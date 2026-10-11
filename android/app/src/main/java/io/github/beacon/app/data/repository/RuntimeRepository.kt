@@ -72,7 +72,7 @@ class RuntimeRepository : RuntimeActions {
 
     override fun barkEncryption(key: String, iv: String, onComplete: (String) -> Unit) {
         if (!ready() || state.value.transportBusy) {
-            onComplete("请等待工作进程就绪")
+            onComplete("请等待接收服务就绪")
             return
         }
         mutableState.update { it.copy(transportBusy = true) }
@@ -118,7 +118,7 @@ class RuntimeRepository : RuntimeActions {
         onComplete: (String) -> Unit,
     ) {
         if (!ready() || state.value.messageBusy || state.value.transportBusy) {
-            onComplete("工作进程未就绪，请稍后重试")
+            onComplete("接收服务未就绪，请稍后重试")
             return
         }
         mutableState.update { it.copy(transportBusy = true) }
@@ -190,7 +190,7 @@ class RuntimeRepository : RuntimeActions {
 
     private fun ready(): Boolean {
         if (!connection.connected) {
-            setStatus(OperationStatus.connectionLost("请先连接工作进程"))
+            setStatus(OperationStatus.connectionLost("请先连接接收服务"))
             return false
         }
         return true
@@ -1009,7 +1009,7 @@ class RuntimeRepository : RuntimeActions {
         val context =
             connection.context
                 ?: run {
-                    onComplete?.invoke("工作进程尚未连接，无法更新状态")
+                    onComplete?.invoke("接收服务尚未连接，无法更新状态")
                     return
                 }
         connection.execute(

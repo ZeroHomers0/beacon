@@ -23,7 +23,7 @@ import io.github.beacon.app.domain.receive.NotificationIntentStore
 import io.github.beacon.app.domain.receive.SaveResult
 import io.github.beacon.app.domain.receive.SyncStore
 
-/** Opened only by :runtime; the UI accesses data through the service's own-UID Binder. */
+/** Owned by reception components; UI data requests use the service on a background executor. */
 class RuntimeMessageStore(
     context: Context,
     private val availableBytes: () -> Long = {

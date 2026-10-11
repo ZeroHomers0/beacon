@@ -7,7 +7,7 @@ import io.github.beacon.app.domain.model.SyncOutcome
 import io.github.beacon.app.domain.policy.SyncResultText
 import org.json.JSONObject
 
-/** Only the :runtime serial executor reads or commits this preference file. */
+/** Only the reception service serial executor reads or commits this preference file. */
 class PollingStateStore(context: Context) {
     private val prefs = GeneralPreferences.open(context)
 

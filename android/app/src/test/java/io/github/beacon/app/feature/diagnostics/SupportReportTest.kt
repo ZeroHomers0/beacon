@@ -23,7 +23,7 @@ private object Copy : SupportReportText {
         "App code：$versionCode · 开发版：$debug · Android API：$sdk"
 
     override fun runtimeConnection(connected: Boolean, notificationsEnabled: Boolean) =
-        "工作进程连接：$connected · 系统通知开启：$notificationsEnabled"
+        "接收服务连接：$connected · 系统通知开启：$notificationsEnabled"
 
     override fun autoReceive(enabled: Boolean, shouldSchedule: Boolean) =
         "自动接收开关：$enabled · 调度允许：$shouldSchedule"
@@ -182,7 +182,7 @@ class SupportReportTest {
                 0,
                 Copy,
             )
-        assertTrue(report.contains("工作进程连接：false"))
+        assertTrue(report.contains("接收服务连接：false"))
         assertTrue(report.contains("最近自动结果：未记录"))
         assertFalse(report.contains("null"))
     }

@@ -13,10 +13,10 @@
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.Beacon">
-        <service android:name=".runtime.RuntimeProbeService" android:process=":runtime" android:exported="false" android:foregroundServiceType="specialUse">
+        <service android:name=".runtime.RuntimeProbeService" android:exported="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="User-enabled persistent connection for receiving self-hosted push notifications and monitoring reception conditions" />
         </service>
-        <receiver android:name=".runtime.RealtimeBootReceiver" android:process=":runtime" android:exported="false">
+        <receiver android:name=".runtime.RealtimeBootReceiver" android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
@@ -29,6 +29,6 @@
             </intent-filter>
         </activity>
         <activity android:name=".NotificationOpenActivity" android:exported="false" android:launchMode="singleTask" android:windowSoftInputMode="adjustNothing" />
-        <receiver android:name=".runtime.notification.NotificationReadReceiver" android:process=":runtime" android:exported="false" />
+        <receiver android:name=".runtime.notification.NotificationReadReceiver" android:exported="false" />
     </application>
 </manifest>

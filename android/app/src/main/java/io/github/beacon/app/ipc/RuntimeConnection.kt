@@ -12,7 +12,7 @@ import io.github.beacon.app.core.serialExecutor
 import io.github.beacon.app.domain.model.OperationStatus
 import io.github.beacon.app.domain.policy.OperationFailure
 
-/** Serial IPC executor with generation guards against callbacks from a released binding. */
+/** Serial service-call executor with generation guards against callbacks from a released binding. */
 internal class RuntimeConnection(
     private val serviceClass: Class<*>,
     private val onStatus: (OperationStatus, Boolean) -> Unit,
@@ -35,7 +35,7 @@ internal class RuntimeConnection(
         }
         val app = context.applicationContext
         this.context = app
-        onStatus(OperationStatus.connecting("正在连接工作进程"), false)
+        onStatus(OperationStatus.connecting("正在连接接收服务"), false)
         val callback =
             object : ServiceConnection {
                 override fun onServiceConnected(name: ComponentName, service: IBinder) {
@@ -48,11 +48,11 @@ internal class RuntimeConnection(
                                 val version = reply.readInt()
                                 val process = reply.readString()
                                 check(
-                                    pid > 0 &&
+                                    pid == android.os.Process.myPid() &&
                                         version == BuildConfig.VERSION_CODE &&
-                                        process == app.packageName + ":runtime"
+                                        process == app.packageName
                                 )
-                                "工作进程已连接：$process · PID $pid · 版本 $version"
+                                "接收服务已连接：$process · PID $pid · 版本 $version"
                             }
                         },
                         onResult = {
@@ -62,7 +62,7 @@ internal class RuntimeConnection(
                         onError = {
                             stop(
                                 OperationStatus.connectionLost(
-                                    "工作进程验证失败（${OperationFailure.describe(it, crossProcess = true)}）"
+                                    "接收服务验证失败（${OperationFailure.describe(it, crossProcess = true)}）"
                                 )
                             )
                         },
@@ -74,16 +74,16 @@ internal class RuntimeConnection(
                         // Keep the binding: Android calls onServiceConnected after restarting it.
                         // Unbinding here used to strand a visible UI after a recoverable crash.
                         binder = null
-                        onStatus(OperationStatus.connectionLost("工作进程重启中，等待重新连接"), false)
+                        onStatus(OperationStatus.connectionLost("接收服务重启中，等待重新连接"), false)
                     }
                 }
 
                 override fun onBindingDied(name: ComponentName) {
-                    if (binding === this) stop(OperationStatus.connectionLost("工作进程绑定失效，请重新验证"))
+                    if (binding === this) stop(OperationStatus.connectionLost("接收服务绑定失效，请重新验证"))
                 }
 
                 override fun onNullBinding(name: ComponentName) {
-                    if (binding === this) stop(OperationStatus.connectionLost("工作进程拒绝绑定"))
+                    if (binding === this) stop(OperationStatus.connectionLost("接收服务拒绝绑定"))
                 }
             }
         binding = callback
@@ -97,20 +97,20 @@ internal class RuntimeConnection(
             ) {
                 binding = null
                 this.context = null
-                onStatus(OperationStatus.connectionLost("工作进程无法绑定"), false)
+                onStatus(OperationStatus.connectionLost("接收服务无法绑定"), false)
             }
         } catch (error: RuntimeException) {
             binding = null
             this.context = null
             onStatus(
-                OperationStatus.connectionLost("工作进程连接失败（${OperationFailure.describe(error)}）"),
+                OperationStatus.connectionLost("接收服务连接失败（${OperationFailure.describe(error)}）"),
                 false,
             )
         }
         main.postDelayed(
             {
                 if (binding === callback && binder == null)
-                    stop(OperationStatus.connectionLost("工作进程连接超时"))
+                    stop(OperationStatus.connectionLost("接收服务连接超时"))
             },
             10_000,
         )
@@ -150,7 +150,7 @@ internal class RuntimeConnection(
     }
 
     fun close() {
-        stop(OperationStatus.connectionLost("已解除工作进程诊断绑定"))
+        stop(OperationStatus.connectionLost("已解除接收服务诊断绑定"))
         worker.shutdown()
     }
 }

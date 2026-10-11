@@ -17,7 +17,7 @@ import io.github.beacon.app.domain.receive.PollingSchedulePolicy
 import io.github.beacon.app.domain.receive.ScheduleAction
 import java.util.concurrent.TimeUnit
 
-/** Called only in the main process; durable control is always sourced from :runtime. */
+/** Called only in the main process; durable control is always sourced from the reception service. */
 object PollingScheduler {
     private const val PERIODIC = "beacon.http.periodic.v1"
     private const val TEST_ONCE = "beacon.http.test.once.v1"

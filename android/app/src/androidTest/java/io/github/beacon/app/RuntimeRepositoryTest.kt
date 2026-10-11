@@ -8,7 +8,7 @@ import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Real :runtime/SQLite/keystore, using synthetic input and an invalid host only. */
+/** Real reception service/SQLite/keystore, using synthetic input and an invalid host only. */
 @RunWith(AndroidJUnit4::class)
 class RuntimeRepositoryTest {
     @Test

@@ -7,7 +7,7 @@ data class RuntimeState(
     val serverCheckResult: String = "尚未检测",
     val serverCheckedAtMs: Long = 0L,
     val connectionSummaryLoaded: Boolean = false,
-    val status: OperationStatus = OperationStatus.connectionLost("工作进程尚未验证"),
+    val status: OperationStatus = OperationStatus.connectionLost("接收服务尚未验证"),
     val messages: List<IncomingMessage> = emptyList(),
     val messageTotal: Long = 0L,
     val messageUnread: Long = 0L,

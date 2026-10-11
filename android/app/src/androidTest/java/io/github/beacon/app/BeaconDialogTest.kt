@@ -201,7 +201,7 @@ class BeaconDialogTest {
         )
         try {
             assertTrue(connected.await(10, java.util.concurrent.TimeUnit.SECONDS))
-            // Configuration must be written by its owning runtime process, never by UI prefs.
+            // Configuration must be written by its owning reception service, never by UI prefs.
             fun configure(address: String, token: String) {
                 val request = android.os.Parcel.obtain()
                 val response = android.os.Parcel.obtain()

@@ -2,6 +2,7 @@ package io.github.beacon.app.ipc
 
 import android.os.IBinder
 import android.os.Parcel
+import android.os.Looper
 import io.github.beacon.app.domain.model.DeleteUndo
 import io.github.beacon.app.domain.model.IncomingMessage
 
@@ -11,6 +12,10 @@ internal fun <T> IBinder.request(
     write: (Parcel) -> Unit = {},
     read: (Parcel) -> T,
 ): T {
+    // Local Binder dispatch runs on the caller's thread. Never wait for storage/network on UI.
+    check(Looper.myLooper() != Looper.getMainLooper()) {
+        "Service requests must run on a background thread"
+    }
     val data = Parcel.obtain()
     val reply = Parcel.obtain()
     try {

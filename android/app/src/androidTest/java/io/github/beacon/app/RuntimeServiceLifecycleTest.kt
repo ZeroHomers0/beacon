@@ -9,9 +9,9 @@ import org.junit.Assert.*
 import org.junit.Test
 
 /**
- * Kill only the test app's own worker, then observe real system restart and Binder reconnection.
+ * Verify a started foreground service outlives UI bindings in the single app process.
  */
-class RuntimeCrashRecoveryTest {
+class RuntimeServiceLifecycleTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
 
     private fun main(action: () -> Unit) = instrumentation.runOnMainSync(action)
@@ -24,16 +24,8 @@ class RuntimeCrashRecoveryTest {
         }
     }
 
-    private fun shell(command: String): String =
-        instrumentation.uiAutomation.executeShellCommand(command).use {
-            android.os.ParcelFileDescriptor.AutoCloseInputStream(it)
-                .bufferedReader()
-                .readText()
-                .trim()
-        }
-
     @Test
-    fun workerKillRestoresServiceAndVisibleClient() {
+    fun closingUiPreservesForegroundServiceAndRebindingLoadsDurableControl() {
         val context = instrumentation.targetContext
         val activity = ActivityScenario.launch(MainActivity::class.java)
         lateinit var repository: RuntimeRepository
@@ -44,6 +36,17 @@ class RuntimeCrashRecoveryTest {
         try {
             await("loaded") {
                 repository.state.value.receivePlanLoaded && !repository.state.value.messageBusy
+            }
+            // A fresh install has no credentials and correctly refuses foreground reception.
+            // Use a loopback endpoint with no listener: transport failure is retryable, no user server.
+            main {
+                repository.transport(
+                    io.github.beacon.app.domain.model.TransportSettings("http://127.0.0.1:9", "a".repeat(64))
+                )
+            }
+            await("test transport saved") {
+                repository.state.value.configuredEndpoint == "http://127.0.0.1:9" &&
+                    !repository.state.value.messageBusy
             }
             main { repository.receivePlan(ReceivePlan(ReceiveMode.RULES, false, false)) }
             await("rules") {
@@ -59,16 +62,22 @@ class RuntimeCrashRecoveryTest {
                 repository.state.value.pollingState.config.enabled &&
                     !repository.state.value.messageBusy
             }
-            val process = "${context.packageName}:runtime"
-            val original = shell("pidof $process").toInt()
-            require(original > 0 && original != android.os.Process.myPid())
-            shell("run-as ${context.packageName} kill -9 $original")
-            await("real worker restart") {
-                shell("pidof $process").let { it.isNotEmpty() && it != original.toString() }
+            val manager = context.getSystemService(android.app.ActivityManager::class.java)
+            @Suppress("DEPRECATION")
+            fun running() = manager.getRunningServices(100).firstOrNull {
+                it.service.className == io.github.beacon.app.runtime.RuntimeProbeService::class.java.name
             }
-            await("Binder reconnect and recorded attempt") {
+            await("foreground started") { running()?.foreground == true }
+            assertEquals(android.os.Process.myPid(), running()!!.pid)
+            main { repository.stop() }
+            activity.close()
+            // No diagnostic binding keeps the service alive: it is independently started.
+            Thread.sleep(500)
+            assertTrue(running()?.foreground == true)
+            main { repository.start(context) }
+            await("rebound durable control") {
                 repository.state.value.runtimeConnected &&
-                    repository.state.value.recovery.attempts > 0 &&
+                    repository.state.value.receivePlanLoaded &&
                     !repository.state.value.messageBusy
             }
             assertTrue(repository.state.value.pollingState.config.enabled)

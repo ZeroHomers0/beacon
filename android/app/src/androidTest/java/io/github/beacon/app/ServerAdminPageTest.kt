@@ -153,7 +153,8 @@ class ServerAdminPageTest {
         rule.onNodeWithText("复制 curl 推送示例").performClick()
         rule.onNodeWithText("已复制").assertIsDisplayed()
         rule.onNodeWithText("关闭").performClick()
-        rule.onNode(hasText("NAS") and !hasSetTextAction()).performScrollTo().assertIsDisplayed()
+        rule.onNodeWithTag("server-admin-list").performScrollToNode(hasText("NAS") and !hasSetTextAction())
+        rule.onNode(hasText("NAS") and !hasSetTextAction()).assertIsDisplayed()
         rule.onNodeWithText("撤销发送凭证").performScrollTo().performClick()
         rule
             .onNodeWithText(rule.activity.getString(R.string.admin_revoke_application_hint, "NAS"))

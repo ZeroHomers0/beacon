@@ -53,7 +53,7 @@ class RuntimeEventPanelTest {
                     }
                 }
             }
-            rule.onNodeWithText("工作进程启动").assertDoesNotExist()
+            rule.onNodeWithText("接收服务启动").assertDoesNotExist()
             rule.onNodeWithText("复制记录").performScrollTo().performClick()
             rule.runOnUiThread {
                 val text =
@@ -63,7 +63,7 @@ class RuntimeEventPanelTest {
                         .getItemAt(0)
                         .text
                         .toString()
-                assertTrue(text.contains("工作进程启动"))
+                assertTrue(text.contains("接收服务启动"))
                 assertTrue(text.contains("1970-01-01T"))
                 assertFalse(text.contains("http://"))
             }

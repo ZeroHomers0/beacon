@@ -14,7 +14,7 @@ import io.github.beacon.app.ipc.RuntimeActions
 /**
  * Lifecycle owner for UI actions and page state.
  *
- * Credentials and database access stay in :runtime; this holds the page state that used to live in
+ * Credentials and database access stay behind the reception service; this holds the page state that used to live in
  * the composable, so it survives configuration changes and process death through
  * [SavedStateHandle].
  */

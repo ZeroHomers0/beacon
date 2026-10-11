@@ -19,7 +19,7 @@ interface RuntimeActions {
 
     fun start(context: Context)
 
-    fun stop(status: OperationStatus = OperationStatus.connectionLost("已解除工作进程诊断绑定"))
+    fun stop(status: OperationStatus = OperationStatus.connectionLost("已解除接收服务诊断绑定"))
 
     fun checkServer() {}
 

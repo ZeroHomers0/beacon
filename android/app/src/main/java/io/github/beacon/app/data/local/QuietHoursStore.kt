@@ -4,7 +4,7 @@ import android.content.Context
 import io.github.beacon.app.domain.model.QuietHours
 import io.github.beacon.app.domain.model.QuietHoursBehavior
 
-/** Only the runtime process reads and writes these preferences. */
+/** Reception components own these preferences. */
 class QuietHoursStore(context: Context) {
     private val preferences = GeneralPreferences.open(context)
 

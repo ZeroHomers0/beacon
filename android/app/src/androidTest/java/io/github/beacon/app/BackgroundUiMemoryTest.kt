@@ -132,6 +132,14 @@ class BackgroundUiMemoryTest {
 
     @Test
     fun fullDetailIsReleasedAndReloadedThroughRuntimeOnReturn() {
+        val key = io.github.beacon.app.domain.model.MessageKey("background-memory", java.util.UUID.randomUUID().toString())
+        io.github.beacon.app.data.local.RuntimeMessageStore(
+            androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
+        ).use { store ->
+            store.save(io.github.beacon.app.domain.model.IncomingMessage(
+                key.server, key.id, "Memory detail", "Unique detail body", receivedAtMs = System.currentTimeMillis()
+            ))
+        }
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             lateinit var model: BeaconViewModel
             scenario.onActivity { model = ViewModelProvider(it)[BeaconViewModel::class.java] }
@@ -147,23 +155,18 @@ class BackgroundUiMemoryTest {
                     model.state.value.connectionSummaryLoaded &&
                     !model.state.value.messageBusy
             }
-            scenario.onActivity { model.readMessages(injectTest = true) }
+            scenario.onActivity { model.readMessages() }
             await("injected message") {
-                !model.state.value.messageBusy && model.state.value.messages.isNotEmpty()
+                !model.state.value.messageBusy && model.state.value.messages.any { it.id == key.id }
             }
             scenario.onActivity {
-                model.openMessage(
-                    io.github.beacon.app.domain.model.MessageKey(
-                        model.state.value.messages.first().server,
-                        model.state.value.messages.first().id,
-                    )
-                )
+                model.openMessage(key)
             }
             await("full detail") {
                 !model.state.value.messageBusy && model.state.value.selectedMessage != null
             }
             val detail = requireNotNull(model.state.value.selectedMessage)
-            val key = io.github.beacon.app.domain.model.MessageKey(detail.server, detail.id)
+            assertEquals(key.id, detail.id)
             scenario.moveToState(Lifecycle.State.CREATED)
             scenario.onActivity { activity ->
                 model.uiState.settingsScreen = SettingsScreen.HOME

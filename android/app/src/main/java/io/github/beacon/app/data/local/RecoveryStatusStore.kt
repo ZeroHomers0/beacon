@@ -5,7 +5,7 @@ import io.github.beacon.app.domain.model.*
 import io.github.beacon.app.domain.policy.CrashRecoveryState
 import io.github.beacon.app.domain.policy.RecoveryStatusPolicy
 
-/** Only the :runtime serial executor writes this preference file. */
+/** Only the reception service serial executor writes this preference file. */
 class RecoveryStatusStore(context: Context) {
     private val preferences = context.getSharedPreferences("receive_recovery", Context.MODE_PRIVATE)
 
