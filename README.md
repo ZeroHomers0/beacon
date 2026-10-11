@@ -8,7 +8,35 @@ Beacon 是一个自托管的 Android 消息推送应用。手机安装 App，服
 
 本项目包含 Android 客户端、Go 服务端和 Workers 服务端。“三端”指这三个组件；使用时安装 Android App，再任选一种服务端即可。
 
-## 2. 技术架构
+## 2. 我的优势与同类对比
+
+### Beacon 的优势
+
+- **Android 上接入 Bark 推送生态**：提供 Bark 兼容接口，允许自定义服务器地址的脚本和第三方软件可以接入，消息由 Beacon Android App 接收，减少改写推送脚本的工作。
+- **两种服务端，按现有环境部署**：已有服务器或 NAS 可以用 Go 单文件 / Docker；也可以部署到 Cloudflare Workers，无需自行维护服务器进程。两种后端共用客户端协议与管理接口。
+- **接收方式可按使用场景调整**：支持 WebSocket 即时接收、HTTP 定时补收，以及按电量、时间段、充电和 Wi-Fi 条件切换的规则接收，方便在通知时效与后台耗电之间取舍。
+- **消息先保存，断线后可补收**：服务端先持久化消息，客户端恢复连接后补收尚未过期的消息，并确认接收；手机同时保存本地历史，便于回看。
+- **手机内完成日常管理**：在 App 中管理服务器、绑定设备、创建与撤销应用令牌、发送测试消息，无需切换到浏览器管理页面。管理、发送与接收使用不同凭据，脚本令牌可以单独撤销。
+
+### 与 Bark、Gotify 对比
+
+| 对比项 | Beacon | Bark | Gotify |
+| --- | --- | --- | --- |
+| 主要接收端 | Android App | iOS App | Android App、Web UI |
+| 即时投递方式 | 自建服务端到 App 的 WebSocket | Apple APNs；自建 Bark 服务端仍通过 APNs 投递 | 自建服务端到客户端的 WebSocket |
+| 服务端部署 | Go 单文件 / Docker，或 Cloudflare Workers | 可使用公共服务或自建 Bark 服务端 | 自建 Gotify 服务端，支持 Docker / 二进制部署 |
+| 推送接口 | Beacon 原生 API + 部分 Bark 兼容 API | Bark HTTP API | Gotify REST API |
+| 接收策略 | 即时、省电、规则接收；支持 HTTP 补收 | 由 iOS 系统推送通道投递 | WebSocket 实时接收 |
+| 管理方式 | Android App 内管理设备与应用令牌 | App 内配置推送服务与通知选项 | Web UI 管理用户、客户端与应用 |
+| 适合的场景 | Android 接收 Bark 兼容推送，或希望选择 Workers 部署及规则接收 | iPhone 通知，利用 iOS 通知分组、铃声、时效性通知等功能 | 需要 Web 管理、多用户管理或插件扩展的自托管消息服务 |
+
+Beacon 的侧重点是 **Android + Bark 兼容 + Workers 可选部署 + 灵活接收策略**。Bark 在 iOS 系统通知能力上更合适，Gotify 提供 Web UI、多用户管理和插件机制；这些能力不能由 Beacon 的兼容接口代替。Beacon 当前没有 iOS 客户端或浏览器管理首页，Bark 参数的兼容范围见第 6 节。
+
+WebSocket 即时接收需要允许 Android 后台运行，耗电与连接稳定性受设备和系统限制影响；省电接收可能延迟，接收确认也不等于用户已经阅读消息。
+
+对比依据：[Bark 官方项目说明](https://github.com/Finb/Bark)、[Gotify 官方项目说明](https://github.com/gotify/server)及[Gotify 文档](https://gotify.net/docs/)。
+
+## 3. 技术架构
 
 ```mermaid
 flowchart LR
@@ -33,17 +61,17 @@ flowchart LR
 
 凭据分为管理令牌、一次性绑定码、设备推送密钥和设备接收凭据。管理令牌用于管理服务器，App 使用独立 Android Keystore 加密保存登录凭据并长期保留，退出登录或服务器拒绝凭据时清除；绑定码用于连接手机；推送密钥用于发送消息；接收凭据由 App 保存并用于同步与确认接收。
 
-## 3. 三端获取与部署
+## 4. 三端获取与部署
 
-### 3.1 Android 客户端
+### 4.1 Android 客户端
 
 1. 打开 [Releases](https://github.com/ZeroHomers0/beacon/releases)，下载 `beacon-release.apk`。
 2. 在 Android 8.0 及以上设备安装，首次安装时按系统提示允许对应来源安装应用。
-3. 安装后按第 4 节绑定自己的服务端，并开启通知权限。
+3. 安装后按第 5 节绑定自己的服务端，并开启通知权限。
 
 若某次构建只有 `beacon-release-unsigned.apk`，该文件需要自行签名后才能安装。自行编译可使用 `android/` 中的 Gradle 工程；正式版本签名配置见 [构建脚本](android/app/build.gradle.kts)。
 
-### 3.2 Go 服务端
+### 4.2 Go 服务端
 
 #### Docker / NAS 部署
 
@@ -82,7 +110,7 @@ export BEACON_WEB_ADMIN_TOKEN="$(openssl rand -hex 32)"
 
 妥善保存生成的管理令牌，以便在 App 中登录服务器管理。正式运行可用 systemd 等方式托管进程，并配置 HTTPS 和 WebSocket 反向代理。数据库会自动初始化。
 
-### 3.3 Cloudflare Workers 服务端
+### 4.3 Cloudflare Workers 服务端
 
 #### 可视化快速部署
 
@@ -119,7 +147,7 @@ npx wrangler secret put ADMIN_TOKEN
 
 更新可在 Fork 仓库中使用 **Sync fork → Update branch**，由 Cloudflare Git 集成重新部署；CLI 部署则拉取最新代码后，在 `workers/` 下运行 `npm ci`、`npm run check` 和 `npm run deploy`。更新后检查运行时 `ADMIN_TOKEN` 与原有实例配置。
 
-## 4. 简单教程
+## 5. 简单教程
 
 ### 绑定手机并发送第一条消息
 
@@ -146,7 +174,7 @@ curl -X POST 'https://push.example.com/api/v1/push' \
 - **规则接收**：按电量、时间段、充电或 Wi-Fi 条件切换接收方式。
 - **应用令牌**：在「服务器管理」中为脚本创建独立应用推送令牌，设置默认优先级，需要时可单独撤销。
 
-## 5. 支持的 API
+## 6. 支持的 API
 
 Go 和 Cloudflare Workers 两种服务端均支持以下接口。先在 App 中绑定服务器，再在连接设置中点击「复制推送密钥」。下面示例中的 `https://push.example.com` 替换为自己的服务地址，`YOUR_PUSH_KEY` 替换为设备推送密钥。推送密钥允许向对应设备发送消息，请勿公开；绑定码和管理令牌不能代替它。App 的连接设置也提供可直接复制的推送示例。
 
@@ -267,7 +295,7 @@ curl -X POST 'https://push.example.com/api/admin/binding' \
 
 Go 服务端需要设置 `BEACON_WEB_ADMIN_TOKEN` 才会启用管理接口；Workers 必须设置 `ADMIN_TOKEN` 才能正常提供服务。
 
-## 6. 疑问
+## 7. 疑问
 
 ### 必须同时部署 Go 和 Workers 吗？
 
@@ -295,7 +323,7 @@ Go 服务端需要设置 `BEACON_WEB_ADMIN_TOKEN` 才会启用管理接口；Wor
 
 ### Bark 软件能直接接入吗？
 
-可以，前提是软件允许修改 Bark 服务器地址或填写完整推送链接。填写自己的服务地址与设备推送密钥，消息由 Beacon Android App 接收。兼容参数范围见第 5 节。
+可以，前提是软件允许修改 Bark 服务器地址或填写完整推送链接。填写自己的服务地址与设备推送密钥，消息由 Beacon Android App 接收。兼容参数范围见第 6 节。
 
 ### 消息保存多久？
 
