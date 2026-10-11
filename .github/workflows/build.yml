@@ -173,13 +173,20 @@ jobs:
           gh run download "$GITHUB_RUN_ID" --pattern 'beacon-*' --dir dist
           shopt -s dotglob
           cat > "$RUNNER_TEMP/notes.md" <<'EOF'
-          第一个正式版本。
+          本次更新统一了设置界面，完善通知操作与 Bark 兼容，并新增应用内检查更新。
+
+          - 设置内支持检查更新、查看更新说明及下载安装；关闭更新弹窗不会中断已请求的下载。
+          - 修复更新检查或下载被取消后状态无法复位、无法重试的问题。
+          - 通知支持一键已读、摘要通知整批已读和复制正文。
+          - 接收规则统一保存，服务器管理操作反馈统一使用全局提示条。
+          - Bark 未支持参数静默忽略，测试推送支持选择优先级。
+          - 优化图标与重复许可资源，减小 APK 体积。
 
           - **Android**：下载 `beacon-release.apk` 安装（Android 8.0 / minSdk 26 及以上）。
           - **服务端**：`beacon-server-linux-amd64` / `-arm64` 是无需依赖的单文件二进制，配套 `docker-compose.yaml`；也可直接用镜像 `ghcr.io/zerohomers0/beacon-server:latest`。
-          - **Cloudflare Workers**：无需服务器，部署方式见 README 第 3 节。
+          - **Cloudflare Workers**：无需服务器，部署方式见仓库文档。
 
-          各目录下的 `SHA256SUMS-*` 为校验文件。安装、绑定、推送与接收模式的用法见仓库 README 第 4 节。
+          各目录下的 `SHA256SUMS-*` 为校验文件。
           EOF
           gh release create "$GITHUB_REF_NAME" dist/*/* --verify-tag \
             --title "Beacon $GITHUB_REF_NAME" \

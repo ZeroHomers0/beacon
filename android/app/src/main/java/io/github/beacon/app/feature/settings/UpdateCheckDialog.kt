@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -22,6 +21,7 @@ import io.github.beacon.app.ui.components.BeaconButton
 import io.github.beacon.app.ui.components.BeaconText
 import io.github.beacon.app.ui.components.BeaconTextButton
 import java.io.File
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -46,11 +46,11 @@ private enum class InstallLaunch {
 internal fun UpdateCheckDialog(
     state: UpdateCheckState,
     release: AppRelease,
+    scope: CoroutineScope,
     onDismiss: () -> Unit,
     onFeedback: (String) -> Unit,
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     // Resolved outside the lambda below: stringResource cannot be called from a plain lambda.
     val missingNotes = stringResource(R.string.settings_update_notes_empty)
     BeaconAlertDialog(
@@ -75,7 +75,9 @@ internal fun UpdateCheckDialog(
         },
         confirmButton = {
             BeaconButton(
-                onClick = { scope.launch { stageAndInstall(context, state, release, onDismiss, onFeedback) } },
+                onClick = {
+                    scope.launch { stageAndInstall(context, state, release, onDismiss, onFeedback) }
+                },
                 enabled = !state.downloading,
             ) {
                 BeaconText(
@@ -117,13 +119,14 @@ private suspend fun stageAndInstall(
         apk.isStagedFor(release) ||
             run {
                 state.beginDownload()
-                val downloaded =
+                try {
                     withContext(Dispatchers.IO) {
                         clearStaged(context)
                         ReleaseClient.download(release, apk)
                     }
-                state.endDownload()
-                downloaded
+                } finally {
+                    state.endDownload()
+                }
             }
     if (!ready) {
         onFeedback(context.getString(R.string.settings_update_download_failed))
@@ -151,19 +154,19 @@ private fun clearStaged(context: Context) {
     File(context.cacheDir, UPDATE_DIR).listFiles()?.forEach { it.delete() }
 }
 
-private fun openInstallPermission(context: Context): Boolean =
-    runCatching {
-            context.startActivity(
-                Intent(
-                    Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                    Uri.parse("package:${context.packageName}"),
-                )
-            )
-        }
-        .isSuccess
+private fun openInstallPermission(context: Context): Boolean = runCatching {
+    context.startActivity(
+        Intent(
+            Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+            Uri.parse("package:${context.packageName}"),
+        )
+    )
+}
+    .isSuccess
 
 private fun launchInstall(context: Context, apk: File): InstallLaunch {
-    if (!context.packageManager.canRequestPackageInstalls()) return InstallLaunch.PERMISSION_REQUIRED
+    if (!context.packageManager.canRequestPackageInstalls())
+        return InstallLaunch.PERMISSION_REQUIRED
     // The archive lives in the private cache, so it is handed over through the app's own provider.
     val uri =
         runCatching { FileProvider.getUriForFile(context, "${context.packageName}.update", apk) }

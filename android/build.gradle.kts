@@ -3,6 +3,6 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose") version "2.3.10" apply false
 }
 
-extra["beaconVersionCode"] = 2
+extra["beaconVersionCode"] = 3
 
-extra["beaconVersionName"] = "1.0.1"
+extra["beaconVersionName"] = "1.0.2"

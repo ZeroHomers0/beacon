@@ -5,7 +5,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.github.beacon.app.domain.model.AppRelease
 
-/** What a finished update check owes the user; [SILENT] is the background check, which says nothing. */
+/**
+ * What a finished update check owes the user; [SILENT] is the background check, which says nothing.
+ */
 enum class UpdateCheckReport {
     SILENT,
     AVAILABLE,
@@ -23,10 +25,13 @@ enum class UpdateCheckReport {
 class UpdateCheckState {
     var checking by mutableStateOf(false)
         private set
+
     var release by mutableStateOf<AppRelease?>(null)
         private set
+
     var dialogOpen by mutableStateOf(false)
         private set
+
     var downloading by mutableStateOf(false)
         private set
 
@@ -52,12 +57,19 @@ class UpdateCheckState {
      * A fetch failure leaves the previous verdict untouched: being offline says nothing about the
      * installed build, so it must not clear a badge that a reachable check had already set.
      */
-    suspend fun check(manual: Boolean, fetch: suspend () -> Result<AppRelease?>): UpdateCheckReport {
+    suspend fun check(
+        manual: Boolean,
+        fetch: suspend () -> Result<AppRelease?>,
+    ): UpdateCheckReport {
         // One check at a time, so a repeated tap cannot race an in-flight result.
         if (checking) return UpdateCheckReport.SILENT
         checking = true
-        val outcome = fetch()
-        checking = false
+        val outcome =
+            try {
+                fetch()
+            } finally {
+                checking = false
+            }
         return outcome.fold(
             onSuccess = { found ->
                 release = found
