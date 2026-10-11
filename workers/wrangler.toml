@@ -1,0 +1,23 @@
+name = "beacon-server"
+main = "src/index.ts"
+compatibility_date = "2026-10-11"
+# Preserve additional dashboard variables during Git builds.
+# ADMIN_TOKEN must still be a runtime Secret, never committed in [vars].
+keep_vars = true
+
+[vars]
+# Stable identity for the single self-hosted instance. Never change after binding.
+BEACON_INSTANCE = "default"
+HISTORY_RETENTION_DAYS = "30"
+
+[[durable_objects.bindings]]
+name = "BEACON"
+class_name = "BeaconInstance"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["BeaconInstance"]
+
+[observability]
+# Bark URLs may contain credentials and message bodies. Disable request logs.
+enabled = false

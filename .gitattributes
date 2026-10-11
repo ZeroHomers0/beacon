@@ -1,0 +1,9 @@
+* text=auto eol=lf
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+Dockerfile text eol=lf
+android/gradlew text eol=lf
+*.bat text eol=crlf
+*.jar binary
+*.md whitespace=-blank-at-eol

@@ -1,0 +1,186 @@
+name: Build and publish
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+      - name: Test server and SQLite queries
+        working-directory: server
+        run: |
+          test -z "$(gofmt -l cmd internal)"
+          go test -count=1 ./...
+          go vet ./...
+      - name: Build Linux binaries
+        working-directory: server
+        run: |
+          mkdir -p ../dist/server
+          for arch in amd64 arm64; do
+            CGO_ENABLED=0 GOOS=linux GOARCH=$arch go build -trimpath -ldflags='-s -w' -o ../dist/server/beacon-server-linux-$arch ./cmd/beacon
+          done
+          cp docker-compose.yaml ../dist/server/
+          cd ../dist/server
+          sha256sum beacon-server-linux-* docker-compose.yaml > SHA256SUMS-server
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: beacon-server-${{ github.sha }}
+          path: dist/server/
+          if-no-files-found: error
+          retention-days: 30
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+          cache-dependency-path: |
+            android/build.gradle.kts
+            android/app/build.gradle.kts
+            android/settings.gradle.kts
+            android/gradle/wrapper/gradle-wrapper.properties
+      - name: Install Android SDK packages
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-37.0' 'build-tools;36.0.0'
+      - name: Provide a debug signing identity
+        # A fresh runner has no debug keystore; nothing here is a release secret.
+        run: |
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            mkdir -p "$HOME/.android"
+            keytool -genkeypair -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
+              -keystore "$HOME/.android/debug.keystore" -storepass android -keypass android \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+      - name: Restore optional production signing identity
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.BEACON_RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_KEY_ALIAS: ${{ secrets.BEACON_RELEASE_KEY_ALIAS }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.BEACON_RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.BEACON_RELEASE_KEY_PASSWORD }}
+        run: |
+          if [ -z "$RELEASE_KEYSTORE_BASE64$RELEASE_KEY_ALIAS$RELEASE_STORE_PASSWORD$RELEASE_KEY_PASSWORD" ]; then
+            if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+              echo 'Production signing is required for a tagged release.' >&2
+              exit 1
+            fi
+            exit 0
+          fi
+          test -n "$RELEASE_KEYSTORE_BASE64" && test -n "$RELEASE_KEY_ALIAS" && test -n "$RELEASE_STORE_PASSWORD" && test -n "$RELEASE_KEY_PASSWORD"
+          printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/beacon-release.jks"
+          chmod 600 "$RUNNER_TEMP/beacon-release.jks"
+          echo "BEACON_RELEASE_KEYSTORE_FILE=$RUNNER_TEMP/beacon-release.jks" >> "$GITHUB_ENV"
+      - name: Build, test and lint Android
+        working-directory: android
+        env:
+          BEACON_RELEASE_KEY_ALIAS: ${{ secrets.BEACON_RELEASE_KEY_ALIAS }}
+          BEACON_RELEASE_STORE_PASSWORD: ${{ secrets.BEACON_RELEASE_STORE_PASSWORD }}
+          BEACON_RELEASE_KEY_PASSWORD: ${{ secrets.BEACON_RELEASE_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon --console=plain :app:assembleDebug :app:assembleRelease :app:lintDebug :app:testDebugUnitTest :app:assembleDebugAndroidTest
+      - name: Collect the release APK
+        run: |
+          mkdir -p dist/android
+          if [ -f android/app/build/outputs/apk/release/app-release.apk ]; then
+            cp android/app/build/outputs/apk/release/app-release.apk dist/android/beacon-release.apk
+          else
+            cp android/app/build/outputs/apk/release/app-release-unsigned.apk dist/android/beacon-release-unsigned.apk
+          fi
+          cd dist/android
+          sha256sum *.apk > SHA256SUMS-android
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: beacon-android-${{ github.sha }}
+          path: dist/android/
+          if-no-files-found: error
+          retention-days: 30
+  image:
+    needs: [server, android]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Set image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}-server" >> "$GITHUB_ENV"
+      - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+      - name: Pull BuildKit with bounded registry retries
+        run: |
+          for attempt in 1 2 3; do
+            if timeout 180s docker pull moby/buildkit:buildx-stable-1; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              sleep 5
+            fi
+          done
+          exit 1
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        id: publish
+        with:
+          context: server
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:sha-${{ github.sha }}
+            ${{ env.IMAGE }}:latest
+          labels: org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Record deployment image
+        run: |
+          echo '### Server image' >> "$GITHUB_STEP_SUMMARY"
+          echo '${{ env.IMAGE }}@${{ steps.publish.outputs.digest }}' >> "$GITHUB_STEP_SUMMARY"
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [server, android, image]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Publish tagged artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh run download "$GITHUB_RUN_ID" --pattern 'beacon-*' --dir dist
+          shopt -s dotglob
+          cat > "$RUNNER_TEMP/notes.md" <<'EOF'
+          第一个正式版本。
+
+          - **Android**：下载 `beacon-release.apk` 安装（Android 8.0 / minSdk 26 及以上）。
+          - **服务端**：`beacon-server-linux-amd64` / `-arm64` 是无需依赖的单文件二进制，配套 `docker-compose.yaml`；也可直接用镜像 `ghcr.io/zerohomers0/beacon-server:latest`。
+          - **Cloudflare Workers**：无需服务器，部署方式见 README 第 3 节。
+
+          各目录下的 `SHA256SUMS-*` 为校验文件。安装、绑定、推送与接收模式的用法见仓库 README 第 4 节。
+          EOF
+          gh release create "$GITHUB_REF_NAME" dist/*/* --verify-tag \
+            --title "Beacon $GITHUB_REF_NAME" \
+            --notes-file "$RUNNER_TEMP/notes.md"

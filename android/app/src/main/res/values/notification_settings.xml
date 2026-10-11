@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="notification_age_title">过时消息提醒</string>
+    <string name="notification_fresh_window">提醒有效时间</string>
+    <string name="notification_minutes">%1$d 分钟</string>
+    <string name="notification_hours">%1$d 小时</string>
+    <string name="notification_outdated_behavior">过时消息处理</string>
+    <string name="notification_age_hint">有效时间从发送时计算。过时或时间未验证的消息按设置静音或仅保存，后者不补发。批次含近期消息仍可提醒；免打扰仍生效。</string>
+    <string name="notification_privacy_title">锁屏隐私</string>
+    <string name="notification_lockscreen_preview">锁屏预览消息内容</string>
+    <string name="notification_lockscreen_hint">默认隐藏标题和正文。开启后由系统锁屏设置决定显示内容，仅影响之后的通知。</string>
+</resources>

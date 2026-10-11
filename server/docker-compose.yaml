@@ -1,0 +1,45 @@
+# Single-container deployment. Edit the two marked values below, then run:
+#   docker compose up -d
+# HTTPS and the native WebSocket share port 443 through your own reverse proxy,
+# which must forward to 127.0.0.1:8088 with Upgrade/Connection headers.
+services:
+  beacon:
+    image: ghcr.io/zerohomers0/beacon-server:latest
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:8088:8080
+    environment:
+      # 1) Public address (reference only). The server never builds absolute URLs:
+      #    binding codes, push paths and the realtime stream path are all relative,
+      #    and the Android app resolves them against the address you enter there.
+      #    Configure your reverse proxy to serve the HTTPS domain below and forward
+      #    it to 127.0.0.1:8088 with Upgrade/Connection headers, then type the same
+      #    address in the app. Example:
+      #      https://beacon.example.com  ->  http://127.0.0.1:8088
+      # 2) Replace with your own random 64-character lowercase hex administrator
+      #    token. Generate it locally, for example:
+      #      openssl rand -hex 32
+      #    Change it before first start; anyone holding it can manage devices.
+      BEACON_WEB_ADMIN_TOKEN: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      # 3) Optional: keep confirmed message history for this many days.
+      #    0 keeps everything; 1 to 3650 enables hourly cleanup.
+      BEACON_HISTORY_RETENTION_DAYS: 0
+    volumes:
+      - type: bind
+        source: ./beacon-data
+        target: /data
+        bind:
+          create_host_path: false
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, 'http://127.0.0.1:8080/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s

@@ -1,0 +1,27 @@
+name: Workers checks
+on:
+  push:
+    paths: ['workers/**', '.github/workflows/workers.yml']
+  pull_request:
+    paths: ['workers/**', '.github/workflows/workers.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workers
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: workers/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - run: npm run build
+      - run: npm run test:protocol

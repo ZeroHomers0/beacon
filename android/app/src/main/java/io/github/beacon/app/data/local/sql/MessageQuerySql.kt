@@ -1,0 +1,12 @@
+package io.github.beacon.app.data.local.sql
+
+object MessageQuerySql {
+    const val FILTER =
+        "delete_token='' AND (? = '' OR server = ?) AND (? = '' OR instr(lower(title),lower(?)) > 0 OR instr(lower(body),lower(?)) > 0 OR instr(lower(subtitle),lower(?)) > 0) AND (? = '0' OR (? = '1' AND is_read=0) OR (? = '2' AND is_read=1))"
+    const val COUNT = "SELECT count(*) FROM messages WHERE $FILTER"
+    const val UNREAD = "SELECT count(*) FROM messages WHERE $FILTER AND is_read=0"
+    const val PAGE =
+        "SELECT rowid,server,id,title,substr(body,1,180),source_created,received,is_read,subtitle,priority,EXISTS(SELECT 1 FROM notification_intents n WHERE n.server=messages.server AND n.id=messages.id),'' FROM messages WHERE $FILTER AND rowid < ? ORDER BY rowid DESC LIMIT ?"
+    const val DETAIL =
+        "SELECT server,id,title,body,source_created,received,is_read,subtitle,priority,EXISTS(SELECT 1 FROM notification_intents n WHERE n.server=messages.server AND n.id=messages.id),bark FROM messages WHERE server=? AND id=? AND delete_token=''"
+}

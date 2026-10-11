@@ -1,0 +1,336 @@
+package io.github.beacon.app.ui.components
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import io.github.beacon.app.R
+import io.github.beacon.app.domain.model.BeaconUiStyle
+import io.github.beacon.app.ui.icons.BeaconIcons
+import io.github.beacon.app.ui.theme.LocalBeaconUiStyle
+
+/** Persistent search surface; no extra card/title/submit button around a list query. */
+@Composable
+fun BeaconSearchBox(
+    value: String,
+    onValueChange: (String) -> Unit,
+    hint: String,
+    modifier: Modifier = Modifier,
+    onSearch: () -> Unit,
+) {
+    BasicTextField(
+        value,
+        onValueChange,
+        singleLine = true,
+        textStyle =
+            MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions(onSearch = { onSearch() }),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .heightIn(min = 52.dp)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
+                .semantics { contentDescription = hint },
+        decorationBox = { field ->
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    BeaconIcons.Search,
+                    null,
+                    Modifier.padding(start = 16.dp, end = 12.dp).size(22.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Box(Modifier.weight(1f).padding(vertical = 14.dp)) {
+                    if (value.isEmpty())
+                        BeaconText(
+                            hint,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    field()
+                }
+                if (value.isNotEmpty())
+                    BeaconIconButton(onClick = { onValueChange("") }) {
+                        Icon(BeaconIcons.Close, stringResource(R.string.ui_clear_search_action))
+                    }
+                else Spacer(Modifier.width(16.dp))
+            }
+        },
+    )
+}
+
+/**
+ * When the window is short (landscape, split screen) the page title and the search field share one
+ * 52dp row: the title sits on the left, the field takes the rest. The header then costs a single
+ * slot instead of a title band plus a field, and search stays persistent in both orientations. Once
+ * the list scrolls the title folds away and the field keeps the whole row.
+ */
+@Composable
+fun BeaconTitleSearchRow(
+    title: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    hint: String,
+    modifier: Modifier = Modifier,
+    titleCollapsed: Boolean = false,
+    onSearch: () -> Unit,
+) {
+    Row(
+        modifier.fillMaxWidth().heightIn(min = 52.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        AnimatedVisibility(
+            visible = !titleCollapsed,
+            enter = fadeIn() + expandHorizontally(),
+            exit = fadeOut() + shrinkHorizontally(),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                BeaconText(
+                    title,
+                    style = MaterialTheme.typography.titleLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.width(12.dp))
+            }
+        }
+        BeaconSearchBox(
+            value,
+            onValueChange,
+            hint,
+            Modifier.weight(1f),
+            onSearch,
+        )
+    }
+}
+
+@Composable
+fun BeaconActionIcon(
+    icon: ImageVector,
+    description: String,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) {
+    BeaconIconButton(onClick = onClick, enabled = enabled) {
+        Icon(icon, description, Modifier.size(24.dp))
+    }
+}
+
+@Composable
+fun BeaconPreferenceToggle(
+    title: String,
+    summary: String,
+    checked: Boolean,
+    enabled: Boolean = true,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 64.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            BeaconText(title, style = MaterialTheme.typography.bodyLarge)
+            BeaconText(
+                summary,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        // The switch is a sibling of the label column, so it carries no text of its own and takes
+        // the title as its accessible name.
+        if (LocalBeaconUiStyle.current == BeaconUiStyle.MIUIX)
+            top.yukonga.miuix.kmp.basic.Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                modifier = Modifier.named(title),
+                enabled = enabled,
+            )
+        else
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                modifier = Modifier.named(title),
+                enabled = enabled,
+            )
+    }
+}
+
+/** Smallest gap kept between the key and the value when both share one line. */
+private val DIAGNOSTIC_ROW_GAP = 16.dp
+
+/** Slack absorbed before falling back to the stacked form, covering rounding and font metrics. */
+internal const val DIAGNOSTIC_ROW_TOLERANCE_PX = 12
+
+/**
+ * Whether a key and its value share one line, or must stack.
+ *
+ * Judged against the full width the row actually has, never a fraction of it: a fixed fractional
+ * split handed the key about a third of the row whatever its length, so an 11-character key wrapped
+ * in a column that could not hold it, orphaning its last character onto a line of its own.
+ */
+internal fun diagnosticRowFits(
+    labelWidthPx: Int,
+    valueWidthPx: Int,
+    gapPx: Int,
+    availableWidthPx: Int,
+): Boolean = labelWidthPx + valueWidthPx + gapPx + DIAGNOSTIC_ROW_TOLERANCE_PX <= availableWidthPx
+
+/**
+ * Key and value share one line when they genuinely fit, and stack otherwise.
+ *
+ * A fixed fractional split squeezed long keys into a one- or two-character orphan line and left
+ * short keys floating far from their value, so measure first: the two-column form is used only when
+ * the pair fits with [DIAGNOSTIC_ROW_GAP] to spare; otherwise both get the full width, which never
+ * wraps. The one-line form right-aligns the value, keeping the pair symmetrical.
+ */
+@Composable
+fun DiagnosticRow(label: String, value: String) {
+    val labelStyle = MaterialTheme.typography.labelLarge
+    val valueStyle = MaterialTheme.typography.bodyMedium
+    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val measurer = rememberTextMeasurer()
+    val gapPx = with(LocalDensity.current) { DIAGNOSTIC_ROW_GAP.roundToPx() }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        BoxWithConstraints(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+            val labelWidth = measurer.measure(label, labelStyle, maxLines = 1).size.width
+            val valueWidth = measurer.measure(value, valueStyle, maxLines = 1).size.width
+            val fits =
+                constraints.hasBoundedWidth &&
+                    diagnosticRowFits(
+                        labelWidth,
+                        valueWidth,
+                        gapPx,
+                        constraints.maxWidth,
+                    )
+            if (fits)
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    BeaconText(label, style = labelStyle, color = labelColor)
+                    BeaconText(value, style = valueStyle)
+                }
+            else
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    BeaconText(label, style = labelStyle, color = labelColor)
+                    BeaconText(value, style = valueStyle)
+                }
+        }
+    }
+}
+
+/** Compact numeric facts, preserving readable values at large font sizes. */
+@Composable
+fun SettingsMetricGrid(metrics: List<Pair<String, String>>) {
+    val density = LocalDensity.current
+    val measurer = rememberTextMeasurer()
+    val widest =
+        metrics.maxOfOrNull { (label, value) ->
+            maxOf(
+                measurer
+                    .measure(label, MaterialTheme.typography.labelMedium, maxLines = 1)
+                    .size
+                    .width,
+                measurer
+                    .measure(value, MaterialTheme.typography.titleMedium, maxLines = 1)
+                    .size
+                    .width,
+            )
+        } ?: 0
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val cellWidth = widest + with(density) { 24.dp.roundToPx() }
+        val columns =
+            if (cellWidth * 2 + with(density) { 8.dp.roundToPx() } <= constraints.maxWidth) 2 else 1
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            metrics.chunked(columns).forEach { pair ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    pair.forEach { (label, value) ->
+                        Surface(
+                            Modifier.weight(1f),
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerLow,
+                        ) {
+                            Column(
+                                Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                BeaconText(
+                                    label,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                BeaconText(
+                                    value,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                        }
+                    }
+                    if (columns == 2 && pair.size == 1) Spacer(Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun BeaconEmptyState(
+    icon: ImageVector,
+    title: String,
+    description: String,
+    loading: Boolean = false,
+    action: @Composable () -> Unit = {},
+) {
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        if (loading) CircularProgressIndicator(Modifier.size(32.dp), strokeWidth = 2.dp)
+        else
+            Icon(
+                icon,
+                null,
+                Modifier.size(40.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        BeaconText(title, style = MaterialTheme.typography.titleMedium)
+        BeaconText(
+            description,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (!loading) action()
+    }
+}

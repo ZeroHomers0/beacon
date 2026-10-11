@@ -1,0 +1,67 @@
+package io.github.beacon.app.ui.components
+
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.Transition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+
+/** KSU/MIUIX geometry: full-width child entry, quarter-width parent parallax, reversed on back. */
+@Composable
+fun BeaconSettingsTransition(
+    transition: Transition<SettingsScreen>,
+    content: @Composable (SettingsScreen) -> Unit,
+) {
+    val direction = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1 else 1
+    transition.AnimatedContent(
+        modifier = Modifier.fillMaxWidth(),
+        transitionSpec = {
+            val entering = targetState != SettingsScreen.HOME
+            val motion =
+                tween<androidx.compose.ui.unit.IntOffset>(
+                    SETTINGS_NAVIGATION_DURATION_MS,
+                    easing = settingsNavigationEasing,
+                )
+            val entry =
+                slideInHorizontally(motion) { width ->
+                    direction * if (entering) width else -width / 4
+                } +
+                    fadeIn(
+                        tween(SETTINGS_NAVIGATION_DURATION_MS, easing = settingsNavigationEasing),
+                        initialAlpha = if (entering) 1f else .9f,
+                    )
+            val exit =
+                slideOutHorizontally(motion) { width ->
+                    direction * if (entering) -width / 4 else width
+                } +
+                    fadeOut(
+                        tween(SETTINGS_NAVIGATION_DURATION_MS, easing = settingsNavigationEasing),
+                        targetAlpha = if (entering) .9f else 1f,
+                    )
+            (entry togetherWith exit)
+                .apply { targetContentZIndex = if (entering) 1f else -1f }
+                .using(
+                    SizeTransform(clip = true) { _, _ ->
+                        tween(SETTINGS_NAVIGATION_DURATION_MS, easing = settingsNavigationEasing)
+                    }
+                )
+        },
+        contentKey = { it },
+    ) { screen ->
+        Box(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface)) {
+            content(screen)
+        }
+    }
+}

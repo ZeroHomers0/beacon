@@ -1,0 +1,562 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
+package io.github.beacon.app.feature.settings
+
+import android.content.ClipData
+import android.content.ClipboardManager
+import androidx.activity.compose.LocalActivity
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.beacon.app.R
+import io.github.beacon.app.ui.components.*
+import io.github.beacon.app.ui.icons.BeaconIcons
+
+@Composable
+internal fun ServerAdminPage(
+    defaultEndpoint: String,
+    scroll: LazyListState,
+    modifier: Modifier,
+    padding: PaddingValues,
+    onConnection: () -> Unit,
+    onUseBinding: (String, String, String) -> Unit,
+    canBindCurrent: Boolean = false,
+    localBindingResult: String = "",
+) {
+    val activity = checkNotNull(LocalActivity.current as? androidx.activity.ComponentActivity)
+    val model = remember(activity) { ViewModelProvider(activity)[ServerAdminViewModel::class.java] }
+    val state by model.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val resources = androidx.compose.ui.platform.LocalResources.current
+    var endpoint by rememberSaveable { mutableStateOf(defaultEndpoint) }
+    // Never make administrator input saveable: Android saved instance state is not a secret store.
+    var token by remember { mutableStateOf("") }
+    var tab by rememberSaveable { mutableIntStateOf(0) }
+    var bindingName by rememberSaveable { mutableStateOf("") }
+    var appName by rememberSaveable { mutableStateOf("") }
+    var deviceId by rememberSaveable { mutableStateOf("") }
+    var priority by rememberSaveable { mutableIntStateOf(5) }
+    var testTitle by rememberSaveable { mutableStateOf("") }
+    var testBody by rememberSaveable { mutableStateOf("") }
+    var pendingDevice by remember { mutableStateOf<AdminDevice?>(null) }
+    var pendingApplication by remember { mutableStateOf<AdminApplication?>(null) }
+    var confirmTest by remember { mutableStateOf(false) }
+    var copied by remember { mutableStateOf(false) }
+    var bindingSubmitted by rememberSaveable { mutableStateOf(false) }
+    val currentBind by rememberUpdatedState(onUseBinding)
+    val currentCanBind by rememberUpdatedState(canBindCurrent && defaultEndpoint.isBlank())
+    fun bindCurrent(endpoint: String, code: String, name: String) {
+        if (!currentCanBind) return
+        bindingSubmitted = true
+        currentBind(endpoint, code, name)
+    }
+    LaunchedEffect(defaultEndpoint) {
+        if (bindingSubmitted && defaultEndpoint.isNotBlank()) model.refresh()
+    }
+    val active = state.devices.filterNot { it.revoked }
+    LaunchedEffect(state.loggedIn, state.devices) {
+        if (active.none { it.id == deviceId }) deviceId = active.firstOrNull()?.id.orEmpty()
+        if (!state.loggedIn) {
+            pendingDevice = null
+            pendingApplication = null
+            confirmTest = false
+        }
+    }
+    LaunchedEffect(state.secret) { copied = false }
+    fun copy(value: String) {
+        val clip = ClipData.newPlainText(resources.getString(R.string.admin_title), value)
+        clip.description.extras =
+            android.os.PersistableBundle().apply {
+                putBoolean("android.content.extra.IS_SENSITIVE", true)
+            }
+        context.getSystemService(ClipboardManager::class.java).setPrimaryClip(clip)
+        copied = true
+    }
+    LazyColumn(
+        state = scroll,
+        modifier = modifier.imePadding().testTag("server-admin-list"),
+        contentPadding = padding,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item {
+            SettingsGroup(stringResource(R.string.admin_this_phone)) {
+                SettingsRow(
+                    stringResource(R.string.admin_local_binding),
+                    defaultEndpoint.ifBlank { stringResource(R.string.settings_guide_unbound) },
+                    BeaconIcons.Server,
+                    onConnection,
+                )
+                if (state.loggedIn && defaultEndpoint.isBlank()) {
+                    BeaconActionButton(
+                        stringResource(R.string.admin_use_binding),
+                        BeaconIcons.Guide,
+                        Modifier.fillMaxWidth(),
+                        canBindCurrent && !state.busy,
+                    ) {
+                        model.bindThisPhone(android.os.Build.MODEL.take(32), ::bindCurrent)
+                    }
+                }
+                if (bindingSubmitted && localBindingResult.isNotBlank())
+                    OperationResultPanel(
+                        stringResource(R.string.admin_local_binding_result),
+                        localBindingResult,
+                    )
+            }
+        }
+        if (!state.loggedIn) {
+            item {
+                UiSection(stringResource(R.string.admin_login_title)) {
+                    SettingsHint(stringResource(R.string.admin_login_hint))
+                    AdminField(
+                        endpoint,
+                        { endpoint = it },
+                        R.string.admin_endpoint,
+                        !state.busy,
+                        keyboard = KeyboardType.Uri,
+                    )
+                    AdminField(
+                        token,
+                        { token = it.trim() },
+                        R.string.admin_token,
+                        !state.busy,
+                        password = true,
+                    )
+                    BeaconActionButton(
+                        stringResource(
+                            if (state.busy) R.string.admin_loading else R.string.admin_login
+                        ),
+                        BeaconIcons.Server,
+                        Modifier.fillMaxWidth(),
+                        !state.busy && endpoint.isNotBlank() && token.isNotBlank(),
+                    ) {
+                        model.login(endpoint.trim(), token)
+                        token = ""
+                    }
+                    state.feedback?.let { feedback ->
+                        OperationResultPanel(
+                            stringResource(R.string.admin_result),
+                            stringResource(feedback),
+                        )
+                    }
+                }
+            }
+        } else {
+            item {
+                UiSection(stringResource(R.string.admin_overview)) {
+                    DiagnosticRow(stringResource(R.string.admin_endpoint), state.endpoint)
+                    DiagnosticRow(stringResource(R.string.admin_version), state.version)
+                    DiagnosticRow(
+                        stringResource(R.string.admin_compatibility),
+                        stringResource(
+                            if (state.protocol == 1) R.string.admin_compatible
+                            else R.string.admin_protocol_unknown
+                        ),
+                    )
+                    DiagnosticRow(stringResource(R.string.admin_server_id), state.serverId)
+                    SettingsMetricGrid(
+                        listOf(
+                            stringResource(R.string.admin_devices) to
+                                state.devices.count { !it.revoked }.toString(),
+                            stringResource(R.string.admin_messages) to state.messages.toString(),
+                            stringResource(R.string.admin_pending) to state.pending.toString(),
+                            stringResource(R.string.admin_database) to
+                                android.text.format.Formatter.formatFileSize(
+                                    context,
+                                    state.databaseBytes,
+                                ),
+                        )
+                    )
+                    BeaconActionPair(
+                        {
+                            BeaconOutlinedButton(
+                                onClick = {
+                                    model.logout()
+                                    token = ""
+                                }
+                            ) {
+                                BeaconText(stringResource(R.string.admin_logout))
+                            }
+                        },
+                        {
+                            BeaconButton(onClick = model::refresh, enabled = !state.busy) {
+                                BeaconText(
+                                    stringResource(
+                                        if (state.busy) R.string.admin_loading
+                                        else R.string.admin_refresh
+                                    )
+                                )
+                            }
+                        },
+                    )
+                }
+            }
+            item {
+                UiSection(stringResource(R.string.admin_manage_section)) {
+                    FlowRow(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        listOf(
+                                R.string.admin_devices,
+                                R.string.admin_applications,
+                                R.string.admin_test,
+                            )
+                            .forEachIndexed { index, label ->
+                                BeaconFilterChip(
+                                    selected = tab == index,
+                                    onClick = { tab = index },
+                                    label = { BeaconText(stringResource(label)) },
+                                    enabled = !state.busy,
+                                )
+                            }
+                    }
+                }
+            }
+        }
+        if (state.loggedIn && state.feedback != null)
+            item {
+                OperationResultPanel(
+                    stringResource(R.string.admin_result),
+                    stringResource(state.feedback!!),
+                )
+            }
+        if (state.loggedIn)
+            when (tab) {
+                0 -> {
+                    item {
+                        UiSection(stringResource(R.string.admin_create_binding)) {
+                            AdminField(
+                                bindingName,
+                                { bindingName = it.take(40) },
+                                R.string.admin_device_name,
+                                !state.busy,
+                            )
+                            SettingsHint(stringResource(R.string.admin_binding_hint))
+                            BeaconActionButton(
+                                stringResource(R.string.admin_create_binding),
+                                BeaconIcons.Guide,
+                                Modifier.fillMaxWidth(),
+                                !state.busy && bindingName.isNotBlank(),
+                            ) {
+                                model.createBinding(bindingName)
+                            }
+                        }
+                    }
+                    if (state.devices.isEmpty())
+                        item { SettingsHint(stringResource(R.string.admin_no_devices)) }
+                    items(state.devices, key = { "device-${it.id}" }) { device ->
+                        UiSection(device.name) {
+                            DiagnosticRow(stringResource(R.string.admin_device_id), device.id)
+                            DiagnosticRow(
+                                stringResource(R.string.admin_status),
+                                stringResource(
+                                    if (device.revoked) R.string.admin_revoked
+                                    else R.string.admin_active
+                                ),
+                            )
+                            if (!device.revoked)
+                                BeaconActionPair(
+                                    {
+                                        BeaconOutlinedButton(
+                                            onClick = {
+                                                deviceId = device.id
+                                                tab = 2
+                                            },
+                                            enabled = !state.busy,
+                                        ) {
+                                            BeaconText(stringResource(R.string.admin_test))
+                                        }
+                                    },
+                                    {
+                                        BeaconDangerButton(
+                                            onClick = { pendingDevice = device },
+                                            enabled = !state.busy,
+                                        ) {
+                                            BeaconText(stringResource(R.string.admin_revoke_device))
+                                        }
+                                    },
+                                )
+                        }
+                    }
+                }
+                1 -> {
+                    item {
+                        UiSection(stringResource(R.string.admin_create_application)) {
+                            DevicePicker(active, deviceId, { deviceId = it }, !state.busy)
+                            AdminField(
+                                appName,
+                                { appName = it.take(40) },
+                                R.string.admin_application_name,
+                                !state.busy,
+                            )
+                            BeaconDropdownPreference(
+                                stringResource(R.string.admin_priority),
+                                (0..10).map { value ->
+                                    stringResource(
+                                        when (value) {
+                                            0 -> R.string.admin_priority_save
+                                            in 1..3 -> R.string.admin_priority_silent
+                                            in 4..7 -> R.string.admin_priority_normal
+                                            else -> R.string.admin_priority_important
+                                        },
+                                        value,
+                                    )
+                                },
+                                priority,
+                                enabled = !state.busy,
+                                stacked = true,
+                            ) {
+                                priority = it
+                            }
+                            SettingsHint(stringResource(R.string.admin_application_hint))
+                            BeaconActionButton(
+                                stringResource(R.string.admin_create_application),
+                                BeaconIcons.CredentialUpdate,
+                                Modifier.fillMaxWidth(),
+                                !state.busy && deviceId.isNotBlank() && appName.isNotBlank(),
+                            ) {
+                                model.createApplication(deviceId, appName, priority)
+                            }
+                        }
+                    }
+                    if (state.applications.isEmpty())
+                        item { SettingsHint(stringResource(R.string.admin_no_applications)) }
+                    items(state.applications, key = { "application-${it.id}" }) { app ->
+                        UiSection(app.name) {
+                            DiagnosticRow(
+                                stringResource(R.string.admin_device),
+                                state.devices.find { it.id == app.deviceId }?.name ?: app.deviceId,
+                            )
+                            DiagnosticRow(
+                                stringResource(R.string.admin_priority),
+                                app.priority.toString(),
+                            )
+                            DiagnosticRow(
+                                stringResource(R.string.admin_status),
+                                stringResource(
+                                    if (app.revoked) R.string.admin_revoked
+                                    else R.string.admin_active
+                                ),
+                            )
+                            if (!app.revoked)
+                                BeaconDangerButton(
+                                    onClick = { pendingApplication = app },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    enabled = !state.busy,
+                                ) {
+                                    BeaconText(stringResource(R.string.admin_revoke_application))
+                                }
+                        }
+                    }
+                }
+                2 ->
+                    item {
+                        UiSection(stringResource(R.string.admin_test)) {
+                            DevicePicker(active, deviceId, { deviceId = it }, !state.busy)
+                            AdminField(
+                                testTitle,
+                                { testTitle = it.take(200) },
+                                R.string.admin_test_title,
+                                !state.busy,
+                            )
+                            AdminField(
+                                testBody,
+                                { testBody = it.take(4096) },
+                                R.string.admin_test_body,
+                                !state.busy,
+                                singleLine = false,
+                            )
+                            SettingsHint(stringResource(R.string.admin_test_hint))
+                            BeaconActionButton(
+                                stringResource(R.string.admin_send_test),
+                                BeaconIcons.Messages,
+                                Modifier.fillMaxWidth(),
+                                !state.busy &&
+                                    deviceId.isNotBlank() &&
+                                    testTitle.isNotBlank() &&
+                                    testBody.isNotBlank(),
+                            ) {
+                                confirmTest = true
+                            }
+                        }
+                    }
+            }
+    }
+    state.secret?.let { secret ->
+        BeaconAlertDialog(
+            onDismissRequest = model::dismissSecret,
+            title = { BeaconText(stringResource(secret.label)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    DiagnosticRow(stringResource(secret.label), secret.value)
+                    if (secret.expiresAt > 0)
+                        DiagnosticRow(
+                            stringResource(R.string.admin_expires),
+                            formatMessageTime(secret.expiresAt),
+                        )
+                    SettingsHint(
+                        stringResource(
+                            if (secret.example.isEmpty()) R.string.admin_binding_hint
+                            else R.string.admin_secret_hint
+                        )
+                    )
+                    if (copied) SettingsHint(stringResource(R.string.admin_copied))
+                    if (secret.expiresAt > 0 && defaultEndpoint.isBlank())
+                        BeaconOutlinedButton(
+                            onClick = {
+                                bindCurrent(state.endpoint, secret.value, bindingName)
+                                model.dismissSecret()
+                            },
+                            enabled = canBindCurrent && !state.busy,
+                        ) {
+                            BeaconText(stringResource(R.string.admin_use_binding))
+                        }
+                    if (secret.example.isNotEmpty())
+                        BeaconOutlinedButton(onClick = { copy(secret.example) }) {
+                            BeaconText(stringResource(R.string.admin_copy_example))
+                        }
+                }
+            },
+            dismissButton = {
+                BeaconOutlinedButton(onClick = { copy(secret.value) }) {
+                    BeaconText(stringResource(R.string.admin_copy))
+                }
+            },
+            confirmButton = {
+                BeaconButton(onClick = model::dismissSecret) {
+                    BeaconText(stringResource(R.string.action_close))
+                }
+            },
+        )
+    }
+    pendingDevice?.let { device ->
+        AdminConfirm(
+            stringResource(R.string.admin_revoke_device),
+            stringResource(R.string.admin_revoke_device_hint, device.name),
+            { pendingDevice = null },
+            {
+                pendingDevice = null
+                model.revokeDevice(device.id)
+            },
+        )
+    }
+    pendingApplication?.let { app ->
+        AdminConfirm(
+            stringResource(R.string.admin_revoke_application),
+            stringResource(R.string.admin_revoke_application_hint, app.name),
+            { pendingApplication = null },
+            {
+                pendingApplication = null
+                model.revokeApplication(app.id)
+            },
+        )
+    }
+    if (confirmTest)
+        AdminConfirm(
+            stringResource(R.string.admin_send_test),
+            stringResource(
+                R.string.admin_test_confirm,
+                active.find { it.id == deviceId }?.name.orEmpty(),
+            ),
+            { confirmTest = false },
+            {
+                confirmTest = false
+                model.test(deviceId, testTitle, testBody)
+            },
+            danger = false,
+        )
+}
+
+@Composable
+private fun AdminField(
+    value: String,
+    change: (String) -> Unit,
+    label: Int,
+    enabled: Boolean,
+    password: Boolean = false,
+    singleLine: Boolean = true,
+    keyboard: KeyboardType = KeyboardType.Text,
+) {
+    val text = stringResource(label)
+    val focus = androidx.compose.ui.platform.LocalFocusManager.current
+    BeaconTextField(
+        value,
+        change,
+        Modifier.fillMaxWidth(),
+        label = { BeaconText(text) },
+        labelText = text,
+        singleLine = singleLine,
+        enabled = enabled,
+        visualTransformation =
+            if (password) PasswordVisualTransformation()
+            else androidx.compose.ui.text.input.VisualTransformation.None,
+        keyboardOptions =
+            KeyboardOptions(
+                keyboardType = if (password) KeyboardType.Password else keyboard,
+                autoCorrectEnabled = false,
+                imeAction =
+                    if (singleLine) androidx.compose.ui.text.input.ImeAction.Done
+                    else androidx.compose.ui.text.input.ImeAction.Default,
+            ),
+        keyboardActions =
+            androidx.compose.foundation.text.KeyboardActions(onDone = { focus.clearFocus() }),
+    )
+}
+
+@Composable
+private fun DevicePicker(
+    devices: List<AdminDevice>,
+    selected: String,
+    change: (String) -> Unit,
+    enabled: Boolean,
+) {
+    if (devices.isEmpty()) SettingsHint(stringResource(R.string.admin_no_active_devices))
+    else
+        BeaconDropdownPreference(
+            stringResource(R.string.admin_device),
+            devices.map { "${it.name} · ${it.id.take(8)}" },
+            devices.indexOfFirst { it.id == selected }.coerceAtLeast(0),
+            enabled = enabled,
+            stacked = true,
+        ) {
+            change(devices[it].id)
+        }
+}
+
+@Composable
+private fun AdminConfirm(
+    title: String,
+    description: String,
+    dismiss: () -> Unit,
+    confirm: () -> Unit,
+    danger: Boolean = true,
+) {
+    BeaconAlertDialog(
+        onDismissRequest = dismiss,
+        title = { BeaconText(title) },
+        text = { SettingsHint(description) },
+        dismissButton = {
+            BeaconOutlinedButton(onClick = dismiss) {
+                BeaconText(stringResource(R.string.action_cancel))
+            }
+        },
+        confirmButton = {
+            if (danger) BeaconDangerButton(onClick = confirm) { BeaconText(title) }
+            else BeaconButton(onClick = confirm) { BeaconText(title) }
+        },
+    )
+}
