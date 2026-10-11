@@ -9,7 +9,7 @@ import org.junit.Assert.*
 import org.junit.Test
 
 /**
- * Verify a started foreground service outlives UI bindings in the single app process.
+ * Verify a started foreground service outlives UI bindings in the communication process.
  */
 class RuntimeServiceLifecycleTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
@@ -68,7 +68,7 @@ class RuntimeServiceLifecycleTest {
                 it.service.className == io.github.beacon.app.runtime.RuntimeProbeService::class.java.name
             }
             await("foreground started") { running()?.foreground == true }
-            assertEquals(android.os.Process.myPid(), running()!!.pid)
+            assertNotEquals(android.os.Process.myPid(), running()!!.pid)
             main { repository.stop() }
             activity.close()
             // No diagnostic binding keeps the service alive: it is independently started.

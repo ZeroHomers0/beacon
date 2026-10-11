@@ -17,7 +17,7 @@ import io.github.beacon.app.domain.receive.PollingSchedulePolicy
 import io.github.beacon.app.domain.receive.ScheduleAction
 import java.util.concurrent.TimeUnit
 
-/** Called only in the main process; durable control is always sourced from the reception service. */
+/** Called only in the communication process; durable control is always sourced from the reception service. */
 object PollingScheduler {
     private const val PERIODIC = "beacon.http.periodic.v1"
     private const val TEST_ONCE = "beacon.http.test.once.v1"
@@ -33,7 +33,7 @@ object PollingScheduler {
 
     @Synchronized
     fun apply(context: Context, state: PollingState) {
-        check(currentProcessName(context) == context.packageName)
+        check(currentProcessName(context) == context.packageName + ":runtime")
         val action = PollingSchedulePolicy.decide(appliedState, state)
         // A refreshed result changes revision, not the schedule. Do not postpone the next run.
         if (action == ScheduleAction.KEEP) {
@@ -69,6 +69,7 @@ object PollingScheduler {
 
     @Synchronized
     fun testOnce(context: Context, state: PollingState) {
+        check(currentProcessName(context) == context.packageName + ":runtime")
         check(BuildConfig.DEBUG && state.shouldSchedule)
         // Debug-only one-shot probe. WorkManager periodic work remains 15 minutes minimum.
         val request =

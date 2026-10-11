@@ -5,6 +5,8 @@ import android.os.IBinder
 object RuntimeProtocol {
 
     const val DESCRIPTOR = "io.github.beacon.runtime.probe.v1"
+    const val RECONCILE_POLLING = IBinder.FIRST_CALL_TRANSACTION + 42
+    const val SCHEDULE_TEST = IBinder.FIRST_CALL_TRANSACTION + 43
     const val PING = IBinder.FIRST_CALL_TRANSACTION
     const val RECENT = PING + 1
     const val INJECT_TEST = PING + 2
@@ -17,7 +19,7 @@ object RuntimeProtocol {
     const val AUTO_SYNC = PING + 9
     const val STOP_RUN = PING + 10
     // Transaction 12 was TEST_SCHEDULE: the runtime never handled it, and the settings test
-    // schedules through PollingScheduler directly. Retired, not reassigned, so that
+    // now schedules through SCHEDULE_TEST. Retired, not reassigned, so that
     // installed clients and the service keep agreeing on every other number.
     // Previous QUERY (+12) and SAVE_SOURCE (+16) are retired; never reuse their numbers.
     const val CHECK_SERVER = PING + 19

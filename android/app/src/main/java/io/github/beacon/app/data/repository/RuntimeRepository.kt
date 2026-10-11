@@ -10,8 +10,9 @@ import io.github.beacon.app.ipc.RuntimeActions
 import io.github.beacon.app.ipc.RuntimeConnection
 import io.github.beacon.app.ipc.RuntimeControlClient
 import io.github.beacon.app.ipc.RuntimeEventClient
+import io.github.beacon.app.ipc.RuntimeProtocol
+import io.github.beacon.app.ipc.request
 import io.github.beacon.app.ipc.RuntimeMessageClient
-import io.github.beacon.app.runtime.PollingScheduler
 import io.github.beacon.app.runtime.RuntimeProbeService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -522,7 +523,7 @@ class RuntimeRepository : RuntimeActions {
             { binder ->
                 operation(binder).let { result ->
                     if (result.outcome == SyncOutcome.OK)
-                        result.copy(text = reconcile(context, result.state, result.text))
+                        result.copy(text = reconcile(binder, result.text))
                     else result
                 }
             },
@@ -973,7 +974,7 @@ class RuntimeRepository : RuntimeActions {
         connection.execute(
             { binder ->
                 val result = RuntimeControlClient(binder).transport(settings, notifyOnly)
-                result.copy(text = reconcile(context, result.state, result.text))
+                result.copy(text = reconcile(binder, result.text))
             },
             { result ->
                 mutableState.update {
@@ -1015,7 +1016,7 @@ class RuntimeRepository : RuntimeActions {
         connection.execute(
             { binder ->
                 val state = RuntimeControlClient(binder).state()
-                state to reconcile(context, state, "")
+                state to reconcile(binder, "")
             },
             { (state, text) ->
                 mutableState.update {
@@ -1051,7 +1052,7 @@ class RuntimeRepository : RuntimeActions {
         connection.execute(
             { binder ->
                 val result = RuntimeControlClient(binder).setPolling(config)
-                result.copy(text = reconcile(context, result.state, result.text))
+                result.copy(text = reconcile(binder, result.text))
             },
             { result ->
                 mutableState.update {
@@ -1123,9 +1124,9 @@ class RuntimeRepository : RuntimeActions {
         }
     }
 
-    private fun reconcile(context: Context, state: PollingState, text: String): String =
+    private fun reconcile(binder: android.os.IBinder, text: String): String =
         try {
-            PollingScheduler.apply(context, state)
+            binder.request(RuntimeProtocol.RECONCILE_POLLING) { Unit }
             text
         } catch (error: Exception) {
             listOf(
@@ -1152,7 +1153,7 @@ class RuntimeRepository : RuntimeActions {
         if (current.transportBusy) return
         setStatus(OperationStatus.pending("正在安排一分钟测试任务"))
         connection.execute(
-            { PollingScheduler.testOnce(context, current.pollingState) },
+            { binder -> binder.request(RuntimeProtocol.SCHEDULE_TEST) { Unit } },
             { setStatus(OperationStatus.result("一分钟测试任务已安排；系统可能有少量调度偏差")) },
             { error ->
                 setStatus(OperationStatus.result("一分钟测试任务失败（${OperationFailure.describe(error)}）"))

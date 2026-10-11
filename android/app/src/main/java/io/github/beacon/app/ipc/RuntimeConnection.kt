@@ -48,9 +48,9 @@ internal class RuntimeConnection(
                                 val version = reply.readInt()
                                 val process = reply.readString()
                                 check(
-                                    pid == android.os.Process.myPid() &&
+                                    pid > 0 && pid != android.os.Process.myPid() &&
                                         version == BuildConfig.VERSION_CODE &&
-                                        process == app.packageName
+                                        process == app.packageName + ":runtime"
                                 )
                                 "接收服务已连接：$process · PID $pid · 版本 $version"
                             }

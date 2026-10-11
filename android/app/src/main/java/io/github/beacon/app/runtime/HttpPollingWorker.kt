@@ -15,7 +15,7 @@ import io.github.beacon.app.ipc.request
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
-/** Main-process scheduler delegates network/secret/SQLite work to the reception service. */
+/** Communication-process scheduler delegates network/secret/SQLite work to the reception service. */
 open class HttpPollingWorker(context: Context, parameters: WorkerParameters) :
     Worker(context, parameters) {
     @Volatile private var endpoint: IBinder? = null

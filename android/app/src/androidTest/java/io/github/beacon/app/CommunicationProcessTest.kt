@@ -15,8 +15,8 @@ import java.util.concurrent.TimeUnit
 import org.junit.Assert.*
 import org.junit.Test
 
-class SingleProcessServiceTest {
-    @Test fun serviceRunsInAppProcessAndRejectsBlockingMainThreadRequests() {
+class CommunicationProcessTest {
+    @Test fun serviceRunsInSeparateProcessAndRejectsBlockingMainThreadRequests() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
         val ready = CountDownLatch(1)
@@ -33,10 +33,27 @@ class SingleProcessServiceTest {
             assertTrue(ready.await(15, TimeUnit.SECONDS))
             val binder = requireNotNull(service)
             binder.request(RuntimeProtocol.PING) {
-                assertEquals(Process.myPid(), it.readInt())
+                assertNotEquals(Process.myPid(), it.readInt())
                 assertEquals(BuildConfig.VERSION_CODE, it.readInt())
-                assertEquals(context.packageName, it.readString())
+                assertEquals(context.packageName + ":runtime", it.readString())
             }
+            binder.request(RuntimeProtocol.RECONCILE_POLLING) { Unit }
+            assertThrows(IllegalStateException::class.java) {
+                (context.applicationContext as BeaconApplication).workManagerConfiguration
+            }
+            val packageInfo = context.packageManager.getPackageInfo(
+                context.packageName,
+                android.content.pm.PackageManager.GET_SERVICES or android.content.pm.PackageManager.GET_RECEIVERS or android.content.pm.PackageManager.GET_PROVIDERS
+            )
+            (packageInfo.services.orEmpty().map { it.name to it.processName } +
+                packageInfo.receivers.orEmpty().map { it.name to it.processName })
+                .filter { it.first.startsWith("androidx.work.") || it.first.startsWith("io.github.beacon.app.runtime.") }
+                .forEach { (name, process) -> assertEquals(name, context.packageName + ":runtime", process) }
+            val startup = packageInfo.providers.orEmpty().single { it.name == "androidx.startup.InitializationProvider" }
+            val provider = context.packageManager.getProviderInfo(
+                ComponentName(context.packageName, startup.name), android.content.pm.PackageManager.GET_META_DATA
+            )
+            assertFalse(provider.metaData.containsKey("androidx.work.WorkManagerInitializer"))
             instrumentation.runOnMainSync {
                 assertThrows(IllegalStateException::class.java) {
                     binder.request(RuntimeProtocol.PING) { Unit }

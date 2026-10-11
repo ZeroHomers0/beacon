@@ -85,6 +85,7 @@ class RuntimeProbeService : Service() {
     }
 
     private val worker = serialExecutor("beacon-runtime")
+    private val scheduler = serialExecutor("beacon-scheduler")
     private val storeDelegate = lazy { RuntimeMessageStore(this) }
     private val store by storeDelegate
     private val events by lazy { RuntimeEventStore(this) }
@@ -287,6 +288,7 @@ class RuntimeProbeService : Service() {
                     } catch (_: Exception) {
                         PollingState(blocked = "接收设置读取失败，请重新保存设置")
                     }
+                reconcileSchedule()
                 // A locked boot parked its wait in device-protected storage; this is the first
                 // start that can read it back, so the real outcome is journalled exactly once.
                 val parked = RecoveryStatusStore(this).consumeAwaitingUnlock()
@@ -298,12 +300,21 @@ class RuntimeProbeService : Service() {
         }
     }
 
+    private fun reconcileSchedule() {
+        // Independent from the receive queue: cancellation may call back into the service.
+        scheduler.execute {
+            runCatching { PollingScheduler.apply(this, pollingState) }
+                .onFailure { android.util.Log.w("Beacon", "Polling schedule reconciliation failed", it) }
+        }
+    }
+
     private fun saveState(value: PollingState) {
         val revised = value.copy(revision = pollingState.revision + 1)
         PollingStateStore(this).save(revised)
         val enabledChanged = pollingState.config.enabled != revised.config.enabled
         val schedulingChanged = pollingState.shouldSchedule != revised.shouldSchedule
         pollingState = revised
+        reconcileSchedule()
 
         if (enabledChanged)
             recordEvent(
@@ -386,6 +397,8 @@ class RuntimeProbeService : Service() {
                 if (
                     code !in
                         listOf(
+                            io.github.beacon.app.ipc.RuntimeProtocol.RECONCILE_POLLING,
+                            io.github.beacon.app.ipc.RuntimeProtocol.SCHEDULE_TEST,
                             PING,
                             RECENT,
                             INJECT_TEST,
@@ -431,6 +444,24 @@ class RuntimeProbeService : Service() {
                 if (Binder.getCallingUid() != applicationInfo.uid)
                     throw SecurityException("Own UID required")
                 data.enforceInterface(DESCRIPTOR)
+                if (code == io.github.beacon.app.ipc.RuntimeProtocol.RECONCILE_POLLING ||
+                    code == io.github.beacon.app.ipc.RuntimeProtocol.SCHEDULE_TEST) {
+                    require(data.dataAvail() == 0)
+                    check(controlLoaded.await(5, java.util.concurrent.TimeUnit.SECONDS))
+                    val task = scheduler.submit {
+                        if (code == io.github.beacon.app.ipc.RuntimeProtocol.SCHEDULE_TEST)
+                            PollingScheduler.testOnce(this@RuntimeProbeService, pollingState)
+                        else PollingScheduler.apply(this@RuntimeProbeService, pollingState)
+                    }
+                    try {
+                        task.get(25, java.util.concurrent.TimeUnit.SECONDS)
+                    } catch (error: java.util.concurrent.TimeoutException) {
+                        task.cancel(false)
+                        throw error
+                    }
+                    requireNotNull(reply).writeNoException()
+                    return true
+                }
                 if (
                     code == io.github.beacon.app.ipc.RuntimeProtocol.CLEAR_ALL_MESSAGES ||
                         code == io.github.beacon.app.ipc.RuntimeProtocol.PENDING_REMINDERS
@@ -581,6 +612,7 @@ class RuntimeProbeService : Service() {
                                 )
                             if (payload != null) {
                                 pollingState = backup.restore(payload, pollingState)
+                                reconcileSchedule()
 
                                 realtime.reloadPreferences()
                             }
@@ -1501,6 +1533,7 @@ class RuntimeProbeService : Service() {
         worker.execute {
             if (realtimeDelegate.isInitialized()) realtime.destroy()
             if (storeDelegate.isInitialized()) store.close()
+            scheduler.shutdown()
         }
         worker.shutdown()
         super.onDestroy()
