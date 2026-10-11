@@ -22,8 +22,8 @@ services:
       #    Change it before first start; anyone holding it can manage devices.
       BEACON_WEB_ADMIN_TOKEN: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
       # 3) Optional: keep confirmed message history for this many days.
-      #    0 keeps everything; 1 to 3650 enables hourly cleanup.
-      BEACON_HISTORY_RETENTION_DAYS: 0
+      #    1 day by default; legacy 0 maps to 1, values above 30 cap at 30. Cleanup runs every minute.
+      BEACON_HISTORY_RETENTION_DAYS: 1
     volumes:
       - type: bind
         source: ./beacon-data

@@ -7,7 +7,7 @@ import (
 	"beacon.local/server/internal/domain"
 )
 
-// Retain minimal confirmation receipts indefinitely for safe offline retries.
+// Retain minimal confirmation receipts for the bounded offline retry window.
 // Unconfirmed messages are never eligible, irrespective of age or device revocation.
 func (a *Store) CleanupConfirmedBatch(ctx context.Context, before int64, limit int) (int64, error) {
 	if before <= 0 || before > time.Now().UnixMilli() || limit < 1 || limit > domain.MaxRetentionBatchSize {

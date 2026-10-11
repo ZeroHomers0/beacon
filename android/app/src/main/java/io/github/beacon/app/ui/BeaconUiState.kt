@@ -83,6 +83,33 @@ class BeaconUiState(
     var pendingDelete: List<MessageKey>? by savedState(handle, "pendingDelete", null)
     var selectionHint: String by savedState(handle, "selectionHint", "")
     var settingsScreen: SettingsScreen by savedState(handle, "settingsScreen", SettingsScreen.HOME)
+    var settingsHistory: ArrayList<SettingsScreen> by savedState(handle, "settingsHistory", arrayListOf())
+    var settingsNavigatingBack by mutableStateOf(false)
+    val settingsBackTarget: SettingsScreen get() = settingsHistory.lastOrNull() ?: SettingsScreen.HOME
+
+    fun navigateSettings(destination: SettingsScreen) {
+        if (destination == settingsScreen) return
+        settingsNavigatingBack = destination == SettingsScreen.HOME
+        settingsHistory = if (destination == SettingsScreen.HOME) arrayListOf()
+            else ArrayList(settingsHistory + settingsScreen)
+        settingsScreen = destination
+    }
+
+    fun backSettings() {
+        settingsNavigatingBack = true
+        settingsScreen = settingsBackTarget
+        settingsHistory = ArrayList(settingsHistory.dropLast(1))
+    }
+
+    fun finishNavigation(index: Int) {
+        if (page == 1 && index == 1 && settingsScreen != SettingsScreen.HOME) backSettings()
+        else {
+            page = index
+            settingsHistory = arrayListOf()
+            settingsScreen = SettingsScreen.HOME
+        }
+    }
+
     var filtersOpen: Boolean by savedState(handle, "filtersOpen", false)
 
     init {
@@ -127,8 +154,7 @@ class BeaconUiState(
                 connectionDirty(runtime)
         if (leavingDirtyConnection) pendingPage = index
         else {
-            page = index
-            settingsScreen = SettingsScreen.HOME
+            finishNavigation(index)
         }
     }
 

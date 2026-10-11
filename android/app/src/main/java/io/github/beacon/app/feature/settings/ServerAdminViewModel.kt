@@ -143,6 +143,16 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
             )
         }
 
+    fun clearMessages() = authenticated(R.string.admin_messages_cleared) { client ->
+        client.clearMessages()
+        parseOverview(client.overview()).copy(endpoint = client.endpoint, loggedIn = true)
+    }
+
+    fun deleteDevice(id: String) = authenticated(R.string.admin_device_deleted) { client ->
+        client.deleteDevice(id)
+        parseOverview(client.overview()).copy(endpoint = client.endpoint, loggedIn = true)
+    }
+
     fun revokeDevice(id: String) =
         authenticated(R.string.admin_device_revoked) { client ->
             client.revokeDevice(id)

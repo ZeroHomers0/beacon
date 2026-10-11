@@ -4,7 +4,7 @@
     <string name="ui_current_receive_mode">当前模式</string>
     <string name="ui_mode_running">已开启</string>
     <string name="ui_message_long_press">长按选择消息</string>
-    <string name="app_name">Beacon 开发版</string>
+    <string name="app_name">Beacon</string>
     <string name="action_cancel">取消</string>
     <string name="action_save">保存</string>
     <string name="action_close">关闭</string>
@@ -634,4 +634,10 @@
     <string name="admin_manage_section">设备与应用</string>
     <string name="admin_binding_started">已生成绑定码并提交当前手机绑定，请查看绑定结果。</string>
     <string name="admin_local_binding_result">当前手机绑定结果</string>
+    <string name="admin_clear_messages">清空所有消息</string>
+    <string name="admin_clear_messages_hint">删除服务器上所有设备的消息（包括未接收消息）、回执和投递队列。此操作不可恢复，不会删除手机上的本地消息。</string>
+    <string name="admin_messages_cleared">服务器所有消息已清空</string>
+    <string name="admin_delete_device">删除设备</string>
+    <string name="admin_delete_device_hint">彻底删除已解绑设备「%1$s」及其所有消息、回执和发送应用。此操作不可恢复。</string>
+    <string name="admin_device_deleted">设备及其消息已删除</string>
 </resources>

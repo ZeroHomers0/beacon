@@ -53,6 +53,8 @@ internal fun ServerAdminPage(
     var testBody by rememberSaveable { mutableStateOf("") }
     var pendingDevice by remember { mutableStateOf<AdminDevice?>(null) }
     var pendingApplication by remember { mutableStateOf<AdminApplication?>(null) }
+    var confirmClear by remember { mutableStateOf(false) }
+    var deletingDevice by remember { mutableStateOf<AdminDevice?>(null) }
     var confirmTest by remember { mutableStateOf(false) }
     var copied by remember { mutableStateOf(false) }
     var bindingSubmitted by rememberSaveable { mutableStateOf(false) }
@@ -71,6 +73,8 @@ internal fun ServerAdminPage(
         if (active.none { it.id == deviceId }) deviceId = active.firstOrNull()?.id.orEmpty()
         if (!state.loggedIn) {
             pendingDevice = null
+            deletingDevice = null
+            confirmClear = false
             pendingApplication = null
             confirmTest = false
         }
@@ -166,6 +170,9 @@ internal fun ServerAdminPage(
                         ),
                     )
                     DiagnosticRow(stringResource(R.string.admin_server_id), state.serverId)
+                    BeaconDangerButton(onClick = { confirmClear = true }, enabled = !state.busy) {
+                        BeaconText(stringResource(R.string.admin_clear_messages))
+                    }
                     SettingsMetricGrid(
                         listOf(
                             stringResource(R.string.admin_devices) to
@@ -268,6 +275,10 @@ internal fun ServerAdminPage(
                                     else R.string.admin_active
                                 ),
                             )
+                            if (device.revoked)
+                                BeaconDangerButton(onClick = { deletingDevice = device }, enabled = !state.busy) {
+                                    BeaconText(stringResource(R.string.admin_delete_device))
+                                }
                             if (!device.revoked)
                                 BeaconActionPair(
                                     {
@@ -441,6 +452,21 @@ internal fun ServerAdminPage(
                     BeaconText(stringResource(R.string.action_close))
                 }
             },
+        )
+    }
+    if (confirmClear)
+        AdminConfirm(
+            stringResource(R.string.admin_clear_messages),
+            stringResource(R.string.admin_clear_messages_hint),
+            { confirmClear = false },
+            { confirmClear = false; model.clearMessages() },
+        )
+    deletingDevice?.let { device ->
+        AdminConfirm(
+            stringResource(R.string.admin_delete_device),
+            stringResource(R.string.admin_delete_device_hint, device.name),
+            { deletingDevice = null },
+            { deletingDevice = null; model.deleteDevice(device.id) },
         )
     }
     pendingDevice?.let { device ->

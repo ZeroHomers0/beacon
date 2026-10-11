@@ -22,13 +22,14 @@ import androidx.compose.ui.unit.LayoutDirection
 @Composable
 fun BeaconSettingsTransition(
     transition: Transition<SettingsScreen>,
+    navigatingBack: Boolean = false,
     content: @Composable (SettingsScreen) -> Unit,
 ) {
     val direction = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1 else 1
     transition.AnimatedContent(
         modifier = Modifier.fillMaxWidth(),
         transitionSpec = {
-            val entering = targetState != SettingsScreen.HOME
+            val entering = targetState != SettingsScreen.HOME && !navigatingBack
             val motion =
                 tween<androidx.compose.ui.unit.IntOffset>(
                     SETTINGS_NAVIGATION_DURATION_MS,

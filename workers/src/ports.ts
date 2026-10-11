@@ -63,6 +63,7 @@ export interface Repository {
   };
   statuses(device: string, ids: string[], now: number): Record<string, string>;
   ack(device: string, ids: string[], now: number): void;
+  clearMessages(device?: string, deleteDevice?: boolean): number;
   stats(): Record<string, unknown>;
 }
 export interface Transport {

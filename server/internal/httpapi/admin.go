@@ -84,6 +84,38 @@ func (a *API) registerAdmin(router *gin.Engine) {
 		}
 		writeJSON(c.Writer, 200, map[string]bool{"revoked": true})
 	})
+	admin.POST("/messages/clear", func(c *gin.Context) {
+		var body struct{}
+		if decodeJSON(c.Writer, c.Request, &body) != nil {
+			apiError(c.Writer, 400, "invalid_request")
+			return
+		}
+		count, err := a.service.ClearMessages("", false)
+		if err != nil {
+			apiError(c.Writer, 500, "storage_error")
+			return
+		}
+		writeJSON(c.Writer, 200, map[string]any{"deleted": count})
+	})
+	admin.POST("/devices/delete", func(c *gin.Context) {
+		var body struct {
+			Device string `json:"device_id"`
+		}
+		if decodeJSON(c.Writer, c.Request, &body) != nil {
+			apiError(c.Writer, 400, "invalid_request")
+			return
+		}
+		count, err := a.service.ClearMessages(body.Device, true)
+		if err != nil {
+			if errors.Is(err, domain.ErrInvalidDevice) {
+				apiError(c.Writer, 400, "invalid_device")
+			} else {
+				apiError(c.Writer, 500, "storage_error")
+			}
+			return
+		}
+		writeJSON(c.Writer, 200, map[string]any{"deleted": count, "device_deleted": true})
+	})
 	admin.POST("/test", func(c *gin.Context) {
 		var body struct {
 			Device   string `json:"device_id"`

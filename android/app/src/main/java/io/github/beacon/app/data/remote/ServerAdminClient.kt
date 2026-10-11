@@ -16,6 +16,10 @@ interface ServerAdministration {
 
     fun binding(name: String): JSONObject
 
+    fun clearMessages(): JSONObject = throw UnsupportedOperationException()
+
+    fun deleteDevice(id: String): JSONObject = throw UnsupportedOperationException()
+
     fun revokeDevice(id: String): JSONObject
 
     fun test(id: String, title: String, body: String): JSONObject
@@ -38,6 +42,10 @@ class ServerAdminClient(
         TransportSettings(this.endpoint, token).validate(allowLoopback)
         require(!http.followRedirects && !http.followSslRedirects)
     }
+
+    override fun clearMessages(): JSONObject = request("messages/clear", JSONObject())
+
+    override fun deleteDevice(id: String): JSONObject = request("devices/delete", JSONObject().put("device_id", id))
 
     override fun overview(): JSONObject = request("overview")
 

@@ -95,7 +95,7 @@ fun BeaconApp(
                 welcome.edit().putBoolean("welcome_shown", true).apply()
                 if (runtimeState.configuredEndpoint.isBlank() && ui.pendingNotification == null) {
                     ui.page = 1
-                    ui.settingsScreen = SettingsScreen.HOME
+                    ui.navigateSettings(SettingsScreen.HOME)
                 }
             }
         }
@@ -216,7 +216,7 @@ fun BeaconApp(
                         onClick = {
                             ui.pendingReceiveMode = null
                             ui.page = 1
-                            ui.settingsScreen = SettingsScreen.RECEPTION
+                            ui.navigateSettings(SettingsScreen.RECEPTION)
                         }
                     ) {
                         BeaconText(stringResource(R.string.receive_return_save))
@@ -265,7 +265,7 @@ fun BeaconApp(
                 events.collect { event ->
                     settingsMotion.seekTo(
                         settingsGestureFraction(event.progress),
-                        SettingsScreen.HOME,
+                        ui.settingsBackTarget,
                     )
                 }
                 navigate(1)
@@ -352,8 +352,7 @@ fun BeaconApp(
                             ui.connectionForm.connectionError = ""
                             ui.connectionForm.connectionEdited = false
                             ui.pendingPage = null
-                            ui.page = destination
-                            ui.settingsScreen = SettingsScreen.HOME
+                            ui.finishNavigation(destination)
                         }
                     ) {
                         BeaconText(stringResource(R.string.ui_discard_and_leave_action))
@@ -533,13 +532,12 @@ fun BeaconApp(
                                                                 runtimeState.serverChecking
                                                         ) {
                                                             ui.page = 1
-                                                            ui.settingsScreen =
-                                                                SettingsScreen.CONNECTION
+                                                            ui.navigateSettings(SettingsScreen.CONNECTION)
                                                         } else ui.receiveModesOpen = true
                                                     },
                                                     onLongClick = {
                                                         ui.page = 1
-                                                        ui.settingsScreen =
+                                                        ui.navigateSettings(
                                                             if (
                                                                 runtimeState.configuredEndpoint
                                                                     .isBlank() ||
@@ -547,7 +545,7 @@ fun BeaconApp(
                                                                         false
                                                             )
                                                                 SettingsScreen.CONNECTION
-                                                            else SettingsScreen.RECEPTION
+                                                            else SettingsScreen.RECEPTION)
                                                     },
                                                     serverIssue =
                                                         runtimeState.connectionSummaryLoaded &&
@@ -690,7 +688,7 @@ fun BeaconApp(
                             }
                         val renderBar: @Composable (Int) -> Unit = { barPage ->
                             if (barPage == 1 && detail == null)
-                                BeaconSettingsTransition(settingsTransition) { screen ->
+                                BeaconSettingsTransition(settingsTransition, ui.settingsNavigatingBack || settingsMotion.targetState == ui.settingsBackTarget) { screen ->
                                     renderSettingsBar(barPage, screen)
                                 }
                             else renderSettingsBar(barPage, ui.settingsScreen)
@@ -784,7 +782,7 @@ fun BeaconApp(
                                         },
                                         onConnectionSettings = {
                                             ui.page = 1
-                                            ui.settingsScreen = SettingsScreen.CONNECTION
+                                            ui.navigateSettings(SettingsScreen.CONNECTION)
                                         },
                                         onEnterSelection = { key ->
                                             if (!ui.selectionMode) {
@@ -814,7 +812,7 @@ fun BeaconApp(
                                     )
 
                                 else ->
-                                    BeaconSettingsTransition(settingsTransition) {
+                                    BeaconSettingsTransition(settingsTransition, ui.settingsNavigatingBack || settingsMotion.targetState == ui.settingsBackTarget) {
                                         displayedSettingsScreen ->
                                         SettingsPage(
                                             displayedSettingsScreen,
@@ -829,7 +827,7 @@ fun BeaconApp(
                                             notificationHint,
                                             ui.uiStyle,
                                             ui.themeMode,
-                                            onNavigate = { ui.settingsScreen = it },
+                                            onNavigate = { ui.navigateSettings(it) },
                                             receivePlan = ui.receivePlan,
                                             receptionForm = ui.receptionForm,
                                             onReceivePlanChange = { actions.receivePlan(it) },

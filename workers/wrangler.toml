@@ -8,7 +8,7 @@ keep_vars = true
 [vars]
 # Stable identity for the single self-hosted instance. Never change after binding.
 BEACON_INSTANCE = "default"
-HISTORY_RETENTION_DAYS = "30"
+HISTORY_RETENTION_DAYS = "1"
 
 [[durable_objects.bindings]]
 name = "BEACON"

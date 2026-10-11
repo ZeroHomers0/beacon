@@ -1,8 +1,10 @@
 package store
 
 import (
+	"beacon.local/server/internal/domain"
 	"database/sql"
 	"fmt"
+	"time"
 )
 
 func migrateMessageSchema(db *sql.DB) error {
@@ -150,6 +152,11 @@ func migrateMessageSchema(db *sql.DB) error {
 		return err
 	}
 	if _, err = tx.Exec("CREATE INDEX IF NOT EXISTS expired_receipts_expiry ON expired_receipts(expires_at)"); err != nil {
+		return err
+	}
+	// Legacy cleanup receipts used zero for permanent retention. Give existing IDs
+	// one full retry window on upgrade, without refreshing it on later opens.
+	if _, err = tx.Exec("UPDATE confirmed_receipts SET expires_at=? WHERE expires_at=0", time.Now().Add(domain.PendingLifetime+domain.ReceiptLifetime+domain.ReceiptGrace).UnixMilli()); err != nil {
 		return err
 	}
 	if _, err = tx.Exec("CREATE INDEX IF NOT EXISTS confirmed_receipts_expiry ON confirmed_receipts(expires_at)"); err != nil {

@@ -18,13 +18,14 @@ export class BeaconInstance extends DurableObject<Env> implements Transport {
   private retention: number;
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
-    this.retention = Number(env.HISTORY_RETENTION_DAYS ?? "30");
+    this.retention = Number(env.HISTORY_RETENTION_DAYS ?? "1");
     if (
       !Number.isInteger(this.retention) ||
       this.retention < 0 ||
       this.retention > 3650
     )
       throw new Error("invalid retention configuration");
+    this.retention = Math.min(30, Math.max(1, this.retention));
     this.store = new MessageStore(ctx.storage);
     this.api = new API(this.store, this, env.ADMIN_TOKEN);
     ctx.blockConcurrencyWhile(async () => {

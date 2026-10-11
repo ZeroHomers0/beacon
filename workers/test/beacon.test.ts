@@ -670,3 +670,23 @@ describe("Beacon protocol and durable delivery", () => {
     });
   });
 });
+
+
+it("admin clear deletes pending messages and receipts, revoked device deletion is isolated", async () => {
+  const a = await bind("a"), b = await bind("b");
+  const m = await push(a.push_key);
+  await push(b.push_key);
+  expect((await call("/api/admin/devices/delete", admin, {device_id:a.device_id})).status).toBe(400);
+  expect((await call("/api/admin/messages/clear", a.receive_token, {})).status).toBe(401);
+  expect((await call("/api/v1/messages/ack", a.receive_token, {ids:[m.id]})).status).toBe(200);
+  await rows("INSERT INTO confirmed_receipts VALUES(?,?,?)",a.device_id,m.id,Date.now()+DAY);
+  await call("/api/admin/revoke",admin,{device_id:a.device_id});
+  expect((await call("/api/admin/devices/delete",admin,{device_id:a.device_id})).status).toBe(200);
+  expect(await rows("SELECT id FROM confirmed_receipts")).toHaveLength(0);
+  expect(await rows("SELECT id FROM devices")).toHaveLength(1);
+  expect(await rows("SELECT id FROM messages")).toHaveLength(1);
+  expect((await call("/api/admin/messages/clear",admin,{})).status).toBe(200);
+  expect(await rows("SELECT id FROM messages")).toHaveLength(0);
+  expect(await rows("SELECT message_seq FROM publish_outbox")).toHaveLength(0);
+  await push(b.push_key);
+});

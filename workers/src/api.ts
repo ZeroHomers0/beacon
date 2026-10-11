@@ -284,6 +284,8 @@ export class API {
       });
     }
     const routes: Record<string, string[]> = {
+      "/api/admin/messages/clear": [],
+      "/api/admin/devices/delete": ["device_id"],
       "/api/admin/binding": ["name"],
       "/api/admin/revoke": ["device_id"],
       "/api/admin/test": ["device_id", "title", "subtitle", "body"],
@@ -298,6 +300,11 @@ export class API {
       path.endsWith("/binding") ? credential.slice(0, 32) : credential,
     );
     await this.transport.arm();
+    if (path === "/api/admin/messages/clear") return json({ deleted: this.store.clearMessages() });
+    if (path === "/api/admin/devices/delete") {
+      if (!validID(payload.device_id)) reject(400, "invalid_device");
+      return json({ deleted: this.store.clearMessages(payload.device_id, true), device_deleted: true });
+    }
     if (path.endsWith("/binding"))
       return json(
         this.store.createBinding(

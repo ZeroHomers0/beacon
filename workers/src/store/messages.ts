@@ -165,6 +165,23 @@ export class MessageStore extends IdentityStore implements Repository {
         seq,
       );
   }
+  clearMessages(device = "", deleteDevice = false): number {
+    return this.storage.transactionSync(() => {
+      if (deleteDevice && !this.first("SELECT id FROM devices WHERE id=? AND revoked=1", device)) reject(400, "invalid_device");
+      const where = device ? " WHERE device=?" : "";
+      const args = device ? [device] : [];
+      const count = Number(this.first("SELECT count(*) AS n FROM messages" + where, ...args)!.n);
+      for (const table of ["confirmed_receipts", "expired_receipts", "messages"])
+        this.rows("DELETE FROM " + table + where, ...args);
+      if (deleteDevice) {
+        for (const table of ["applications", "session_disconnects"])
+          this.rows("DELETE FROM " + table + " WHERE device=?", device);
+        this.rows("DELETE FROM devices WHERE id=?", device);
+        this.rows("DELETE FROM rate_buckets WHERE key=?", `device:${device}`);
+      }
+      return count;
+    });
+  }
   stats() {
     const counts = this
       .first(`SELECT count(*) AS messages,coalesce(sum(acked=0),0) AS pending,coalesce(sum(acked=1),0) AS confirmed,
