@@ -19,12 +19,12 @@ jobs:
         with:
           go-version-file: server/go.mod
           cache-dependency-path: server/go.sum
-      - name: Test server and SQLite queries
+      - name: Check and build server
         working-directory: server
         run: |
           test -z "$(gofmt -l cmd internal)"
-          go test -count=1 ./...
           go vet ./...
+          go build ./...
       - name: Build Linux binaries
         working-directory: server
         run: |
@@ -87,7 +87,7 @@ jobs:
           printf '%s' "$RELEASE_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/beacon-release.jks"
           chmod 600 "$RUNNER_TEMP/beacon-release.jks"
           echo "BEACON_RELEASE_KEYSTORE_FILE=$RUNNER_TEMP/beacon-release.jks" >> "$GITHUB_ENV"
-      - name: Build, test and lint Android
+      - name: Build and lint Android
         working-directory: android
         env:
           BEACON_RELEASE_KEY_ALIAS: ${{ secrets.BEACON_RELEASE_KEY_ALIAS }}
@@ -95,7 +95,7 @@ jobs:
           BEACON_RELEASE_KEY_PASSWORD: ${{ secrets.BEACON_RELEASE_KEY_PASSWORD }}
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon --console=plain :app:assembleDebug :app:assembleRelease :app:lintDebug :app:testDebugUnitTest :app:assembleDebugAndroidTest
+          ./gradlew --no-daemon --console=plain :app:assembleDebug :app:assembleRelease :app:lintDebug
       - name: Collect the release APK
         run: |
           mkdir -p dist/android

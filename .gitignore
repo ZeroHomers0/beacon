@@ -32,3 +32,11 @@ server/beacon-server
 .vscode/
 .agents/
 .codex/
+# Test sources stay on the local machine; they are not part of the published repository.
+android/app/src/test/
+android/app/src/androidTest/
+server/**/*_test.go
+workers/test/
+workers/vitest.config.ts
+workers/tools/test.mjs
+workers/tools/protocol.mjs
