@@ -7,8 +7,6 @@ import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -18,9 +16,6 @@ import io.github.beacon.app.BuildConfig
 import io.github.beacon.app.R
 import io.github.beacon.app.ui.components.BeaconActionButton
 import io.github.beacon.app.ui.components.BeaconText
-import io.github.beacon.app.ui.components.DiagnosticRow
-import io.github.beacon.app.ui.components.SettingsHint
-import io.github.beacon.app.ui.components.UiSection
 import io.github.beacon.app.ui.icons.BeaconIcons
 
 internal fun LazyListScope.aboutSettingsItems(
@@ -54,42 +49,24 @@ internal fun LazyListScope.aboutSettingsItems(
         }
     }
     item {
-        // Every entry here is a labelled fact; the tagline above the card carries the marketing
-        // line, so the card title stays a heading instead of a sentence.
-        UiSection(stringResource(R.string.settings_current_support_title)) {
-            SettingsHint(stringResource(R.string.settings_receive_benefit_hint))
-            DiagnosticRow(
-                resources.getString(R.string.settings_about_transport_title),
-                resources.getString(R.string.settings_about_transport_desc),
-            )
-            DiagnosticRow(
-                resources.getString(R.string.ui_power_saving_mode),
-                resources.getString(R.string.settings_about_background_desc),
-            )
-            DiagnosticRow(
-                resources.getString(R.string.settings_about_build),
-                BuildConfig.VERSION_CODE.toString(),
-            )
-            SettingsHint(resources.getString(R.string.settings_about_receive_hint))
-            BeaconActionButton(
-                resources.getString(R.string.settings_about_project),
-                BeaconIcons.Cloud,
-                Modifier.fillMaxWidth(),
-            ) {
-                try {
-                    context.startActivity(
-                        Intent(
-                            Intent.ACTION_VIEW,
-                            android.net.Uri.parse("https://github.com/ZeroHomers0/beacon"),
-                        )
+        // The page stays deliberately short: identity, version and the project link. Anything
+        // else belongs to the settings page that owns the feature.
+        BeaconActionButton(
+            resources.getString(R.string.settings_about_project),
+            BeaconIcons.Cloud,
+            Modifier.fillMaxWidth(),
+        ) {
+            try {
+                context.startActivity(
+                    Intent(
+                        Intent.ACTION_VIEW,
+                        android.net.Uri.parse("https://github.com/ZeroHomers0/beacon"),
                     )
-                } catch (_: android.content.ActivityNotFoundException) {
-                    onOperationDetails(
-                        resources.getString(R.string.settings_about_browser_unavailable)
-                    )
-                } catch (_: SecurityException) {
-                    onOperationDetails(resources.getString(R.string.settings_about_browser_blocked))
-                }
+                )
+            } catch (_: android.content.ActivityNotFoundException) {
+                onOperationDetails(resources.getString(R.string.settings_about_browser_unavailable))
+            } catch (_: SecurityException) {
+                onOperationDetails(resources.getString(R.string.settings_about_browser_blocked))
             }
         }
     }

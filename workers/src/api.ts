@@ -288,7 +288,7 @@ export class API {
       "/api/admin/devices/delete": ["device_id"],
       "/api/admin/binding": ["name"],
       "/api/admin/revoke": ["device_id"],
-      "/api/admin/test": ["device_id", "title", "subtitle", "body"],
+      "/api/admin/test": ["device_id", "title", "subtitle", "body", "priority"],
       "/api/admin/applications": ["device_id", "name", "default_priority"],
       "/api/admin/applications/revoke": ["id"],
     };
@@ -331,19 +331,20 @@ export class API {
         this.store.createApplication(
           payload.device_id,
           payload.name,
-          priority(payload.default_priority, 0),
+          priority(payload.default_priority, 5),
           credentialHash,
           credential,
         ),
         201,
       );
     this.store.active(payload.device_id);
+    const selected = priority(payload.priority, 5);
     const m = this.store.save(
-      { device: payload.device_id, application: "", priority: 5 },
+      { device: payload.device_id, application: "", priority: selected },
       text(payload.title),
       text(payload.subtitle),
       text(payload.body),
-      5,
+      selected,
       "",
       Date.now(),
     );

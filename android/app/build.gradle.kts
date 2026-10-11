@@ -65,6 +65,21 @@ android {
         compose = true
         buildConfig = true
     }
+    // Every AndroidX AAR ships a byte-identical Apache-2.0 LICENSE.txt under
+    // META-INF/androidx/<group>/<artifact>/. Shipping six copies only bloats the APK, so the
+    // duplicates are dropped and the androidx.annotation copy below keeps the text distributed.
+    packaging {
+        resources {
+            excludes +=
+                listOf(
+                    "META-INF/androidx/collection/collection/LICENSE.txt",
+                    "META-INF/androidx/collection/collection-ktx/LICENSE.txt",
+                    "META-INF/androidx/lifecycle/lifecycle-common/LICENSE.txt",
+                    "META-INF/androidx/lifecycle/lifecycle-common-java8/LICENSE.txt",
+                    "META-INF/androidx/room/room-common/LICENSE.txt",
+                )
+        }
+    }
 }
 
 dependencies {

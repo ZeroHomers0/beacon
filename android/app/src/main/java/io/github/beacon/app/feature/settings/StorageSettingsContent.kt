@@ -276,9 +276,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                 }
             },
             dismissButton = {
-                BeaconOutlinedButton(onClick = { clearAllStage = 0 }) {
-                    BeaconText(stringResource(R.string.action_cancel))
-                }
+                BeaconCancelButton(onClick = { clearAllStage = 0 })
             },
         )
     if (custom)
@@ -289,27 +287,16 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
             }
         }
     confirmation?.let { snapshot ->
-        BeaconAlertDialog(
-            onDismissRequest = { confirmation = null },
-            title = { BeaconText(stringResource(R.string.storage_confirm_title)) },
-            text = {
-                BeaconText(stringResource(R.string.storage_confirm_message, snapshot.planned))
-            },
-            confirmButton = {
-                BeaconButton(
-                    onClick = {
-                        confirmation = null
-                        actions.applyCleanup(snapshot.token)
-                    },
-                    enabled = !state.messageBusy && settingsLoaded,
-                ) {
-                    BeaconText(stringResource(R.string.storage_clean_action))
-                }
-            },
-            dismissButton = {
-                BeaconOutlinedButton(onClick = { confirmation = null }) {
-                    BeaconText(stringResource(R.string.action_cancel))
-                }
+        BeaconConfirmDialog(
+            title = stringResource(R.string.storage_confirm_title),
+            description = stringResource(R.string.storage_confirm_message, snapshot.planned),
+            confirmText = stringResource(R.string.storage_clean_action),
+            danger = false,
+            enabled = !state.messageBusy && settingsLoaded,
+            onDismiss = { confirmation = null },
+            onConfirm = {
+                confirmation = null
+                actions.applyCleanup(snapshot.token)
             },
         )
     }

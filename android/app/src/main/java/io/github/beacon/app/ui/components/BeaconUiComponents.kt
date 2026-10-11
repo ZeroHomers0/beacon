@@ -5,6 +5,10 @@ package io.github.beacon.app.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -109,6 +113,26 @@ fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
     }
 }
 
+/**
+ * The scroll container every settings surface uses: item spacing and keyboard avoidance are fixed
+ * here so no page can drift away from the others.
+ */
+@Composable
+fun BeaconSettingsList(
+    state: LazyListState,
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+    content: LazyListScope.() -> Unit,
+) {
+    LazyColumn(
+        state = state,
+        modifier = modifier.imePadding(),
+        contentPadding = contentPadding,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        content = content,
+    )
+}
+
 @Composable
 fun SettingsRow(title: String, subtitle: String, icon: ImageVector, onClick: () -> Unit) =
     SettingsRow(title, subtitle, icon, MaterialTheme.colorScheme.onSurface, onClick)
@@ -120,13 +144,16 @@ fun SettingsRow(
     icon: ImageVector,
     iconTint: Color,
     onClick: () -> Unit,
+    badge: Boolean = false,
 ) {
     if (LocalBeaconUiStyle.current == BeaconUiStyle.MIUIX) {
         top.yukonga.miuix.kmp.extra.SuperArrow(
             title,
             summary = subtitle.takeIf { it.isNotBlank() },
             onClick = onClick,
-            startAction = { Icon(icon, null, Modifier.padding(end = 8.dp), tint = iconTint) },
+            startAction = {
+                BadgedIcon(icon, iconTint, badge, Modifier.padding(end = 8.dp))
+            },
         )
     } else {
         Surface(onClick = onClick, color = Color.Transparent) {
@@ -135,7 +162,7 @@ fun SettingsRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                Icon(icon, null, tint = iconTint)
+                BadgedIcon(icon, iconTint, badge)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     BeaconText(title, style = MaterialTheme.typography.titleMedium)
                     if (subtitle.isNotBlank())
@@ -148,6 +175,26 @@ fun SettingsRow(
                 Icon(BeaconIcons.Arrow, null)
             }
         }
+    }
+}
+
+/**
+ * The leading icon with an optional dot marking something new on this row.
+ *
+ * The dot sits inside the icon's own bounds, so it needs no extra space and cannot be clipped by
+ * either style's row.
+ */
+@Composable
+private fun BadgedIcon(icon: ImageVector, tint: Color, badge: Boolean, modifier: Modifier = Modifier) {
+    Box(modifier.size(24.dp)) {
+        Icon(icon, null, tint = tint)
+        if (badge)
+            Box(
+                Modifier.align(Alignment.TopEnd)
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.error)
+            )
     }
 }
 

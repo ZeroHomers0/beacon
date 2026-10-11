@@ -118,15 +118,13 @@ internal fun CredentialRotationDialog(
             }
         },
         dismissButton = {
-            BeaconOutlinedButton(
+            BeaconCancelButton(
                 enabled = !state.messageBusy,
                 onClick = {
                     payload = ""
                     dismiss()
                 },
-            ) {
-                BeaconText(stringResource(R.string.action_cancel))
-            }
+            )
         },
     )
 }

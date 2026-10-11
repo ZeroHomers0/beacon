@@ -38,6 +38,7 @@ class BeaconUiState(
 
     val connectionForm = ConnectionFormState()
     val receptionForm = io.github.beacon.app.feature.settings.ReceptionFormState()
+    val updateState = io.github.beacon.app.feature.settings.UpdateCheckState()
     var pendingReceiveMode by mutableStateOf<io.github.beacon.app.domain.model.ReceiveMode?>(null)
 
     private val uiStyleState = mutableStateOf(styleStore.load())

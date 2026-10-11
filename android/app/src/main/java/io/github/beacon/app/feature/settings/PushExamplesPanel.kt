@@ -1,8 +1,5 @@
 package io.github.beacon.app.feature.settings
 
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.os.PersistableBundle
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -48,17 +45,13 @@ fun PushExamplesPanel(actions: RuntimeActions, enabled: Boolean, endpoint: Strin
                     }
                         .getOrNull()
                     if (example != null) {
-                        val clip =
-                            ClipData.newPlainText(
+                        copied =
+                            copyToClipboard(
+                                context,
                                 resources.getString(R.string.settings_clipboard_push_example),
                                 example,
+                                sensitive = true,
                             )
-                        clip.description.extras =
-                            PersistableBundle().apply {
-                                putBoolean("android.content.extra.IS_SENSITIVE", true)
-                            }
-                        context.getSystemService(ClipboardManager::class.java).setPrimaryClip(clip)
-                        copied = true
                     }
                 }
             }

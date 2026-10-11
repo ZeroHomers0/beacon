@@ -11,7 +11,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import io.github.beacon.app.R
 
 /**
  * Single-action dialogs pass no [dismissButton]; the confirm button then spans the full width
@@ -63,6 +65,56 @@ fun BeaconActionPair(dismiss: @Composable () -> Unit, confirm: @Composable () ->
             Box(Modifier.weight(1f), propagateMinConstraints = true) { dismiss() }
             Box(Modifier.weight(1f), propagateMinConstraints = true) { confirm() }
         }
+    }
+}
+
+/**
+ * The confirmation dialog the whole app shares: a title, one line of explanation and a
+ * cancel/confirm pair. The confirm label defaults to the title so the common case reads as
+ * 「删除设备 / 删除设备」 instead of inventing a second wording.
+ *
+ * [danger] fills the confirm button with the error container and is reserved for actions that
+ * cannot be undone. [enabled] and [dismissEnabled] stay separate because a dialog that keeps the
+ * user inside while a call is in flight disables both, while one whose confirm is simply not
+ * applicable yet still allows a plain dismissal. Anything richer than a single sentence still
+ * builds on [BeaconAlertDialog] directly — a two-stage confirmation must not be flattened into one
+ * step.
+ */
+@Composable
+fun BeaconConfirmDialog(
+    title: String,
+    description: String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+    confirmText: String = title,
+    danger: Boolean = true,
+    enabled: Boolean = true,
+    dismissEnabled: Boolean = true,
+    dismissText: String = stringResource(R.string.action_cancel),
+) {
+    BeaconAlertDialog(
+        onDismissRequest = onDismiss,
+        title = { BeaconText(title) },
+        text = { SettingsHint(description) },
+        confirmButton = {
+            if (danger) BeaconDangerButton(onConfirm, enabled = enabled) { BeaconText(confirmText) }
+            else BeaconButton(onConfirm, enabled = enabled) { BeaconText(confirmText) }
+        },
+        dismissButton = {
+            BeaconOutlinedButton(onDismiss, enabled = dismissEnabled) { BeaconText(dismissText) }
+        },
+    )
+}
+
+/** The cancel half of [BeaconConfirmDialog], for dialogs that need a custom body. */
+@Composable
+fun BeaconCancelButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+) {
+    BeaconOutlinedButton(onClick, modifier, enabled) {
+        BeaconText(stringResource(R.string.action_cancel))
     }
 }
 

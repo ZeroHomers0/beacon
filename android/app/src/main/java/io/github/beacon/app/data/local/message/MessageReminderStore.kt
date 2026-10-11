@@ -79,14 +79,21 @@ internal class MessageReminderStore(private val helper: SQLiteOpenHelper) {
     }
 
     /** A visible notification was handled: mark read and consume its reminder atomically. */
-    fun readFromNotification(key: MessageKey): Int {
-        key.validate()
+    fun readFromNotification(key: MessageKey): Int = readFromNotification(listOf(key))
+
+    /** A summary notification stands for a whole batch; one transaction keeps its rows consistent. */
+    fun readFromNotification(keys: List<MessageKey>): Int {
+        if (keys.isEmpty()) return 0
+        keys.forEach { it.validate() }
         val db = helper.writableDatabase
         db.beginTransaction()
         try {
-            val changed =
-                updateStatement(db, MessageManagementSql.READ, arrayOf(1L, key.server, key.id, 1L))
-            db.execSQL(MessageManagementSql.CANCEL_NOTICE, arrayOf(key.server, key.id))
+            var changed = 0
+            keys.forEach { key ->
+                changed +=
+                    updateStatement(db, MessageManagementSql.READ, arrayOf(1L, key.server, key.id, 1L))
+                db.execSQL(MessageManagementSql.CANCEL_NOTICE, arrayOf(key.server, key.id))
+            }
             db.setTransactionSuccessful()
             return changed
         } finally {

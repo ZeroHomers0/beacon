@@ -27,7 +27,7 @@ import io.github.beacon.app.ipc.RuntimeActions
 import io.github.beacon.app.ui.components.BeaconActionButton
 import io.github.beacon.app.ui.components.BeaconActionPair
 import io.github.beacon.app.ui.components.BeaconButton
-import io.github.beacon.app.ui.components.BeaconOutlinedButton
+import io.github.beacon.app.ui.components.BeaconCancelButton
 import io.github.beacon.app.ui.components.BeaconText
 import io.github.beacon.app.ui.components.BeaconTextField
 import io.github.beacon.app.ui.components.DiagnosticRow
@@ -36,6 +36,7 @@ import io.github.beacon.app.ui.components.SettingsHint
 import io.github.beacon.app.ui.components.SettingsScreen
 import io.github.beacon.app.ui.components.UiSection
 import io.github.beacon.app.ui.components.formatMessageTime
+import io.github.beacon.app.ui.components.copyToClipboard
 import io.github.beacon.app.ui.icons.BeaconIcons
 
 internal fun LazyListScope.connectionSettingsItems(
@@ -164,7 +165,7 @@ internal fun LazyListScope.connectionSettingsItems(
                 )
             BeaconActionPair(
                 dismiss = {
-                    BeaconOutlinedButton(
+                    BeaconCancelButton(
                         modifier = Modifier.heightIn(min = 48.dp),
                         enabled = !busy && connectionDirty,
                         onClick = {
@@ -174,9 +175,7 @@ internal fun LazyListScope.connectionSettingsItems(
                             connectionForm.connectionError = ""
                             focus.clearFocus()
                         },
-                    ) {
-                        BeaconText(stringResource(R.string.action_cancel))
-                    }
+                    )
                 },
                 confirm = {
                     BeaconButton(
@@ -224,22 +223,13 @@ internal fun LazyListScope.connectionSettingsItems(
             ) {
                 connectionForm.copiedPushKey = false
                 actions.copyPushKey { address ->
-                    val clip =
-                        android.content.ClipData.newPlainText(
+                    connectionForm.copiedPushKey =
+                        copyToClipboard(
+                            context,
                             resources.getString(R.string.settings_clipboard_push_key),
                             address,
+                            sensitive = true,
                         )
-                    clip.description.extras =
-                        android.os.PersistableBundle().apply {
-                            putBoolean("android.content.extra.IS_SENSITIVE", true)
-                        }
-                    val written = runCatching {
-                        context
-                            .getSystemService(android.content.ClipboardManager::class.java)
-                            .setPrimaryClip(clip)
-                    }
-                        .isSuccess
-                    connectionForm.copiedPushKey = written
                 }
             }
             // Copying an opaque key gives no visible result, so the page confirms it in place.

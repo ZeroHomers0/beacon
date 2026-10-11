@@ -1,7 +1,5 @@
 package io.github.beacon.app.feature.diagnostics
 
-import android.content.ClipData
-import android.content.ClipboardManager
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -32,9 +30,7 @@ internal fun RuntimeEventPanel(connected: Boolean, actions: RuntimeActions) {
     val copiedText = stringResource(R.string.events_copied)
     val clipLabel = stringResource(R.string.events_clip_label)
     fun copyRecords() {
-        context
-            .getSystemService(ClipboardManager::class.java)
-            .setPrimaryClip(ClipData.newPlainText(clipLabel, text.export(events)))
+        copyToClipboard(context, clipLabel, text.export(events), sensitive = true)
         feedback = copiedText
     }
     fun refresh() {
@@ -134,40 +130,32 @@ internal fun RuntimeEventPanel(connected: Boolean, actions: RuntimeActions) {
             },
         )
     if (confirmClear)
-        BeaconAlertDialog(
-            onDismissRequest = { if (!busy) confirmClear = false },
-            title = { BeaconText(stringResource(R.string.events_clear)) },
-            text = { BeaconText(stringResource(R.string.events_clear_note)) },
-            confirmButton = {
-                BeaconButton(
-                    enabled = connected && !busy,
-                    onClick = {
-                        val capture = ++generation
-                        busy = true
-                        actions.clearEventLog(
-                            onFailure = {
-                                if (capture == generation) {
-                                    busy = false
-                                    feedback = failureText
-                                }
-                            }
-                        ) {
-                            if (capture == generation) {
-                                busy = false
-                                events = emptyList()
-                                loaded = true
-                                confirmClear = false
-                                feedback = clearedText
-                            }
+        BeaconConfirmDialog(
+            title = stringResource(R.string.events_clear),
+            description = stringResource(R.string.events_clear_note),
+            confirmText = stringResource(R.string.events_confirm_clear),
+            danger = false,
+            enabled = connected && !busy,
+            dismissEnabled = !busy,
+            onDismiss = { if (!busy) confirmClear = false },
+            onConfirm = {
+                val capture = ++generation
+                busy = true
+                actions.clearEventLog(
+                    onFailure = {
+                        if (capture == generation) {
+                            busy = false
+                            feedback = failureText
                         }
-                    },
+                    }
                 ) {
-                    BeaconText(stringResource(R.string.events_confirm_clear))
-                }
-            },
-            dismissButton = {
-                BeaconOutlinedButton(enabled = !busy, onClick = { confirmClear = false }) {
-                    BeaconText(stringResource(R.string.action_cancel))
+                    if (capture == generation) {
+                        busy = false
+                        events = emptyList()
+                        loaded = true
+                        confirmClear = false
+                        feedback = clearedText
+                    }
                 }
             },
         )

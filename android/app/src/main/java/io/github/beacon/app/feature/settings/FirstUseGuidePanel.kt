@@ -1,6 +1,8 @@
 package io.github.beacon.app.feature.settings
 
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import io.github.beacon.app.R
@@ -29,7 +31,10 @@ fun FirstUseGuidePanel(
                 resources.getString(R.string.settings_guide_unbound)
             else resources.getString(R.string.settings_guide_bound),
         )
-        BeaconOutlinedButton(onClick = { onNavigate(SettingsScreen.CONNECTION) }) {
+        BeaconOutlinedButton(
+            onClick = { onNavigate(SettingsScreen.CONNECTION) },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
             BeaconText(stringResource(R.string.settings_guide_configure))
         }
         DiagnosticRow(
@@ -38,17 +43,24 @@ fun FirstUseGuidePanel(
                 resources.getString(R.string.settings_guide_notifications_allowed)
             else resources.getString(R.string.settings_guide_notifications_denied),
         )
-        BeaconOutlinedButton(onClick = { onNavigate(SettingsScreen.NOTIFICATIONS) }) {
+        BeaconOutlinedButton(
+            onClick = { onNavigate(SettingsScreen.NOTIFICATIONS) },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
             BeaconText(stringResource(R.string.settings_guide_check_notifications))
         }
         SettingsHint(stringResource(R.string.settings_guide_receive_hint))
-        BeaconOutlinedButton(onClick = { onNavigate(SettingsScreen.RECEPTION) }) {
+        BeaconOutlinedButton(
+            onClick = { onNavigate(SettingsScreen.RECEPTION) },
+            modifier = Modifier.fillMaxWidth(),
+        ) {
             BeaconText(stringResource(R.string.settings_guide_receive_action))
         }
         SettingsHint(stringResource(R.string.settings_guide_test_hint))
         BeaconButton(
             enabled = !busy && state.configuredEndpoint.isNotBlank(),
             onClick = { testConfirmation = true },
+            modifier = Modifier.fillMaxWidth(),
         ) {
             BeaconText(stringResource(R.string.settings_guide_test_action))
         }
@@ -60,6 +72,7 @@ fun FirstUseGuidePanel(
                 preferences.edit().putBoolean("completed", true).apply()
                 onNavigate(SettingsScreen.HOME)
             },
+            modifier = Modifier.fillMaxWidth(),
         ) {
             BeaconText(stringResource(R.string.settings_guide_done))
         }
@@ -83,9 +96,7 @@ fun FirstUseGuidePanel(
                 }
             },
             dismissButton = {
-                BeaconOutlinedButton(onClick = { testConfirmation = false }) {
-                    BeaconText(stringResource(R.string.action_cancel))
-                }
+                BeaconCancelButton(onClick = { testConfirmation = false })
             },
         )
 }

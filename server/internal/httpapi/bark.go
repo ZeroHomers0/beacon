@@ -26,18 +26,28 @@ func barkReply(w http.ResponseWriter, status int, message string, stored *domain
 	writeJSON(w, status, result)
 }
 
+// barkField reports whether Beacon honours a Bark parameter. Every other Bark
+// parameter (group, badge, ttl, action, ...) is silently dropped so third-party
+// software only has to change the key to reach Beacon.
 func barkField(key string) bool {
 	return key == "title" || key == "subtitle" || key == "body" || key == "device_key" || key == "level" || key == "sound" || key == "image" || key == "icon" || key == "url" || key == "ciphertext" || key == "iv"
 }
 
+// barkValues parses a Bark query string or urlencoded form. Unsupported
+// parameters are dropped, including a repeated unsupported parameter. A
+// repeated *supported* parameter stays a malformed request: the server cannot
+// tell which of the values the client meant, so the request is rejected.
 func barkValues(raw string) (map[string]string, error) {
-	values, err := url.ParseQuery(raw)
+	parsed, err := url.ParseQuery(raw)
 	if err != nil {
 		return nil, err
 	}
 	result := map[string]string{}
-	for key, values := range values {
-		if !barkField(key) || len(values) != 1 || !utf8.ValidString(values[0]) {
+	for key, values := range parsed {
+		if !barkField(key) {
+			continue
+		}
+		if len(values) != 1 || !utf8.ValidString(values[0]) {
 			return nil, errors.New("invalid fields")
 		}
 		result[key] = values[0]
@@ -45,6 +55,11 @@ func barkValues(raw string) (map[string]string, error) {
 	return result, nil
 }
 
+// barkJSON decodes a Bark JSON object. Unsupported parameters are dropped
+// whatever their JSON type; a non-string value for a parameter Beacon actually
+// honours is a genuine client bug and fails the request. A duplicate key is
+// rejected for every key: encoding/json would silently keep the last value, and
+// the Workers backend rejects it while parsing too.
 func barkJSON(raw []byte) (map[string]string, error) {
 	if !utf8.Valid(raw) {
 		return nil, errors.New("invalid utf8")
@@ -55,17 +70,23 @@ func barkJSON(raw []byte) (map[string]string, error) {
 		return nil, errors.New("invalid object")
 	}
 	values := map[string]string{}
+	seen := map[string]bool{}
 	for decoder.More() {
 		token, err = decoder.Token()
 		key, ok := token.(string)
-		if err != nil || !ok || !barkField(key) {
+		if err != nil || !ok || seen[key] {
 			return nil, errors.New("invalid field")
 		}
-		if _, exists := values[key]; exists {
-			return nil, errors.New("duplicate field")
-		}
+		seen[key] = true
+		supported := barkField(key)
 		var rawValue json.RawMessage
-		if err = decoder.Decode(&rawValue); err != nil || len(rawValue) == 0 || rawValue[0] != '"' {
+		if err = decoder.Decode(&rawValue); err != nil || len(rawValue) == 0 {
+			return nil, errors.New("invalid value")
+		}
+		if !supported {
+			continue
+		}
+		if rawValue[0] != '"' {
 			return nil, errors.New("invalid string")
 		}
 		var value string
@@ -196,23 +217,14 @@ func (a *API) bark(w http.ResponseWriter, r *http.Request) {
 		barkReply(w, http.StatusUnauthorized, "unauthorized", nil)
 		return
 	}
-	extension, err := validateBarkExtension(values)
-	if err != nil {
-		barkReply(w, http.StatusBadRequest, "invalid_presentation", nil)
-		return
-	}
-	if values["ciphertext"] != "" {
-		if values["title"] != "" || values["subtitle"] != "" || values["body"] != "" {
-			barkReply(w, http.StatusBadRequest, "invalid_message", nil)
-			return
-		}
+	extension, kept := validateBarkExtension(values)
+	// Bark's own semantics give ciphertext precedence: when it survives
+	// validation, any plaintext alongside it is ignored rather than rejected.
+	if kept["ciphertext"] != "" {
+		values["title"], values["subtitle"] = "", ""
 		values["body"] = "加密消息"
 	}
-	priority, err := barkPriority(values["level"], values["sound"])
-	if err != nil {
-		barkReply(w, http.StatusBadRequest, "invalid_presentation", nil)
-		return
-	}
+	priority := barkPriority(values["level"], values["sound"])
 	message, err := a.service.PushCredential(values["device_key"], values["title"], values["subtitle"], values["body"], &priority, extension)
 	if err != nil {
 		if errors.Is(err, domain.ErrInvalidMessage) {

@@ -169,15 +169,13 @@ fun HistoryArchivePanel(actions: RuntimeActions, busy: Boolean) {
                 }
             },
             dismissButton = {
-                BeaconOutlinedButton(
+                BeaconCancelButton(
                     onClick = {
                         operation = null
                         password = ""
                         confirmPassword = ""
                     }
-                ) {
-                    BeaconText(stringResource(R.string.action_cancel))
-                }
+                )
             },
         )
 }

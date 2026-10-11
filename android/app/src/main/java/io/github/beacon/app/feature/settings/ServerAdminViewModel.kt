@@ -59,8 +59,12 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
     private var job: Job? = null
     private var generation = 0
 
-    fun logout() {
-        generation++
+    /** The caller shows the outcome in the app-wide snackbar, so the message is consumed once. */
+    fun dismissFeedback() {
+        if (mutable.value.feedback != null) mutable.value = mutable.value.copy(feedback = null)
+    }
+
+    fun logout() {        generation++
         job?.cancel()
         session = null
         mutable.value = AdminUiState(feedback = R.string.admin_logged_out)
@@ -179,9 +183,9 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
             )
         }
 
-    fun test(device: String, title: String, body: String) =
+    fun test(device: String, title: String, body: String, priority: Int) =
         authenticated(R.string.admin_test_accepted) { client ->
-            client.test(device, title, body)
+            client.test(device, title, body, priority)
             mutable.value
         }
 

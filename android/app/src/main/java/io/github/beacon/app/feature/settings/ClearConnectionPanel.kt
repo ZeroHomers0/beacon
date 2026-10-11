@@ -50,29 +50,20 @@ fun ClearConnectionPanel(state: RuntimeState, actions: RuntimeActions, form: Con
             }
         }
     if (confirm)
-        BeaconAlertDialog(
-            onDismissRequest = { if (!state.messageBusy) confirm = false },
-            title = { BeaconText(stringResource(R.string.connection_clear)) },
-            text = { SettingsHint(stringResource(R.string.connection_clear_desc)) },
-            confirmButton = {
-                BeaconDangerButton(
-                    enabled = !state.messageBusy,
-                    onClick = {
-                        actions.clearConnection {
-                            form.endpoint = ""
-                            form.bindingCode = ""
-                            form.connectionEdited = false
-                            form.connectionError = ""
-                            confirm = false
-                        }
-                    },
-                ) {
-                    BeaconText(stringResource(R.string.connection_clear_confirm))
-                }
-            },
-            dismissButton = {
-                BeaconOutlinedButton(enabled = !state.messageBusy, onClick = { confirm = false }) {
-                    BeaconText(stringResource(R.string.action_cancel))
+        BeaconConfirmDialog(
+            title = stringResource(R.string.connection_clear),
+            description = stringResource(R.string.connection_clear_desc),
+            confirmText = stringResource(R.string.connection_clear_confirm),
+            enabled = !state.messageBusy,
+            dismissEnabled = !state.messageBusy,
+            onDismiss = { if (!state.messageBusy) confirm = false },
+            onConfirm = {
+                actions.clearConnection {
+                    form.endpoint = ""
+                    form.bindingCode = ""
+                    form.connectionEdited = false
+                    form.connectionError = ""
+                    confirm = false
                 }
             },
         )
@@ -107,9 +98,7 @@ internal fun DeviceRevocationDialog(state: RuntimeState, dismiss: () -> Unit, su
             }
         },
         dismissButton = {
-            BeaconOutlinedButton(enabled = !state.messageBusy, onClick = dismiss) {
-                BeaconText(stringResource(R.string.action_cancel))
-            }
+            BeaconCancelButton(enabled = !state.messageBusy, onClick = dismiss)
         },
     )
 }

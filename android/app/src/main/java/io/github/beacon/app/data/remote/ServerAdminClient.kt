@@ -22,7 +22,7 @@ interface ServerAdministration {
 
     fun revokeDevice(id: String): JSONObject
 
-    fun test(id: String, title: String, body: String): JSONObject
+    fun test(id: String, title: String, body: String, priority: Int): JSONObject
 
     fun application(id: String, name: String, priority: Int): JSONObject
 
@@ -55,8 +55,15 @@ class ServerAdminClient(
     override fun revokeDevice(id: String): JSONObject =
         request("revoke", JSONObject().put("device_id", id))
 
-    override fun test(id: String, title: String, body: String): JSONObject =
-        request("test", JSONObject().put("device_id", id).put("title", title).put("body", body))
+    override fun test(id: String, title: String, body: String, priority: Int): JSONObject =
+        request(
+            "test",
+            JSONObject()
+                .put("device_id", id)
+                .put("title", title)
+                .put("body", body)
+                .put("priority", priority),
+        )
 
     override fun application(id: String, name: String, priority: Int): JSONObject =
         request(

@@ -160,15 +160,13 @@ fun SettingsBackupPanel(actions: RuntimeActions, busy: Boolean) {
                 }
             },
             dismissButton = {
-                BeaconOutlinedButton(
+                BeaconCancelButton(
                     enabled = !busy,
                     onClick = {
                         importing = false
                         text = ""
                     },
-                ) {
-                    BeaconText(stringResource(R.string.action_cancel))
-                }
+                )
             },
         )
 }

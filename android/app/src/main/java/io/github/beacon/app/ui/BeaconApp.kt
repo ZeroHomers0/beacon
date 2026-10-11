@@ -3,9 +3,6 @@
 package io.github.beacon.app.ui
 
 import android.app.NotificationManager
-import android.content.ClipData
-import android.content.ClipboardManager
-import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.core.SeekableTransitionState
@@ -34,7 +31,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import io.github.beacon.app.BuildConfig
 import io.github.beacon.app.R
+import io.github.beacon.app.data.remote.ReleaseClient
 import io.github.beacon.app.domain.model.BeaconUiStyle
 import io.github.beacon.app.domain.model.MessageAction
 import io.github.beacon.app.domain.model.MessageKey
@@ -43,10 +42,13 @@ import io.github.beacon.app.feature.messages.MessageDetailScreen
 import io.github.beacon.app.feature.messages.MessagesPage
 import io.github.beacon.app.feature.settings.ReceiveModeDialog
 import io.github.beacon.app.feature.settings.SettingsPage
+import io.github.beacon.app.feature.settings.UpdateCheckDialog
+import io.github.beacon.app.feature.settings.UpdateCheckReport
 import io.github.beacon.app.ipc.RuntimeActions
 import io.github.beacon.app.ui.components.BeaconActionIcon
 import io.github.beacon.app.ui.components.BeaconAlertDialog
 import io.github.beacon.app.ui.components.BeaconButton
+import io.github.beacon.app.ui.components.BeaconConfirmDialog
 import io.github.beacon.app.ui.components.BeaconDropdownMenu
 import io.github.beacon.app.ui.components.BeaconDropdownMenuItem
 import io.github.beacon.app.ui.components.BeaconIconButton
@@ -64,10 +66,13 @@ import io.github.beacon.app.ui.components.SettingsScreen
 import io.github.beacon.app.ui.components.rememberBeaconBarBehavior
 import io.github.beacon.app.ui.components.settingsGestureFraction
 import io.github.beacon.app.ui.components.userOperationFeedback
+import io.github.beacon.app.ui.components.copyToClipboard
 import io.github.beacon.app.ui.icons.BeaconIcons
 import io.github.beacon.app.ui.theme.BeaconTheme
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Below this window height the list pages move their title into the sticky search row and shrink
@@ -140,11 +145,21 @@ fun BeaconApp(
             }
         }
     }
+    // One release check per entry to the foreground, and never two at once. It only decides whether
+    // the settings entry shows its dot: the announcement itself waits for the user to ask.
+    val updateState = ui.updateState
+    val checkForUpdate: suspend (Boolean) -> UpdateCheckReport = { manual ->
+        updateState.check(manual) {
+            withContext(Dispatchers.IO) { ReleaseClient.latest(BuildConfig.VERSION_NAME) }
+        }
+    }
+    val updateScope = rememberCoroutineScope()
     androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
         // The saved server is re-probed on every return to the foreground, but the toolbar entry
         // keeps the last verdict while it runs, so a healthy server never flashes "checking".
         actions.autoCheckServer()
         actions.refreshPolling()
+        updateScope.launch { checkForUpdate(false) }
     }
 
     BeaconTheme(ui.uiStyle, ui.themeMode) {
@@ -171,6 +186,8 @@ fun BeaconApp(
         val redactedDiagLabel = stringResource(R.string.ui_redacted_diag_title)
         val clipboardBodyLabel = stringResource(R.string.ui_widget_body_label)
         val clipboardTitleLabel = stringResource(R.string.ui_widget_title_label)
+        val updateLatestCopy = stringResource(R.string.settings_update_latest)
+        val updateFailedCopy = stringResource(R.string.settings_update_failed)
         ui.operationDetails?.let { details ->
             BeaconAlertDialog(
                 onDismissRequest = { ui.operationDetails = null },
@@ -188,12 +205,49 @@ fun BeaconApp(
                 },
             )
         }
-        LaunchedEffect(runtimeState.pollingState.config) {
+        // Only a check the user asked for reports back: the background one stays silent, and its
+        // dot is the whole message.
+        val checkUpdateNow: () -> Unit = {
+            updateScope.launch {
+                when (checkForUpdate(true)) {
+                    UpdateCheckReport.LATEST ->
+                        snackbar.showSnackbar(updateLatestCopy, duration = SnackbarDuration.Short)
+                    UpdateCheckReport.FAILED ->
+                        snackbar.showSnackbar(updateFailedCopy, duration = SnackbarDuration.Short)
+                    // AVAILABLE already opened the dialog; SILENT was never requested by the user.
+                    else -> Unit
+                }
+            }
+        }
+        ui.updateState.release?.let { release ->
+            if (ui.updateState.dialogOpen)
+                UpdateCheckDialog(
+                    state = ui.updateState,
+                    release = release,
+                    onDismiss = { ui.updateState.closeDialog() },
+                    onFeedback = { message ->
+                        updateScope.launch {
+                            snackbar.showSnackbar(message, duration = SnackbarDuration.Short)
+                        }
+                    },
+                )
+        }
+        // The reception page keeps one draft for the whole page, so it is seeded from both halves
+        // of the saved state. A draft that already matches the runtime is re-seeded too, which is
+        // how a completed save clears it; a half-finished save stays editable for a retry.
+        LaunchedEffect(
+            runtimeState.receivePlan,
+            runtimeState.pollingState.config,
+            runtimeState.receivePlanLoaded,
+        ) {
             if (
                 !ui.receptionForm.edited ||
-                    !ui.receptionForm.differsFrom(runtimeState.pollingState.config)
+                    !ui.receptionForm.differsFrom(
+                        runtimeState.pollingState.config,
+                        runtimeState.receivePlan,
+                    )
             )
-                ui.receptionForm.reset(runtimeState.pollingState.config)
+                ui.receptionForm.reset(runtimeState.pollingState.config, runtimeState.receivePlan)
         }
         ui.pendingReceiveMode?.let { mode ->
             BeaconAlertDialog(
@@ -203,7 +257,10 @@ fun BeaconApp(
                 confirmButton = {
                     BeaconButton(
                         onClick = {
-                            ui.receptionForm.reset(runtimeState.pollingState.config)
+                            ui.receptionForm.reset(
+                                runtimeState.pollingState.config,
+                                runtimeState.receivePlan,
+                            )
                             actions.receivePlan(ui.receivePlan.copy(mode = mode))
                             ui.pendingReceiveMode = null
                         }
@@ -231,7 +288,10 @@ fun BeaconApp(
                     if (
                         mode != ui.receivePlan.mode &&
                             ui.receptionForm.edited &&
-                            ui.receptionForm.differsFrom(runtimeState.pollingState.config)
+                            ui.receptionForm.differsFrom(
+                                runtimeState.pollingState.config,
+                                runtimeState.receivePlan,
+                            )
                     ) {
                         ui.pendingReceiveMode = mode
                     } else {
@@ -323,10 +383,8 @@ fun BeaconApp(
                 confirmButton = {
                     BeaconTextButton(
                         onClick = {
-                            (context.getSystemService(Context.CLIPBOARD_SERVICE)
-                                    as ClipboardManager)
-                                .setPrimaryClip(ClipData.newPlainText(redactedDiagLabel, report))
-                            ui.reportCopied = true
+                            ui.reportCopied =
+                                copyToClipboard(context, redactedDiagLabel, report, sensitive = true)
                         }
                     ) {
                         BeaconText(stringResource(R.string.diag_copy_report_action))
@@ -340,65 +398,43 @@ fun BeaconApp(
             )
         }
         ui.pendingPage?.let { destination ->
-            BeaconAlertDialog(
-                onDismissRequest = { ui.pendingPage = null },
-                title = { BeaconText(stringResource(R.string.ui_discard_connection_title)) },
-                text = { BeaconText(stringResource(R.string.ui_unsaved_connection_hint)) },
-                confirmButton = {
-                    BeaconButton(
-                        onClick = {
-                            ui.connectionForm.endpoint = runtimeState.configuredEndpoint
-                            ui.connectionForm.bindingCode = ""
-                            ui.connectionForm.connectionError = ""
-                            ui.connectionForm.connectionEdited = false
-                            ui.pendingPage = null
-                            ui.finishNavigation(destination)
-                        }
-                    ) {
-                        BeaconText(stringResource(R.string.ui_discard_and_leave_action))
-                    }
-                },
-                dismissButton = {
-                    BeaconTextButton(onClick = { ui.pendingPage = null }) {
-                        BeaconText(stringResource(R.string.ui_continue_editing_action))
-                    }
+            BeaconConfirmDialog(
+                title = stringResource(R.string.ui_discard_connection_title),
+                description = stringResource(R.string.ui_unsaved_connection_hint),
+                confirmText = stringResource(R.string.ui_discard_and_leave_action),
+                danger = false,
+                dismissText = stringResource(R.string.ui_continue_editing_action),
+                onDismiss = { ui.pendingPage = null },
+                onConfirm = {
+                    ui.connectionForm.endpoint = runtimeState.configuredEndpoint
+                    ui.connectionForm.bindingCode = ""
+                    ui.connectionForm.connectionError = ""
+                    ui.connectionForm.connectionEdited = false
+                    ui.pendingPage = null
+                    ui.finishNavigation(destination)
                 },
             )
         }
         ui.pendingDelete?.let { keys ->
-            BeaconAlertDialog(
-                onDismissRequest = { ui.pendingDelete = null },
-                title = {
-                    BeaconText(stringResource(R.string.msg_delete_confirm_title, keys.size))
-                },
-                text = {
-                    BeaconText(
-                        if (keys.size == 1) stringResource(R.string.ui_delete_undo_hint)
-                        else stringResource(R.string.ui_delete_multi_warning_hint)
-                    )
-                },
-                confirmButton = {
-                    BeaconButton(
-                        enabled = !runtimeState.messageBusy,
-                        onClick = {
-                            ui.pendingDelete = null
-                            actions.manageMessages(
-                                MessageAction.DELETE,
-                                keys,
-                                onComplete = {
-                                    ui.selectedKeys = emptyList()
-                                    uiScope.launch { messageScroll.scrollToItem(0) }
-                                },
-                            )
+            BeaconConfirmDialog(
+                title = stringResource(R.string.msg_delete_confirm_title, keys.size),
+                description =
+                    if (keys.size == 1) stringResource(R.string.ui_delete_undo_hint)
+                    else stringResource(R.string.ui_delete_multi_warning_hint),
+                confirmText = stringResource(R.string.ui_confirm_delete_action),
+                danger = false,
+                enabled = !runtimeState.messageBusy,
+                onDismiss = { ui.pendingDelete = null },
+                onConfirm = {
+                    ui.pendingDelete = null
+                    actions.manageMessages(
+                        MessageAction.DELETE,
+                        keys,
+                        onComplete = {
+                            ui.selectedKeys = emptyList()
+                            uiScope.launch { messageScroll.scrollToItem(0) }
                         },
-                    ) {
-                        BeaconText(stringResource(R.string.ui_confirm_delete_action))
-                    }
-                },
-                dismissButton = {
-                    BeaconTextButton(onClick = { ui.pendingDelete = null }) {
-                        BeaconText(stringResource(R.string.action_cancel))
-                    }
+                    )
                 },
             )
         }
@@ -720,14 +756,11 @@ fun BeaconApp(
                             detail,
                             listModifier,
                             onCopy = { body ->
-                                context
-                                    .getSystemService(ClipboardManager::class.java)
-                                    .setPrimaryClip(
-                                        ClipData.newPlainText(
-                                            if (body) clipboardBodyLabel else clipboardTitleLabel,
-                                            if (body) detail.body else detail.title,
-                                        )
-                                    )
+                                copyToClipboard(
+                                    context,
+                                    if (body) clipboardBodyLabel else clipboardTitleLabel,
+                                    if (body) detail.body else detail.title,
+                                )
                             },
                             onDelete = {
                                 ui.pendingDelete = listOf(MessageKey(detail.server, detail.id))
@@ -799,15 +832,12 @@ fun BeaconApp(
                                         onSelectionChange = { ui.selectedKeys = it },
                                         onSelectionHint = { ui.selectionHint = it },
                                         onCopyText = { text, body ->
-                                            context
-                                                .getSystemService(ClipboardManager::class.java)
-                                                .setPrimaryClip(
-                                                    ClipData.newPlainText(
-                                                        if (body) clipboardBodyLabel
-                                                        else clipboardTitleLabel,
-                                                        text,
-                                                    )
-                                                )
+                                            copyToClipboard(
+                                                context,
+                                                if (body) clipboardBodyLabel
+                                                else clipboardTitleLabel,
+                                                text,
+                                            )
                                         },
                                     )
 
@@ -839,6 +869,15 @@ fun BeaconApp(
                                                 ui.themeMode = it
                                             },
                                             onOperationDetails = { ui.operationDetails = it },
+                                            onFeedback = { message ->
+                                                uiScope.launch {
+                                                    snackbar.currentSnackbarData?.dismiss()
+                                                    snackbar.showSnackbar(
+                                                        message,
+                                                        duration = SnackbarDuration.Short,
+                                                    )
+                                                }
+                                            },
                                             onPreviewReport = {
                                                 ui.supportPreview =
                                                     viewModel.supportReport(
@@ -854,6 +893,8 @@ fun BeaconApp(
                                                 onRequestNotificationPermission,
                                             onNotificationSettingsUnavailable =
                                                 onNotificationSettingsUnavailable,
+                                            updateState = ui.updateState,
+                                            onCheckUpdate = checkUpdateNow,
                                         )
                                     }
                             }

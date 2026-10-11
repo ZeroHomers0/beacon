@@ -8,6 +8,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import io.github.beacon.app.MainActivity
 import io.github.beacon.app.R
@@ -132,27 +133,13 @@ class MessageNotifications(
                 .setAutoCancel(true)
                 .setOnlyAlertOnce(true)
                 .apply {
-                    batch.key?.let { key ->
-                        val intent =
-                            NotificationNavigation.intent(context, key)
-                                .setClass(context, NotificationReadReceiver::class.java)
-                                .setAction(NotificationReadReceiver.MARK_READ)
-                                .setFlags(0)
-                                .putExtra(NotificationReadReceiver.TAG, batch.tag)
-                        intent.data =
-                            intent.data
-                                ?.buildUpon()
-                                ?.appendQueryParameter("notice", batch.tag)
-                                ?.build()
-                        val read =
-                            PendingIntent.getBroadcast(
-                                context,
-                                0,
-                                intent,
-                                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-                            )
-                        addAction(Notification.Action.Builder(null, "标为已读", read).build())
-                    }
+                    // The platform shows at most three actions and only while the notice is
+                    // expanded. A single message card therefore offers the two operations that need
+                    // no screen; a summary card holds no text to copy, so it clears the batch.
+                    readAction(batch)?.let { addAction(it) }
+                    batch.key
+                        ?.takeIf { batch.body.isNotBlank() }
+                        ?.let { addAction(copyAction(it, batch.tag, batch.body)) }
                 }
                 .apply {
                     if (!batch.alert) {
@@ -210,6 +197,86 @@ class MessageNotifications(
 
     private fun body(batch: NotificationBatch): String =
         if (batch.count == 1) batch.body else "本轮保存 ${batch.count} 条消息，点击查看"
+
+    /**
+     * The single-message read plus the whole-batch read, both handled by the same non-exported
+     * receiver so the state change stays one local transaction.
+     */
+    private fun readAction(batch: NotificationBatch): Notification.Action? {
+        val key = batch.key
+        if (key == null && batch.keys.isEmpty()) return null
+        val intent =
+            if (key != null)
+                actionIntent(key, batch.tag)
+                    .setClass(context, NotificationReadReceiver::class.java)
+                    .setAction(NotificationReadReceiver.MARK_READ)
+            else
+                Intent(context, NotificationReadReceiver::class.java)
+                    .setAction(NotificationReadReceiver.MARK_ALL_READ)
+                    .setData(noticeData(batch.tag))
+                    .putStringArrayListExtra(
+                        NotificationReadReceiver.SERVERS,
+                        ArrayList(batch.keys.map { it.server }),
+                    )
+                    .putStringArrayListExtra(
+                        NotificationReadReceiver.IDS,
+                        ArrayList(batch.keys.map { it.id }),
+                    )
+        val read =
+            PendingIntent.getBroadcast(
+                context,
+                0,
+                intent.putExtra(NotificationReadReceiver.TAG, batch.tag),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+        val label =
+            if (key != null) R.string.action_mark_read else R.string.action_mark_all_read
+        val builder = Notification.Action.Builder(null, context.getString(label), read)
+        // A label alone does not tell the platform what an action means; the semantic does. Both
+        // constants only exist from API 28 on.
+        if (Build.VERSION.SDK_INT >= 28) {
+            builder.setSemanticAction(Notification.Action.SEMANTIC_ACTION_MARK_AS_READ)
+        }
+        return builder.build()
+    }
+
+    private fun copyAction(
+        key: io.github.beacon.app.domain.model.MessageKey,
+        tag: String,
+        text: String,
+    ): Notification.Action {
+        val intent =
+            actionIntent(key, tag)
+                .setClass(context, NotificationCopyReceiver::class.java)
+                .setAction(NotificationCopyReceiver.COPY_BODY)
+                .putExtra(NotificationCopyReceiver.TEXT, text)
+        val copy =
+            PendingIntent.getBroadcast(
+                context,
+                0,
+                intent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            )
+        return Notification.Action.Builder(null, context.getString(R.string.action_copy_body), copy)
+            .build()
+    }
+
+    private fun actionIntent(
+        key: io.github.beacon.app.domain.model.MessageKey,
+        tag: String,
+    ): Intent {
+        val intent = NotificationNavigation.intent(context, key).setFlags(0)
+        intent.data = intent.data?.buildUpon()?.appendQueryParameter("notice", tag)?.build()
+        return intent
+    }
+
+    /**
+     * A PendingIntent compares equal when its action, data, type, class and categories match, and
+     * ignores extras. The notice tag therefore has to travel in the data URI, or a later batch for
+     * the same message would reuse an earlier card's action extras.
+     */
+    private fun noticeData(tag: String): Uri =
+        Uri.Builder().scheme("beacon").authority("batch").appendQueryParameter("notice", tag).build()
 
     companion object {
         private val FRESH = io.github.beacon.app.domain.model.NotificationChannelKind.FRESH.id

@@ -122,12 +122,14 @@ func (a *API) registerAdmin(router *gin.Engine) {
 			Title    string `json:"title"`
 			Subtitle string `json:"subtitle"`
 			Body     string `json:"body"`
+			// Omitted means the same default a device-level push uses.
+			Priority *int `json:"priority"`
 		}
 		if decodeJSON(c.Writer, c.Request, &body) != nil {
 			apiError(c.Writer, 400, "invalid_request")
 			return
 		}
-		message, err := a.service.Push(body.Device, body.Title, body.Subtitle, body.Body)
+		message, err := a.service.PushPriority(body.Device, body.Title, body.Subtitle, body.Body, body.Priority)
 		if err != nil {
 			if errors.Is(err, domain.ErrStorageCapacity) {
 				apiError(c.Writer, http.StatusInsufficientStorage, "storage_capacity_reached")

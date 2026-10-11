@@ -153,6 +153,9 @@ class RuntimeMessageStore(
     /** A visible notification was handled: mark read and consume its reminder atomically. */
     fun readFromNotification(key: MessageKey): Int = reminderStore.readFromNotification(key)
 
+    /** A summary notification was handled: every message it stands for is read in one transaction. */
+    fun readFromNotification(keys: List<MessageKey>): Int = reminderStore.readFromNotification(keys)
+
     private fun createCursors(db: SQLiteDatabase) {
         db.execSQL("CREATE TABLE sync_cursors(server TEXT PRIMARY KEY, sequence INTEGER NOT NULL)")
     }

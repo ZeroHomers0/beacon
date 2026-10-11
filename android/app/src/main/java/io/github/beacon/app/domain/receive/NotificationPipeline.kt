@@ -30,6 +30,8 @@ data class NotificationBatch(
     val body: String = "",
     val key: MessageKey? = null,
     val priority: Int = 5,
+    /** Every message of this batch; a summary card can only act on them by carrying them along. */
+    val keys: List<MessageKey> = emptyList(),
 )
 
 object NotificationPolicy {
@@ -67,6 +69,7 @@ object NotificationPolicy {
             intents
                 .filter { it.createdAtMs in (nowMs - freshWindowMs)..nowMs }
                 .maxOfOrNull { it.priority } ?: 5,
+            intents.mapNotNull { it.key },
         )
     }
 }

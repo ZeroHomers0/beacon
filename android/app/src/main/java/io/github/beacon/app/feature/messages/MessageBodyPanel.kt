@@ -58,9 +58,7 @@ fun MessageLinksPanel(body: String) {
                 }
             },
             dismissButton = {
-                BeaconOutlinedButton(onClick = { selected = null }) {
-                    BeaconText(stringResource(R.string.action_cancel))
-                }
+                BeaconCancelButton(onClick = { selected = null })
             },
         )
     }

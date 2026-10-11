@@ -30,11 +30,11 @@ object PushExamples {
         val key = URI(address).path.substringAfterLast('/')
         val endpoint = address.substringBeforeLast('/') + "/push"
         return if (powershell)
-            "\$payload = @{ device_key = '$key'; title = 'Beacon'; subtitle = 'JSON example'; body = 'Hello from Beacon' } | ConvertTo-Json\nInvoke-RestMethod -Method Post -Uri '" +
+            "\$payload = @{ device_key = '$key'; title = 'Beacon'; subtitle = 'JSON example'; body = 'Hello from Beacon'; priority = 5 } | ConvertTo-Json\nInvoke-RestMethod -Method Post -Uri '" +
                 endpoint.replace("'", "''") +
                 "' -ContentType 'application/json; charset=utf-8' -Body ([System.Text.Encoding]::UTF8.GetBytes(\$payload))"
         else
-            "curl --fail-with-body -H 'Content-Type: application/json' --data '{\"device_key\":\"$key\",\"title\":\"Beacon\",\"subtitle\":\"JSON example\",\"body\":\"Hello from Beacon\"}' '" +
+            "curl --fail-with-body -H 'Content-Type: application/json' --data '{\"device_key\":\"$key\",\"title\":\"Beacon\",\"subtitle\":\"JSON example\",\"body\":\"Hello from Beacon\",\"priority\":5}' '" +
                 endpoint.replace("'", "'\"'\"'") +
                 "'"
     }

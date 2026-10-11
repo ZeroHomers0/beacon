@@ -129,15 +129,13 @@ internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions) {
             }
             BeaconActionPair(
                 dismiss = {
-                    BeaconOutlinedButton(
+                    BeaconCancelButton(
                         enabled = editable && (changed || !valid),
                         onClick = {
                             reset(saved)
                             failed = false
                         },
-                    ) {
-                        BeaconText(stringResource(R.string.action_cancel))
-                    }
+                    )
                 },
                 confirm = {
                     BeaconButton(

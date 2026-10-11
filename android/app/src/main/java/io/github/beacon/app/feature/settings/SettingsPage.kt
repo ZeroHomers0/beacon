@@ -22,6 +22,7 @@ import io.github.beacon.app.domain.model.ReceivePlan
 import io.github.beacon.app.domain.model.RuntimeState
 import io.github.beacon.app.ipc.RuntimeActions
 import io.github.beacon.app.ui.components.BeaconDropdownPreference
+import io.github.beacon.app.ui.components.BeaconSettingsList
 import io.github.beacon.app.ui.components.NotificationPermissionState
 import io.github.beacon.app.ui.components.SettingsGroup
 import io.github.beacon.app.ui.components.SettingsRow
@@ -53,9 +54,12 @@ fun SettingsPage(
     onUiStyleChange: (BeaconUiStyle) -> Unit,
     onThemeModeChange: (BeaconThemeMode) -> Unit,
     onOperationDetails: (String) -> Unit,
+    onFeedback: (String) -> Unit,
     onPreviewReport: () -> Unit,
     onRequestNotificationPermission: () -> Unit,
     onNotificationSettingsUnavailable: () -> Unit,
+    updateState: UpdateCheckState,
+    onCheckUpdate: () -> Unit,
 ) {
     val resources = androidx.compose.ui.platform.LocalResources.current
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -108,15 +112,11 @@ fun SettingsPage(
             canBindCurrent =
                 runtimeState.connectionSummaryLoaded && runtimeState.runtimeConnected && !busy,
             localBindingResult = runtimeState.status.text,
+            onFeedback = onFeedback,
         )
         return
     }
-    LazyColumn(
-        state = scroll,
-        modifier = modifier.imePadding(),
-        contentPadding = padding,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
+    BeaconSettingsList(state = scroll, modifier = modifier, contentPadding = padding) {
         when (screen) {
             SettingsScreen.HOME,
             SettingsScreen.APPEARANCE -> {
@@ -152,9 +152,8 @@ fun SettingsPage(
                                 io.github.beacon.app.ui.components.receiveModeColor(
                                     receivePlan.mode
                                 ),
-                        ) {
-                            onNavigate(SettingsScreen.RECEPTION)
-                        }
+                            onClick = { onNavigate(SettingsScreen.RECEPTION) },
+                        )
                         SettingsRow(
                             stringResource(R.string.settings_notifications_section_title),
                             notificationHint?.let { stringResource(it) }
@@ -244,6 +243,39 @@ fun SettingsPage(
                         ) {
                             onNavigate(SettingsScreen.DIAGNOSTICS)
                         }
+                        SettingsRow(
+                            title = stringResource(R.string.settings_update_title),
+                            subtitle =
+                                when {
+                                    updateState.checking ->
+                                        stringResource(R.string.settings_update_checking)
+                                    // The dot says "new build"; the subtitle says which one.
+                                    updateState.release != null ->
+                                        stringResource(
+                                            R.string.settings_update_available,
+                                            updateState.release?.version.orEmpty(),
+                                        )
+                                    else ->
+                                        stringResource(
+                                            R.string.settings_version_label,
+                                            BuildConfig.VERSION_NAME,
+                                        )
+                                },
+                            icon = BeaconIcons.Update,
+                            iconTint = MaterialTheme.colorScheme.onSurface,
+                            onClick = {
+                                when {
+                                    // A check is already running; report it instead of starting another.
+                                    updateState.checking ->
+                                        onFeedback(
+                                            resources.getString(R.string.settings_update_checking)
+                                        )
+                                    updateState.release != null -> updateState.openDialog()
+                                    else -> onCheckUpdate()
+                                }
+                            },
+                            badge = updateState.release != null,
+                        )
                         SettingsRow(
                             stringResource(R.string.settings_about_title),
                             stringResource(

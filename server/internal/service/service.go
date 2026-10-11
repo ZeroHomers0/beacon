@@ -51,13 +51,24 @@ func (s *Service) Authenticate(token string, push bool) (string, error) {
 }
 
 func (s *Service) Push(device, title, subtitle, body string) (domain.Message, error) {
-	if len(title) > domain.MaxTitleBytes || len(subtitle) > domain.MaxTitleBytes || len(body) == 0 || len(body) > domain.MaxBodyBytes {
+	return s.PushPriority(device, title, subtitle, body, nil)
+}
+
+// PushPriority serves the administrator test path, which may pick a tier; nil keeps the default.
+// A device-level push has no sending application, so both the application id and the credential
+// stay empty.
+func (s *Service) PushPriority(device, title, subtitle, body string, priority *int) (domain.Message, error) {
+	selected := domain.DefaultPriority
+	if priority != nil {
+		selected = *priority
+	}
+	if len(title) > domain.MaxTitleBytes || len(subtitle) > domain.MaxTitleBytes || len(body) == 0 || len(body) > domain.MaxBodyBytes || selected < 0 || selected > 10 {
 		return domain.Message{}, domain.ErrInvalidMessage
 	}
 	if !s.pushLimit.allow(device, time.Now()) {
 		return domain.Message{}, domain.ErrRateLimited
 	}
-	return s.repository.SaveMessage(device, title, subtitle, body)
+	return s.repository.SavePriorityMessage(device, title, subtitle, body, selected, "", "")
 }
 
 func (s *Service) Messages(device string, after int64, limit int, pending bool) (domain.MessagePage, error) {

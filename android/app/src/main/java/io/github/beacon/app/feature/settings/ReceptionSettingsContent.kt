@@ -18,10 +18,8 @@ import io.github.beacon.app.domain.model.ReceivePlan
 import io.github.beacon.app.domain.model.RuntimeState
 import io.github.beacon.app.ipc.RuntimeActions
 import io.github.beacon.app.ui.components.BeaconActionButton
-import io.github.beacon.app.ui.components.BeaconActionPair
 import io.github.beacon.app.ui.components.BeaconButton
 import io.github.beacon.app.ui.components.BeaconDropdownPreference
-import io.github.beacon.app.ui.components.BeaconOutlinedButton
 import io.github.beacon.app.ui.components.BeaconPreferenceToggle
 import io.github.beacon.app.ui.components.BeaconText
 import io.github.beacon.app.ui.components.DiagnosticRow
@@ -36,6 +34,12 @@ import io.github.beacon.app.ui.components.receiveModeIcon
 import io.github.beacon.app.ui.components.receiveModeTitle
 import io.github.beacon.app.ui.icons.BeaconIcons
 
+/**
+ * The reception page edits one draft and saves it with one button at the bottom.
+ *
+ * The mode row is the exception: it writes through immediately, because switching modes already
+ * raises its own unsaved-changes prompt.
+ */
 internal fun LazyListScope.receptionSettingsItems(
     runtimeState: RuntimeState,
     actions: RuntimeActions,
@@ -62,11 +66,12 @@ internal fun LazyListScope.receptionSettingsItems(
         UiSection(stringResource(R.string.settings_receive_status_title)) {
             BeaconPreferenceToggle(
                 stringResource(R.string.settings_battery_saver_title),
-                receiveLabel(polling),
-                polling.config.enabled,
+                receiveLabel(polling.copy(config = polling.config.copy(enabled = receptionForm.enabled))),
+                receptionForm.enabled,
                 !busy,
             ) {
-                actions.setPolling(polling.config.copy(enabled = it))
+                receptionForm.enabled = it
+                receptionForm.edited = true
             }
             SettingsHint(stringResource(R.string.settings_receive_switch_hint))
             if (receivePlan.mode == ReceiveMode.RULES)
@@ -114,7 +119,7 @@ internal fun LazyListScope.receptionSettingsItems(
         }
     }
     if (receivePlan.mode == ReceiveMode.RULES) {
-        item { ReceiveRulesPanel(receivePlan, busy, onReceivePlanChange) }
+        item { ReceiveRulesPanel(receptionForm, busy) }
     }
     if (receivePlan.mode != ReceiveMode.POWER_SAVING) {
         item {
@@ -124,12 +129,14 @@ internal fun LazyListScope.receptionSettingsItems(
                     RealtimeHeartbeat.options.map {
                         stringResource(R.string.receive_heartbeat_seconds, it)
                     },
-                    RealtimeHeartbeat.options.indexOf(receivePlan.heartbeatSeconds),
+                    RealtimeHeartbeat.options.indexOf(receptionForm.plan.heartbeatSeconds),
                     !busy && runtimeState.receivePlanLoaded,
                 ) {
-                    onReceivePlanChange(
-                        receivePlan.copy(heartbeatSeconds = RealtimeHeartbeat.options[it])
-                    )
+                    receptionForm.plan =
+                        receptionForm.plan.copy(
+                            heartbeatSeconds = RealtimeHeartbeat.options[it]
+                        )
+                    receptionForm.edited = true
                 }
                 SettingsHint(stringResource(R.string.receive_heartbeat_hint))
             }
@@ -199,36 +206,25 @@ internal fun LazyListScope.receptionSettingsItems(
                     receptionForm.charging = it
                     receptionForm.edited = true
                 }
-                val changed =
-                    interval != polling.config.intervalMinutes ||
-                        unmetered != polling.config.unmetered ||
-                        charging != polling.config.charging
-                BeaconActionPair(
-                    dismiss = {
-                        BeaconOutlinedButton(
-                            modifier = Modifier.heightIn(min = 48.dp),
-                            enabled = !busy && changed,
-                            onClick = {
-                                receptionForm.reset(polling.config)
-                            },
-                        ) {
-                            BeaconText(stringResource(R.string.action_cancel))
-                        }
-                    },
-                    confirm = {
-                        BeaconButton(
-                            modifier = Modifier.heightIn(min = 48.dp),
-                            enabled = !busy && changed,
-                            onClick = {
-                                actions.setPolling(receptionForm.applyTo(polling.config))
-                            },
-                        ) {
-                            BeaconText(stringResource(R.string.action_save))
-                        }
-                    },
-                )
                 SettingsHint(stringResource(R.string.settings_auto_receive_note_hint))
             }
+        }
+    }
+    item {
+        val planDirty = receptionForm.pendingPlan() != receivePlan
+        val pollingDirty = receptionForm.differsFrom(polling.config)
+        val changed = (planDirty || pollingDirty) && receptionForm.scheduleValid
+        BeaconButton(
+            onClick = {
+                // The draft stays "edited" until the runtime reports the saved values back; a
+                // failed save therefore keeps the button enabled for a retry.
+                if (planDirty) onReceivePlanChange(receptionForm.pendingPlan())
+                if (pollingDirty) actions.setPolling(receptionForm.applyTo(polling.config))
+            },
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !busy && changed,
+        ) {
+            BeaconText(stringResource(R.string.action_save))
         }
     }
 }

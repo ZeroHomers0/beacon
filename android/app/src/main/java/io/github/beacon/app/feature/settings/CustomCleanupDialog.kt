@@ -80,9 +80,7 @@ fun CustomCleanupDialog(
             }
         },
         dismissButton = {
-            BeaconOutlinedButton(enabled = !busy, onClick = onDismiss) {
-                BeaconText(stringResource(R.string.action_cancel))
-            }
+            BeaconCancelButton(enabled = !busy, onClick = onDismiss)
         },
     )
 }

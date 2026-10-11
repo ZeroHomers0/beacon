@@ -2,8 +2,6 @@
 
 package io.github.beacon.app.feature.settings
 
-import android.content.ClipData
-import android.content.ClipboardManager
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -33,6 +31,7 @@ internal fun ServerAdminPage(
     padding: PaddingValues,
     onConnection: () -> Unit,
     onUseBinding: (String, String, String) -> Unit,
+    onFeedback: (String) -> Unit,
     canBindCurrent: Boolean = false,
     localBindingResult: String = "",
 ) {
@@ -51,9 +50,11 @@ internal fun ServerAdminPage(
     var priority by rememberSaveable { mutableIntStateOf(5) }
     var testTitle by rememberSaveable { mutableStateOf("") }
     var testBody by rememberSaveable { mutableStateOf("") }
+    var testPriority by rememberSaveable { mutableIntStateOf(5) }
     var pendingDevice by remember { mutableStateOf<AdminDevice?>(null) }
     var pendingApplication by remember { mutableStateOf<AdminApplication?>(null) }
-    var confirmClear by remember { mutableStateOf(false) }
+    // Two-stage cloud purge: 1 = warning, 2 = final confirmation. Mirrors local cleanup.
+    var clearStage by remember { mutableIntStateOf(0) }
     var deletingDevice by remember { mutableStateOf<AdminDevice?>(null) }
     var confirmTest by remember { mutableStateOf(false) }
     var copied by remember { mutableStateOf(false) }
@@ -74,26 +75,33 @@ internal fun ServerAdminPage(
         if (!state.loggedIn) {
             pendingDevice = null
             deletingDevice = null
-            confirmClear = false
+            clearStage = 0
             pendingApplication = null
             confirmTest = false
         }
     }
     LaunchedEffect(state.secret) { copied = false }
-    fun copy(value: String) {
-        val clip = ClipData.newPlainText(resources.getString(R.string.admin_title), value)
-        clip.description.extras =
-            android.os.PersistableBundle().apply {
-                putBoolean("android.content.extra.IS_SENSITIVE", true)
-            }
-        context.getSystemService(ClipboardManager::class.java).setPrimaryClip(clip)
-        copied = true
+    // Administrator outcomes share the app-wide snackbar, so they are consumed once and cleared.
+    val feedbackText = state.feedback?.let { stringResource(it) }
+    LaunchedEffect(state.feedback) {
+        if (feedbackText != null) {
+            onFeedback(feedbackText)
+            model.dismissFeedback()
+        }
     }
-    LazyColumn(
+    fun copy(value: String) {
+        copied =
+            copyToClipboard(
+                context,
+                resources.getString(R.string.admin_title),
+                value,
+                sensitive = true,
+            )
+    }
+    BeaconSettingsList(
         state = scroll,
-        modifier = modifier.imePadding().testTag("server-admin-list"),
+        modifier = modifier.testTag("server-admin-list"),
         contentPadding = padding,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
             SettingsGroup(stringResource(R.string.admin_this_phone)) {
@@ -149,12 +157,6 @@ internal fun ServerAdminPage(
                         model.login(endpoint.trim(), token)
                         token = ""
                     }
-                    state.feedback?.let { feedback ->
-                        OperationResultPanel(
-                            stringResource(R.string.admin_result),
-                            stringResource(feedback),
-                        )
-                    }
                 }
             }
         } else {
@@ -170,9 +172,6 @@ internal fun ServerAdminPage(
                         ),
                     )
                     DiagnosticRow(stringResource(R.string.admin_server_id), state.serverId)
-                    BeaconDangerButton(onClick = { confirmClear = true }, enabled = !state.busy) {
-                        BeaconText(stringResource(R.string.admin_clear_messages))
-                    }
                     SettingsMetricGrid(
                         listOf(
                             stringResource(R.string.admin_devices) to
@@ -186,6 +185,14 @@ internal fun ServerAdminPage(
                                 ),
                         )
                     )
+                    SettingsHint(stringResource(R.string.admin_clear_messages_hint))
+                    BeaconDangerButton(
+                        onClick = { clearStage = 1 },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !state.busy,
+                    ) {
+                        BeaconText(stringResource(R.string.admin_clear_messages))
+                    }
                     BeaconActionPair(
                         {
                             BeaconOutlinedButton(
@@ -234,13 +241,6 @@ internal fun ServerAdminPage(
                 }
             }
         }
-        if (state.loggedIn && state.feedback != null)
-            item {
-                OperationResultPanel(
-                    stringResource(R.string.admin_result),
-                    stringResource(state.feedback!!),
-                )
-            }
         if (state.loggedIn)
             when (tab) {
                 0 -> {
@@ -314,24 +314,18 @@ internal fun ServerAdminPage(
                                 R.string.admin_application_name,
                                 !state.busy,
                             )
+                            // Only the tiers the client distinguishes are offered; the server,
+                            // protocol and Bark entry still accept the full 0-10 range.
                             BeaconDropdownPreference(
                                 stringResource(R.string.admin_priority),
-                                (0..10).map { value ->
-                                    stringResource(
-                                        when (value) {
-                                            0 -> R.string.admin_priority_save
-                                            in 1..3 -> R.string.admin_priority_silent
-                                            in 4..7 -> R.string.admin_priority_normal
-                                            else -> R.string.admin_priority_important
-                                        },
-                                        value,
-                                    )
+                                PRIORITY_TIERS.map { value ->
+                                    stringResource(priorityLabel(value), value)
                                 },
-                                priority,
+                                PRIORITY_TIERS.indexOf(priority).coerceAtLeast(0),
                                 enabled = !state.busy,
                                 stacked = true,
                             ) {
-                                priority = it
+                                priority = PRIORITY_TIERS[it]
                             }
                             SettingsHint(stringResource(R.string.admin_application_hint))
                             BeaconActionButton(
@@ -354,7 +348,7 @@ internal fun ServerAdminPage(
                             )
                             DiagnosticRow(
                                 stringResource(R.string.admin_priority),
-                                app.priority.toString(),
+                                stringResource(priorityLabel(app.priority), app.priority),
                             )
                             DiagnosticRow(
                                 stringResource(R.string.admin_status),
@@ -391,6 +385,17 @@ internal fun ServerAdminPage(
                                 !state.busy,
                                 singleLine = false,
                             )
+                            BeaconDropdownPreference(
+                                stringResource(R.string.admin_priority),
+                                PRIORITY_TIERS.map { value ->
+                                    stringResource(priorityLabel(value), value)
+                                },
+                                PRIORITY_TIERS.indexOf(testPriority).coerceAtLeast(0),
+                                enabled = !state.busy,
+                                stacked = true,
+                            ) {
+                                testPriority = PRIORITY_TIERS[it]
+                            }
                             SettingsHint(stringResource(R.string.admin_test_hint))
                             BeaconActionButton(
                                 stringResource(R.string.admin_send_test),
@@ -454,54 +459,90 @@ internal fun ServerAdminPage(
             },
         )
     }
-    if (confirmClear)
-        AdminConfirm(
-            stringResource(R.string.admin_clear_messages),
-            stringResource(R.string.admin_clear_messages_hint),
-            { confirmClear = false },
-            { confirmClear = false; model.clearMessages() },
+    if (clearStage > 0)
+        BeaconAlertDialog(
+            onDismissRequest = { clearStage = 0 },
+            title = {
+                BeaconText(
+                    stringResource(
+                        if (clearStage == 1) R.string.admin_clear_messages_confirm
+                        else R.string.admin_clear_messages_final
+                    )
+                )
+            },
+            text = {
+                BeaconText(
+                    stringResource(
+                        if (clearStage == 1) R.string.admin_clear_messages_warning
+                        else R.string.admin_clear_messages_final_warning
+                    )
+                )
+            },
+            confirmButton = {
+                BeaconDangerButton(
+                    onClick = {
+                        if (clearStage == 1) clearStage = 2
+                        else {
+                            clearStage = 0
+                            model.clearMessages()
+                        }
+                    },
+                    enabled = !state.busy,
+                ) {
+                    BeaconText(
+                        stringResource(
+                            if (clearStage == 1) R.string.settings_cleanup_all_continue
+                            else R.string.settings_cleanup_all_apply
+                        )
+                    )
+                }
+            },
+            dismissButton = {
+                BeaconCancelButton(onClick = { clearStage = 0 })
+            },
         )
     deletingDevice?.let { device ->
-        AdminConfirm(
-            stringResource(R.string.admin_delete_device),
-            stringResource(R.string.admin_delete_device_hint, device.name),
-            { deletingDevice = null },
-            { deletingDevice = null; model.deleteDevice(device.id) },
+        BeaconConfirmDialog(
+            title = stringResource(R.string.admin_delete_device),
+            description = stringResource(R.string.admin_delete_device_hint, device.name),
+            onDismiss = { deletingDevice = null },
+            onConfirm = { deletingDevice = null; model.deleteDevice(device.id) },
         )
     }
     pendingDevice?.let { device ->
-        AdminConfirm(
-            stringResource(R.string.admin_revoke_device),
-            stringResource(R.string.admin_revoke_device_hint, device.name),
-            { pendingDevice = null },
-            {
+        BeaconConfirmDialog(
+            title = stringResource(R.string.admin_revoke_device),
+            description = stringResource(R.string.admin_revoke_device_hint, device.name),
+            onDismiss = { pendingDevice = null },
+            onConfirm = {
                 pendingDevice = null
                 model.revokeDevice(device.id)
             },
         )
     }
     pendingApplication?.let { app ->
-        AdminConfirm(
-            stringResource(R.string.admin_revoke_application),
-            stringResource(R.string.admin_revoke_application_hint, app.name),
-            { pendingApplication = null },
-            {
+        BeaconConfirmDialog(
+            title = stringResource(R.string.admin_revoke_application),
+            description = stringResource(R.string.admin_revoke_application_hint, app.name),
+            onDismiss = { pendingApplication = null },
+            onConfirm = {
                 pendingApplication = null
                 model.revokeApplication(app.id)
             },
         )
     }
     if (confirmTest)
-        AdminConfirm(
-            stringResource(R.string.admin_send_test),
-            stringResource(
-                R.string.admin_test_confirm,
-                active.find { it.id == deviceId }?.name.orEmpty(),
-            ),
-            { confirmTest = false },
-            {
+        BeaconConfirmDialog(
+            title = stringResource(R.string.admin_send_test),
+            description =
+                stringResource(
+                    R.string.admin_test_confirm,
+                    active.find { it.id == deviceId }?.name.orEmpty(),
+                ),
+            onDismiss = { confirmTest = false },
+            onConfirm = {
                 confirmTest = false
-                model.test(deviceId, testTitle, testBody)
+                model.test(deviceId, testTitle, testBody, testPriority)
             },
             danger = false,
         )
@@ -563,26 +604,17 @@ private fun DevicePicker(
         }
 }
 
-@Composable
-private fun AdminConfirm(
-    title: String,
-    description: String,
-    dismiss: () -> Unit,
-    confirm: () -> Unit,
-    danger: Boolean = true,
-) {
-    BeaconAlertDialog(
-        onDismissRequest = dismiss,
-        title = { BeaconText(title) },
-        text = { SettingsHint(description) },
-        dismissButton = {
-            BeaconOutlinedButton(onClick = dismiss) {
-                BeaconText(stringResource(R.string.action_cancel))
-            }
-        },
-        confirmButton = {
-            if (danger) BeaconDangerButton(onClick = confirm) { BeaconText(title) }
-            else BeaconButton(onClick = confirm) { BeaconText(title) }
-        },
-    )
-}
+/**
+ * The four tiers the client can actually tell apart: 0 never notifies, 1-3 use the silent channel,
+ * 4-7 the normal one and 8-10 the important one. The server, the wire protocol and the Bark entry
+ * still accept the whole 0-10 range, so a narrow picker never narrows the contract.
+ */
+private val PRIORITY_TIERS = listOf(0, 2, 5, 8)
+
+private fun priorityLabel(value: Int): Int =
+    when (value) {
+        0 -> R.string.admin_priority_save
+        in 1..3 -> R.string.admin_priority_silent
+        in 4..7 -> R.string.admin_priority_normal
+        else -> R.string.admin_priority_important
+    }
