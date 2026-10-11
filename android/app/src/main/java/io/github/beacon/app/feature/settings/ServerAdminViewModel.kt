@@ -48,7 +48,7 @@ data class AdminUiState(
     val secret: AdminSecret? = null,
 )
 
-/** Secrets survive rotation in memory, never SavedStateHandle, preferences or settings exports. */
+/** Administrator credentials use an independent Keystore; never saved state or settings exports. */
 class ServerAdminViewModel(private val createClient: (String, String) -> ServerAdministration) :
     ViewModel() {
     constructor() : this({ endpoint, token -> ServerAdminClient(endpoint, token) })
@@ -59,14 +59,40 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
     private var job: Job? = null
     private var generation = 0
 
+    private var credentialStore: io.github.beacon.app.data.local.TransportSecretStore? = null
+
+    fun restoreSession(context: android.content.Context) {
+        if (credentialStore != null) return
+        val store =
+            io.github.beacon.app.data.local.TransportSecretStore(
+                context.applicationContext,
+                "admin_secret",
+                "beacon_admin_v1",
+            )
+        credentialStore = store
+        val restoreGeneration = generation
+        viewModelScope.launch {
+            val saved = withContext(Dispatchers.IO) { runCatching { store.load() }.getOrNull() }
+            if (
+                saved != null &&
+                    generation == restoreGeneration &&
+                    session == null &&
+                    !mutable.value.busy
+            )
+                login(saved.endpoint, saved.token)
+        }
+    }
+
     /** The caller shows the outcome in the app-wide snackbar, so the message is consumed once. */
     fun dismissFeedback() {
         if (mutable.value.feedback != null) mutable.value = mutable.value.copy(feedback = null)
     }
 
-    fun logout() {        generation++
+    fun logout() {
+        generation++
         job?.cancel()
         session = null
+        credentialStore?.clear()
         mutable.value = AdminUiState(feedback = R.string.admin_logged_out)
     }
 
@@ -80,9 +106,20 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
                 return
             }
         session = client
-        run(R.string.admin_connected) {
+        run(
+            R.string.admin_connected,
+            onSuccess = {
+                credentialStore?.save(
+                    io.github.beacon.app.domain.model.TransportSettings(
+                        client.endpoint,
+                        token.trim(),
+                    )
+                )
+            },
+        ) {
             val overview = client.overview()
-            parseOverview(overview).copy(endpoint = client.endpoint, loggedIn = true)
+            val result = parseOverview(overview).copy(endpoint = client.endpoint, loggedIn = true)
+            result
         }
     }
 
@@ -147,15 +184,17 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
             )
         }
 
-    fun clearMessages() = authenticated(R.string.admin_messages_cleared) { client ->
-        client.clearMessages()
-        parseOverview(client.overview()).copy(endpoint = client.endpoint, loggedIn = true)
-    }
+    fun clearMessages() =
+        authenticated(R.string.admin_messages_cleared) { client ->
+            client.clearMessages()
+            parseOverview(client.overview()).copy(endpoint = client.endpoint, loggedIn = true)
+        }
 
-    fun deleteDevice(id: String) = authenticated(R.string.admin_device_deleted) { client ->
-        client.deleteDevice(id)
-        parseOverview(client.overview()).copy(endpoint = client.endpoint, loggedIn = true)
-    }
+    fun deleteDevice(id: String) =
+        authenticated(R.string.admin_device_deleted) { client ->
+            client.deleteDevice(id)
+            parseOverview(client.overview()).copy(endpoint = client.endpoint, loggedIn = true)
+        }
 
     fun revokeDevice(id: String) =
         authenticated(R.string.admin_device_revoked) { client ->
@@ -213,6 +252,11 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
                 throw cancelled
             } catch (failure: Exception) {
                 if (captured != generation) return@launch
+                if (failure is AdminRequestException && failure.status in listOf(401, 403)) {
+                    session = null
+                    credentialStore?.clear()
+                    mutable.value = AdminUiState(endpoint = mutable.value.endpoint)
+                }
                 val feedback =
                     when (failure) {
                         is AdminRequestException ->

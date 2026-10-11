@@ -23,6 +23,25 @@ enum class UpdateCheckReport {
  * update is already known, or when their own check finds one.
  */
 class UpdateCheckState {
+    private var preferences: android.content.SharedPreferences? = null
+    private var acknowledgedVersion by mutableStateOf<String?>(null)
+    private var acknowledgePending = false
+    val hasUnreadUpdate: Boolean
+        get() = release != null && release?.version != acknowledgedVersion
+
+    fun attachPreferences(value: android.content.SharedPreferences) {
+        preferences = value
+        acknowledgedVersion = value.getString("acknowledged_version", null)
+    }
+
+    fun acknowledge() {
+        if (checking) acknowledgePending = true
+        release?.version?.let {
+            acknowledgedVersion = it
+            preferences?.edit()?.putString("acknowledged_version", it)?.apply()
+        }
+    }
+
     var checking by mutableStateOf(false)
         private set
 
@@ -36,6 +55,7 @@ class UpdateCheckState {
         private set
 
     fun openDialog() {
+        acknowledge()
         if (release != null) dialogOpen = true
     }
 
@@ -62,7 +82,9 @@ class UpdateCheckState {
         fetch: suspend () -> Result<AppRelease?>,
     ): UpdateCheckReport {
         // One check at a time, so a repeated tap cannot race an in-flight result.
+        if (manual) acknowledge()
         if (checking) return UpdateCheckReport.SILENT
+        acknowledgePending = manual
         checking = true
         val outcome =
             try {
@@ -73,6 +95,8 @@ class UpdateCheckState {
         return outcome.fold(
             onSuccess = { found ->
                 release = found
+                if (acknowledgePending) acknowledge()
+                acknowledgePending = false
                 if (found == null) dialogOpen = false
                 when {
                     !manual -> UpdateCheckReport.SILENT

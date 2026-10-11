@@ -76,25 +76,19 @@ internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions) {
         }
         UiSection(stringResource(R.string.quiet_schedule)) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                BeaconTextField(
+                BeaconTimePreference(
                     start,
-                    { start = it.take(5) },
+                    { start = it },
+                    stringResource(R.string.quiet_start),
                     Modifier.weight(1f),
-                    label = { BeaconText(stringResource(R.string.quiet_start)) },
-                    labelText = stringResource(R.string.quiet_start),
-                    singleLine = true,
                     enabled = editable,
-                    isError = first == null,
                 )
-                BeaconTextField(
+                BeaconTimePreference(
                     end,
-                    { end = it.take(5) },
+                    { end = it },
+                    stringResource(R.string.quiet_end),
                     Modifier.weight(1f),
-                    label = { BeaconText(stringResource(R.string.quiet_end)) },
-                    labelText = stringResource(R.string.quiet_end),
-                    singleLine = true,
                     enabled = editable,
-                    isError = last == null || first == last,
                 )
             }
             SettingsHint(stringResource(R.string.quiet_time_hint))

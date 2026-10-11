@@ -12,7 +12,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import io.github.beacon.app.BuildConfig
 import io.github.beacon.app.R
 import io.github.beacon.app.ui.components.BeaconActionButton
 import io.github.beacon.app.ui.components.BeaconText
@@ -41,15 +40,10 @@ internal fun LazyListScope.aboutSettingsItems(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            BeaconText(
-                BuildConfig.VERSION_NAME,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
     item {
-        // The page stays deliberately short: identity, version and the project link. Anything
+        // The page stays deliberately short: identity and the project link. Anything
         // else belongs to the settings page that owns the feature.
         BeaconActionButton(
             resources.getString(R.string.settings_about_project),

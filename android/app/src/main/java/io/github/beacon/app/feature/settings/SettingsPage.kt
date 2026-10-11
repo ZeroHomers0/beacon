@@ -3,7 +3,6 @@
 package io.github.beacon.app.feature.settings
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -13,7 +12,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import io.github.beacon.app.BuildConfig
 import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.BeaconThemeMode
@@ -264,8 +262,10 @@ fun SettingsPage(
                             icon = BeaconIcons.Update,
                             iconTint = MaterialTheme.colorScheme.onSurface,
                             onClick = {
+                                updateState.acknowledge()
                                 when {
-                                    // A check is already running; report it instead of starting another.
+                                    // A check is already running; report it instead of starting
+                                    // another.
                                     updateState.checking ->
                                         onFeedback(
                                             resources.getString(R.string.settings_update_checking)
@@ -274,14 +274,11 @@ fun SettingsPage(
                                     else -> onCheckUpdate()
                                 }
                             },
-                            badge = updateState.release != null,
+                            badge = updateState.hasUnreadUpdate,
                         )
                         SettingsRow(
                             stringResource(R.string.settings_about_title),
-                            stringResource(
-                                R.string.settings_version_label,
-                                BuildConfig.VERSION_NAME,
-                            ),
+                            "",
                             BeaconIcons.Info,
                         ) {
                             onNavigate(SettingsScreen.ABOUT)

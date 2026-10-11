@@ -49,7 +49,7 @@ fun BeaconScaffold(
                 Modifier.align(androidx.compose.ui.Alignment.BottomCenter)
                     .fillMaxWidth()
                     .navigationBarsPadding()
-                    .padding(start = 12.dp, end = 12.dp, bottom = 104.dp),
+                    .padding(start = 12.dp, end = 12.dp, bottom = 16.dp),
             ) { data ->
                 BeaconOperationSnackbar(data)
             }

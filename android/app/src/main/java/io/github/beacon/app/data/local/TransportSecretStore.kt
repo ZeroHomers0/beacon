@@ -15,19 +15,23 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 import org.json.JSONObject
 
-class TransportSecretStore(context: Context) {
-    private val prefs = context.getSharedPreferences("transport_secret", 0)
+class TransportSecretStore(
+    context: Context,
+    preferenceName: String = "transport_secret",
+    private val keyAlias: String = "beacon_transport_v1",
+) {
+    private val prefs = context.getSharedPreferences(preferenceName, 0)
 
     private fun key(): SecretKey {
         val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-        (store.getKey("beacon_transport_v1", null) as? SecretKey)?.let {
+        (store.getKey(keyAlias, null) as? SecretKey)?.let {
             return it
         }
         return KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
             .apply {
                 init(
                     KeyGenParameterSpec.Builder(
-                            "beacon_transport_v1",
+                            keyAlias,
                             KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
                         )
                         .setBlockModes(KeyProperties.BLOCK_MODE_GCM)

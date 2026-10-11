@@ -492,7 +492,7 @@
     <string name="settings_rules_other_times">其它时间的即时条件</string>
     <string name="settings_rules_wifi_hint">任一条件满足即可；低电量保护仍优先。</string>
     <string name="settings_rules_fallback_hint">未匹配时使用省电设置。规则随时间、电量和网络变化更新，暂停接收后停止运行。</string>
-    <string name="settings_rules_time_invalid">请填写有效的开始与结束时间，且两者不能相同</string>
+    <string name="settings_rules_time_invalid">请选择有效的开始与结束时间，且两者不能相同</string>
     <string name="settings_backup_export_done">设置已导出为 JSON 文件</string>
     <string name="settings_backup_export_failed">文件保存失败，请重新导出</string>
     <string name="settings_backup_invalid_file">文件过大、格式或设置值无效，请选择 Beacon 设置 JSON</string>
@@ -564,7 +564,7 @@
     <string name="admin_title">服务器管理</string>
     <string name="admin_entry_hint">独立登录 · 设备与发送应用</string>
     <string name="admin_login_title">管理员登录</string>
-    <string name="admin_login_hint">使用服务器 secrets/web-admin-token 中的管理员令牌登录，与接收凭证独立，仅当前会话保留。未绑定手机可先登录再一键绑定。</string>
+    <string name="admin_login_hint">使用服务器 secrets/web-admin-token 中的管理员令牌登录，与接收凭证独立，登录后长期保留，退出登录时清除。未绑定手机可先登录再一键绑定。</string>
     <string name="admin_endpoint">服务器地址</string>
     <string name="admin_token">管理员令牌</string>
     <string name="admin_login">登录管理</string>

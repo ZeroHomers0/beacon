@@ -13,5 +13,5 @@
     <string name="quiet_time_hint">24 小时制，例如 22:00–08:00，自动跨越午夜</string>
     <string name="quiet_weekdays">周一,周二,周三,周四,周五,周六,周日</string>
     <string name="quiet_day_hint">星期对应开始的那一天。例如周五 22:00 至次日 08:00，包括周六凌晨。</string>
-    <string name="quiet_invalid">请填写不同的有效时间，并至少选择一天</string>
+    <string name="quiet_invalid">请选择不同的有效时间，并至少选择一天</string>
 </resources>

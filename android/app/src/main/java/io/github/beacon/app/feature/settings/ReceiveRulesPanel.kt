@@ -9,8 +9,8 @@ import io.github.beacon.app.R
 import io.github.beacon.app.ui.components.*
 
 /**
- * Rule conditions only. The page keeps a single draft and a single save button, so this panel
- * edits [form] in place instead of owning its own confirmation row.
+ * Rule conditions only. The page keeps a single draft and a single save button, so this panel edits
+ * [form] in place instead of owning its own confirmation row.
  */
 @Composable
 internal fun ReceiveRulesPanel(form: ReceptionFormState, busy: Boolean) {
@@ -66,24 +66,24 @@ internal fun ReceiveRulesPanel(form: ReceptionFormState, busy: Boolean) {
             }
             if (plan.scheduleEnabled) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    BeaconTextField(
+                    BeaconTimePreference(
                         start,
-                        { form.scheduleStartText = it.take(5); form.edited = true },
+                        {
+                            form.scheduleStartText = it
+                            form.edited = true
+                        },
+                        stringResource(R.string.settings_rules_start),
                         Modifier.weight(1f),
-                        label = { BeaconText(stringResource(R.string.settings_rules_start)) },
-                        labelText = resources.getString(R.string.settings_rules_start),
-                        singleLine = true,
-                        isError = first == null,
                         enabled = !busy,
                     )
-                    BeaconTextField(
+                    BeaconTimePreference(
                         end,
-                        { form.scheduleEndText = it.take(5); form.edited = true },
+                        {
+                            form.scheduleEndText = it
+                            form.edited = true
+                        },
+                        stringResource(R.string.settings_rules_end),
                         Modifier.weight(1f),
-                        label = { BeaconText(stringResource(R.string.settings_rules_end)) },
-                        labelText = resources.getString(R.string.settings_rules_end),
-                        singleLine = true,
-                        isError = last == null || first == last,
                         enabled = !busy,
                     )
                 }

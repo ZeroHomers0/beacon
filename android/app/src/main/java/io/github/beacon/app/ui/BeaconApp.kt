@@ -52,7 +52,6 @@ import io.github.beacon.app.ui.components.BeaconConfirmDialog
 import io.github.beacon.app.ui.components.BeaconDropdownMenu
 import io.github.beacon.app.ui.components.BeaconDropdownMenuItem
 import io.github.beacon.app.ui.components.BeaconIconButton
-import io.github.beacon.app.ui.components.BeaconNavigation
 import io.github.beacon.app.ui.components.BeaconPagerToolbar
 import io.github.beacon.app.ui.components.BeaconScaffold
 import io.github.beacon.app.ui.components.BeaconSelectableRow
@@ -63,10 +62,10 @@ import io.github.beacon.app.ui.components.BeaconTopBar
 import io.github.beacon.app.ui.components.NotificationPermissionState
 import io.github.beacon.app.ui.components.ReceiveModeButton
 import io.github.beacon.app.ui.components.SettingsScreen
+import io.github.beacon.app.ui.components.copyToClipboard
 import io.github.beacon.app.ui.components.rememberBeaconBarBehavior
 import io.github.beacon.app.ui.components.settingsGestureFraction
 import io.github.beacon.app.ui.components.userOperationFeedback
-import io.github.beacon.app.ui.components.copyToClipboard
 import io.github.beacon.app.ui.icons.BeaconIcons
 import io.github.beacon.app.ui.theme.BeaconTheme
 import kotlinx.coroutines.Dispatchers
@@ -93,18 +92,6 @@ fun BeaconApp(
     val context = androidx.compose.ui.platform.LocalContext.current
     val ui = viewModel.uiState
     val runtimeState by actions.state.collectAsStateWithLifecycle()
-    LaunchedEffect(runtimeState.connectionSummaryLoaded) {
-        if (runtimeState.connectionSummaryLoaded) {
-            val welcome = context.getSharedPreferences("first_use_guide", 0)
-            if (!welcome.getBoolean("welcome_shown", false)) {
-                welcome.edit().putBoolean("welcome_shown", true).apply()
-                if (runtimeState.configuredEndpoint.isBlank() && ui.pendingNotification == null) {
-                    ui.page = 1
-                    ui.navigateSettings(SettingsScreen.HOME)
-                }
-            }
-        }
-    }
     LaunchedEffect(
         ui.pendingNotification,
         runtimeState.runtimeConnected,
@@ -148,6 +135,9 @@ fun BeaconApp(
     // One release check per entry to the foreground, and never two at once. It only decides whether
     // the settings entry shows its dot: the announcement itself waits for the user to ask.
     val updateState = ui.updateState
+    LaunchedEffect(updateState, context) {
+        updateState.attachPreferences(context.getSharedPreferences("update_notice", 0))
+    }
     val checkForUpdate: suspend (Boolean) -> UpdateCheckReport = { manual ->
         updateState.check(manual) {
             withContext(Dispatchers.IO) { ReleaseClient.latest(BuildConfig.VERSION_NAME) }
@@ -385,7 +375,12 @@ fun BeaconApp(
                     BeaconTextButton(
                         onClick = {
                             ui.reportCopied =
-                                copyToClipboard(context, redactedDiagLabel, report, sensitive = true)
+                                copyToClipboard(
+                                    context,
+                                    redactedDiagLabel,
+                                    report,
+                                    sensitive = true,
+                                )
                         }
                     ) {
                         BeaconText(stringResource(R.string.diag_copy_report_action))
@@ -482,17 +477,11 @@ fun BeaconApp(
                 (ui.page == 0 && ui.selectionMode) ||
                 detail != null ||
                 (ui.page == 1 && ui.settingsScreen != SettingsScreen.HOME)
-        val landscape =
-            androidx.compose.ui.platform.LocalConfiguration.current.orientation ==
-                android.content.res.Configuration.ORIENTATION_LANDSCAPE
         Row(Modifier.fillMaxSize()) {
-            if (landscape && detail == null)
-                BeaconNavigation(ui.page, ui.pages, rail = true) { index ->
-                    if (ui.page != index) navigate(index)
-                }
             Box(Modifier.weight(1f).fillMaxHeight()) {
                 BeaconScaffold(
                     snackbar = snackbar,
+                    bottomBar = {},
                     topBar = {
                         val renderSettingsBar: @Composable (Int, SettingsScreen) -> Unit =
                             { barPage, displayedSettingsScreen ->
@@ -537,15 +526,28 @@ fun BeaconApp(
                                                     ),
                                                 )
                                             }
-                                        else if (
-                                            barPage == 1 &&
-                                                displayedSettingsScreen != SettingsScreen.HOME
-                                        )
-                                            BeaconIconButton(onClick = { navigate(1) }) {
+                                        else if (barPage == 1)
+                                            BeaconIconButton(
+                                                onClick = {
+                                                    navigate(
+                                                        if (
+                                                            displayedSettingsScreen ==
+                                                                SettingsScreen.HOME
+                                                        )
+                                                            0
+                                                        else 1
+                                                    )
+                                                }
+                                            ) {
                                                 Icon(
                                                     BeaconIcons.Back,
                                                     stringResource(
-                                                        R.string.ui_back_to_settings_action
+                                                        if (
+                                                            displayedSettingsScreen ==
+                                                                SettingsScreen.HOME
+                                                        )
+                                                            R.string.ui_back_to_messages_action
+                                                        else R.string.ui_back_to_settings_action
                                                     ),
                                                 )
                                             }
@@ -569,7 +571,9 @@ fun BeaconApp(
                                                                 runtimeState.serverChecking
                                                         ) {
                                                             ui.page = 1
-                                                            ui.navigateSettings(SettingsScreen.CONNECTION)
+                                                            ui.navigateSettings(
+                                                                SettingsScreen.CONNECTION
+                                                            )
                                                         } else ui.receiveModesOpen = true
                                                     },
                                                     onLongClick = {
@@ -582,7 +586,8 @@ fun BeaconApp(
                                                                         false
                                                             )
                                                                 SettingsScreen.CONNECTION
-                                                            else SettingsScreen.RECEPTION)
+                                                            else SettingsScreen.RECEPTION
+                                                        )
                                                     },
                                                     serverIssue =
                                                         runtimeState.connectionSummaryLoaded &&
@@ -719,25 +724,36 @@ fun BeaconApp(
                                                     }
                                                 }
                                             }
+                                            BadgedBox(
+                                                badge = {
+                                                    if (updateState.hasUnreadUpdate) Badge()
+                                                }
+                                            ) {
+                                                BeaconActionIcon(
+                                                    BeaconIcons.Settings,
+                                                    stringResource(R.string.ui_nav_settings_title),
+                                                ) {
+                                                    ui.navigateSettings(SettingsScreen.HOME)
+                                                    navigate(1)
+                                                }
+                                            }
                                         }
                                     },
                                 )
                             }
                         val renderBar: @Composable (Int) -> Unit = { barPage ->
                             if (barPage == 1 && detail == null)
-                                BeaconSettingsTransition(settingsTransition, ui.settingsNavigatingBack || settingsMotion.targetState == ui.settingsBackTarget) { screen ->
+                                BeaconSettingsTransition(
+                                    settingsTransition,
+                                    ui.settingsNavigatingBack ||
+                                        settingsMotion.targetState == ui.settingsBackTarget,
+                                ) { screen ->
                                     renderSettingsBar(barPage, screen)
                                 }
                             else renderSettingsBar(barPage, ui.settingsScreen)
                         }
                         if (detail != null) renderBar(ui.page)
                         else BeaconPagerToolbar(pager, renderBar)
-                    },
-                    bottomBar = {
-                        if (detail == null && !landscape)
-                            BeaconNavigation(ui.page, ui.pages) { index ->
-                                if (ui.page != index) navigate(index)
-                            }
                     },
                 ) { insets ->
                     // Keyboard overlays the fixed layout; Scaffold only supplies system-bar/page
@@ -843,8 +859,11 @@ fun BeaconApp(
                                     )
 
                                 else ->
-                                    BeaconSettingsTransition(settingsTransition, ui.settingsNavigatingBack || settingsMotion.targetState == ui.settingsBackTarget) {
-                                        displayedSettingsScreen ->
+                                    BeaconSettingsTransition(
+                                        settingsTransition,
+                                        ui.settingsNavigatingBack ||
+                                            settingsMotion.targetState == ui.settingsBackTarget,
+                                    ) { displayedSettingsScreen ->
                                         SettingsPage(
                                             displayedSettingsScreen,
                                             settingsScrollStates.getValue(displayedSettingsScreen),

@@ -4,7 +4,6 @@ package io.github.beacon.app.feature.settings
 
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
@@ -37,6 +36,7 @@ internal fun ServerAdminPage(
 ) {
     val activity = checkNotNull(LocalActivity.current as? androidx.activity.ComponentActivity)
     val model = remember(activity) { ViewModelProvider(activity)[ServerAdminViewModel::class.java] }
+    LaunchedEffect(model) { model.restoreSession(activity) }
     val state by model.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val resources = androidx.compose.ui.platform.LocalResources.current
@@ -276,7 +276,10 @@ internal fun ServerAdminPage(
                                 ),
                             )
                             if (device.revoked)
-                                BeaconDangerButton(onClick = { deletingDevice = device }, enabled = !state.busy) {
+                                BeaconDangerButton(
+                                    onClick = { deletingDevice = device },
+                                    enabled = !state.busy,
+                                ) {
                                     BeaconText(stringResource(R.string.admin_delete_device))
                                 }
                             if (!device.revoked)
@@ -506,7 +509,10 @@ internal fun ServerAdminPage(
             title = stringResource(R.string.admin_delete_device),
             description = stringResource(R.string.admin_delete_device_hint, device.name),
             onDismiss = { deletingDevice = null },
-            onConfirm = { deletingDevice = null; model.deleteDevice(device.id) },
+            onConfirm = {
+                deletingDevice = null
+                model.deleteDevice(device.id)
+            },
         )
     }
     pendingDevice?.let { device ->
