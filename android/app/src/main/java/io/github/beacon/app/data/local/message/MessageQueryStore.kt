@@ -33,18 +33,24 @@ internal class MessageQueryStore(private val helper: SQLiteOpenHelper) {
     fun page(query: MessageQuery): MessagePage {
         query.validate()
         val db = helper.readableDatabase
-        val total =
-            db.rawQuery(MessageQuerySql.COUNT, query.filterArgs()).use {
+        val anchored =
+            query.anchor?.let { key ->
+                db.rawQuery(
+                        "SELECT rowid FROM messages WHERE server=? AND id=? AND delete_token=''",
+                        arrayOf(key.server, key.id),
+                    )
+                    .use {
+                        if (it.moveToFirst()) query.copy(before = it.getLong(0) + 1, anchor = null)
+                        else null
+                    }
+            } ?: query
+        val (total, unread) =
+            db.rawQuery(MessageQuerySql.COUNTS, query.filterArgs()).use {
                 it.moveToFirst()
-                it.getLong(0)
-            }
-        val unread =
-            db.rawQuery(MessageQuerySql.UNREAD, query.filterArgs()).use {
-                it.moveToFirst()
-                it.getLong(0)
+                it.getLong(0) to it.getLong(1)
             }
         val rows =
-            db.rawQuery(MessageQuerySql.PAGE, query.pageArgs()).use { cursor ->
+            db.rawQuery(MessageQuerySql.PAGE, anchored.pageArgs()).use { cursor ->
                 buildList {
                     while (cursor.moveToNext()) add(
                         cursor.getLong(0) to

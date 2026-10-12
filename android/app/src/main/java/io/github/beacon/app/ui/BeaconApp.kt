@@ -293,6 +293,44 @@ fun BeaconApp(
                 onDismiss = { ui.receiveModesOpen = false },
             )
         val messageScroll = rememberLazyListState()
+        androidx.lifecycle.compose.LifecycleEventEffect(
+            androidx.lifecycle.Lifecycle.Event.ON_STOP
+        ) {
+            val item =
+                messageScroll.layoutInfo.visibleItemsInfo.firstOrNull { it.key is MessageKey }
+            ui.readingKey = item?.key as? MessageKey
+            ui.readingOffset = item?.let { (-it.offset).coerceAtLeast(0) } ?: 0
+        }
+        LaunchedEffect(runtimeState.messages, runtimeState.messageBusy, ui.restoreReadingPosition) {
+            if (
+                ui.restoreReadingPosition &&
+                    !runtimeState.messageBusy &&
+                    runtimeState.messages.isNotEmpty()
+            ) {
+                val index =
+                    runtimeState.messages.indexOfFirst {
+                        MessageKey(it.server, it.id) == ui.readingKey
+                    }
+                val zone = java.time.ZoneId.systemDefault()
+                val headers =
+                    if (index < 0) 0
+                    else
+                        (0..index).count { position ->
+                            position == 0 ||
+                                io.github.beacon.app.domain.policy.MessagePresentation.receivedDate(
+                                    runtimeState.messages[position],
+                                    zone,
+                                ) !=
+                                    io.github.beacon.app.domain.policy.MessagePresentation
+                                        .receivedDate(runtimeState.messages[position - 1], zone)
+                        }
+                messageScroll.scrollToItem(
+                    if (index < 0) 0 else 1 + index + headers,
+                    if (index < 0) 0 else ui.readingOffset,
+                )
+                ui.restoreReadingPosition = false
+            }
+        }
         val settingsScrollStates = SettingsScreen.entries.associateWith { rememberLazyListState() }
         val uiScope = rememberCoroutineScope()
         val focus = LocalFocusManager.current
@@ -351,7 +389,8 @@ fun BeaconApp(
             runtimeState.messageQuery.search,
             runtimeState.messageQuery.readFilter,
         ) {
-            if (runtimeState.messagePageIndex == 0) messageScroll.scrollToItem(0)
+            if (runtimeState.messagePageIndex == 0 && !ui.restoreReadingPosition)
+                messageScroll.scrollToItem(0)
         }
         LaunchedEffect(ui.search, runtimeState.messageBusy) {
             delay(350)

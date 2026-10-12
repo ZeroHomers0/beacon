@@ -17,7 +17,7 @@ internal constructor(
     private val receive: (ByteArray) -> Unit,
     private val onState: (State) -> Unit,
     private val onSubscribed: () -> Unit,
-    private val transportFactory: () -> RealtimeTransport,
+    private val transportFactory: (Int) -> RealtimeTransport,
 ) : AutoCloseable {
     constructor(
         configuration: RealtimeConfiguration,
@@ -32,8 +32,13 @@ internal constructor(
         receive,
         onState,
         onSubscribed,
-        {
-            WebSocketTransport(heartbeatSeconds)
+        { failures ->
+            WebSocketTransport(
+                io.github.beacon.app.domain.model.RealtimeHeartbeat.forFailures(
+                    heartbeatSeconds,
+                    failures,
+                )
+            )
         },
     )
 
@@ -62,6 +67,7 @@ internal constructor(
     private var retry: ScheduledFuture<*>? = null
     @Volatile private var attempt = 0L
     private var terminal = false
+    private var connectedAtNanos = 0L
     @Volatile
     var diagnostics = RealtimeDiagnostics()
         private set
@@ -102,7 +108,7 @@ internal constructor(
         state(State.CONNECTING)
         try {
             configuration.validate()
-            val transport = transportFactory()
+            val transport = transportFactory(failures)
             current = transport
             transport.connect(
                 configuration,
@@ -128,11 +134,11 @@ internal constructor(
                 retire()
                 return
             }
-            failures = 0
+            connectedAtNanos = System.nanoTime()
             diagnostics =
                 diagnostics.copy(
                     failure = RealtimeFailure.NONE,
-                    retries = 0,
+                    retries = failures,
                     connectedAtMs = System.currentTimeMillis(),
                 )
             state(State.CONNECTED)
@@ -171,6 +177,13 @@ internal constructor(
                 state(State.CONFIG_FAILED)
             }
             else -> {
+                // Brief successful handshakes must not restart an unstable network's backoff.
+                if (
+                    connectedAtNanos != 0L &&
+                        System.nanoTime() - connectedAtNanos >= TimeUnit.MINUTES.toNanos(2)
+                )
+                    failures = 0
+                connectedAtNanos = 0L
                 failures = (failures + 1).coerceAtMost(100)
                 diagnostics = diagnostics.copy(retries = failures)
                 state(State.RETRYING)
@@ -179,7 +192,7 @@ internal constructor(
                 retry =
                     executor.schedule(
                         ::connect,
-                        RealtimeReconnectPolicy.delayMs(failures),
+                        RealtimeReconnectPolicy.jitteredDelayMs(failures),
                         TimeUnit.MILLISECONDS,
                     )
             }

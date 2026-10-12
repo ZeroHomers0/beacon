@@ -67,6 +67,9 @@ class BeaconUiState(
         }
 
     var receiveModesOpen by mutableStateOf(false)
+    var readingKey: MessageKey? = null
+    var readingOffset: Int = 0
+    var restoreReadingPosition by mutableStateOf(false)
 
     init {
         handle["page"] = (handle.get<Int>("page") ?: 0).coerceIn(0, 1)
@@ -84,14 +87,17 @@ class BeaconUiState(
     var pendingDelete: List<MessageKey>? by savedState(handle, "pendingDelete", null)
     var selectionHint: String by savedState(handle, "selectionHint", "")
     var settingsScreen: SettingsScreen by savedState(handle, "settingsScreen", SettingsScreen.HOME)
-    var settingsHistory: ArrayList<SettingsScreen> by savedState(handle, "settingsHistory", arrayListOf())
+    var settingsHistory: ArrayList<SettingsScreen> by
+        savedState(handle, "settingsHistory", arrayListOf())
     var settingsNavigatingBack by mutableStateOf(false)
-    val settingsBackTarget: SettingsScreen get() = settingsHistory.lastOrNull() ?: SettingsScreen.HOME
+    val settingsBackTarget: SettingsScreen
+        get() = settingsHistory.lastOrNull() ?: SettingsScreen.HOME
 
     fun navigateSettings(destination: SettingsScreen) {
         if (destination == settingsScreen) return
         settingsNavigatingBack = destination == SettingsScreen.HOME
-        settingsHistory = if (destination == SettingsScreen.HOME) arrayListOf()
+        settingsHistory =
+            if (destination == SettingsScreen.HOME) arrayListOf()
             else ArrayList(settingsHistory + settingsScreen)
         settingsScreen = destination
     }

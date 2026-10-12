@@ -11,8 +11,12 @@ import io.github.beacon.app.domain.receive.SyncResponseException
 import io.github.beacon.app.domain.receive.SyncStage
 import io.github.beacon.app.domain.receive.SyncStore
 import java.io.IOException
-import java.net.HttpURLConnection
-import java.net.URL
+import java.util.concurrent.TimeUnit
+import okhttp3.ConnectionPool
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -22,6 +26,21 @@ class HttpMessageSync(
     private val store: SyncStore,
     private val shouldContinue: () -> Boolean = { true },
 ) {
+    companion object {
+        // Synchronous requests need no dispatcher thread. One short-lived idle connection also
+        // serves burst receipts and polling pages, without retaining credentials in client state.
+        private val http =
+            OkHttpClient.Builder()
+                .connectionPool(ConnectionPool(1, 30, TimeUnit.SECONDS))
+                .connectTimeout(HttpSyncLimits.SOCKET_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
+                .readTimeout(HttpSyncLimits.SOCKET_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
+                .writeTimeout(HttpSyncLimits.SOCKET_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
+                .followRedirects(false)
+                .followSslRedirects(false)
+                .retryOnConnectionFailure(false)
+                .build()
+    }
+
     private val deadline = System.nanoTime() + HttpSyncLimits.RUN_BUDGET_MS * 1_000_000L
 
     private fun request(path: String, body: JSONObject? = null): JSONObject {
@@ -34,28 +53,26 @@ class HttpMessageSync(
                 "/api/v1/receipts/status" -> SyncStage.ACK
                 else -> SyncStage.MESSAGES
             }
-        val connection =
-            URL(settings.endpoint.trimEnd('/') + path).openConnection() as HttpURLConnection
-        try {
-            connection.instanceFollowRedirects = false
-            connection.connectTimeout = HttpSyncLimits.SOCKET_TIMEOUT_MS
-            connection.readTimeout = HttpSyncLimits.SOCKET_TIMEOUT_MS
-            connection.setRequestProperty("Authorization", "Bearer ${settings.token}")
-            if (body != null) {
-                connection.requestMethod = "POST"
-                connection.doOutput = true
-                connection.setRequestProperty("Content-Type", "application/json")
-                connection.outputStream.use {
-                    it.write(body.toString().toByteArray(Charsets.UTF_8))
-                }
-            }
-            val status = connection.responseCode
+        val request =
+            Request.Builder()
+                .url(settings.endpoint.trimEnd('/') + path)
+                .header("Authorization", "Bearer ${settings.token}")
+        if (body != null)
+            request.post(
+                body.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
+            )
+        val call = http.newCall(request.build())
+        call
+            .timeout()
+            .timeout((deadline - System.nanoTime()).coerceAtLeast(1), TimeUnit.NANOSECONDS)
+        call.execute().use { response ->
+            val status = response.code
             if (status == 401 || status == 403) throw SyncAuthenticationException(status, stage)
             if (status == 429 || status in 500..599) throw HttpTransientException(status, stage)
             if (status in 300..499) throw HttpRejectedException(status, stage)
             if (status != 200) throw SyncResponseException(stage)
             val bytes =
-                connection.inputStream.use { input ->
+                requireNotNull(response.body).byteStream().use { input ->
                     val buffer = java.io.ByteArrayOutputStream()
                     val block = ByteArray(8192)
                     while (true) {
@@ -75,8 +92,6 @@ class HttpMessageSync(
             } catch (_: org.json.JSONException) {
                 throw SyncResponseException(stage)
             }
-        } finally {
-            connection.disconnect()
         }
     }
 
@@ -152,6 +167,14 @@ class HttpMessageSync(
     fun acknowledge(id: String) {
         check(MessageIdentity.valid(id))
         confirmReceipts(listOf(id))
+    }
+
+    /** Pending receipts were durably saved before this bounded batch is attempted. */
+    fun acknowledgePending(namespace: String) {
+        val ids = store.pendingIds(namespace).take(HttpSyncLimits.ACK_BATCH_SIZE)
+        if (ids.isEmpty()) return
+        confirmReceipts(ids)
+        store.ackBatchCompleted(namespace, ids)
     }
 
     private fun confirmReceipts(ids: List<String>, supportsStatus: Boolean? = null): Int {
@@ -232,7 +255,7 @@ class HttpMessageSync(
             try {
                 oldPending.chunked(HttpSyncLimits.ACK_BATCH_SIZE).forEach { ids ->
                     ack(ids)
-                    ids.forEach { store.ackCompleted(namespace, it) }
+                    store.ackBatchCompleted(namespace, ids)
                 }
             } catch (e: IOException) {
                 if (e is HttpRejectedException) throw e /* Durable queue remains. */
@@ -246,6 +269,7 @@ class HttpMessageSync(
                     checkRunning()
                     true
                 },
+                acknowledgeCompleted = store::ackBatchCompleted,
             )
         var inserted = 0
         // Both pending replay and incremental reads share the same persistence path.

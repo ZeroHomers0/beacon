@@ -158,34 +158,32 @@ class MessageNotifications(
                 .setCategory(Notification.CATEGORY_MESSAGE)
                 .setNumber(batch.count)
                 .build()
+        // Media is resolved only for a card that can actually alert. A silent batch — the
+        // quiet-hours downgrade and the history channel included — is built without touching the
+        // network, and [RemoteMessageImage] keeps the alert path to one cold fetch per URL.
         val metadata =
-            batch.key
-                ?.let { messageLookup(it) }
-                ?.bark
-                ?.let { runCatching { org.json.JSONObject(it) }.getOrNull() }
+            if (batch.alert)
+                batch.key
+                    ?.let { messageLookup(it) }
+                    ?.bark
+                    ?.let { runCatching { org.json.JSONObject(it) }.getOrNull() }
+            else null
+        // Only the picture is fetched. The avatar's setLargeIcon cost a second cold handshake and a
+        // second decode for a 48 dp thumbnail, and the card is already identified by its small icon
+        // and title; the detail page still shows the avatar.
         val image =
             metadata
                 ?.optString("image")
                 ?.takeIf { it.isNotEmpty() }
                 ?.let { io.github.beacon.app.data.remote.RemoteMessageImage.load(it) }
-        val icon =
-            metadata
-                ?.optString("icon")
-                ?.takeIf { it.isNotEmpty() }
-                ?.let { io.github.beacon.app.data.remote.RemoteMessageImage.load(it) }
         val presented =
-            if (image != null || icon != null)
+            if (image != null)
                 android.app.Notification.Builder.recoverBuilder(context, notification)
-                    .apply {
-                        icon?.let { setLargeIcon(it) }
-                        image?.let {
-                            setStyle(
-                                android.app.Notification.BigPictureStyle()
-                                    .bigPicture(it)
-                                    .setSummaryText(body(batch))
-                            )
-                        }
-                    }
+                    .setStyle(
+                        android.app.Notification.BigPictureStyle()
+                            .bigPicture(image)
+                            .setSummaryText(body(batch))
+                    )
                     .build()
             else notification
         manager.notify(batch.tag, ID, presented)
@@ -284,5 +282,23 @@ class MessageNotifications(
             io.github.beacon.app.domain.model.NotificationChannelKind.IMPORTANT.id
         private val HISTORY = io.github.beacon.app.domain.model.NotificationChannelKind.HISTORY.id
         internal const val ID = 100
+
+        /**
+         * The verdict `post` would reach anyway, asked before a caller renders a whole batch. While
+         * notifications are off at the app or permission level the post can only fail, so reading
+         * the pending set, parsing settings and building the card for every received message bought
+         * nothing. The result is not cached: a stale denial would defer — and by the fresh-window
+         * rule eventually silence — a real alert, which is worse than one binder call per message.
+         */
+        fun postable(context: Context): Boolean {
+            if (
+                Build.VERSION.SDK_INT >= 33 &&
+                    context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
+                        PackageManager.PERMISSION_GRANTED
+            )
+                return false
+            return context.getSystemService(NotificationManager::class.java)
+                .areNotificationsEnabled()
+        }
     }
 }

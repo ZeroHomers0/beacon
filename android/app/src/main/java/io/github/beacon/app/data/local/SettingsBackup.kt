@@ -60,7 +60,8 @@ class SettingsBackup(private val context: Context) {
                     else -> keys + ruleKeys + "heartbeat_seconds"
                 }
             require(names.size == expected.size && names.toSet() == expected)
-            if (version != 3) value.put("heartbeat_seconds", RealtimeHeartbeat.DEFAULT_SECONDS)
+            // Preserve the historical choice when restoring pre-heartbeat backups.
+            if (version != 3) value.put("heartbeat_seconds", 60)
             if (version == 1)
                 value
                     .put("schedule_enabled", false)

@@ -113,6 +113,8 @@ internal class RuntimeMessageClient(private val binder: IBinder) {
                 it.writeString(query.serverId)
                 it.writeLong(query.before)
                 it.writeInt(query.readFilter.wireId)
+                it.writeString(query.anchor?.server)
+                it.writeString(query.anchor?.id)
             },
         ) { reply ->
             val total = reply.readLong()

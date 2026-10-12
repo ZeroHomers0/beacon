@@ -5,6 +5,9 @@ import io.github.beacon.app.data.local.sql.MessageManagementSql
 import io.github.beacon.app.domain.model.MessageKey
 import io.github.beacon.app.domain.receive.NotificationIntent
 
+/** SQLite's compiled statement-variable ceiling; chunked so a large batch stays one commit. */
+private const val SQLITE_MAX_VARIABLES = 500
+
 /** Durable message reminders, their consumption and notification-driven read marking. */
 internal class MessageReminderStore(private val helper: SQLiteOpenHelper) {
 
@@ -66,12 +69,22 @@ internal class MessageReminderStore(private val helper: SQLiteOpenHelper) {
     }
 
     fun notificationsPosted(intents: List<NotificationIntent>) {
+        if (intents.isEmpty()) return
         val db = helper.writableDatabase
         db.beginTransaction()
         try {
-            intents.forEach {
-                db.delete("notification_intents", "seq=?", arrayOf(it.sequence.toString()))
-            }
+            // One statement for the whole batch. Deleting row by row made the cost grow with the
+            // backlog — up to 200 executions inside a single commit for a catch-up flush.
+            intents
+                .map { it.sequence }
+                .chunked(SQLITE_MAX_VARIABLES)
+                .forEach { batch ->
+                    db.delete(
+                        "notification_intents",
+                        "seq IN (${batch.joinToString(",") { "?" }})",
+                        batch.map { it.toString() }.toTypedArray(),
+                    )
+                }
             db.setTransactionSuccessful()
         } finally {
             db.endTransaction()

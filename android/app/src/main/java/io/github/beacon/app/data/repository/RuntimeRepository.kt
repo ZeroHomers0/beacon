@@ -10,9 +10,9 @@ import io.github.beacon.app.ipc.RuntimeActions
 import io.github.beacon.app.ipc.RuntimeConnection
 import io.github.beacon.app.ipc.RuntimeControlClient
 import io.github.beacon.app.ipc.RuntimeEventClient
+import io.github.beacon.app.ipc.RuntimeMessageClient
 import io.github.beacon.app.ipc.RuntimeProtocol
 import io.github.beacon.app.ipc.request
-import io.github.beacon.app.ipc.RuntimeMessageClient
 import io.github.beacon.app.runtime.RuntimeProbeService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,6 +24,14 @@ class RuntimeRepository : RuntimeActions {
     override val state = mutableState.asStateFlow()
     private var pageHistory = listOf(Long.MAX_VALUE)
     private var detailGeneration = 0L
+    private var backgroundAnchor: MessageKey? = null
+    private var backgroundListReleased = false
+    private var receivePlanInFlight = false
+
+    fun saveReadingAnchor(key: MessageKey?) {
+        backgroundAnchor = key
+    }
+
     /**
      * Check owed to [refreshConnectionSummary]: null when none is pending, true when the user asked
      * for it, false when it came from returning to the foreground. A manual request wins, so a
@@ -49,7 +57,10 @@ class RuntimeRepository : RuntimeActions {
         RuntimeConnection(
             serviceClass = RuntimeProbeService::class.java,
             onStatus = { status, connected ->
-                if (!connected) invalidateServerCheck()
+                if (!connected) {
+                    invalidateServerCheck()
+                    receivePlanInFlight = false
+                }
                 mutableState.update {
                     it.copy(
                         status = status,
@@ -65,7 +76,16 @@ class RuntimeRepository : RuntimeActions {
                 refreshConnectionSummary()
                 refreshPolling()
                 receivePlan()
-                readMessages()
+                val current = state.value
+                loadPage(
+                    current.messageQuery.copy(
+                        anchor = if (backgroundListReleased) backgroundAnchor else null
+                    ),
+                    listOf(Long.MAX_VALUE),
+                    0,
+                    showStatus = false,
+                )
+                backgroundListReleased = false
             },
         )
 
@@ -183,6 +203,11 @@ class RuntimeRepository : RuntimeActions {
     fun releaseBackgroundDetail() {
         check(!connection.connected)
         closeDetail()
+        backgroundListReleased = true
+        pageHistory = listOf(Long.MAX_VALUE)
+        mutableState.update {
+            it.copy(messages = emptyList(), nextMessageCursor = null, cleanupPreview = null)
+        }
     }
 
     private fun setStatus(status: OperationStatus) {
@@ -647,7 +672,7 @@ class RuntimeRepository : RuntimeActions {
                         messageTotal = result.page.total,
                         messageUnread = result.page.unread,
                         nextMessageCursor = result.page.nextBefore,
-                        messageQuery = query.copy(before = Long.MAX_VALUE),
+                        messageQuery = query.copy(before = Long.MAX_VALUE, anchor = null),
                         messagePageIndex = index,
                         dataBusy = false,
                         status =
@@ -1072,10 +1097,13 @@ class RuntimeRepository : RuntimeActions {
 
     override fun receivePlan(value: ReceivePlan?) {
         if (!connection.connected) return
+        if (value == null && receivePlanInFlight) return
         if (value != null && state.value.messageBusy) return
+        receivePlanInFlight = true
         connection.execute(
             { RuntimeControlClient(it).receivePlan(value) },
             { result ->
+                receivePlanInFlight = false
                 val changed = result.deliveryRevision != state.value.deliveryRevision
                 val firstRead = !state.value.receivePlanLoaded
                 mutableState.update {
@@ -1094,6 +1122,7 @@ class RuntimeRepository : RuntimeActions {
                 if (changed && !state.value.messageBusy) readMessages(showStatus = false)
             },
             { error ->
+                receivePlanInFlight = false
                 if (value != null)
                     setStatus(
                         OperationStatus.result(

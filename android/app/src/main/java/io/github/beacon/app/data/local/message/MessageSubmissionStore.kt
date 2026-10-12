@@ -81,13 +81,26 @@ internal class MessageSubmissionStore(
         }
     }
 
-    fun ackCompleted(server: String, id: String) {
-        helper.writableDatabase.delete("pending_ack", "server=? AND id=?", arrayOf(server, id))
-        helper.writableDatabase.delete(
-            "receipt_times",
-            "server=? AND id=? AND deleted=0",
-            arrayOf(server, id),
-        )
+    fun ackCompleted(server: String, id: String) = ackCompleted(server, listOf(id))
+
+    /**
+     * Both tables are retired for the whole set in one commit. A per-message call issued two
+     * separate deletions, i.e. two implicit transactions each; a 100-message catch-up therefore
+     * paid ~200 commits for bookkeeping that belongs together.
+     */
+    fun ackCompleted(server: String, ids: List<String>) {
+        if (ids.isEmpty()) return
+        val db = helper.writableDatabase
+        db.beginTransaction()
+        try {
+            ids.forEach { id ->
+                db.delete("pending_ack", "server=? AND id=?", arrayOf(server, id))
+                db.delete("receipt_times", "server=? AND id=? AND deleted=0", arrayOf(server, id))
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
     }
 
     /**
@@ -95,11 +108,14 @@ internal class MessageSubmissionStore(
      */
     fun retireRevokedReceipts(namespace: String) {
         require(namespace.matches(Regex("[0-9a-f]{64}")))
-        helper.writableDatabase.delete("pending_ack", "server=?", arrayOf(namespace))
-        helper.writableDatabase.delete(
-            "receipt_times",
-            "server=? AND deleted=0",
-            arrayOf(namespace),
-        )
+        val db = helper.writableDatabase
+        db.beginTransaction()
+        try {
+            db.delete("pending_ack", "server=?", arrayOf(namespace))
+            db.delete("receipt_times", "server=? AND deleted=0", arrayOf(namespace))
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
     }
 }

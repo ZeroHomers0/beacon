@@ -13,4 +13,10 @@ object RealtimeReconnectPolicy {
         repeat((failureCount - 1).coerceAtMost(18)) { delay = min(MAX_MS, delay * 2) }
         return delay
     }
+
+    /** Jitter only shortens the bounded deadline; the first retry remains responsive. */
+    fun jitteredDelayMs(failureCount: Int): Long {
+        val ceiling = delayMs(failureCount)
+        return kotlin.random.Random.nextLong(ceiling * 3 / 4, ceiling + 1)
+    }
 }

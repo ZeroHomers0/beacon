@@ -30,6 +30,8 @@ class RuntimeMessageStore(
         android.os.StatFs(context.filesDir.absolutePath).availableBytes
     },
 ) : SQLiteOpenHelper(context, "beacon-messages.db", null, 13), SyncStore, NotificationIntentStore {
+    override fun ackBatchCompleted(server: String, ids: List<String>) =
+        submissionStore.ackCompleted(server, ids)
 
     private val appContext = context.applicationContext
     private val databaseFile = context.getDatabasePath("beacon-messages.db")

@@ -12,6 +12,10 @@ import io.github.beacon.app.runtime.notification.MessageNotifications
 
 /** One policy snapshot per batch for HTTP, realtime and manual pending-notification handling. */
 internal fun flushNotifications(context: Context, store: RuntimeMessageStore): String {
+    // Asked before any work is done. With notifications off at the app or permission level the
+    // pipeline could only rebuild the whole pending set and be told "no" again, once per received
+    // message. The intents are durable and untouched, so raising the switch later still posts them.
+    if (!MessageNotifications.postable(context)) return "通知已被系统或应用关闭；提醒任务保留，重新开启后随下一次刷新补发"
     val settings = NotificationSettingsStore(context).load()
     return NotificationPipeline(
             store,

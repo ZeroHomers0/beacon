@@ -340,7 +340,11 @@ class RuntimeProbeService : Service() {
             recordEvent(eventKind, SyncOutcome.STOPPED)
             return SyncReport(SyncOutcome.STOPPED, "自动接收已暂停或任务已停止")
         }
-        if (automatic) saveState(pollingState.copy(lastAttemptMs = System.currentTimeMillis()))
+        // The attempt timestamp is carried into the result record below instead of being committed
+        // on its own first: nothing gates on it (it is diagnostics only), while a second commit
+        // meant
+        // a second synchronous preference fsync plus a second schedule reconciliation per run.
+        val attemptedAtMs = System.currentTimeMillis()
         val settings =
             try {
                 TransportSecretStore(this).load()
@@ -350,6 +354,7 @@ class RuntimeProbeService : Service() {
                         pollingState.copy(
                             blocked = PollingPolicy.blockingReason(SyncOutcome.CONFIG),
                             lastResult = "连接配置不可用",
+                            lastAttemptMs = attemptedAtMs,
                         )
                     )
                 recordEvent(eventKind, SyncOutcome.CONFIG)
@@ -367,6 +372,7 @@ class RuntimeProbeService : Service() {
             saveState(
                 pollingState.copy(
                     blocked = PollingPolicy.blockingReason(outcome),
+                    lastAttemptMs = attemptedAtMs,
                     lastSuccessMs =
                         if (outcome == SyncOutcome.OK) System.currentTimeMillis()
                         else pollingState.lastSuccessMs,
@@ -1263,7 +1269,15 @@ class RuntimeProbeService : Service() {
                             val filter =
                                 MessageReadFilter.fromWireId(data.readInt())
                                     ?: throw IllegalArgumentException("Invalid read filter")
-                            MessageQuery(search, serverId, before, filter).also { it.validate() }
+                            val anchorServer = if (data.dataAvail() > 0) data.readString() else null
+                            val anchorId = if (data.dataAvail() > 0) data.readString() else null
+                            require((anchorServer == null) == (anchorId == null))
+                            val anchor = anchorServer?.let {
+                                MessageKey(it, requireNotNull(anchorId))
+                            }
+                            MessageQuery(search, serverId, before, filter, anchor).also {
+                                it.validate()
+                            }
                         } else null
                     val server = if (code == DETAIL) requireNotNull(data.readString()) else null
                     val id = if (code == DETAIL) requireNotNull(data.readString()) else null

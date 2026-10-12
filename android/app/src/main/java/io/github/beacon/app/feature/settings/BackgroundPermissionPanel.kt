@@ -29,6 +29,7 @@ fun BackgroundPermissionPanel() {
     var unavailable by remember { mutableStateOf(false) }
     var refreshed by remember { mutableStateOf(false) }
     var lockGuide by remember { mutableStateOf(false) }
+    var tileRefused by remember { mutableStateOf(false) }
     fun refresh() {
         restricted =
             runCatching {

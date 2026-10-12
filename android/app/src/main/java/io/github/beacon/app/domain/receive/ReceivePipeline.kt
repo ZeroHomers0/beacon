@@ -19,6 +19,10 @@ interface ReceiveStore {
 data class ReceiveResult(val saved: SaveResult, val ackPending: Boolean)
 
 interface SyncStore : ReceiveStore {
+    fun ackBatchCompleted(server: String, ids: List<String>) {
+        ids.forEach { ackCompleted(server, it) }
+    }
+
     fun retireExpiredRecords(server: String, beforeMs: Long): Int = 0
 
     fun requiresRetentionContract(server: String): Boolean = false

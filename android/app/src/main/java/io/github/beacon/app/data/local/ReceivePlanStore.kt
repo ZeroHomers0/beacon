@@ -19,7 +19,11 @@ class ReceivePlanStore(context: Context) {
                 scheduleRealtime = preferences.getBoolean("schedule_realtime", true),
                 lowBatteryEnabled = preferences.getBoolean("low_battery_enabled", false),
                 lowBatteryPercent = preferences.getInt("low_battery_percent", 20),
-                heartbeatSeconds = preferences.getInt("heartbeat_seconds", 60),
+                heartbeatSeconds =
+                    preferences.getInt(
+                        "heartbeat_seconds",
+                        io.github.beacon.app.domain.model.RealtimeHeartbeat.DEFAULT_SECONDS,
+                    ),
             )
             .also { it.validate() }
 

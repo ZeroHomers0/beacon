@@ -5,11 +5,19 @@ import java.io.IOException
 
 /**
  * A batch is confirmed only after every member has a durable message/deletion decision and receipt.
+ *
+ * [acknowledgeCompleted] retires the local receipts once the server accepted the batch. Callers
+ * that hold a transactional batch delete should pass it: the per-message fallback issues two
+ * unwrapped deletions per id, which on a 100-message page is a few hundred commits for bookkeeping
+ * that belongs to one transaction.
  */
 class ReceiveBatchPipeline(
     private val store: ReceiveStore,
     private val acknowledge: (String, List<String>) -> Unit,
     private val shouldContinue: () -> Boolean = { true },
+    private val acknowledgeCompleted: (String, List<String>) -> Unit = { server, ids ->
+        ids.forEach { store.ackCompleted(server, it) }
+    },
 ) {
     fun accept(messages: List<IncomingMessage>): Int {
         require(messages.size <= MAX_BATCH_SIZE)
@@ -27,7 +35,7 @@ class ReceiveBatchPipeline(
         val ids = messages.map { it.id }
         try {
             acknowledge(server, ids)
-            ids.forEach { store.ackCompleted(server, it) }
+            acknowledgeCompleted(server, ids)
         } catch (error: IOException) {
             if (error is HttpRejectedException) throw error
             // Durable receipts remain for a later request. Authentication/protocol errors

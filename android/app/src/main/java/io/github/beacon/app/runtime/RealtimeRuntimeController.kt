@@ -53,6 +53,99 @@ internal class RealtimeRuntimeController(
     @Volatile private var foreground = false
     @Volatile private var destroyed = false
     private val main = Handler(Looper.getMainLooper())
+    private var receiptTask: Runnable? = null
+    private var notificationTask: Runnable? = null
+    private var receivedInBatch = 0
+    private var insertedInBatch = 0
+    private var lastReceivedMs = 0L
+
+    private fun queueReceipts(
+        settings: TransportSettings,
+        namespace: String,
+        valid: () -> Boolean,
+    ) {
+        if (receiptTask != null) return
+        val task =
+            object : Runnable {
+                override fun run() {
+                    runCatching {
+                        worker.execute {
+                            if (receiptTask !== this) return@execute
+                            receiptTask = null
+                            if (!valid()) return@execute
+                            var confirmed = false
+                            try {
+                                HttpMessageSync(settings, store, valid)
+                                    .acknowledgePending(namespace)
+                                confirmed = true
+                                if (valid() && store.pendingIds(namespace).isNotEmpty())
+                                    queueReceipts(settings, namespace, valid)
+                            } catch (_: SyncAuthenticationException) {
+                                savePolling(
+                                    polling()
+                                        .copy(
+                                            blocked = "接收凭证失效，请重新绑定服务器",
+                                            lastOutcome = SyncOutcome.AUTH,
+                                        )
+                                )
+                                reconcile()
+                                return@execute
+                            } catch (_: Exception) {
+                                // Durable receipts survive connection changes and are retried by
+                                // HTTP
+                                // catch-up or the next received message; no idle retry timer is
+                                // added.
+                            }
+                            if (valid() && receivedInBatch > 0) {
+                                savePolling(
+                                    polling()
+                                        .copy(
+                                            lastSuccessMs = lastReceivedMs,
+                                            lastResult =
+                                                "即时接收：新增 $insertedInBatch 条消息 · 收到 $receivedInBatch 条" +
+                                                    if (confirmed) " · 接收回执已提交"
+                                                    else " · 接收回执等待自动重试",
+                                            lastOutcome = SyncOutcome.OK,
+                                        )
+                                )
+                                receivedInBatch = 0
+                                insertedInBatch = 0
+                            }
+                        }
+                    }
+                }
+            }
+        receiptTask = task
+        main.postDelayed(task, 250L)
+    }
+
+    /**
+     * One notification pass per burst. Every received message used to flush the whole pending set
+     * immediately: the settings reads, the channel lookup and the shade update ran once per message
+     * even though a catch-up batch saves them all within the same window. The trailing delay
+     * mirrors [queueReceipts]; the intents are durable, so a skipped pass is not lost — the next
+     * message or HTTP sync posts them. `reset()` deliberately does not cancel this: a network
+     * change must not swallow an alert for a message that is already saved.
+     */
+    private fun queueNotifications() {
+        if (notificationTask != null) return
+        val task =
+            object : Runnable {
+                override fun run() {
+                    runCatching {
+                        worker.execute {
+                            if (notificationTask !== this) return@execute
+                            notificationTask = null
+                            if (destroyed) return@execute
+                            runCatching { flushNotifications(service, store) }
+                        }
+                    }
+                }
+            }
+        notificationTask = task
+        main.postDelayed(task, 250L)
+    }
+
     private var lastNetwork: Network? = null
     private var offline = false
     private var networkRegistered = false
@@ -82,15 +175,23 @@ internal class RealtimeRuntimeController(
 
     private val networkCallback =
         object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) = networkChanged()
+            override fun onAvailable(network: Network) = debounceNetworkChanged()
 
-            override fun onLost(network: Network) = networkChanged()
+            override fun onLost(network: Network) = debounceNetworkChanged()
 
             override fun onCapabilitiesChanged(
                 network: Network,
                 capabilities: NetworkCapabilities,
-            ) = networkChanged()
+            ) = debounceNetworkChanged()
         }
+
+    private val networkMonitor = Runnable { networkChanged() }
+
+    private fun debounceNetworkChanged() {
+        if (destroyed) return
+        main.removeCallbacks(networkMonitor)
+        main.postDelayed(networkMonitor, 500L)
+    }
 
     fun pollingChanged() = networkChanged()
 
@@ -174,6 +275,10 @@ internal class RealtimeRuntimeController(
     }
 
     fun reset() {
+        receiptTask?.let { main.removeCallbacks(it) }
+        receiptTask = null
+        receivedInBatch = 0
+        insertedInBatch = 0
         epoch.incrementAndGet()
         if (session != null) recordTransition(RuntimeEventKind.REALTIME_STOPPED)
         session?.close()
@@ -316,49 +421,15 @@ internal class RealtimeRuntimeController(
                                 val message = decoder.decode(payload, System.currentTimeMillis())
                                 // Persist first. Server confirmation and system notifications are
                                 // independent.
-                                val result =
-                                    try {
-                                        ReceivePipeline(store) { _, id ->
-                                                HttpMessageSync(settings, store) {
-                                                        valid()
-                                                    }
-                                                    .acknowledge(id)
-                                            }
-                                            .accept(message)
-                                    } catch (e: SyncAuthenticationException) {
-                                        savePolling(
-                                            polling()
-                                                .copy(
-                                                    blocked = "接收凭证失效，请重新绑定服务器",
-                                                    lastOutcome = SyncOutcome.AUTH,
-                                                )
-                                        )
-                                        throw e
-                                    }
+                                ReceiveMessageValidation.validate(message)
+                                val saved = store.save(message)
+                                receivedInBatch++
+                                if (saved == SaveResult.INSERTED) insertedInBatch++
+                                lastReceivedMs = System.currentTimeMillis()
+                                queueReceipts(settings, message.server, ::valid)
                                 deliveryRevision++
-                                runCatching {
-                                    flushNotifications(service, store)
-                                }
+                                queueNotifications()
                                 runReceiveCleanup(service, store)
-                                val current = polling()
-                                savePolling(
-                                    current.copy(
-                                        lastSuccessMs = System.currentTimeMillis(),
-                                        lastResult =
-                                            "即时接收：" +
-                                                when (result.saved) {
-                                                    io.github.beacon.app.domain.receive.SaveResult
-                                                        .INSERTED -> "新增 1 条消息"
-                                                    io.github.beacon.app.domain.receive.SaveResult
-                                                        .DUPLICATE -> "已忽略重复消息"
-                                                    io.github.beacon.app.domain.receive.SaveResult
-                                                        .DELETED -> "已忽略本地删除的消息"
-                                                } +
-                                                if (result.ackPending) " · 接收回执等待自动重试"
-                                                else " · 接收回执已提交",
-                                        lastOutcome = SyncOutcome.OK,
-                                    )
-                                )
                             }
                             .get(45, TimeUnit.SECONDS)
                     },
@@ -473,5 +544,12 @@ internal class RealtimeRuntimeController(
         destroyed = true
         epoch.incrementAndGet()
         main.removeCallbacks(monitor)
+        main.removeCallbacks(networkMonitor)
+        receiptTask?.let { main.removeCallbacks(it) }
+        notificationTask?.let { main.removeCallbacks(it) }
+        // Dropped explicitly: a leftover handle would keep queueNotifications from ever scheduling
+        // again on a restarted session.
+        receiptTask = null
+        notificationTask = null
     }
 }
