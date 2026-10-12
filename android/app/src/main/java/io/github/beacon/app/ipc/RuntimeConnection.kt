@@ -19,6 +19,7 @@ internal class RuntimeConnection(
     private val onConnected: () -> Unit,
 ) {
     private val worker = serialExecutor("beacon-ui-ipc")
+    private val probeWorker = serialExecutor("beacon-ui-probe")
     private val main = Handler(Looper.getMainLooper())
     @Volatile private var binding: ServiceConnection? = null
     @Volatile private var binder: IBinder? = null
@@ -120,10 +121,24 @@ internal class RuntimeConnection(
         operation: (IBinder) -> T,
         onResult: (T) -> Unit,
         onError: (Exception) -> Unit,
+    ): Boolean = executeOn(worker, operation, onResult, onError)
+
+    /** Read-only network diagnostics must not hold up local pages or control operations. */
+    fun <T> executeProbe(
+        operation: (IBinder) -> T,
+        onResult: (T) -> Unit,
+        onError: (Exception) -> Unit,
+    ): Boolean = executeOn(probeWorker, operation, onResult, onError)
+
+    private fun <T> executeOn(
+        executor: java.util.concurrent.ExecutorService,
+        operation: (IBinder) -> T,
+        onResult: (T) -> Unit,
+        onError: (Exception) -> Unit,
     ): Boolean {
         val service = binder ?: return false
         val expected = binding
-        worker.execute {
+        executor.execute {
             try {
                 val result = operation(service)
                 main.post { if (binding === expected && binder === service) onResult(result) }
@@ -152,5 +167,6 @@ internal class RuntimeConnection(
     fun close() {
         stop(OperationStatus.connectionLost("已解除接收服务诊断绑定"))
         worker.shutdown()
+        probeWorker.shutdown()
     }
 }

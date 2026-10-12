@@ -71,6 +71,15 @@ fun MessagesPage(
     // The shared title only folds once the list has actually scrolled.
     val titleCollapsed by remember { derivedStateOf { scroll.firstVisibleItemIndex > 0 } }
     val busy = runtimeState.messageBusy
+    val awaitingMessages = !runtimeState.messagesLoaded && !runtimeState.messageLoadFailed
+    var showLoading by remember { mutableStateOf(false) }
+    LaunchedEffect(awaitingMessages, busy, runtimeState.runtimeConnected) {
+        showLoading = false
+        if ((awaitingMessages && runtimeState.runtimeConnected) || busy) {
+            delay(400)
+            showLoading = true
+        }
+    }
     // `onSelection` runs outside a composable scope, so the hint is resolved here.
     val shareFailureHint = stringResource(R.string.message_share_failed)
     val maxSelectionHint = stringResource(R.string.msg_max_selection_hint)
@@ -258,7 +267,7 @@ fun MessagesPage(
                 if (runtimeState.messages.isEmpty())
                     item(key = "empty") {
                         when {
-                            busy ->
+                            (awaitingMessages || busy) && showLoading ->
                                 BeaconEmptyState(
                                     BeaconIcons.Messages,
                                     stringResource(R.string.msg_loading),
@@ -276,6 +285,8 @@ fun MessagesPage(
                                         BeaconText(stringResource(R.string.action_retry))
                                     }
                                 }
+
+                            awaitingMessages || busy -> Unit
 
                             else ->
                                 BeaconEmptyState(

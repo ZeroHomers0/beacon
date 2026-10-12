@@ -12,19 +12,33 @@ import io.github.beacon.app.runtime.notification.MessageNotifications
 
 /** One policy snapshot per batch for HTTP, realtime and manual pending-notification handling. */
 internal fun flushNotifications(context: Context, store: RuntimeMessageStore): String {
-    // Asked before any work is done. With notifications off at the app or permission level the
-    // pipeline could only rebuild the whole pending set and be told "no" again, once per received
-    // message. The intents are durable and untouched, so raising the switch later still posts them.
-    if (!MessageNotifications.postable(context)) return "通知已被系统或应用关闭；提醒任务保留，重新开启后随下一次刷新补发"
     val settings = NotificationSettingsStore(context).load()
-    return NotificationPipeline(
-            store,
-            MessageNotifications(context, settings) { store.detail(it.server, it.id) }::post,
-            QuietHoursStore(context).load(),
-            settings = settings,
-        )
-        .flush(System.currentTimeMillis())
+    return flushPendingNotifications(
+        store,
+        settings,
+        QuietHoursStore(context).load(),
+        System.currentTimeMillis(),
+        { MessageNotifications.postable(context) },
+        { batch -> MessageNotifications(context, settings) { store.detail(it.server, it.id) }.post(batch) },
+    )
 }
+
+/** Apply SAVE_ONLY before permission checks so suppressed reminders cannot be replayed later. */
+internal fun flushPendingNotifications(
+    store: NotificationIntentStore,
+    settings: io.github.beacon.app.domain.model.NotificationSettings,
+    quietHours: io.github.beacon.app.domain.model.QuietHours,
+    nowMs: Long,
+    postable: () -> Boolean,
+    post: (io.github.beacon.app.domain.receive.NotificationBatch) -> Boolean,
+    zone: () -> java.time.ZoneId = java.time.ZoneId::systemDefault,
+): String = NotificationPipeline(
+    store,
+    { batch -> postable() && post(batch) },
+    quietHours,
+    zone,
+    settings,
+).flush(nowMs)
 
 /** Reuse normal rules, but never consume another message's pending reminder. */
 internal fun remindMessage(context: Context, store: RuntimeMessageStore, key: MessageKey): String {

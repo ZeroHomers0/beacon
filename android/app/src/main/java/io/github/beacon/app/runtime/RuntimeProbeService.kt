@@ -86,6 +86,7 @@ class RuntimeProbeService : Service() {
 
     private val worker = serialExecutor("beacon-runtime")
     private val scheduler = serialExecutor("beacon-scheduler")
+    private val serverProbe = serialExecutor("beacon-server-probe")
     private val storeDelegate = lazy { RuntimeMessageStore(this) }
     private val store by storeDelegate
     private val events by lazy { RuntimeEventStore(this) }
@@ -1174,12 +1175,18 @@ class RuntimeProbeService : Service() {
                 if (code == io.github.beacon.app.ipc.RuntimeProtocol.CHECK_SERVER) {
                     if (data.dataAvail() != 0) throw SecurityException("Unexpected payload")
                     val result =
-                        worker
+                        serverProbe
                             .submit<Pair<Boolean, String>> {
                                 try {
-                                    val saved =
-                                        TransportSecretStore(this@RuntimeProbeService).load()
-                                    Pair(true, HttpMessageSync(saved, store).checkServer())
+                                    // Snapshot credentials on their owner, then release it before
+                                    // network IO so local queries and mutations can proceed.
+                                    val sync = worker.submit<HttpMessageSync> {
+                                        HttpMessageSync(
+                                            TransportSecretStore(this@RuntimeProbeService).load(),
+                                            store,
+                                        )
+                                    }.get(5, java.util.concurrent.TimeUnit.SECONDS)
+                                    Pair(true, sync.checkServer())
                                 } catch (error: Exception) {
                                     Pair(
                                         false,
@@ -1551,6 +1558,7 @@ class RuntimeProbeService : Service() {
     }
 
     override fun onDestroy() {
+        serverProbe.shutdownNow()
         if (realtimeDelegate.isInitialized()) realtime.cancel()
         worker.execute {
             if (realtimeDelegate.isInitialized()) realtime.destroy()

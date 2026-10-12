@@ -28,8 +28,6 @@ fun BackgroundPermissionPanel() {
     var exempt by remember { mutableStateOf<Boolean?>(null) }
     var unavailable by remember { mutableStateOf(false) }
     var refreshed by remember { mutableStateOf(false) }
-    var lockGuide by remember { mutableStateOf(false) }
-    var tileRefused by remember { mutableStateOf(false) }
     fun refresh() {
         restricted =
             runCatching {
@@ -72,13 +70,6 @@ fun BackgroundPermissionPanel() {
         onDispose { owner.lifecycle.removeObserver(observer) }
     }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        UiSection(stringResource(R.string.settings_receiver_title)) {
-            BeaconText(
-                stringResource(R.string.background_client_receiver),
-                style = MaterialTheme.typography.titleSmall,
-            )
-            SettingsHint(stringResource(R.string.background_plain_client_hint))
-        }
         UiSection(stringResource(R.string.background_autostart_title)) {
             BeaconText(
                 stringResource(R.string.background_manual_status),
@@ -130,17 +121,6 @@ fun BackgroundPermissionPanel() {
                 },
             )
         }
-        UiSection(stringResource(R.string.background_lock_title)) {
-            BeaconText(
-                stringResource(R.string.background_manual_status),
-                style = MaterialTheme.typography.titleSmall,
-            )
-            SettingsHint(stringResource(R.string.background_lock_hint))
-            BeaconButton(onClick = { lockGuide = true }, modifier = Modifier.fillMaxWidth()) {
-                BeaconText(stringResource(R.string.background_lock_guide_action))
-            }
-        }
-        SettingsHint(stringResource(R.string.background_optional_hint))
         if (unavailable)
             BeaconText(
                 stringResource(R.string.background_settings_unavailable),
@@ -157,16 +137,4 @@ fun BackgroundPermissionPanel() {
         }
         if (refreshed) SettingsHint(resources.getString(R.string.settings_refresh_done))
     }
-    if (lockGuide)
-        BeaconAlertDialog(
-            onDismissRequest = { lockGuide = false },
-            title = { BeaconText(stringResource(R.string.background_lock_title)) },
-            text = { BeaconText(stringResource(R.string.background_lock_guide)) },
-            // Both actions only closed the guide, so one acknowledgement replaces the pair.
-            confirmButton = {
-                BeaconButton(onClick = { lockGuide = false }) {
-                    BeaconText(stringResource(R.string.ui_got_it_action))
-                }
-            },
-        )
 }

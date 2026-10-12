@@ -26,6 +26,7 @@ class RuntimeRepository : RuntimeActions {
     private var detailGeneration = 0L
     private var backgroundAnchor: MessageKey? = null
     private var backgroundListReleased = false
+    private var preserveReadingWindow = false
     private var receivePlanInFlight = false
 
     fun saveReadingAnchor(key: MessageKey?) {
@@ -73,10 +74,10 @@ class RuntimeRepository : RuntimeActions {
                 }
             },
             onConnected = {
-                refreshConnectionSummary()
-                refreshPolling()
-                receivePlan()
+                // Queue the local first page before control reads. Their callbacks can enqueue
+                // network probes and schedule reconciliation on this same serial IPC executor.
                 val current = state.value
+                preserveReadingWindow = backgroundListReleased && backgroundAnchor != null
                 loadPage(
                     current.messageQuery.copy(
                         anchor = if (backgroundListReleased) backgroundAnchor else null
@@ -86,6 +87,9 @@ class RuntimeRepository : RuntimeActions {
                     showStatus = false,
                 )
                 backgroundListReleased = false
+                refreshConnectionSummary()
+                refreshPolling()
+                receivePlan()
             },
         )
 
@@ -206,7 +210,7 @@ class RuntimeRepository : RuntimeActions {
         backgroundListReleased = true
         pageHistory = listOf(Long.MAX_VALUE)
         mutableState.update {
-            it.copy(messages = emptyList(), nextMessageCursor = null, cleanupPreview = null)
+            it.copy(messages = emptyList(), messagesLoaded = false, nextMessageCursor = null, cleanupPreview = null)
         }
     }
 
@@ -360,7 +364,7 @@ class RuntimeRepository : RuntimeActions {
             serverProbeInFlight = false
             serverCheckGeneration++
         }
-        if (!connection.connected || !state.value.connectionSummaryLoaded) {
+        if (!state.value.runtimeConnected || !connection.connected || !state.value.connectionSummaryLoaded) {
             // Remember the owed check until the connection summary has been read.
             pendingServerCheck = manual || pendingServerCheck == true
             return
@@ -392,7 +396,7 @@ class RuntimeRepository : RuntimeActions {
                 serverCheckResult = if (showProgress) "正在检测已保存的服务器…" else it.serverCheckResult,
             )
         }
-        connection.execute(
+        connection.executeProbe(
             { RuntimeControlClient(it).checkServer() },
             { result ->
                 // A superseded probe must not release the guard held by the one that replaced it.
@@ -436,6 +440,7 @@ class RuntimeRepository : RuntimeActions {
     }
 
     override fun refreshConnectionSummary() {
+        if (!state.value.runtimeConnected) return
         connection.execute(
             { RuntimeControlClient(it).address() },
             { address ->
@@ -601,6 +606,7 @@ class RuntimeRepository : RuntimeActions {
         readFilter: MessageReadFilter,
         showStatus: Boolean,
     ) {
+        if (!state.value.messageBusy) preserveReadingWindow = false
         loadPage(
             MessageQuery(search, serverId, readFilter = readFilter),
             listOf(Long.MAX_VALUE),
@@ -674,6 +680,7 @@ class RuntimeRepository : RuntimeActions {
                         nextMessageCursor = result.page.nextBefore,
                         messageQuery = query.copy(before = Long.MAX_VALUE, anchor = null),
                         messagePageIndex = index,
+                        messagesLoaded = true,
                         dataBusy = false,
                         status =
                             if (showStatus)
@@ -1032,6 +1039,9 @@ class RuntimeRepository : RuntimeActions {
     }
 
     override fun refreshPolling(onComplete: ((String) -> Unit)?) {
+        // Foreground effects may run while PING is still validating a new binding. Initial
+        // control reads are queued by onConnected, after the first local page.
+        if (!state.value.runtimeConnected && onComplete == null) return
         val context =
             connection.context
                 ?: run {
@@ -1096,7 +1106,7 @@ class RuntimeRepository : RuntimeActions {
     }
 
     override fun receivePlan(value: ReceivePlan?) {
-        if (!connection.connected) return
+        if (!state.value.runtimeConnected || !connection.connected) return
         if (value == null && receivePlanInFlight) return
         if (value != null && state.value.messageBusy) return
         receivePlanInFlight = true
@@ -1119,7 +1129,13 @@ class RuntimeRepository : RuntimeActions {
                     )
                 }
                 if (value != null || firstRead) launchRealtime()
-                if (changed && !state.value.messageBusy) readMessages(showStatus = false)
+                if (changed && !state.value.messageBusy) {
+                    val current = state.value
+                    val anchor = if (preserveReadingWindow) {
+                        current.messages.firstOrNull()?.let { MessageKey(it.server, it.id) }
+                    } else null
+                    loadPage(current.messageQuery.copy(anchor = anchor), listOf(Long.MAX_VALUE), 0, showStatus = false)
+                }
             },
             { error ->
                 receivePlanInFlight = false
