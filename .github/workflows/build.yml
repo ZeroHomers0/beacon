@@ -165,7 +165,6 @@ jobs:
       contents: write
       actions: read
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Publish tagged artifacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -173,7 +172,6 @@ jobs:
         run: |
           gh run download "$GITHUB_RUN_ID" --pattern 'beacon-*' --dir dist
           shopt -s dotglob
-          cp RELEASE_NOTES.md "$RUNNER_TEMP/notes.md"
           gh release create "$GITHUB_REF_NAME" dist/*/* --verify-tag \
             --title "Beacon $GITHUB_REF_NAME" \
-            --notes-file "$RUNNER_TEMP/notes.md"
+            --generate-notes

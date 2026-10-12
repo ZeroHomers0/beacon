@@ -1,4 +1,6 @@
 .local/
+# Release prose is maintained locally or on GitHub, not in the source repository.
+/RELEASE_NOTES.md
 .tmp-*/
 __pycache__/
 *.pyc
