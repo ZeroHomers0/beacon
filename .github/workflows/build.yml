@@ -173,13 +173,12 @@ jobs:
           gh run download "$GITHUB_RUN_ID" --pattern 'beacon-*' --dir dist
           shopt -s dotglob
           cat > "$RUNNER_TEMP/notes.md" <<'EOF'
-          本次更新简化首页导航，统一时间选择，并支持长期保留服务器管理登录。
+          本次更新统一时间选择界面，改善时间显示与操作体验。
 
-          - 移除底部导航及横屏侧栏，默认进入首页，设置入口位于右上角，设置页可返回首页。
-          - 静音时段与接收时段统一使用 24 小时时间选择器。
-          - 服务器管理凭据使用独立 Android Keystore 加密保存，退出登录或凭据失效时清除。
-          - 移除关于入口及关于页面重复的版本号，版本信息保留在检查与更新中。
-          - 检测到新版本时设置入口显示红点；点击检查与更新后消除，同一版本不会重复提示，新版本重新提示。
+          - 时间入口将标题与时间分行显示，避免文案挤压数字。
+          - 时间滚轮跟随当前 MIUIX / Material 及深色模式，统一应用 UI 风格。
+          - 页面内直接显示时、分数字，无需弹窗，上下滑动选择，松手后自动对齐。
+          - 沿用页面原有保存流程；静音时段与接收时段共用同一组件。
 
           - **Android**：下载 `beacon-release.apk` 安装（Android 8.0 / minSdk 26 及以上）。
           - **服务端**：`beacon-server-linux-amd64` / `-arm64` 是无需依赖的单文件二进制，配套 `docker-compose.yaml`；也可直接用镜像 `ghcr.io/zerohomers0/beacon-server:latest`。

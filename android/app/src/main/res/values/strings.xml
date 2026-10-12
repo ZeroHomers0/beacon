@@ -651,4 +651,6 @@
     <string name="admin_delete_device">删除设备</string>
     <string name="admin_delete_device_hint">彻底删除已解绑设备「%1$s」及其所有消息、回执和发送应用。此操作不可恢复。</string>
     <string name="admin_device_deleted">设备及其消息已删除</string>
+    <string name="time_picker_hour">时</string>
+    <string name="time_picker_minute">分</string>
 </resources>
