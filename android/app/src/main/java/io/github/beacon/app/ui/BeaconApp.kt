@@ -724,18 +724,13 @@ fun BeaconApp(
                                                     }
                                                 }
                                             }
-                                            BadgedBox(
-                                                badge = {
-                                                    if (updateState.hasUnreadUpdate) Badge()
-                                                }
+                                            BeaconActionIcon(
+                                                BeaconIcons.Settings,
+                                                stringResource(R.string.ui_nav_settings_title),
+                                                showBadge = updateState.hasUnreadUpdate,
                                             ) {
-                                                BeaconActionIcon(
-                                                    BeaconIcons.Settings,
-                                                    stringResource(R.string.ui_nav_settings_title),
-                                                ) {
-                                                    ui.navigateSettings(SettingsScreen.HOME)
-                                                    navigate(1)
-                                                }
+                                                ui.navigateSettings(SettingsScreen.HOME)
+                                                navigate(1)
                                             }
                                         }
                                     },

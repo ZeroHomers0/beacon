@@ -132,10 +132,13 @@ fun BeaconActionIcon(
     icon: ImageVector,
     description: String,
     enabled: Boolean = true,
+    showBadge: Boolean = false,
     onClick: () -> Unit,
 ) {
     BeaconIconButton(onClick = onClick, enabled = enabled) {
-        Icon(icon, description, Modifier.size(24.dp))
+        BadgedBox(badge = { if (showBadge) Badge() }) {
+            Icon(icon, description, Modifier.size(24.dp))
+        }
     }
 }
 

@@ -2,7 +2,7 @@ package config
 
 import "time"
 
-const Version = "1.1.0"
+const Version = "1.1.1"
 
 type Config struct {
 	Listen       string
