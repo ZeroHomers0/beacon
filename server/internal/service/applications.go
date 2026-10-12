@@ -6,6 +6,8 @@ import (
 )
 
 type ApplicationRepository interface {
+	HasPushRequest(string, string) (bool, error)
+	SavePushMessage(string, string, string, string, int, string, string, string, domain.PushOptions) (domain.Message, error)
 	CreateApplication(string, string, int) (domain.ApplicationCredential, error)
 	ListApplications() ([]domain.Application, error)
 	RevokeApplication(string) error
@@ -23,6 +25,17 @@ func (s *Service) RevokeApplication(id string) error { return s.repository.Revok
 
 // Legacy device push keys remain valid. Application credentials are send-only.
 func (s *Service) PushCredential(token, title, subtitle, body string, priority *int, extensions ...string) (domain.Message, error) {
+	return s.PushWithOptions(token, title, subtitle, body, priority, domain.PushOptions{}, extensions...)
+}
+
+func (s *Service) PushWithOptions(token, title, subtitle, body string, priority *int, options domain.PushOptions, extensions ...string) (domain.Message, error) {
+	if !options.Valid() || len(extensions) > 1 {
+		return domain.Message{}, domain.ErrInvalidMessage
+	}
+	bark := ""
+	if len(extensions) == 1 {
+		bark = extensions[0]
+	}
 	repository := s.repository
 	device, err := s.Authenticate(token, true)
 	applicationID := ""
@@ -37,8 +50,16 @@ func (s *Service) PushCredential(token, title, subtitle, body string, priority *
 	if priority != nil {
 		selected = *priority
 	}
-	if !s.pushLimit.allow(device, time.Now()) {
+	replay := false
+	if options.Key != "" {
+		var lookupErr error
+		replay, lookupErr = repository.HasPushRequest(token, options.Key)
+		if lookupErr != nil {
+			return domain.Message{}, lookupErr
+		}
+	}
+	if !replay && !s.pushLimit.allow(device, time.Now()) {
 		return domain.Message{}, domain.ErrRateLimited
 	}
-	return repository.SavePriorityMessage(device, title, subtitle, body, selected, applicationID, token, extensions...)
+	return repository.SavePushMessage(device, title, subtitle, body, selected, applicationID, token, bark, options)
 }

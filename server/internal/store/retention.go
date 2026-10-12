@@ -19,7 +19,7 @@ func (a *Store) CleanupConfirmedBatch(ctx context.Context, before int64, limit i
 	}
 	defer tx.Rollback()
 	selection := "SELECT seq FROM messages WHERE acked=1 AND created<? ORDER BY created,seq LIMIT ?"
-	if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO confirmed_receipts(device,id,expires_at) SELECT device,id,max(?,created+?) FROM messages WHERE seq IN ("+selection+")", time.Now().Add(domain.ReceiptLifetime).UnixMilli(), (domain.PendingLifetime + domain.ReceiptLifetime + domain.ReceiptGrace).Milliseconds(), before, limit); err != nil {
+	if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO confirmed_receipts(device,id,expires_at) SELECT device,id,max(?,expires_at+?) FROM messages WHERE seq IN ("+selection+")", time.Now().Add(domain.ReceiptLifetime).UnixMilli(), (domain.ReceiptLifetime + domain.ReceiptGrace).Milliseconds(), before, limit); err != nil {
 		return 0, err
 	}
 	result, err := tx.ExecContext(ctx, "DELETE FROM messages WHERE seq IN ("+selection+")", before, limit)

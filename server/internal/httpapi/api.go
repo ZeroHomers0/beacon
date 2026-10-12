@@ -153,7 +153,9 @@ func (a *API) capabilities(w http.ResponseWriter, r *http.Request) {
 		"server_time_ms":              time.Now().UnixMilli(),
 		"transports":                  transports,
 		"push_apis":                   []string{"beacon", "bark_text"},
-		"message_fields":              []string{"title", "subtitle", "body", "priority"},
+		"message_fields":              []string{"title", "subtitle", "body", "priority", "group", "ttl", "application_id", "application_name", "expires_at_ms"},
+		"push_idempotency":            true,
+		"max_ttl_seconds":             604800,
 		"max_page_size":               domain.MaxPageSize,
 		"binding":                     "one_time_code",
 		"self_revoke":                 true,
@@ -179,14 +181,18 @@ func (a *API) push(w http.ResponseWriter, r *http.Request) {
 		Body     string `json:"body"`
 		Subtitle string `json:"subtitle"`
 		Priority *int   `json:"priority"`
+		Group    string `json:"group"`
+		TTL      int64  `json:"ttl"`
 	}
 	if decodeJSON(w, r, &payload) != nil {
 		apiError(w, http.StatusBadRequest, "invalid_message")
 		return
 	}
-	m, err := a.service.PushCredential(token, payload.Title, payload.Subtitle, payload.Body, payload.Priority)
+	m, err := a.service.PushWithOptions(token, payload.Title, payload.Subtitle, payload.Body, payload.Priority, domain.PushOptions{Key: r.Header.Get("Idempotency-Key"), Group: payload.Group, TTL: payload.TTL})
 	if err != nil {
-		if errors.Is(err, domain.ErrInvalidMessage) {
+		if errors.Is(err, domain.ErrIdempotencyConflict) {
+			apiError(w, http.StatusConflict, "idempotency_conflict")
+		} else if errors.Is(err, domain.ErrInvalidMessage) {
 			apiError(w, http.StatusBadRequest, "invalid_message")
 		} else if errors.Is(err, domain.ErrStorageCapacity) {
 			apiError(w, http.StatusInsufficientStorage, "storage_capacity_reached")

@@ -17,7 +17,7 @@ func migrateMessageSchema(db *sql.DB) error {
 	if err = tx.QueryRow("PRAGMA user_version").Scan(&version); err != nil {
 		return err
 	}
-	if version > 9 {
+	if version > 10 {
 		return fmt.Errorf("unsupported database schema")
 	}
 	rows, err := tx.Query("PRAGMA table_info(messages)")
@@ -173,7 +173,25 @@ func migrateMessageSchema(db *sql.DB) error {
 			}
 		}
 	}
-	if _, err = tx.Exec("PRAGMA user_version=9"); err != nil {
+	if version < 10 {
+		for _, col := range []struct{ name, kind string }{{"application_name", "TEXT NOT NULL DEFAULT ''"}, {"message_group", "TEXT NOT NULL DEFAULT ''"}, {"expires_at", "INTEGER NOT NULL DEFAULT 0"}} {
+			var present int
+			if err = tx.QueryRow("SELECT count(*) FROM pragma_table_info('messages') WHERE name=?", col.name).Scan(&present); err != nil {
+				return err
+			}
+			if present == 0 {
+				if _, err = tx.Exec("ALTER TABLE messages ADD COLUMN " + col.name + " " + col.kind); err != nil {
+					return err
+				}
+			}
+		}
+		for _, q := range []string{"UPDATE messages SET expires_at=created+604800000 WHERE expires_at=0", "UPDATE messages SET application_name=coalesce((SELECT name FROM applications WHERE id=messages.application_id),'') WHERE application_name=''", "CREATE INDEX IF NOT EXISTS messages_expiry ON messages(acked,expires_at,seq)", "CREATE TABLE IF NOT EXISTS push_requests(credential TEXT NOT NULL,request_key TEXT NOT NULL,fingerprint TEXT NOT NULL,response TEXT NOT NULL,expires_at INTEGER NOT NULL,PRIMARY KEY(credential,request_key))", "CREATE INDEX IF NOT EXISTS push_requests_expiry ON push_requests(expires_at)"} {
+			if _, err = tx.Exec(q); err != nil {
+				return err
+			}
+		}
+	}
+	if _, err = tx.Exec("PRAGMA user_version=10"); err != nil {
 		return err
 	}
 	return tx.Commit()

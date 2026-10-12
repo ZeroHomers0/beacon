@@ -8,6 +8,7 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -27,10 +28,10 @@ func barkReply(w http.ResponseWriter, status int, message string, stored *domain
 }
 
 // barkField reports whether Beacon honours a Bark parameter. Every other Bark
-// parameter (group, badge, ttl, action, ...) is silently dropped so third-party
+// parameter (badge, action, ...) is silently dropped so third-party
 // software only has to change the key to reach Beacon.
 func barkField(key string) bool {
-	return key == "title" || key == "subtitle" || key == "body" || key == "device_key" || key == "level" || key == "sound" || key == "image" || key == "icon" || key == "url" || key == "ciphertext" || key == "iv"
+	return key == "group" || key == "ttl" || key == "title" || key == "subtitle" || key == "body" || key == "device_key" || key == "level" || key == "sound" || key == "image" || key == "icon" || key == "url" || key == "ciphertext" || key == "iv"
 }
 
 // barkValues parses a Bark query string or urlencoded form. Unsupported
@@ -84,6 +85,14 @@ func barkJSON(raw []byte) (map[string]string, error) {
 			return nil, errors.New("invalid value")
 		}
 		if !supported {
+			continue
+		}
+		if key == "ttl" && rawValue[0] != '"' {
+			var value json.Number
+			if err = json.Unmarshal(rawValue, &value); err != nil || string(rawValue) == "null" {
+				return nil, errors.New("invalid ttl")
+			}
+			values[key] = value.String()
 			continue
 		}
 		if rawValue[0] != '"' {
@@ -225,9 +234,20 @@ func (a *API) bark(w http.ResponseWriter, r *http.Request) {
 		values["body"] = "加密消息"
 	}
 	priority := barkPriority(values["level"], values["sound"])
-	message, err := a.service.PushCredential(values["device_key"], values["title"], values["subtitle"], values["body"], &priority, extension)
+	var ttl int64
+	if value, ok := values["ttl"]; ok {
+		var parseErr error
+		ttl, parseErr = strconv.ParseInt(value, 10, 64)
+		if parseErr != nil || strconv.FormatInt(ttl, 10) != value || ttl < 0 || ttl > 604800 {
+			barkReply(w, 400, "invalid_message", nil)
+			return
+		}
+	}
+	message, err := a.service.PushWithOptions(values["device_key"], values["title"], values["subtitle"], values["body"], &priority, domain.PushOptions{Key: r.Header.Get("Idempotency-Key"), Group: values["group"], TTL: ttl}, extension)
 	if err != nil {
-		if errors.Is(err, domain.ErrInvalidMessage) {
+		if errors.Is(err, domain.ErrIdempotencyConflict) {
+			barkReply(w, 409, "idempotency_conflict", nil)
+		} else if errors.Is(err, domain.ErrInvalidMessage) {
 			barkReply(w, http.StatusBadRequest, "invalid_message", nil)
 		} else if errors.Is(err, domain.ErrStorageCapacity) {
 			barkReply(w, http.StatusInsufficientStorage, "storage_capacity_reached", nil)

@@ -22,11 +22,11 @@ func (a *Store) ClaimPublish(now int64, limit int) ([]domain.PublishTask, error)
 		return nil, err
 	}
 	defer tx.Rollback()
-	rows, err := tx.Query(`SELECT m.device,m.id,m.seq,m.title,m.body,m.created,m.subtitle,o.attempts,m.priority,m.application_id,m.bark
+	rows, err := tx.Query(`SELECT m.device,m.id,m.seq,m.title,m.body,m.created,m.subtitle,o.attempts,m.priority,m.application_id,m.bark,m.message_group,m.expires_at,m.application_name
 		FROM publish_outbox o JOIN messages m ON m.seq=o.message_seq JOIN devices d ON d.id=m.device
 		WHERE o.next_attempt<=? AND o.lease_until<=? AND m.acked=0 AND d.revoked=0
-		AND m.created>?
-		ORDER BY o.next_attempt,m.seq LIMIT ?`, now, now, now-domain.PendingLifetime.Milliseconds(), limit)
+		AND m.expires_at>?
+		ORDER BY o.next_attempt,m.seq LIMIT ?`, now, now, now, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +35,7 @@ func (a *Store) ClaimPublish(now int64, limit int) ([]domain.PublishTask, error)
 		task := domain.PublishTask{ServerID: a.serverID, LeaseToken: lease, LeaseUntil: now + domain.PublishLease.Milliseconds()}
 		if err = rows.Scan(&task.DeviceID, &task.Message.ID, &task.Message.Sequence,
 			&task.Message.Title, &task.Message.Body, &task.Message.CreatedAt,
-			&task.Message.Subtitle, &task.Attempts, &task.Message.Priority, &task.Message.ApplicationID, &task.Message.Bark); err != nil {
+			&task.Message.Subtitle, &task.Attempts, &task.Message.Priority, &task.Message.ApplicationID, &task.Message.Bark, &task.Message.Group, &task.Message.ExpiresAt, &task.Message.ApplicationName); err != nil {
 			rows.Close()
 			return nil, err
 		}
@@ -69,7 +69,7 @@ func (a *Store) Publishable(task domain.PublishTask, now int64) (bool, error) {
 		JOIN messages m ON m.seq=o.message_seq JOIN devices d ON d.id=m.device
 		WHERE o.message_seq=? AND o.lease_token=? AND o.lease_until>?
 		AND m.acked=0 AND d.revoked=0
-		AND m.created>?`, task.Message.Sequence, task.LeaseToken, now, now-domain.PendingLifetime.Milliseconds()).Scan(&count)
+		AND m.expires_at>?`, task.Message.Sequence, task.LeaseToken, now, now).Scan(&count)
 	return count == 1, err
 }
 

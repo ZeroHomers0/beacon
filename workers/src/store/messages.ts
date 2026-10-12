@@ -32,6 +32,7 @@ export class MessageStore extends IdentityStore implements Repository {
     priority: number,
     bark: string,
     now: number,
+    options?: import("../domain").PushOptions,
   ): Message {
     if (
       bytes(title) > 1024 ||
@@ -43,6 +44,40 @@ export class MessageStore extends IdentityStore implements Repository {
       reject(400, "invalid_message");
     return this.storage.transactionSync(() => {
       this.active(sender.device);
+      // Fingerprinting yields to other requests; recheck rotated/revoked credentials
+      // inside the transaction before replaying or accepting a new message.
+      if (options) {
+        const current = this.sender(options.credential);
+        if (
+          current.device !== sender.device ||
+          current.application !== sender.application
+        )
+          reject(401, "unauthorized");
+      }
+      if (options?.key) {
+        const old = this.first(
+          "SELECT fingerprint,response FROM push_requests WHERE credential=? AND request_key=? AND expires_at>?",
+          options.credential,
+          options.key,
+          now,
+        );
+        if (old) {
+          if (old.fingerprint !== options.fingerprint)
+            reject(409, "idempotency_conflict");
+          return JSON.parse(String(old.response)) as Message;
+        }
+        this.rows(
+          "DELETE FROM push_requests WHERE credential=? AND request_key=?",
+          options.credential,
+          options.key,
+        );
+        if (
+          Number(this.first("SELECT count(*) AS n FROM push_requests")!.n) >=
+          100000
+        )
+          reject(507, "storage_capacity_reached");
+      }
+      const expires = now + (options?.ttl || 604800) * 1000;
       this.admit("push", now, 1000, 100);
       this.admit(`device:${sender.device}`, now, 200, 10);
       const usage = this.first(
@@ -60,8 +95,8 @@ export class MessageStore extends IdentityStore implements Repository {
         reject(507, "storage_capacity_reached");
       const id = token();
       const row = this.first(
-        `INSERT INTO messages(id,device,title,subtitle,body,priority,application_id,bark,created)
-        VALUES(?,?,?,?,?,?,?,?,?) RETURNING *`,
+        `INSERT INTO messages(id,device,title,subtitle,body,priority,application_id,bark,created,message_group,expires_at,application_name)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?) RETURNING *`,
         id,
         sender.device,
         title,
@@ -71,13 +106,26 @@ export class MessageStore extends IdentityStore implements Repository {
         sender.application,
         bark,
         now,
+        options?.group ?? "",
+        expires,
+        sender.name ?? "",
       )!;
       this.rows(
         "INSERT INTO publish_outbox(message_seq,next_attempt) VALUES(?,?)",
         row.seq,
         now,
       );
-      return message(row);
+      const result = message(row);
+      if (options?.key)
+        this.rows(
+          "INSERT INTO push_requests VALUES(?,?,?,?,?)",
+          options.credential,
+          options.key,
+          options.fingerprint,
+          JSON.stringify(result),
+          now + PENDING,
+        );
+      return result;
     });
   }
   page(
@@ -88,10 +136,10 @@ export class MessageStore extends IdentityStore implements Repository {
     now: number,
   ) {
     const rows = this.rows(
-      `SELECT * FROM messages WHERE device=? AND seq>? AND created>?${pending ? " AND acked=0" : ""} ORDER BY seq LIMIT ?`,
+      `SELECT * FROM messages WHERE device=? AND seq>? AND expires_at>?${pending ? " AND acked=0" : ""} ORDER BY seq LIMIT ?`,
       device,
       after,
-      now - PENDING,
+      now,
       limit + 1,
     );
     const items = rows.slice(0, limit).map(message);
@@ -147,9 +195,9 @@ export class MessageStore extends IdentityStore implements Repository {
   due(now: number, device?: string): Row[] {
     return this.rows(
       `SELECT m.*,o.attempts FROM publish_outbox o JOIN messages m ON m.seq=o.message_seq
-      JOIN devices d ON d.id=m.device WHERE m.acked=0 AND d.revoked=0 AND m.created>?
+      JOIN devices d ON d.id=m.device WHERE m.acked=0 AND d.revoked=0 AND m.expires_at>?
       ${device ? "AND m.device=?" : "AND o.next_attempt<=?"} ORDER BY o.next_attempt,m.seq LIMIT ?`,
-      now - PENDING,
+      now,
       device ?? now,
       BATCH,
     );
@@ -167,11 +215,21 @@ export class MessageStore extends IdentityStore implements Repository {
   }
   clearMessages(device = "", deleteDevice = false): number {
     return this.storage.transactionSync(() => {
-      if (deleteDevice && !this.first("SELECT id FROM devices WHERE id=? AND revoked=1", device)) reject(400, "invalid_device");
+      if (
+        deleteDevice &&
+        !this.first("SELECT id FROM devices WHERE id=? AND revoked=1", device)
+      )
+        reject(400, "invalid_device");
       const where = device ? " WHERE device=?" : "";
       const args = device ? [device] : [];
-      const count = Number(this.first("SELECT count(*) AS n FROM messages" + where, ...args)!.n);
-      for (const table of ["confirmed_receipts", "expired_receipts", "messages"])
+      const count = Number(
+        this.first("SELECT count(*) AS n FROM messages" + where, ...args)!.n,
+      );
+      for (const table of [
+        "confirmed_receipts",
+        "expired_receipts",
+        "messages",
+      ])
         this.rows("DELETE FROM " + table + where, ...args);
       if (deleteDevice) {
         for (const table of ["applications", "session_disconnects"])
@@ -208,8 +266,8 @@ export class MessageStore extends IdentityStore implements Repository {
   maintain(now: number, retentionDays: number): boolean {
     return this.storage.transactionSync(() => {
       const expired = this.rows(
-        "SELECT seq,id,device,created FROM messages WHERE acked=0 AND created<=? ORDER BY created,seq LIMIT ?",
-        now - PENDING,
+        "SELECT seq,id,device,created,expires_at FROM messages WHERE acked=0 AND expires_at<=? ORDER BY expires_at,seq LIMIT ?",
+        now,
         BATCH,
       );
       for (const row of expired) {
@@ -217,7 +275,7 @@ export class MessageStore extends IdentityStore implements Repository {
           "INSERT OR IGNORE INTO expired_receipts VALUES(?,?,?)",
           row.device,
           row.id,
-          Number(row.created) + PENDING + RECEIPT + GRACE,
+          Number(row.expires_at) + RECEIPT + GRACE,
         );
         this.rows(
           "UPDATE devices SET expired_messages=expired_messages+1 WHERE id=?",
@@ -228,7 +286,7 @@ export class MessageStore extends IdentityStore implements Repository {
       let full = expired.length === BATCH;
       if (retentionDays > 0) {
         const confirmed = this.rows(
-          "SELECT seq,id,device,created FROM messages WHERE acked=1 AND created<? ORDER BY created,seq LIMIT ?",
+          "SELECT seq,id,device,created,expires_at FROM messages WHERE acked=1 AND created<? ORDER BY created,seq LIMIT ?",
           now - retentionDays * 86400000,
           BATCH,
         );
@@ -237,10 +295,7 @@ export class MessageStore extends IdentityStore implements Repository {
             "INSERT OR IGNORE INTO confirmed_receipts VALUES(?,?,?)",
             row.device,
             row.id,
-            Math.max(
-              now + RECEIPT,
-              Number(row.created) + PENDING + RECEIPT + GRACE,
-            ),
+            Math.max(now + RECEIPT, Number(row.expires_at) + RECEIPT + GRACE),
           );
           this.rows("DELETE FROM messages WHERE seq=?", row.seq);
         }
@@ -254,6 +309,10 @@ export class MessageStore extends IdentityStore implements Repository {
         );
         full ||= deleted.length === BATCH;
       }
+      this.rows(
+        "DELETE FROM push_requests WHERE rowid IN (SELECT rowid FROM push_requests WHERE expires_at<=? LIMIT 100)",
+        now,
+      );
       this.rows("DELETE FROM binding_codes WHERE expires_at<=?", now);
       this.rows("DELETE FROM rate_buckets WHERE at<?", now - 120000);
       this.rows(
@@ -267,8 +326,8 @@ export class MessageStore extends IdentityStore implements Repository {
     const delivery = this.first(
       `SELECT min(o.next_attempt) AS n FROM publish_outbox o
       JOIN messages m ON m.seq=o.message_seq JOIN devices d ON d.id=m.device
-      WHERE m.acked=0 AND d.revoked=0 AND m.created>?`,
-      now - PENDING,
+      WHERE m.acked=0 AND d.revoked=0 AND m.expires_at>?`,
+      now,
     )!.n;
     const maintenance = Number(
       this.first("SELECT value FROM metadata WHERE key='maintenance_due'")

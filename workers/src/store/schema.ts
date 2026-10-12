@@ -10,9 +10,13 @@ export function migrate(storage: DurableObjectStorage): void {
     const version = [
       ...sql.exec("SELECT value FROM metadata WHERE key='schema_version'"),
     ][0];
+    if (version?.value === "2") return;
     if (version && version.value !== "1")
       throw new Error("unsupported workers schema");
-    if (version) return;
+    if (version) {
+      upgrade(sql);
+      return;
+    }
     sql.exec(`CREATE TABLE devices(id TEXT PRIMARY KEY,name TEXT NOT NULL,receive_hash TEXT UNIQUE NOT NULL,
       push_hash TEXT UNIQUE NOT NULL,revoked INTEGER NOT NULL DEFAULT 0,expired_messages INTEGER NOT NULL DEFAULT 0,
       pending_count INTEGER NOT NULL DEFAULT 0,pending_bytes INTEGER NOT NULL DEFAULT 0)`);
@@ -70,5 +74,28 @@ export function migrate(storage: DurableObjectStorage): void {
       "INSERT INTO metadata VALUES('server_id',?),('schema_version','1')",
       token(),
     );
+    upgrade(sql);
   });
+}
+
+function upgrade(sql: SqlStorage): void {
+  sql.exec(
+    "ALTER TABLE messages ADD COLUMN application_name TEXT NOT NULL DEFAULT ''",
+  );
+  sql.exec(
+    "ALTER TABLE messages ADD COLUMN message_group TEXT NOT NULL DEFAULT ''",
+  );
+  sql.exec(
+    "ALTER TABLE messages ADD COLUMN expires_at INTEGER NOT NULL DEFAULT 0",
+  );
+  sql.exec("UPDATE messages SET expires_at=created+604800000");
+  sql.exec(
+    "UPDATE messages SET application_name=coalesce((SELECT name FROM applications WHERE id=messages.application_id),'')",
+  );
+  sql.exec("CREATE INDEX messages_expiry ON messages(acked,expires_at,seq)");
+  sql.exec(
+    "CREATE TABLE push_requests(credential TEXT NOT NULL,request_key TEXT NOT NULL,fingerprint TEXT NOT NULL,response TEXT NOT NULL,expires_at INTEGER NOT NULL,PRIMARY KEY(credential,request_key))",
+  );
+  sql.exec("CREATE INDEX push_requests_expiry ON push_requests(expires_at)");
+  sql.exec("UPDATE metadata SET value='2' WHERE key='schema_version'");
 }

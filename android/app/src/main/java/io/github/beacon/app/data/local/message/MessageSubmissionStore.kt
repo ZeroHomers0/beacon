@@ -33,6 +33,10 @@ internal class MessageSubmissionStore(
                     put("subtitle", message.subtitle)
                     put("priority", message.priority)
                     put("bark", message.bark)
+                    put("application_id", message.applicationId)
+                    put("application_name", message.applicationName)
+                    put("message_group", message.group)
+                    put("expires_at", message.expiresAtMs)
                 }
             val result =
                 when {

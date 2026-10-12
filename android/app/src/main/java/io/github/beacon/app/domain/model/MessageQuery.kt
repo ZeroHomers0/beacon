@@ -6,6 +6,15 @@ data class MessageQuery(
     val before: Long = Long.MAX_VALUE,
     val readFilter: MessageReadFilter = MessageReadFilter.ALL,
 ) {
+    val groupFilter: String
+        get() = search.takeIf { it.startsWith("group:") }?.removePrefix("group:") ?: ""
+
+    val applicationFilter: String
+        get() = search.takeIf { it.startsWith("app:") }?.removePrefix("app:") ?: ""
+
+    val textSearch: String
+        get() = if (groupFilter.isNotEmpty() || applicationFilter.isNotEmpty()) "" else search
+
     fun validate() {
         require(search.length <= 256 && serverId.length <= 128 && before > 0)
     }

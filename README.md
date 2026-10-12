@@ -147,6 +147,10 @@ npx wrangler secret put ADMIN_TOKEN
 
 更新可在 Fork 仓库中使用 **Sync fork → Update branch**，由 Cloudflare Git 集成重新部署；CLI 部署则拉取最新代码后，在 `workers/` 下运行 `npm ci`、`npm run check` 和 `npm run deploy`。更新后检查运行时 `ADMIN_TOKEN` 与原有实例配置。
 
+### 升级到 v1.1.0
+
+升级前备份服务端数据库或存储，建议先升级服务端，再安装新版 Android App。三端自动迁移数据库，已有设备凭据、消息和接收状态保持有效。旧脚本继续使用原有字段；使用 `group`、`ttl`、幂等键与应用来源显示时，需要新版服务端配合。手机历史备份增加来源、分组和有效期字段，新版客户端仍可导入旧备份。
+
 ## 5. 简单教程
 
 ### 绑定手机并发送第一条消息
@@ -195,10 +199,26 @@ curl -X POST 'https://push.example.com/api/v1/push' \
 | `title` | 可选，标题，最多 1024 UTF-8 字节 |
 | `subtitle` | 可选，副标题，最多 1024 UTF-8 字节 |
 | `priority` | 可选，0–10 的整数；设备推送密钥默认使用 5 |
+| `group` | 可选，消息分组，最多 128 UTF-8 字节 |
+| `ttl` | 可选，消息投递有效期，单位秒，0–604800 的整数；省略或 0 使用七天默认值 |
 
 优先级 0–1 仅保存消息，2–3 静默通知，4–7 普通通知，8–10 重要通知。原生接口也接受服务端管理中创建的应用推送令牌；省略 `priority` 时使用该应用的默认优先级。
 
-成功返回 HTTP 200，响应包含消息的 `id`、`sequence` 等信息。服务端接收成功表示消息已保存，不代表手机已经收到或展示通知。
+成功返回 HTTP 200，响应包含消息的 `id`、`sequence`、`expires_at_ms` 等信息。使用应用令牌发送时还包含 `application_id` 与 `application_name`；它们由服务器生成，不能由发送方指定。
+
+需要自动重试的脚本可添加 `Idempotency-Key` 请求头（1–128 个不含空格的可见 ASCII 字符）。同一发送凭据下，相同键与相同内容在首次成功后七天内返回原消息，不重复保存或创建投递任务；同键不同内容返回 `409 idempotency_conflict`。消息已确认、已过期或历史已清理时仍返回原结果，不重新投递。换用不同凭据、超过七天或不带幂等键时会创建新消息。每个业务事件使用一个新键，失败重试时保持键和内容一致。
+
+```bash
+curl -X POST 'https://push.example.com/api/v1/push' \
+  -H 'Authorization: Bearer YOUR_PUSH_KEY' \
+  -H 'Idempotency-Key: build-20261012-001' \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"构建完成","body":"构建已通过","group":"CI","ttl":3600}'
+```
+
+有效期按服务端时间计算。到期后 HTTP 补收和 WebSocket 均停止投递，后台维护随后清理过期正文；已保存到手机的历史不会随有效期到期而消失。手机消息卡片显示分组与应用名称，点击标签可精确筛选，也可在搜索栏输入 `group:CI` 或 `app:完整应用ID`。普通搜索同时匹配正文、标题、分组、应用名称和应用 ID。
+
+服务端接收成功表示消息已保存，不代表手机已经收到或展示通知。
 
 ### Bark 兼容接口
 
@@ -246,7 +266,9 @@ curl -X POST 'https://push.example.com/push' \
 - `level=passive` 或 `sound=none` 对应优先级 2；`level=timeSensitive`、`level=critical` 对应优先级 8；其余默认使用 5。Android 通知效果仍受系统通知权限和通知渠道设置影响。
 - 接收 `image`、`icon`、`url`、`sound` 扩展字段；链接字段仅保留有效的 HTTPS 地址。Bark 的 iOS 铃声和 critical alert 权限不等同于 Android 上的效果。
 - 接收 `ciphertext`、`iv` 加密字段，解密需要在接收端配置匹配的 Bark 加密密钥；服务端不接收 AES 密钥。
-- `group`、`badge`、`ttl`、`action` 等未实现参数会被忽略，不影响正常文本推送。
+- 支持 `group` 与 `ttl`；Beacon 的 `ttl` 单位为秒，范围与原生接口一致，JSON 可使用整数或整数字符串，表单/查询参数使用整数字符串。
+- Bark 接口也支持 `Idempotency-Key` 请求头，作用域、有效窗口与原生接口相同。
+- `badge`、`action` 等未实现参数会被忽略，不影响正常文本推送。
 
 ### 常见错误
 
@@ -256,6 +278,7 @@ curl -X POST 'https://push.example.com/push' \
 | `401` | 推送密钥无效或已撤销 |
 | `413` | 请求过大 |
 | `415` | Bark POST 请求的 Content-Type 不受支持，请使用 JSON 或表单 |
+| `409` | 幂等键已用于不同内容，请为新事件使用新键 |
 | `429` | 推送频率超过限制，稍后重试 |
 | `507` | 服务端存储容量达到限制 |
 

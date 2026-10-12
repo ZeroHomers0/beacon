@@ -355,6 +355,16 @@ fun MessagesPage(
                                 }
                             },
                             onRemind = { actions.remindMessage(key) },
+                            onFilterGroup = {
+                                val value = "group:${message.group}"
+                                onSearch(value)
+                                onApplyFilter(value, readFilter)
+                            },
+                            onFilterApplication = {
+                                val value = "app:${message.applicationId}"
+                                onSearch(value)
+                                onApplyFilter(value, readFilter)
+                            },
                             onLongPress = { onEnterSelection(key) },
                             onToggleRead = {
                                 actions.manageMessages(

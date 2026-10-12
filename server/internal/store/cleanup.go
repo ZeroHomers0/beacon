@@ -67,7 +67,7 @@ func (a *Store) CleanupConfirmed(before int64, apply bool) (domain.CleanupResult
 	}
 	if apply {
 		// Keep only IDs for idempotent confirmation retries after an HTTP response was lost.
-		if _, err = tx.Exec("INSERT OR IGNORE INTO confirmed_receipts(device,id,expires_at) SELECT device,id,max(?,created+?) FROM messages WHERE created<? AND acked=1", time.Now().Add(domain.ReceiptLifetime).UnixMilli(), (domain.PendingLifetime + domain.ReceiptLifetime + domain.ReceiptGrace).Milliseconds(), before); err != nil {
+		if _, err = tx.Exec("INSERT OR IGNORE INTO confirmed_receipts(device,id,expires_at) SELECT device,id,max(?,expires_at+?) FROM messages WHERE created<? AND acked=1", time.Now().Add(domain.ReceiptLifetime).UnixMilli(), (domain.ReceiptLifetime + domain.ReceiptGrace).Milliseconds(), before); err != nil {
 			return domain.CleanupResult{}, err
 		}
 		deleted, err := tx.Exec("DELETE FROM messages WHERE created<? AND acked=1", before)

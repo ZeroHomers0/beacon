@@ -52,6 +52,11 @@ class ReceivePipeline(
 /** Identical byte limits for immediate delivery and paged HTTP persistence. */
 object ReceiveMessageValidation {
     fun validate(message: IncomingMessage) {
+        require(message.applicationName.toByteArray(Charsets.UTF_8).size <= 128)
+        require(
+            message.applicationId.isEmpty() || message.applicationId.matches(Regex("[0-9a-f]{64}"))
+        )
+        require(message.group.toByteArray(Charsets.UTF_8).size <= 128 && message.expiresAtMs >= 0)
         require(message.bark.toByteArray(Charsets.UTF_8).size <= 100000)
         require(message.priority in 0..10)
         require(message.server.isNotBlank() && message.server.length <= MessageLimits.ID_CHARACTERS)

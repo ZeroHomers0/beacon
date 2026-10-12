@@ -1,8 +1,7 @@
 import { Fault, bytes, reject } from "./domain";
 import { parse, read } from "./http";
 
-// Every Bark parameter Beacon honours. Unsupported parameters (group, badge,
-// ttl, action, ...) are silently dropped so third-party software only has to
+// Every Bark parameter Beacon honours. Unsupported parameters (badge, action, ...) are silently dropped so third-party software only has to
 // change the key to reach Beacon.
 const FIELDS = [
   "title",
@@ -16,6 +15,8 @@ const FIELDS = [
   "url",
   "ciphertext",
   "iv",
+  "group",
+  "ttl",
 ];
 // Unsupported parameters are dropped, including a repeated unsupported one. A
 // repeated supported parameter stays a malformed request: the server cannot tell
@@ -23,7 +24,8 @@ const FIELDS = [
 function decode(raw: string): string {
   return decodeURIComponent(raw.replace(/\+/g, " "));
 }
-function query(raw: string): Record<string, string> {  const result: Record<string, string> = Object.create(null);
+function query(raw: string): Record<string, string> {
+  const result: Record<string, string> = Object.create(null);
   if (!raw) return result;
   for (const pair of raw.split("&")) {
     if (!pair) continue;
@@ -98,6 +100,14 @@ export async function bark(request: Request): Promise<Record<string, string>> {
         const filtered: Record<string, string> = {};
         for (const [key, item] of Object.entries(value)) {
           if (!FIELDS.includes(key)) continue;
+          if (
+            key === "ttl" &&
+            typeof item === "number" &&
+            Number.isInteger(item)
+          ) {
+            filtered[key] = String(item);
+            continue;
+          }
           if (typeof item !== "string") throw new Error("field");
           filtered[key] = item;
         }
@@ -171,7 +181,10 @@ export function presentation(values: Record<string, string>): {
   const iv = values.iv ?? "";
   // iv is compared in UTF-8 bytes, exactly like Go's len([]byte(value)).
   let validIV = iv !== "" && bytes(iv) === 16;
-  if (((values.ciphertext ?? "") !== "" && ciphertext === "") || (iv !== "" && !validIV)) {
+  if (
+    ((values.ciphertext ?? "") !== "" && ciphertext === "") ||
+    (iv !== "" && !validIV)
+  ) {
     ciphertext = "";
     validIV = false;
   }

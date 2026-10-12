@@ -653,4 +653,5 @@
     <string name="admin_device_deleted">设备及其消息已删除</string>
     <string name="time_picker_hour">时</string>
     <string name="time_picker_minute">分</string>
+    <string name="message_application_short">应用 %1$s</string>
 </resources>

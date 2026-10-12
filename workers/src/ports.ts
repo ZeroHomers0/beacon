@@ -48,6 +48,7 @@ export interface Repository {
     priority: number,
     bark: string,
     now: number,
+    options?: import("./domain").PushOptions,
   ): Message;
   page(
     device: string,

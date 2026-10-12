@@ -59,6 +59,10 @@ internal object HttpMessagePageDecoder {
                             ),
                             subtitle = if (subtitle is String) subtitle else "",
                             priority = MessagePriorityDecoder.decode(row),
+                            applicationId = MessageMetadataDecoder.application(row),
+                            applicationName = MessageMetadataDecoder.name(row),
+                            group = MessageMetadataDecoder.group(row),
+                            expiresAtMs = MessageMetadataDecoder.expires(row),
                             bark =
                                 (row.opt("bark") ?: "").also {
                                     require(

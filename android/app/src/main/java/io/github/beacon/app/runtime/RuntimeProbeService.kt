@@ -304,7 +304,9 @@ class RuntimeProbeService : Service() {
         // Independent from the receive queue: cancellation may call back into the service.
         scheduler.execute {
             runCatching { PollingScheduler.apply(this, pollingState) }
-                .onFailure { android.util.Log.w("Beacon", "Polling schedule reconciliation failed", it) }
+                .onFailure {
+                    android.util.Log.w("Beacon", "Polling schedule reconciliation failed", it)
+                }
         }
     }
 
@@ -444,8 +446,10 @@ class RuntimeProbeService : Service() {
                 if (Binder.getCallingUid() != applicationInfo.uid)
                     throw SecurityException("Own UID required")
                 data.enforceInterface(DESCRIPTOR)
-                if (code == io.github.beacon.app.ipc.RuntimeProtocol.RECONCILE_POLLING ||
-                    code == io.github.beacon.app.ipc.RuntimeProtocol.SCHEDULE_TEST) {
+                if (
+                    code == io.github.beacon.app.ipc.RuntimeProtocol.RECONCILE_POLLING ||
+                        code == io.github.beacon.app.ipc.RuntimeProtocol.SCHEDULE_TEST
+                ) {
                     require(data.dataAvail() == 0)
                     check(controlLoaded.await(5, java.util.concurrent.TimeUnit.SECONDS))
                     val task = scheduler.submit {
@@ -1526,6 +1530,10 @@ class RuntimeProbeService : Service() {
                 }
                 .getOrDefault("")
         )
+        reply.writeString(message.applicationId)
+        reply.writeString(message.group)
+        reply.writeLong(message.expiresAtMs)
+        reply.writeString(message.applicationName)
     }
 
     override fun onDestroy() {

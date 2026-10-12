@@ -115,6 +115,17 @@ fun MessageDetailScreen(
                             }
                         }
                     }
+                    if (message.group.isNotBlank() || message.applicationId.isNotBlank())
+                        BeaconText(
+                            listOf(
+                                    message.group,
+                                    message.applicationName.ifBlank { message.applicationId },
+                                )
+                                .filter { it.isNotBlank() }
+                                .joinToString(" · "),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
                     if (message.subtitle.isNotBlank())
                         SelectionContainer {
                             BeaconText(

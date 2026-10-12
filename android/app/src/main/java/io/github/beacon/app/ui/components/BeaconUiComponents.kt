@@ -185,7 +185,12 @@ fun SettingsRow(
  * either style's row.
  */
 @Composable
-private fun BadgedIcon(icon: ImageVector, tint: Color, badge: Boolean, modifier: Modifier = Modifier) {
+private fun BadgedIcon(
+    icon: ImageVector,
+    tint: Color,
+    badge: Boolean,
+    modifier: Modifier = Modifier,
+) {
     Box(modifier.size(24.dp)) {
         Icon(icon, null, tint = tint)
         if (badge)
@@ -212,6 +217,8 @@ fun MessageItem(
     onLongPress: () -> Unit,
     onShare: (() -> Unit)? = null,
     onRemind: (() -> Unit)? = null,
+    onFilterGroup: (() -> Unit)? = null,
+    onFilterApplication: (() -> Unit)? = null,
 ) {
     var menu by remember { mutableStateOf(false) }
     val unreadLabel = stringResource(R.string.msg_unread_label)
@@ -308,6 +315,36 @@ fun MessageItem(
                         }
                     }
             }
+            if (message.group.isNotBlank() || message.applicationId.isNotBlank())
+                ActionFlow {
+                    if (message.group.isNotBlank())
+                        AssistChip(
+                            onClick = { onFilterGroup?.invoke() },
+                            enabled = !busy && !selectionMode && onFilterGroup != null,
+                            label = {
+                                BeaconText(
+                                    message.group,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            },
+                        )
+                    if (message.applicationId.isNotBlank())
+                        AssistChip(
+                            onClick = { onFilterApplication?.invoke() },
+                            enabled = !busy && !selectionMode && onFilterApplication != null,
+                            label = {
+                                BeaconText(
+                                    message.applicationName.ifBlank {
+                                        stringResource(
+                                            R.string.message_application_short,
+                                            message.applicationId.take(8),
+                                        )
+                                    }
+                                )
+                            },
+                        )
+                }
             if (message.subtitle.isNotBlank())
                 BeaconText(
                     message.subtitle,

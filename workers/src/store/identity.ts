@@ -31,7 +31,7 @@ export class IdentityStore {
     const app =
       applications &&
       this.first(
-        `SELECT a.id,a.device,a.default_priority FROM applications a JOIN devices d ON d.id=a.device
+        `SELECT a.id,a.device,a.default_priority,a.name FROM applications a JOIN devices d ON d.id=a.device
       WHERE a.token_hash=? AND a.revoked=0 AND d.revoked=0`,
         hash,
       );
@@ -39,6 +39,7 @@ export class IdentityStore {
     return {
       device: String(app.device),
       application: String(app.id),
+      name: String(app.name),
       priority: Number(app.default_priority),
     };
   }

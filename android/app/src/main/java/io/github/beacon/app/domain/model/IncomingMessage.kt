@@ -12,4 +12,8 @@ data class IncomingMessage(
     val priority: Int = 5,
     val reminderPending: Boolean = false,
     val bark: String = "",
+    val applicationId: String = "",
+    val group: String = "",
+    val expiresAtMs: Long = 0,
+    val applicationName: String = "",
 )

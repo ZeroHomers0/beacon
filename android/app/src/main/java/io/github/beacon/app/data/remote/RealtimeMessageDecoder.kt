@@ -56,6 +56,10 @@ class RealtimeMessageDecoder(
             receivedAtMs,
             subtitle = subtitle,
             priority = MessagePriorityDecoder.decode(row),
+            applicationId = MessageMetadataDecoder.application(row),
+            applicationName = MessageMetadataDecoder.name(row),
+            group = MessageMetadataDecoder.group(row),
+            expiresAtMs = MessageMetadataDecoder.expires(row),
             bark =
                 (row.opt("bark") ?: "").also {
                     require(it is String && it.toByteArray(Charsets.UTF_8).size <= 100000)

@@ -1,4 +1,4 @@
-export const VERSION = "1.0.0-workers";
+export const VERSION = "1.1.0-workers";
 export const DAY = 86_400_000;
 export const PENDING = 7 * DAY;
 export const RECEIPT = 30 * DAY;
@@ -8,7 +8,42 @@ export const BATCH = 100;
 export const MAINTENANCE = 60 * 60_000;
 export type Row = Record<string, SqlStorageValue>;
 
+export interface PushOptions {
+  key: string;
+  credential: string;
+  fingerprint: string;
+  group: string;
+  ttl: number;
+}
+export function pushOptions(
+  group: unknown,
+  ttl: unknown,
+  key: string,
+  credential: string,
+  fingerprint: string,
+): PushOptions {
+  if (group === undefined || group === null) group = "";
+  if (
+    typeof group !== "string" ||
+    bytes(group) > 128 ||
+    !/^[\x21-\x7e]{0,128}$/.test(key)
+  )
+    reject(400, "invalid_message");
+  if (ttl === undefined || ttl === null) ttl = 0;
+  if (
+    typeof ttl !== "number" ||
+    !Number.isInteger(ttl) ||
+    ttl < 0 ||
+    ttl > 604800
+  )
+    reject(400, "invalid_message");
+  return { key, credential, fingerprint, group, ttl };
+}
+
 export interface Message {
+  application_name?: string;
+  group?: string;
+  expires_at_ms: number;
   id: string;
   sequence: number;
   title: string;
@@ -22,6 +57,7 @@ export interface Message {
 export interface Sender {
   device: string;
   application: string;
+  name?: string;
   priority: number;
 }
 export interface Attachment {
@@ -79,6 +115,11 @@ export function priority(value: unknown, fallback = 5): number {
 }
 export function message(row: Row): Message {
   return {
+    ...(row.application_name
+      ? { application_name: String(row.application_name) }
+      : {}),
+    ...(row.message_group ? { group: String(row.message_group) } : {}),
+    expires_at_ms: Number(row.expires_at),
     id: String(row.id),
     sequence: Number(row.seq),
     title: String(row.title),

@@ -4,6 +4,7 @@ import {
   VERSION,
   hash,
   priority,
+  pushOptions,
   reject,
   token,
   validID,
@@ -72,20 +73,41 @@ export class API {
       const credential = bearer(request);
       const payload = await body(
         request,
-        ["title", "subtitle", "body", "priority"],
+        ["title", "subtitle", "body", "priority", "group", "ttl"],
         "invalid_message",
       );
       const credentialHash = await hash(credential);
       await this.transport.arm();
       const sender = this.store.sender(credentialHash);
+      const selected = priority(payload.priority, sender.priority);
+      const options = pushOptions(
+        payload.group,
+        payload.ttl,
+        request.headers.get("Idempotency-Key") ?? "",
+        credentialHash,
+        "",
+      );
+      options.fingerprint = await hash(
+        JSON.stringify([
+          text(payload.title),
+          text(payload.subtitle),
+          text(payload.body),
+          selected,
+          sender.application,
+          "",
+          options.group,
+          options.ttl,
+        ]),
+      );
       const m = this.store.save(
         sender,
         text(payload.title),
         text(payload.subtitle),
         text(payload.body),
-        priority(payload.priority, sender.priority),
+        selected,
         "",
         Date.now(),
+        options,
       );
       this.dispatch(sender.device);
       return json(m);
@@ -154,7 +176,19 @@ export class API {
           server_time_ms: now,
           transports: ["http", "websocket"],
           push_apis: ["beacon", "bark_text"],
-          message_fields: ["title", "subtitle", "body", "priority"],
+          message_fields: [
+            "title",
+            "subtitle",
+            "body",
+            "priority",
+            "group",
+            "ttl",
+            "application_id",
+            "application_name",
+            "expires_at_ms",
+          ],
+          push_idempotency: true,
+          max_ttl_seconds: 604800,
           max_page_size: 100,
           binding: "one_time_code",
           self_revoke: true,
@@ -223,6 +257,28 @@ export class API {
       // Existing Bark authenticates device push keys; application tokens use /api/v1/push.
       const sender = this.store.sender(credentialHash, false);
       const extension = presentation(values);
+      const rawTTL = values.ttl;
+      if (rawTTL !== undefined && !/^(0|[1-9][0-9]*)$/.test(rawTTL))
+        reject(400, "invalid_message");
+      const options = pushOptions(
+        values.group,
+        rawTTL === undefined ? 0 : Number(rawTTL),
+        request.headers.get("Idempotency-Key") ?? "",
+        credentialHash,
+        "",
+      );
+      options.fingerprint = await hash(
+        JSON.stringify([
+          values.title ?? "",
+          values.subtitle ?? "",
+          extension.body,
+          extension.priority,
+          sender.application,
+          extension.bark,
+          options.group,
+          options.ttl,
+        ]),
+      );
       const m = this.store.save(
         sender,
         values.title ?? "",
@@ -231,6 +287,7 @@ export class API {
         extension.priority,
         extension.bark,
         Date.now(),
+        options,
       );
       this.dispatch(sender.device);
       return json({
@@ -300,10 +357,14 @@ export class API {
       path.endsWith("/binding") ? credential.slice(0, 32) : credential,
     );
     await this.transport.arm();
-    if (path === "/api/admin/messages/clear") return json({ deleted: this.store.clearMessages() });
+    if (path === "/api/admin/messages/clear")
+      return json({ deleted: this.store.clearMessages() });
     if (path === "/api/admin/devices/delete") {
       if (!validID(payload.device_id)) reject(400, "invalid_device");
-      return json({ deleted: this.store.clearMessages(payload.device_id, true), device_deleted: true });
+      return json({
+        deleted: this.store.clearMessages(payload.device_id, true),
+        device_deleted: true,
+      });
     }
     if (path.endsWith("/binding"))
       return json(

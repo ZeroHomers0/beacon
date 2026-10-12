@@ -22,7 +22,7 @@ internal class MessageHistoryArchive(
             val rows = org.json.JSONArray()
             var estimatedBytes = 256L
             db.rawQuery(
-                    "SELECT server,id,title,body,source_created,received,is_read,subtitle,priority,bark FROM messages WHERE delete_token='' ORDER BY rowid",
+                    "SELECT server,id,title,body,source_created,received,is_read,subtitle,priority,bark,application_id,message_group,expires_at,application_name FROM messages WHERE delete_token='' ORDER BY rowid",
                     null,
                 )
                 .use { cursor ->
@@ -40,7 +40,11 @@ internal class MessageHistoryArchive(
                                 .put("read", cursor.getInt(6) == 1)
                                 .put("subtitle", cursor.getString(7))
                                 .put("priority", cursor.getInt(8))
-                                .put("bark", cursor.getString(9)))
+                                .put("bark", cursor.getString(9))
+                                .put("application_id", cursor.getString(10))
+                                .put("group", cursor.getString(11))
+                                .put("expires_at_ms", cursor.getLong(12))
+                                .put("application_name", cursor.getString(13)))
                         estimatedBytes += row.toString().toByteArray(Charsets.UTF_8).size + 1
                         require(estimatedBytes <= maxBytes - 53)
                         rows.put(row)
@@ -84,7 +88,7 @@ internal class MessageHistoryArchive(
         val messages =
             (0 until rows.length()).map { index ->
                 val row = rows.getJSONObject(index)
-                require(row.length() in 9..10 && row.get("read") is Boolean)
+                require(row.length() in 9..14 && row.get("read") is Boolean)
                 require(
                     row.keys().asSequence().all {
                         it in
@@ -99,6 +103,10 @@ internal class MessageHistoryArchive(
                                 "subtitle",
                                 "priority",
                                 "bark",
+                                "application_id",
+                                "application_name",
+                                "group",
+                                "expires_at_ms",
                             )
                     }
                 )
@@ -121,6 +129,15 @@ internal class MessageHistoryArchive(
                         row.getString("subtitle"),
                         row.getInt("priority"),
                         bark = row.optString("bark"),
+                        applicationId =
+                            io.github.beacon.app.data.remote.MessageMetadataDecoder.application(
+                                row
+                            ),
+                        applicationName =
+                            io.github.beacon.app.data.remote.MessageMetadataDecoder.name(row),
+                        group = io.github.beacon.app.data.remote.MessageMetadataDecoder.group(row),
+                        expiresAtMs =
+                            io.github.beacon.app.data.remote.MessageMetadataDecoder.expires(row),
                     )
                 io.github.beacon.app.domain.receive.ReceiveMessageValidation.validate(message)
                 if (message.bark.isNotEmpty())
@@ -159,6 +176,10 @@ internal class MessageHistoryArchive(
                         put("subtitle", message.subtitle)
                         put("priority", message.priority)
                         put("bark", message.bark)
+                        put("application_id", message.applicationId)
+                        put("application_name", message.applicationName)
+                        put("message_group", message.group)
+                        put("expires_at", message.expiresAtMs)
                     }
                 if (
                     db.insertWithOnConflict(

@@ -1,8 +1,8 @@
 package io.github.beacon.app.ipc
 
 import android.os.IBinder
-import android.os.Parcel
 import android.os.Looper
+import android.os.Parcel
 import io.github.beacon.app.domain.model.DeleteUndo
 import io.github.beacon.app.domain.model.IncomingMessage
 
@@ -49,6 +49,19 @@ internal fun Parcel.readMessage() =
         priority = readInt().also { check(it in 0..10) },
         reminderPending = readInt().also { check(it in 0..1) } == 1,
         bark = requireNotNull(readString()).also { require(it.length <= 100000) },
+        applicationId =
+            requireNotNull(readString()).also {
+                require(it.isEmpty() || it.matches(Regex("[0-9a-f]{64}")))
+            },
+        group =
+            requireNotNull(readString()).also {
+                require(it.toByteArray(Charsets.UTF_8).size <= 128)
+            },
+        expiresAtMs = readLong().also { require(it >= 0) },
+        applicationName =
+            requireNotNull(readString()).also {
+                require(it.toByteArray(Charsets.UTF_8).size <= 128)
+            },
     )
 
 internal fun Parcel.readUndo(): DeleteUndo? {

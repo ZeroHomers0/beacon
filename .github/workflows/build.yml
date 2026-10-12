@@ -165,6 +165,7 @@ jobs:
       contents: write
       actions: read
     steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Publish tagged artifacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -172,20 +173,7 @@ jobs:
         run: |
           gh run download "$GITHUB_RUN_ID" --pattern 'beacon-*' --dir dist
           shopt -s dotglob
-          cat > "$RUNNER_TEMP/notes.md" <<'EOF'
-          本次更新统一时间选择界面，改善时间显示与操作体验。
-
-          - 时间入口将标题与时间分行显示，避免文案挤压数字。
-          - 时间滚轮跟随当前 MIUIX / Material 及深色模式，统一应用 UI 风格。
-          - 页面内直接显示时、分数字，无需弹窗，上下滑动选择，松手后自动对齐。
-          - 沿用页面原有保存流程；静音时段与接收时段共用同一组件。
-
-          - **Android**：下载 `beacon-release.apk` 安装（Android 8.0 / minSdk 26 及以上）。
-          - **服务端**：`beacon-server-linux-amd64` / `-arm64` 是无需依赖的单文件二进制，配套 `docker-compose.yaml`；也可直接用镜像 `ghcr.io/zerohomers0/beacon-server:latest`。
-          - **Cloudflare Workers**：无需服务器，部署方式见仓库文档。
-
-          各目录下的 `SHA256SUMS-*` 为校验文件。
-          EOF
+          cp RELEASE_NOTES.md "$RUNNER_TEMP/notes.md"
           gh release create "$GITHUB_REF_NAME" dist/*/* --verify-tag \
             --title "Beacon $GITHUB_REF_NAME" \
             --notes-file "$RUNNER_TEMP/notes.md"

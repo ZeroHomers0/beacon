@@ -29,7 +29,7 @@ class RuntimeMessageStore(
     private val availableBytes: () -> Long = {
         android.os.StatFs(context.filesDir.absolutePath).availableBytes
     },
-) : SQLiteOpenHelper(context, "beacon-messages.db", null, 12), SyncStore, NotificationIntentStore {
+) : SQLiteOpenHelper(context, "beacon-messages.db", null, 13), SyncStore, NotificationIntentStore {
 
     private val appContext = context.applicationContext
     private val databaseFile = context.getDatabasePath("beacon-messages.db")
@@ -76,7 +76,7 @@ class RuntimeMessageStore(
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
-            "CREATE TABLE messages(server TEXT NOT NULL, id TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL, received INTEGER NOT NULL, source_created INTEGER NOT NULL DEFAULT 0, is_read INTEGER NOT NULL DEFAULT 0, delete_token TEXT NOT NULL DEFAULT '', subtitle TEXT NOT NULL DEFAULT '', priority INTEGER NOT NULL DEFAULT 5, bark TEXT NOT NULL DEFAULT '', PRIMARY KEY(server,id))"
+            "CREATE TABLE messages(server TEXT NOT NULL, id TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL, received INTEGER NOT NULL, source_created INTEGER NOT NULL DEFAULT 0, is_read INTEGER NOT NULL DEFAULT 0, delete_token TEXT NOT NULL DEFAULT '', subtitle TEXT NOT NULL DEFAULT '', priority INTEGER NOT NULL DEFAULT 5, bark TEXT NOT NULL DEFAULT '', application_id TEXT NOT NULL DEFAULT '', application_name TEXT NOT NULL DEFAULT '', message_group TEXT NOT NULL DEFAULT '', expires_at INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(server,id))"
         )
         db.execSQL("CREATE INDEX messages_received ON messages(received DESC)")
         db.execSQL(
@@ -93,7 +93,12 @@ class RuntimeMessageStore(
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        check(oldVersion in 1..11 && newVersion == 12)
+        check(oldVersion in 1..12 && newVersion == 13)
+        db.execSQL("ALTER TABLE messages ADD COLUMN application_id TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE messages ADD COLUMN message_group TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE messages ADD COLUMN expires_at INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE messages ADD COLUMN application_name TEXT NOT NULL DEFAULT ''")
+        if (oldVersion == 12) return
         if (oldVersion < 12)
             db.execSQL("ALTER TABLE messages ADD COLUMN bark TEXT NOT NULL DEFAULT ''")
         if (oldVersion < 10)
@@ -153,7 +158,9 @@ class RuntimeMessageStore(
     /** A visible notification was handled: mark read and consume its reminder atomically. */
     fun readFromNotification(key: MessageKey): Int = reminderStore.readFromNotification(key)
 
-    /** A summary notification was handled: every message it stands for is read in one transaction. */
+    /**
+     * A summary notification was handled: every message it stands for is read in one transaction.
+     */
     fun readFromNotification(keys: List<MessageKey>): Int = reminderStore.readFromNotification(keys)
 
     private fun createCursors(db: SQLiteDatabase) {
