@@ -29,7 +29,7 @@ class RuntimeMessageStore(
     private val availableBytes: () -> Long = {
         android.os.StatFs(context.filesDir.absolutePath).availableBytes
     },
-) : SQLiteOpenHelper(context, "beacon-messages.db", null, 13), SyncStore, NotificationIntentStore {
+) : SQLiteOpenHelper(context, "beacon-messages.db", null, 14), SyncStore, NotificationIntentStore {
     override fun ackBatchCompleted(server: String, ids: List<String>) =
         submissionStore.ackCompleted(server, ids)
 
@@ -78,7 +78,7 @@ class RuntimeMessageStore(
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
-            "CREATE TABLE messages(server TEXT NOT NULL, id TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL, received INTEGER NOT NULL, source_created INTEGER NOT NULL DEFAULT 0, is_read INTEGER NOT NULL DEFAULT 0, delete_token TEXT NOT NULL DEFAULT '', subtitle TEXT NOT NULL DEFAULT '', priority INTEGER NOT NULL DEFAULT 5, bark TEXT NOT NULL DEFAULT '', application_id TEXT NOT NULL DEFAULT '', application_name TEXT NOT NULL DEFAULT '', message_group TEXT NOT NULL DEFAULT '', expires_at INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(server,id))"
+            "CREATE TABLE messages(server TEXT NOT NULL, id TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL, received INTEGER NOT NULL, source_created INTEGER NOT NULL DEFAULT 0, is_read INTEGER NOT NULL DEFAULT 0, delete_token TEXT NOT NULL DEFAULT '', subtitle TEXT NOT NULL DEFAULT '', priority INTEGER NOT NULL DEFAULT 5, bark TEXT NOT NULL DEFAULT '', application_id TEXT NOT NULL DEFAULT '', application_name TEXT NOT NULL DEFAULT '', message_group TEXT NOT NULL DEFAULT '', expires_at INTEGER NOT NULL DEFAULT 0, actions TEXT NOT NULL DEFAULT '[]', PRIMARY KEY(server,id))"
         )
         db.execSQL("CREATE INDEX messages_received ON messages(received DESC)")
         db.execSQL(
@@ -95,7 +95,9 @@ class RuntimeMessageStore(
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        check(oldVersion in 1..12 && newVersion == 13)
+        check(oldVersion in 1..13 && newVersion == 14)
+        db.execSQL("ALTER TABLE messages ADD COLUMN actions TEXT NOT NULL DEFAULT '[]'")
+        if (oldVersion == 13) return
         db.execSQL("ALTER TABLE messages ADD COLUMN application_id TEXT NOT NULL DEFAULT ''")
         db.execSQL("ALTER TABLE messages ADD COLUMN message_group TEXT NOT NULL DEFAULT ''")
         db.execSQL("ALTER TABLE messages ADD COLUMN expires_at INTEGER NOT NULL DEFAULT 0")

@@ -8,5 +8,5 @@ object MessageQuerySql {
     const val PAGE =
         "SELECT rowid,server,id,title,substr(body,1,180),source_created,received,is_read,subtitle,priority,EXISTS(SELECT 1 FROM notification_intents n WHERE n.server=messages.server AND n.id=messages.id),'',application_id,message_group,expires_at,application_name FROM messages WHERE $FILTER AND rowid < ? ORDER BY rowid DESC LIMIT ?"
     const val DETAIL =
-        "SELECT server,id,title,body,source_created,received,is_read,subtitle,priority,EXISTS(SELECT 1 FROM notification_intents n WHERE n.server=messages.server AND n.id=messages.id),bark,application_id,message_group,expires_at,application_name FROM messages WHERE server=? AND id=? AND delete_token=''"
+        "SELECT server,id,title,body,source_created,received,is_read,subtitle,priority,EXISTS(SELECT 1 FROM notification_intents n WHERE n.server=messages.server AND n.id=messages.id),bark,application_id,message_group,expires_at,application_name,actions FROM messages WHERE server=? AND id=? AND delete_token=''"
 }

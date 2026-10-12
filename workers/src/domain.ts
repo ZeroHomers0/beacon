@@ -1,4 +1,4 @@
-export const VERSION = "1.1.1-workers";
+export const VERSION = "1.1.3-workers";
 export const DAY = 86_400_000;
 export const PENDING = 7 * DAY;
 export const RECEIPT = 30 * DAY;
@@ -14,6 +14,7 @@ export interface PushOptions {
   fingerprint: string;
   group: string;
   ttl: number;
+  actions?: MessageAction[];
 }
 export function pushOptions(
   group: unknown,
@@ -40,6 +41,43 @@ export function pushOptions(
   return { key, credential, fingerprint, group, ttl };
 }
 
+export interface MessageAction {
+  title: string;
+  url: string;
+}
+export function validateMessageActions(value: unknown): MessageAction[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value) || value.length > 3) reject(400, "invalid_message");
+  return value.map((item) => {
+    if (
+      !item || typeof item !== "object" || Array.isArray(item) ||
+      Object.keys(item).some((key) => !["title", "url"].includes(key))
+    )
+      reject(400, "invalid_message");
+    const { title, url } = item;
+    if (typeof title !== "string" || !title.trim() || bytes(title) > 64 ||
+        /[\u0000-\u001f\u007f-\u009f]/.test(title) ||
+        typeof url !== "string" || bytes(url) > 2048 ||
+        !/^https:\/\//i.test(url) || /[\s\\\u0000-\u001f\u007f-\u009f]/.test(url))
+      reject(400, "invalid_message");
+    const authority = url.slice(url.indexOf("//") + 2).split(/[/?#]/)[0];
+    if (!authority || authority.includes("@") || authority.endsWith(":") ||
+        /%(?![0-9a-f]{2})/i.test(url) || /[^\x00-\x7f]/.test(authority))
+      reject(400, "invalid_message");
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol !== "https:" || !parsed.hostname || parsed.username || parsed.password ||
+          (parsed.port !== "" && Number(parsed.port) < 1) ||
+          parsed.hostname.length > 253 ||
+          (!/^\[[a-f0-9:]+\]$/i.test(parsed.hostname) &&
+            !parsed.hostname.replace(/\.$/, "").split(".").every((label) => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i.test(label))))
+        reject(400, "invalid_message");
+    } catch {
+      reject(400, "invalid_message");
+    }
+    return { title, url };
+  });
+}
 export interface Message {
   application_name?: string;
   group?: string;
@@ -53,6 +91,7 @@ export interface Message {
   priority: number;
   application_id?: string;
   bark?: string;
+  actions?: MessageAction[];
 }
 export interface Sender {
   device: string;
@@ -130,6 +169,7 @@ export function message(row: Row): Message {
     ...(row.application_id
       ? { application_id: String(row.application_id) }
       : {}),
+    ...(row.actions ? { actions: JSON.parse(String(row.actions)) as MessageAction[] } : {}),
     ...(row.bark ? { bark: String(row.bark) } : {}),
   };
 }

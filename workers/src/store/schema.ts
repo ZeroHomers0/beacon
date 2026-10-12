@@ -10,11 +10,16 @@ export function migrate(storage: DurableObjectStorage): void {
     const version = [
       ...sql.exec("SELECT value FROM metadata WHERE key='schema_version'"),
     ][0];
-    if (version?.value === "2") return;
+    if (version?.value === "3") return;
+    if (version?.value === "2") {
+      upgradeActions(sql);
+      return;
+    }
     if (version && version.value !== "1")
       throw new Error("unsupported workers schema");
     if (version) {
       upgrade(sql);
+      upgradeActions(sql);
       return;
     }
     sql.exec(`CREATE TABLE devices(id TEXT PRIMARY KEY,name TEXT NOT NULL,receive_hash TEXT UNIQUE NOT NULL,
@@ -75,6 +80,7 @@ export function migrate(storage: DurableObjectStorage): void {
       token(),
     );
     upgrade(sql);
+    upgradeActions(sql);
   });
 }
 
@@ -98,4 +104,25 @@ function upgrade(sql: SqlStorage): void {
   );
   sql.exec("CREATE INDEX push_requests_expiry ON push_requests(expires_at)");
   sql.exec("UPDATE metadata SET value='2' WHERE key='schema_version'");
+}
+
+function upgradeActions(sql: SqlStorage): void {
+  sql.exec("ALTER TABLE messages ADD COLUMN actions TEXT NOT NULL DEFAULT ''");
+  for (const trigger of ["messages_insert", "messages_delete", "messages_ack"])
+    sql.exec(`DROP TRIGGER IF EXISTS ${trigger}`);
+  const size = "length(CAST(NEW.title AS BLOB))+length(CAST(NEW.subtitle AS BLOB))+length(CAST(NEW.body AS BLOB))+length(CAST(NEW.bark AS BLOB))+length(CAST(NEW.actions AS BLOB))";
+  const oldSize = size.replaceAll("NEW.", "OLD.");
+  sql.exec(`CREATE TRIGGER messages_insert AFTER INSERT ON messages BEGIN
+    UPDATE usage SET messages=messages+1 WHERE singleton=1;
+    UPDATE devices SET pending_count=pending_count+(NEW.acked=0),pending_bytes=pending_bytes+(NEW.acked=0)*(${size}) WHERE id=NEW.device;
+    END`);
+  sql.exec(`CREATE TRIGGER messages_delete AFTER DELETE ON messages BEGIN
+    UPDATE usage SET messages=messages-1 WHERE singleton=1;
+    UPDATE devices SET pending_count=pending_count-(OLD.acked=0),pending_bytes=pending_bytes-(OLD.acked=0)*(${oldSize}) WHERE id=OLD.device;
+    END`);
+  sql.exec(`CREATE TRIGGER messages_ack AFTER UPDATE OF acked ON messages WHEN OLD.acked<>NEW.acked BEGIN
+    UPDATE devices SET pending_count=pending_count+(NEW.acked=0)-(OLD.acked=0),
+      pending_bytes=pending_bytes+((NEW.acked=0)-(OLD.acked=0))*(${size}) WHERE id=NEW.device;
+    END`);
+  sql.exec("UPDATE metadata SET value='3' WHERE key='schema_version'");
 }

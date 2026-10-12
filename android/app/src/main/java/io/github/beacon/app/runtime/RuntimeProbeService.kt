@@ -1180,12 +1180,16 @@ class RuntimeProbeService : Service() {
                                 try {
                                     // Snapshot credentials on their owner, then release it before
                                     // network IO so local queries and mutations can proceed.
-                                    val sync = worker.submit<HttpMessageSync> {
-                                        HttpMessageSync(
-                                            TransportSecretStore(this@RuntimeProbeService).load(),
-                                            store,
-                                        )
-                                    }.get(5, java.util.concurrent.TimeUnit.SECONDS)
+                                    val sync =
+                                        worker
+                                            .submit<HttpMessageSync> {
+                                                HttpMessageSync(
+                                                    TransportSecretStore(this@RuntimeProbeService)
+                                                        .load(),
+                                                    store,
+                                                )
+                                            }
+                                            .get(5, java.util.concurrent.TimeUnit.SECONDS)
                                     Pair(true, sync.checkServer())
                                 } catch (error: Exception) {
                                     Pair(
@@ -1555,6 +1559,9 @@ class RuntimeProbeService : Service() {
         reply.writeString(message.group)
         reply.writeLong(message.expiresAtMs)
         reply.writeString(message.applicationName)
+        reply.writeString(
+            io.github.beacon.app.data.remote.MessageActionsCodec.encode(message.actions)
+        )
     }
 
     override fun onDestroy() {

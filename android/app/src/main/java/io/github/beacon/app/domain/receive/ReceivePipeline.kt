@@ -56,6 +56,7 @@ class ReceivePipeline(
 /** Identical byte limits for immediate delivery and paged HTTP persistence. */
 object ReceiveMessageValidation {
     fun validate(message: IncomingMessage) {
+        io.github.beacon.app.data.remote.MessageActionsCodec.validate(message.actions)
         require(message.applicationName.toByteArray(Charsets.UTF_8).size <= 128)
         require(
             message.applicationId.isEmpty() || message.applicationId.matches(Regex("[0-9a-f]{64}"))

@@ -66,6 +66,10 @@ fun MessagesPage(
     val context = androidx.compose.ui.platform.LocalContext.current
     val zone = java.time.ZoneId.systemDefault()
     val today = java.time.LocalDate.now(zone)
+    val dates =
+        remember(runtimeState.messages, zone) {
+            runtimeState.messages.map { MessagePresentation.receivedDate(it, zone) }
+        }
     val focus = LocalFocusManager.current
     val layoutDirection = LocalLayoutDirection.current
     // The shared title only folds once the list has actually scrolled.
@@ -303,19 +307,8 @@ fun MessagesPage(
                         }
                     }
                 runtimeState.messages.forEachIndexed { index, message ->
-                    val date =
-                        MessagePresentation.receivedDate(
-                            message,
-                            zone,
-                        )
-                    if (
-                        index == 0 ||
-                            date !=
-                                MessagePresentation.receivedDate(
-                                    runtimeState.messages[index - 1],
-                                    zone,
-                                )
-                    ) {
+                    val date = dates[index]
+                    if (index == 0 || date != dates[index - 1]) {
                         item(key = "date.${message.server.length}:${message.server}${message.id}") {
                             BeaconText(
                                 when (date) {

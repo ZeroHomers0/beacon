@@ -16,6 +16,8 @@ import io.github.beacon.app.domain.policy.MessagePresentation
 import io.github.beacon.app.ui.components.*
 import io.github.beacon.app.ui.icons.BeaconIcons
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
@@ -94,10 +96,17 @@ fun MessageMediaPanel(metadata: String) {
                 hint = loadingText
                 val images =
                     withContext(Dispatchers.IO) {
-                        (if (image.isNotEmpty()) RemoteMessageImage.load(image) else null) to
-                            (if (icon.isNotEmpty())
-                                RemoteMessageImage.load(icon, iconPixels.coerceIn(1, 1024))
-                            else null)
+                        coroutineScope {
+                            val photo = async {
+                                if (image.isNotEmpty()) RemoteMessageImage.load(image) else null
+                            }
+                            val avatarImage = async {
+                                if (icon.isNotEmpty())
+                                    RemoteMessageImage.load(icon, iconPixels.coerceIn(1, 1024))
+                                else null
+                            }
+                            photo.await() to avatarImage.await()
+                        }
                     }
                 bitmap = images.first
                 avatar = images.second

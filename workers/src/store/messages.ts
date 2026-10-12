@@ -42,6 +42,7 @@ export class MessageStore extends IdentityStore implements Repository {
       bytes(bark) > 100000
     )
       reject(400, "invalid_message");
+    const actionJSON = options?.actions?.length ? JSON.stringify(options.actions) : "";
     return this.storage.transactionSync(() => {
       this.active(sender.device);
       // Fingerprinting yields to other requests; recheck rotated/revoked credentials
@@ -87,7 +88,7 @@ export class MessageStore extends IdentityStore implements Repository {
       const live = this.first("SELECT messages FROM usage WHERE singleton=1")!;
       if (
         Number(usage.pending_count) >= 10000 ||
-        Number(usage.pending_bytes) + bytes(title + subtitle + body + bark) >
+        Number(usage.pending_bytes) + bytes(title + subtitle + body + bark + actionJSON) >
           64 * 1024 * 1024 ||
         Number(live.messages) >= 100000 ||
         this.storage.sql.databaseSize + 512 * 1024 > 256 * 1024 * 1024
@@ -95,8 +96,8 @@ export class MessageStore extends IdentityStore implements Repository {
         reject(507, "storage_capacity_reached");
       const id = token();
       const row = this.first(
-        `INSERT INTO messages(id,device,title,subtitle,body,priority,application_id,bark,created,message_group,expires_at,application_name)
-        VALUES(?,?,?,?,?,?,?,?,?,?,?,?) RETURNING *`,
+        `INSERT INTO messages(id,device,title,subtitle,body,priority,application_id,bark,created,message_group,expires_at,application_name,actions)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING *`,
         id,
         sender.device,
         title,
@@ -109,6 +110,7 @@ export class MessageStore extends IdentityStore implements Repository {
         options?.group ?? "",
         expires,
         sender.name ?? "",
+        actionJSON,
       )!;
       this.rows(
         "INSERT INTO publish_outbox(message_seq,next_attempt) VALUES(?,?)",

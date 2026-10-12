@@ -160,7 +160,16 @@ func (a *Store) SavePushMessage(device, title, subtitle, body string, priority i
 		}
 	}
 	credential := auth.HashToken(token)
-	fingerprintBytes, _ := json.Marshal([]any{title, subtitle, body, priority, applicationID, bark, options.Group, options.TTL})
+	actions := ""
+	if len(options.Actions) > 0 {
+		encoded, _ := json.Marshal(options.Actions)
+		actions = string(encoded)
+	}
+	fingerprintFields := []any{title, subtitle, body, priority, applicationID, bark, options.Group, options.TTL}
+	if len(options.Actions) > 0 {
+		fingerprintFields = append(fingerprintFields, options.Actions)
+	}
+	fingerprintBytes, _ := json.Marshal(fingerprintFields)
 	fingerprint := auth.HashToken(string(fingerprintBytes))
 	if options.Key != "" {
 		var previous, response string
@@ -192,15 +201,15 @@ func (a *Store) SavePushMessage(device, title, subtitle, body string, priority i
 		ttl = 604800
 	}
 	expires := now + ttl*1000
-	addedBytes := int64(len(title) + len(subtitle) + len(body) + len(bark))
+	addedBytes := int64(len(title) + len(subtitle) + len(body) + len(bark) + len(actions))
 	if err := a.checkDevicePendingQuota(tx, device, addedBytes); err != nil {
 		return domain.Message{}, err
 	}
 	if err := a.checkStoreQuota(tx, addedBytes); err != nil {
 		return domain.Message{}, err
 	}
-	result, err := tx.Exec(`INSERT INTO messages(id,device,title,body,created,subtitle,priority,application_id,bark,message_group,expires_at,application_name)
-		SELECT ?,id,?,?,?,?,?,?,?,?,?,? FROM devices WHERE id=? AND revoked=0`, id, title, body, now, subtitle, priority, applicationID, bark, options.Group, expires, applicationName, device)
+	result, err := tx.Exec(`INSERT INTO messages(id,device,title,body,created,subtitle,priority,application_id,bark,message_group,expires_at,application_name,actions)
+		SELECT ?,id,?,?,?,?,?,?,?,?,?,?,? FROM devices WHERE id=? AND revoked=0`, id, title, body, now, subtitle, priority, applicationID, bark, options.Group, expires, applicationName, actions, device)
 	if err != nil {
 		return domain.Message{}, err
 	}
@@ -218,7 +227,7 @@ func (a *Store) SavePushMessage(device, title, subtitle, body string, priority i
 	if _, err = tx.Exec("INSERT INTO publish_outbox(message_seq) VALUES(?)", sequence); err != nil {
 		return domain.Message{}, err
 	}
-	m := domain.Message{ApplicationName: applicationName, ID: id, Sequence: sequence, Title: title, Body: body, CreatedAt: now, Subtitle: subtitle, Priority: priority, ApplicationID: applicationID, Bark: bark, Group: options.Group, ExpiresAt: expires}
+	m := domain.Message{Actions: options.Actions, ApplicationName: applicationName, ID: id, Sequence: sequence, Title: title, Body: body, CreatedAt: now, Subtitle: subtitle, Priority: priority, ApplicationID: applicationID, Bark: bark, Group: options.Group, ExpiresAt: expires}
 	if options.Key != "" {
 		response, _ := json.Marshal(m)
 		if _, err = tx.Exec("INSERT INTO push_requests VALUES(?,?,?,?,?)", credential, options.Key, fingerprint, string(response), now+604800000); err != nil {
@@ -234,7 +243,7 @@ func (a *Store) SavePushMessage(device, title, subtitle, body string, priority i
 // pendingDeviceUsage returns the unacked count and byte total pending for a device.
 func pendingDeviceUsage(tx *sql.Tx, device string) (int64, int64, error) {
 	var pending, pendingBytes int64
-	err := tx.QueryRow(`SELECT count(*),coalesce(sum(length(CAST(title AS BLOB))+length(CAST(subtitle AS BLOB))+length(CAST(body AS BLOB))+length(CAST(bark AS BLOB))),0) FROM messages WHERE device=? AND acked=0`, device).Scan(&pending, &pendingBytes)
+	err := tx.QueryRow(`SELECT count(*),coalesce(sum(length(CAST(title AS BLOB))+length(CAST(subtitle AS BLOB))+length(CAST(body AS BLOB))+length(CAST(bark AS BLOB))+length(CAST(actions AS BLOB))),0) FROM messages WHERE device=? AND acked=0`, device).Scan(&pending, &pendingBytes)
 	return pending, pendingBytes, err
 }
 
@@ -275,7 +284,7 @@ func (a *Store) checkStoreQuota(tx *sql.Tx, addedBytes int64) error {
 }
 
 func (a *Store) Messages(device string, after int64, limit int, pending bool) (domain.MessagePage, error) {
-	query := "SELECT id,seq,title,body,created,subtitle,priority,application_id,bark,message_group,expires_at,application_name FROM messages WHERE device=? AND seq>? AND expires_at>?"
+	query := "SELECT id,seq,title,body,created,subtitle,priority,application_id,bark,message_group,expires_at,application_name,actions FROM messages WHERE device=? AND seq>? AND expires_at>?"
 	if pending {
 		query += " AND acked=0"
 	}
@@ -288,8 +297,14 @@ func (a *Store) Messages(device string, after int64, limit int, pending bool) (d
 	items := make([]domain.Message, 0, limit+1)
 	for rows.Next() {
 		var m domain.Message
-		if err := rows.Scan(&m.ID, &m.Sequence, &m.Title, &m.Body, &m.CreatedAt, &m.Subtitle, &m.Priority, &m.ApplicationID, &m.Bark, &m.Group, &m.ExpiresAt, &m.ApplicationName); err != nil {
+		var actions string
+		if err := rows.Scan(&m.ID, &m.Sequence, &m.Title, &m.Body, &m.CreatedAt, &m.Subtitle, &m.Priority, &m.ApplicationID, &m.Bark, &m.Group, &m.ExpiresAt, &m.ApplicationName, &actions); err != nil {
 			return domain.MessagePage{}, err
+		}
+		if actions != "" {
+			if err := json.Unmarshal([]byte(actions), &m.Actions); err != nil {
+				return domain.MessagePage{}, err
+			}
 		}
 		items = append(items, m)
 	}

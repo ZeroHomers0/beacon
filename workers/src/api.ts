@@ -1,4 +1,5 @@
 import {
+  validateMessageActions,
   PENDING,
   RECEIPT,
   VERSION,
@@ -73,7 +74,7 @@ export class API {
       const credential = bearer(request);
       const payload = await body(
         request,
-        ["title", "subtitle", "body", "priority", "group", "ttl"],
+        ["title", "subtitle", "body", "priority", "group", "ttl", "actions"],
         "invalid_message",
       );
       const credentialHash = await hash(credential);
@@ -87,6 +88,7 @@ export class API {
         credentialHash,
         "",
       );
+      options.actions = validateMessageActions(payload.actions);
       options.fingerprint = await hash(
         JSON.stringify([
           text(payload.title),
@@ -97,6 +99,7 @@ export class API {
           "",
           options.group,
           options.ttl,
+          ...(options.actions.length ? [options.actions] : []),
         ]),
       );
       const m = this.store.save(
@@ -186,6 +189,7 @@ export class API {
             "application_id",
             "application_name",
             "expires_at_ms",
+            "actions",
           ],
           push_idempotency: true,
           max_ttl_seconds: 604800,

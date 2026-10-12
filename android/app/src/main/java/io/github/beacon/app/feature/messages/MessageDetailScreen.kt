@@ -166,7 +166,8 @@ fun MessageDetailScreen(
                 org.json.JSONObject(message.bark).optString("url")
             }
                 .getOrDefault("")
-            MessageLinksPanel(message.body + if (barkUrl.isNotBlank()) "\n$barkUrl" else "")
+            MessageActionsPanel(message.actions, barkUrl)
+            MessageLinksPanel(message.body)
             UiSection(stringResource(R.string.msg_detail_info_title)) {
                 DiagnosticRow(
                     stringResource(R.string.msg_detail_reminder_state_label),

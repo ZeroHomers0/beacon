@@ -153,7 +153,8 @@ func (a *API) capabilities(w http.ResponseWriter, r *http.Request) {
 		"server_time_ms":              time.Now().UnixMilli(),
 		"transports":                  transports,
 		"push_apis":                   []string{"beacon", "bark_text"},
-		"message_fields":              []string{"title", "subtitle", "body", "priority", "group", "ttl", "application_id", "application_name", "expires_at_ms"},
+		"message_fields":              []string{"title", "subtitle", "body", "priority", "group", "ttl", "application_id", "application_name", "expires_at_ms", "actions"},
+		"max_message_actions":         3,
 		"push_idempotency":            true,
 		"max_ttl_seconds":             604800,
 		"max_page_size":               domain.MaxPageSize,
@@ -177,18 +178,19 @@ func (a *API) push(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var payload struct {
-		Title    string `json:"title"`
-		Body     string `json:"body"`
-		Subtitle string `json:"subtitle"`
-		Priority *int   `json:"priority"`
-		Group    string `json:"group"`
-		TTL      int64  `json:"ttl"`
+		Title    string                `json:"title"`
+		Body     string                `json:"body"`
+		Subtitle string                `json:"subtitle"`
+		Priority *int                  `json:"priority"`
+		Group    string                `json:"group"`
+		TTL      int64                 `json:"ttl"`
+		Actions  domain.MessageActions `json:"actions"`
 	}
 	if decodeJSON(w, r, &payload) != nil {
 		apiError(w, http.StatusBadRequest, "invalid_message")
 		return
 	}
-	m, err := a.service.PushWithOptions(token, payload.Title, payload.Subtitle, payload.Body, payload.Priority, domain.PushOptions{Key: r.Header.Get("Idempotency-Key"), Group: payload.Group, TTL: payload.TTL})
+	m, err := a.service.PushWithOptions(token, payload.Title, payload.Subtitle, payload.Body, payload.Priority, domain.PushOptions{Key: r.Header.Get("Idempotency-Key"), Group: payload.Group, TTL: payload.TTL, Actions: payload.Actions})
 	if err != nil {
 		if errors.Is(err, domain.ErrIdempotencyConflict) {
 			apiError(w, http.StatusConflict, "idempotency_conflict")

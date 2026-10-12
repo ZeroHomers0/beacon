@@ -82,14 +82,18 @@ type DeviceCredentials struct {
 }
 
 type PushOptions struct {
-	Key   string `json:"-"`
-	Group string `json:"group"`
-	TTL   int64  `json:"ttl"`
+	Key     string          `json:"-"`
+	Group   string          `json:"group"`
+	TTL     int64           `json:"ttl"`
+	Actions []MessageAction `json:"actions,omitempty"`
 }
 
 var ErrIdempotencyConflict = errors.New("idempotency_conflict")
 
 func (o PushOptions) Valid() bool {
+	if !ValidMessageActions(o.Actions) {
+		return false
+	}
 	if len(o.Key) > 128 || len(o.Group) > 128 || o.TTL < 0 || o.TTL > 604800 {
 		return false
 	}
@@ -102,18 +106,19 @@ func (o PushOptions) Valid() bool {
 }
 
 type Message struct {
-	ApplicationName string `json:"application_name,omitempty"`
-	Group           string `json:"group,omitempty"`
-	ExpiresAt       int64  `json:"expires_at_ms"`
-	Bark            string `json:"bark,omitempty"`
-	ID              string `json:"id"`
-	Sequence        int64  `json:"sequence"`
-	Title           string `json:"title"`
-	Body            string `json:"body"`
-	CreatedAt       int64  `json:"created_at_ms"`
-	Subtitle        string `json:"subtitle"`
-	Priority        int    `json:"priority"`
-	ApplicationID   string `json:"application_id,omitempty"`
+	Actions         []MessageAction `json:"actions,omitempty"`
+	ApplicationName string          `json:"application_name,omitempty"`
+	Group           string          `json:"group,omitempty"`
+	ExpiresAt       int64           `json:"expires_at_ms"`
+	Bark            string          `json:"bark,omitempty"`
+	ID              string          `json:"id"`
+	Sequence        int64           `json:"sequence"`
+	Title           string          `json:"title"`
+	Body            string          `json:"body"`
+	CreatedAt       int64           `json:"created_at_ms"`
+	Subtitle        string          `json:"subtitle"`
+	Priority        int             `json:"priority"`
+	ApplicationID   string          `json:"application_id,omitempty"`
 }
 
 type MessagePage struct {

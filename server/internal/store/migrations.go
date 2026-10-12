@@ -17,7 +17,7 @@ func migrateMessageSchema(db *sql.DB) error {
 	if err = tx.QueryRow("PRAGMA user_version").Scan(&version); err != nil {
 		return err
 	}
-	if version > 10 {
+	if version > 11 {
 		return fmt.Errorf("unsupported database schema")
 	}
 	rows, err := tx.Query("PRAGMA table_info(messages)")
@@ -191,7 +191,18 @@ func migrateMessageSchema(db *sql.DB) error {
 			}
 		}
 	}
-	if _, err = tx.Exec("PRAGMA user_version=10"); err != nil {
+	if version < 11 {
+		var present int
+		if err = tx.QueryRow("SELECT count(*) FROM pragma_table_info('messages') WHERE name='actions'").Scan(&present); err != nil {
+			return err
+		}
+		if present == 0 {
+			if _, err = tx.Exec("ALTER TABLE messages ADD COLUMN actions TEXT NOT NULL DEFAULT ''"); err != nil {
+				return err
+			}
+		}
+	}
+	if _, err = tx.Exec("PRAGMA user_version=11"); err != nil {
 		return err
 	}
 	return tx.Commit()

@@ -259,6 +259,8 @@
     <string name="message_yesterday">昨天</string>
     <string name="message_unknown_date">接收时间未知</string>
     <string name="message_links">正文链接</string>
+    <string name="message_actions">消息操作</string>
+    <string name="message_action_open">打开链接</string>
     <string name="message_open_link">打开网页链接？</string>
     <string name="message_open_browser">打开浏览器</string>
     <string name="message_link_failed">没有可用的应用打开此链接</string>

@@ -35,6 +35,10 @@ internal class MessageSubmissionStore(
                     put("bark", message.bark)
                     put("application_id", message.applicationId)
                     put("application_name", message.applicationName)
+                    put(
+                        "actions",
+                        io.github.beacon.app.data.remote.MessageActionsCodec.encode(message.actions),
+                    )
                     put("message_group", message.group)
                     put("expires_at", message.expiresAtMs)
                 }

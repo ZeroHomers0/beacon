@@ -199,12 +199,28 @@ curl -X POST 'https://push.example.com/api/v1/push' \
 | `title` | 可选，标题，最多 1024 UTF-8 字节 |
 | `subtitle` | 可选，副标题，最多 1024 UTF-8 字节 |
 | `priority` | 可选，0–10 的整数；设备推送密钥默认使用 5 |
+| `actions` | 可选，最多 3 个操作按钮，格式为 `[{"title":"查看日志","url":"https://example.com/logs"}]`；省略或空数组表示没有按钮 |
 | `group` | 可选，消息分组，最多 128 UTF-8 字节 |
 | `ttl` | 可选，消息投递有效期，单位秒，0–604800 的整数；省略或 0 使用七天默认值 |
 
 优先级 0–1 仅保存消息，2–3 静默通知，4–7 普通通知，8–10 重要通知。原生接口也接受服务端管理中创建的应用推送令牌；省略 `priority` 时使用该应用的默认优先级。
 
 成功返回 HTTP 200，响应包含消息的 `id`、`sequence`、`expires_at_ms` 等信息。使用应用令牌发送时还包含 `application_id` 与 `application_name`；它们由服务器生成，不能由发送方指定。
+
+#### 带操作按钮的消息（v1.1.3 起）
+
+每个操作必须包含 `title` 和 `url`，不接受其他字段。`title` 不能全为空白或包含控制字符，最多 64 UTF-8 字节；`url` 最多 2048 UTF-8 字节，必须为有效 HTTPS 地址，不能包含用户名或密码。`actions: null`、超过 3 个按钮或无效字段返回 `400 invalid_message`。
+
+```bash
+curl -X POST 'https://push.example.com/api/v1/push' \
+  -H 'Authorization: Bearer YOUR_PUSH_KEY' \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"构建失败","body":"主分支构建失败，请查看日志","group":"CI","actions":[{"title":"查看日志","url":"https://ci.example.com/builds/123"},{"title":"打开项目","url":"https://git.example.com/team/project"}]}'
+```
+
+新版 App 在消息详情展示按钮和目标地址，点击后交给系统浏览器或对应应用打开。收到消息不会自动打开链接，也不会代用户发起带鉴权的请求。按钮随历史消息和备份保存，HTTP 补收与即时接收均支持；幂等判断包含按钮标题、地址和排列顺序。
+
+使用此功能需升级服务端与 Android App 至 v1.1.3。已有消息和旧备份继续兼容；旧版 App 会忽略新按钮字段。Bark 的 `url` 在新版详情页显示为“打开链接”按钮，Bark 接口暂不支持 `actions` 数组。
 
 需要自动重试的脚本可添加 `Idempotency-Key` 请求头（1–128 个不含空格的可见 ASCII 字符）。同一发送凭据下，相同键与相同内容在首次成功后七天内返回原消息，不重复保存或创建投递任务；同键不同内容返回 `409 idempotency_conflict`。消息已确认、已过期或历史已清理时仍返回原结果，不重新投递。换用不同凭据、超过七天或不带幂等键时会创建新消息。每个业务事件使用一个新键，失败重试时保持键和内容一致。
 

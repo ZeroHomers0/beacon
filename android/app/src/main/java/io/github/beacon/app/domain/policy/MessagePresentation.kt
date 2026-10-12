@@ -9,6 +9,7 @@ import java.time.ZoneId
 object MessagePresentation {
     private const val MAX_LINKS = 10
     private const val MAX_URL_CHARACTERS = 2048
+    private val webLinks = Regex("""https?://[^\s<>"\u0000-\u001f]+""", RegexOption.IGNORE_CASE)
 
     fun receivedDate(message: IncomingMessage, zone: ZoneId): LocalDate? =
         message.receivedAtMs
@@ -17,7 +18,7 @@ object MessagePresentation {
 
     /** Explicit web links only. No custom schemes, credentials or automatic remote fetches. */
     fun links(body: String): List<String> =
-        Regex("""https?://[^\s<>"\u0000-\u001f]+""", RegexOption.IGNORE_CASE)
+        webLinks
             .findAll(body.take(io.github.beacon.app.domain.model.MessageLimits.BODY_BYTES))
             .map { it.value.trimEnd('.', ',', '，', '。', '；', ';', '!', '！') }
             .filter { raw ->
