@@ -42,8 +42,15 @@ jobs:
           if-no-files-found: error
           retention-days: 30
   android:
+    name: Android (${{ matrix.abi }})
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        abi: [armeabi-v7a, arm64-v8a, universal]
+    env:
+      BEACON_ABI: ${{ matrix.abi }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
@@ -95,20 +102,43 @@ jobs:
           BEACON_RELEASE_KEY_PASSWORD: ${{ secrets.BEACON_RELEASE_KEY_PASSWORD }}
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon --console=plain :app:assembleDebug :app:assembleRelease :app:lintDebug
+          ./gradlew --no-daemon --console=plain -PbeaconAbi="$BEACON_ABI" :app:assembleRelease
+          if [ "$BEACON_ABI" = universal ]; then
+            ./gradlew --no-daemon --console=plain :app:assembleDebug :app:lintDebug
+          fi
       - name: Collect the release APK
         run: |
           mkdir -p dist/android
+          suffix="-$BEACON_ABI"
+          sums="SHA256SUMS-android-$BEACON_ABI"
+          if [ "$BEACON_ABI" = universal ]; then
+            suffix=""
+            sums="SHA256SUMS-android"
+          fi
           if [ -f android/app/build/outputs/apk/release/app-release.apk ]; then
-            cp android/app/build/outputs/apk/release/app-release.apk dist/android/beacon-release.apk
+            cp android/app/build/outputs/apk/release/app-release.apk "dist/android/beacon-release$suffix.apk"
           else
-            cp android/app/build/outputs/apk/release/app-release-unsigned.apk dist/android/beacon-release-unsigned.apk
+            cp android/app/build/outputs/apk/release/app-release-unsigned.apk "dist/android/beacon-release$suffix-unsigned.apk"
           fi
           cd dist/android
-          sha256sum *.apk > SHA256SUMS-android
+          sha256sum *.apk > "$sums"
+      - name: Verify APK architecture
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          from zipfile import ZipFile
+          abi = os.environ["BEACON_ABI"]
+          expected = {"armeabi-v7a", "arm64-v8a", "x86", "x86_64"} if abi == "universal" else {abi}
+          apk, = Path("dist/android").glob("*.apk")
+          with ZipFile(apk) as archive:
+              actual = {name.split("/")[1] for name in archive.namelist() if name.startswith("lib/") and name.endswith(".so")}
+          assert actual == expected, f"{apk.name}: expected {expected}, got {actual}"
+          print(f"{apk.name}: verified {', '.join(sorted(actual))}")
+          PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: beacon-android-${{ github.sha }}
+          name: beacon-android-${{ matrix.abi }}-${{ github.sha }}
           path: dist/android/
           if-no-files-found: error
           retention-days: 30

@@ -14,6 +14,12 @@ val releaseSigning =
         .associateWith { providers.environmentVariable(it).orNull }
 val hasReleaseSigning = releaseSigning.values.any { !it.isNullOrBlank() }
 
+// CI builds one APK per matrix entry; local builds remain universal by default.
+val beaconAbi = providers.gradleProperty("beaconAbi").getOrElse("universal")
+require(beaconAbi in setOf("universal", "armeabi-v7a", "arm64-v8a")) {
+    "beaconAbi must be universal, armeabi-v7a or arm64-v8a"
+}
+
 if (hasReleaseSigning)
     require(releaseSigning.values.all { !it.isNullOrBlank() }) {
         "All four BEACON_RELEASE signing variables are required"
@@ -29,6 +35,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         versionCode = rootProject.extra["beaconVersionCode"] as Int
         versionName = rootProject.extra["beaconVersionName"] as String
+        if (beaconAbi != "universal") ndk.abiFilters.add(beaconAbi)
     }
     buildTypes {
         debug {

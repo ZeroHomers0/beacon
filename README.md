@@ -65,11 +65,13 @@ flowchart LR
 
 ### 4.1 Android 客户端
 
-1. 打开 [Releases](https://github.com/ZeroHomers0/beacon/releases)，下载 `beacon-release.apk`。
+1. 打开 [Releases](https://github.com/ZeroHomers0/beacon/releases)，下载通用包 `beacon-release.apk`。后续版本也提供 `beacon-release-arm64-v8a.apk`（64 位 ARM）和 `beacon-release-armeabi-v7a.apk`（32 位 ARM）；不确定设备架构时选择通用包。
 2. 在 Android 8.0 及以上设备安装，首次安装时按系统提示允许对应来源安装应用。
 3. 安装后按第 5 节绑定自己的服务端，并开启通知权限。
 
 若某次构建只有 `beacon-release-unsigned.apk`，该文件需要自行签名后才能安装。自行编译可使用 `android/` 中的 Gradle 工程；正式版本签名配置见 [构建脚本](android/app/build.gradle.kts)。
+
+Android 流水线按 v7a、v8a、通用包三个并行任务构建，分别提供校验和，使用相同的版本号和正式签名。App 内更新继续下载通用包。自行编译时默认生成通用包，也可在 `android/` 下运行 `./gradlew -PbeaconAbi=arm64-v8a :app:assembleRelease` 或 `./gradlew -PbeaconAbi=armeabi-v7a :app:assembleRelease` 生成对应架构的包。
 
 ### 4.2 Go 服务端
 
