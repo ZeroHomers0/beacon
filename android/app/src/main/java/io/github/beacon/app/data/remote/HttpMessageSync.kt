@@ -68,7 +68,14 @@ class HttpMessageSync(
         call.execute().use { response ->
             val status = response.code
             if (status == 401 || status == 403) throw SyncAuthenticationException(status, stage)
-            if (status == 429 || status in 500..599) throw HttpTransientException(status, stage)
+            if (status == 429 || status in 500..599)
+                throw HttpTransientException(
+                    status,
+                    stage,
+                    io.github.beacon.app.domain.receive.RetryAfterPolicy.delayMs(
+                        response.header("Retry-After")
+                    ),
+                )
             if (status in 300..499) throw HttpRejectedException(status, stage)
             if (status != 200) throw SyncResponseException(stage)
             val bytes =
@@ -258,7 +265,8 @@ class HttpMessageSync(
                     store.ackBatchCompleted(namespace, ids)
                 }
             } catch (e: IOException) {
-                if (e is HttpRejectedException) throw e /* Durable queue remains. */
+                if (e is HttpRejectedException || e is HttpTransientException) throw e
+                /* Durable queue remains. */
             }
         }
         val pipeline =

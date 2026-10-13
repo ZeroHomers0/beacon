@@ -58,13 +58,24 @@ internal class RealtimeRuntimeController(
     private var receivedInBatch = 0
     private var insertedInBatch = 0
     private var lastReceivedMs = 0L
+    private var receiptNamespace: String? = null
+    private var receiptRetryAtMs = 0L
+
+    // Evaluated on the runtime actor. A failed receipt must still get periodic HTTP recovery.
+    val canSkipPeriodicSync: Boolean
+        get() = running && receiptNamespace?.let { store.pendingIds(it).isEmpty() } == true
 
     private fun queueReceipts(
         settings: TransportSettings,
         namespace: String,
         valid: () -> Boolean,
     ) {
-        if (receiptTask != null) return
+        if (
+            receiptTask != null ||
+                service.automaticHttpWaiting() ||
+                android.os.SystemClock.elapsedRealtime() < receiptRetryAtMs
+        )
+            return
         val task =
             object : Runnable {
                 override fun run() {
@@ -73,6 +84,7 @@ internal class RealtimeRuntimeController(
                             if (receiptTask !== this) return@execute
                             receiptTask = null
                             if (!valid()) return@execute
+                            if (service.automaticHttpWaiting()) return@execute
                             var confirmed = false
                             try {
                                 HttpMessageSync(settings, store, valid)
@@ -90,7 +102,11 @@ internal class RealtimeRuntimeController(
                                 )
                                 reconcile()
                                 return@execute
-                            } catch (_: Exception) {
+                            } catch (error: Exception) {
+                                RetryAfterPolicy.from(error)?.let(service::deferAutomaticHttp)
+                                receiptRetryAtMs =
+                                    android.os.SystemClock.elapsedRealtime() +
+                                        maxOf(30_000L, RetryAfterPolicy.from(error) ?: 0L)
                                 // Durable receipts survive connection changes and are retried by
                                 // HTTP
                                 // catch-up or the next received message; no idle retry timer is
@@ -116,16 +132,16 @@ internal class RealtimeRuntimeController(
                 }
             }
         receiptTask = task
-        main.postDelayed(task, 250L)
+        main.postDelayed(task, ReceiveNetworkWorkPolicy.RECEIPT_BATCH_DELAY_MS)
     }
 
     /**
      * One notification pass per burst. Every received message used to flush the whole pending set
      * immediately: the settings reads, the channel lookup and the shade update ran once per message
-     * even though a catch-up batch saves them all within the same window. The trailing delay
-     * mirrors [queueReceipts]; the intents are durable, so a skipped pass is not lost — the next
-     * message or HTTP sync posts them. `reset()` deliberately does not cancel this: a network
-     * change must not swallow an alert for a message that is already saved.
+     * even though a catch-up batch saves them all within the same window. Notifications keep a
+     * shorter delay than receipt batching; the intents are durable, so a skipped pass is not lost —
+     * the next message or HTTP sync posts them. `reset()` deliberately does not cancel this: a
+     * network change must not swallow an alert for a message that is already saved.
      */
     private fun queueNotifications() {
         if (notificationTask != null) return
@@ -138,6 +154,7 @@ internal class RealtimeRuntimeController(
                             notificationTask = null
                             if (destroyed) return@execute
                             runCatching { flushNotifications(service, store) }
+                            runReceiveCleanup(service, store)
                         }
                     }
                 }
@@ -279,6 +296,8 @@ internal class RealtimeRuntimeController(
         receiptTask = null
         receivedInBatch = 0
         insertedInBatch = 0
+        receiptNamespace = null
+        receiptRetryAtMs = 0L
         epoch.incrementAndGet()
         if (session != null) recordTransition(RuntimeEventKind.REALTIME_STOPPED)
         session?.close()
@@ -365,7 +384,13 @@ internal class RealtimeRuntimeController(
                 caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
         offline = !online
         val wifi = caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
-        val battery = service.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        val battery =
+            if (
+                plan.mode == ReceiveMode.RULES &&
+                    (plan.lowBatteryEnabled || plan.realtimeWhileCharging)
+            )
+                service.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+            else null
         val percent =
             battery?.let {
                 val scale = it.getIntExtra(BatteryManager.EXTRA_SCALE, 0)
@@ -405,6 +430,11 @@ internal class RealtimeRuntimeController(
         try {
             val settings = TransportSecretStore(service).load()
             val config = HttpMessageSync(settings, store, ::valid).realtimeConfiguration()
+            receiptNamespace =
+                io.github.beacon.app.data.remote.MessageIdentity.namespace(
+                    config.serverId,
+                    config.deviceId,
+                )
             val decoder =
                 RealtimeMessageDecoder(config.serverId, config.deviceId, config.clockOffsetMs)
             val next =
@@ -429,7 +459,6 @@ internal class RealtimeRuntimeController(
                                 queueReceipts(settings, message.server, ::valid)
                                 deliveryRevision++
                                 queueNotifications()
-                                runReceiveCleanup(service, store)
                             }
                             .get(45, TimeUnit.SECONDS)
                     },
@@ -504,7 +533,11 @@ internal class RealtimeRuntimeController(
             } else {
                 failures = (failures + 1).coerceAtMost(100)
                 nextConfigRetry =
-                    System.currentTimeMillis() + RealtimeReconnectPolicy.delayMs(failures)
+                    System.currentTimeMillis() +
+                        maxOf(
+                            RealtimeReconnectPolicy.jitteredDelayMs(failures),
+                            RetryAfterPolicy.from(error) ?: 0L,
+                        )
                 status = "即时配置暂不可用 · 自动重试，HTTP 补收保留"
             }
             publishStatus()

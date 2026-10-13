@@ -104,13 +104,14 @@ class RuntimeProbeService : Service() {
 
     private val generation = java.util.concurrent.atomic.AtomicLong()
     private val syncing = java.util.concurrent.atomic.AtomicBoolean()
+    private val networkWork = io.github.beacon.app.domain.receive.ReceiveNetworkWorkPolicy()
     private val activeRuns =
         java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.atomic.AtomicBoolean>()
     private val controlLoaded = java.util.concurrent.CountDownLatch(1)
     @Volatile private var pollingState = PollingState()
     private val realtimeDelegate = lazy {
         RealtimeRuntimeController(this, worker, store, { pollingState }, ::saveState) {
-            sync(true, generation.get(), null)
+            sync(true, generation.get(), null, catchUp = true)
         }
     }
 
@@ -331,6 +332,7 @@ class RuntimeProbeService : Service() {
         automatic: Boolean,
         expectedGeneration: Long,
         active: java.util.concurrent.atomic.AtomicBoolean?,
+        catchUp: Boolean = false,
     ): SyncReport {
         fun allowed() =
             generation.get() == expectedGeneration &&
@@ -340,6 +342,25 @@ class RuntimeProbeService : Service() {
         if (!allowed()) {
             recordEvent(eventKind, SyncOutcome.STOPPED)
             return SyncReport(SyncOutcome.STOPPED, "自动接收已暂停或任务已停止")
+        }
+        val nowElapsed = android.os.SystemClock.elapsedRealtime()
+        if (automatic && networkWork.waiting(expectedGeneration, nowElapsed)) {
+            // Server cooldown must not defer a notification for an already saved message.
+            if (allowed()) runCatching { flushNotifications(this, store) }
+            return SyncReport(SyncOutcome.TRANSIENT, "服务器要求稍后重试；待接收消息和回执保留")
+        }
+        if (
+            automatic &&
+                !catchUp &&
+                networkWork.skipPeriodicSync(
+                    expectedGeneration,
+                    nowElapsed,
+                    realtime.canSkipPeriodicSync,
+                )
+        ) {
+            // Skip network work only; retry durable local notification intents as before.
+            if (allowed()) runCatching { flushNotifications(this, store) }
+            return SyncReport(SyncOutcome.OK, "即时连接正常；本轮省略重复 HTTP 补收")
         }
         // The attempt timestamp is carried into the result record below instead of being committed
         // on its own first: nothing gates on it (it is diagnostics only), while a second commit
@@ -366,9 +387,18 @@ class RuntimeProbeService : Service() {
             try {
                 HttpMessageSync(settings, store, ::allowed).run()
             } catch (e: Exception) {
+                io.github.beacon.app.domain.receive.RetryAfterPolicy.from(e)?.let {
+                    networkWork.defer(
+                        expectedGeneration,
+                        android.os.SystemClock.elapsedRealtime(),
+                        it,
+                    )
+                }
                 outcome = SyncFailure.outcome(e, e is android.database.sqlite.SQLiteException)
                 SyncFailure.describe(e, outcome)
             }
+        if (outcome == SyncOutcome.OK && allowed())
+            networkWork.completed(expectedGeneration, android.os.SystemClock.elapsedRealtime())
         if (automatic)
             saveState(
                 pollingState.copy(
@@ -399,6 +429,14 @@ class RuntimeProbeService : Service() {
             listOf(message, notice).filter { it.isNotBlank() }.joinToString("\n"),
         )
     }
+
+    // Shared by periodic HTTP recovery and realtime receipt batches, on the runtime actor.
+    internal fun deferAutomaticHttp(delayMs: Long) {
+        networkWork.defer(generation.get(), android.os.SystemClock.elapsedRealtime(), delayMs)
+    }
+
+    internal fun automaticHttpWaiting(): Boolean =
+        networkWork.waiting(generation.get(), android.os.SystemClock.elapsedRealtime())
 
     private val endpoint =
         object : Binder() {

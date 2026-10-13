@@ -37,7 +37,9 @@ class ReceiveBatchPipeline(
             acknowledge(server, ids)
             acknowledgeCompleted(server, ids)
         } catch (error: IOException) {
-            if (error is HttpRejectedException) throw error
+            // Stop this run on explicit server rejection/overload instead of requesting more
+            // pages and receipts from the same failing server. Saved messages remain durable.
+            if (error is HttpRejectedException || error is HttpTransientException) throw error
             // Durable receipts remain for a later request. Authentication/protocol errors
             // propagate.
         }

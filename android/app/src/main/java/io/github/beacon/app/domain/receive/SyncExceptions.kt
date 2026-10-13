@@ -18,6 +18,10 @@ class HttpRejectedException(
     val stage: SyncStage = SyncStage.CAPABILITIES,
 ) : java.io.IOException()
 
-class HttpTransientException(val statusCode: Int, val stage: SyncStage) : java.io.IOException()
+class HttpTransientException(
+    val statusCode: Int,
+    val stage: SyncStage,
+    val retryAfterMs: Long? = null,
+) : java.io.IOException()
 
 class SyncResponseException(val stage: SyncStage) : RuntimeException()

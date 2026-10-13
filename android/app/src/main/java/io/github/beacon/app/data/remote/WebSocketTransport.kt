@@ -84,6 +84,17 @@ internal class WebSocketTransport(private val http: OkHttpClient = defaultClient
                     ) {
                         val error =
                             if (response?.code in listOf(401, 403)) RealtimeAuthorizationFailure()
+                            else if (
+                                response != null &&
+                                    (response.code == 429 || response.code in 500..599)
+                            )
+                                io.github.beacon.app.domain.receive.HttpTransientException(
+                                    response.code,
+                                    io.github.beacon.app.domain.receive.SyncStage.CAPABILITIES,
+                                    io.github.beacon.app.domain.receive.RetryAfterPolicy.delayMs(
+                                        response.header("Retry-After")
+                                    ),
+                                )
                             else t
                         failure = error
                         response?.close()

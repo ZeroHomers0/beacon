@@ -192,7 +192,10 @@ internal constructor(
                 retry =
                     executor.schedule(
                         ::connect,
-                        RealtimeReconnectPolicy.jitteredDelayMs(failures),
+                        maxOf(
+                            RealtimeReconnectPolicy.jitteredDelayMs(failures),
+                            io.github.beacon.app.domain.receive.RetryAfterPolicy.from(error) ?: 0L,
+                        ),
                         TimeUnit.MILLISECONDS,
                     )
             }
