@@ -1,5 +1,6 @@
 package io.github.beacon.app.data.remote
 
+import android.os.SystemClock
 import io.github.beacon.app.BuildConfig
 import io.github.beacon.app.domain.model.TransportSettings
 import io.github.beacon.app.domain.receive.HttpRejectedException
@@ -25,6 +26,7 @@ class HttpMessageSync(
     private val settings: TransportSettings,
     private val store: SyncStore,
     private val shouldContinue: () -> Boolean = { true },
+    private val nowMs: () -> Long = SystemClock::elapsedRealtime,
 ) {
     companion object {
         // Synchronous requests need no dispatcher thread. One short-lived idle connection also
@@ -41,7 +43,7 @@ class HttpMessageSync(
                 .build()
     }
 
-    private val deadline = System.nanoTime() + HttpSyncLimits.RUN_BUDGET_MS * 1_000_000L
+    private val deadline = nowMs() + HttpSyncLimits.RUN_BUDGET_MS
 
     private fun request(path: String, body: JSONObject? = null): JSONObject {
         checkRunning()
@@ -62,9 +64,7 @@ class HttpMessageSync(
                 body.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
             )
         val call = http.newCall(request.build())
-        call
-            .timeout()
-            .timeout((deadline - System.nanoTime()).coerceAtLeast(1), TimeUnit.NANOSECONDS)
+        call.timeout().timeout((deadline - nowMs()).coerceAtLeast(1), TimeUnit.MILLISECONDS)
         call.execute().use { response ->
             val status = response.code
             if (status == 401 || status == 403) throw SyncAuthenticationException(status, stage)
@@ -219,7 +219,7 @@ class HttpMessageSync(
 
     private fun checkRunning() {
         if (!shouldContinue()) throw SyncCancelledException()
-        if (System.nanoTime() >= deadline) throw IOException("Sync budget exhausted")
+        if (nowMs() >= deadline) throw IOException("Sync budget exhausted")
     }
 
     private fun requireRetentionContract(reply: JSONObject, namespace: String) {

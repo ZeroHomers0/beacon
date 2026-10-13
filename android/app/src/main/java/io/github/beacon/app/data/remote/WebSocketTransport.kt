@@ -1,5 +1,6 @@
 package io.github.beacon.app.data.remote
 
+import android.os.SystemClock
 import io.github.beacon.app.domain.model.RealtimeConfiguration
 import io.github.beacon.app.domain.model.RealtimeHeartbeat
 import java.io.IOException
@@ -22,10 +23,21 @@ internal class WebSocketTransport(
     private val batch: Boolean = false,
     private val onVerified: (Int) -> Unit = {},
     private val onHeartbeat: () -> Unit = {},
+    private val nowMs: () -> Long = SystemClock::elapsedRealtime,
 ) : RealtimeTransport {
     constructor(heartbeatSeconds: Int) : this(defaultClient(heartbeatSeconds))
 
     private val closed = AtomicBoolean()
+
+    override val heartbeatSeconds: Int
+        get() =
+            heartbeatPolicy?.seconds
+                ?: controlIntervalSeconds.takeIf { it > 0 }
+                ?: TimeUnit.MILLISECONDS.toSeconds(http.pingIntervalMillis.toLong()).toInt()
+
+    @Volatile private var longestProbeSeconds = 0
+    override val longestHeartbeatSeconds: Int
+        get() = maxOf(longestProbeSeconds, heartbeatSeconds)
 
     companion object {
         internal fun defaultClient(
@@ -165,7 +177,8 @@ internal class WebSocketTransport(
         if (closed.get()) return
         probe?.cancel(false)
         val seconds = heartbeatPolicy?.seconds ?: controlIntervalSeconds
-        nextProbeAt = System.nanoTime() + TimeUnit.SECONDS.toNanos(seconds.toLong())
+        longestProbeSeconds = maxOf(longestProbeSeconds, seconds)
+        nextProbeAt = nowMs() + TimeUnit.SECONDS.toMillis(seconds.toLong())
         probe =
             timer.schedule(
                 { synchronized(this) { sendProbe() } },
@@ -200,12 +213,11 @@ internal class WebSocketTransport(
     override fun coalesceHeartbeat() {
         if (controlIntervalSeconds <= 0) return
         synchronized(this) {
-            val remaining = TimeUnit.NANOSECONDS.toMillis(nextProbeAt - System.nanoTime())
+            val remaining = nextProbeAt - nowMs()
             if (
                 !waiting &&
-                    remaining in
-                        0..io.github.beacon.app.domain.receive.AdaptiveHeartbeatPolicy
-                                .ALIGN_WINDOW_MS
+                    remaining <=
+                        io.github.beacon.app.domain.receive.AdaptiveHeartbeatPolicy.ALIGN_WINDOW_MS
             )
                 sendProbe(true)
         }

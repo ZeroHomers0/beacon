@@ -1,5 +1,6 @@
 package io.github.beacon.app.data.remote
 
+import android.os.SystemClock
 import io.github.beacon.app.domain.model.RealtimeConfiguration
 import io.github.beacon.app.domain.model.RealtimeDiagnostics
 import io.github.beacon.app.domain.model.RealtimeFailure
@@ -18,6 +19,7 @@ internal constructor(
     private val onState: (State) -> Unit,
     private val onSubscribed: () -> Unit,
     private val transportFactory: (Int) -> RealtimeTransport,
+    private val nowMs: () -> Long = SystemClock::elapsedRealtime,
 ) : AutoCloseable {
     constructor(
         configuration: RealtimeConfiguration,
@@ -30,6 +32,7 @@ internal constructor(
         batchOrdinaryMessages: Boolean = false,
         onVerifiedHeartbeat: (Int) -> Unit = {},
         onHeartbeat: () -> Unit = {},
+        powerSaving: Boolean = false,
     ) : this(
         configuration,
         password,
@@ -39,11 +42,11 @@ internal constructor(
         { failures ->
             if (
                 configuration.adaptiveHeartbeatSupported &&
-                    (heartbeatPolicy != null || batchOrdinaryMessages)
+                    (heartbeatPolicy != null || batchOrdinaryMessages || powerSaving)
             )
                 WebSocketTransport(
-                    heartbeatPolicy = heartbeatPolicy,
-                    controlIntervalSeconds = heartbeatSeconds,
+                    heartbeatPolicy = if (powerSaving) null else heartbeatPolicy,
+                    controlIntervalSeconds = if (powerSaving) 300 else heartbeatSeconds,
                     batch = batchOrdinaryMessages,
                     onVerified = onVerifiedHeartbeat,
                     onHeartbeat = onHeartbeat,
@@ -83,7 +86,8 @@ internal constructor(
     private var retry: ScheduledFuture<*>? = null
     @Volatile private var attempt = 0L
     private var terminal = false
-    private var connectedAtNanos = 0L
+    private var connectedAtMs: Long? = null
+    private var connectedHeartbeatSeconds = 0
     @Volatile
     var diagnostics = RealtimeDiagnostics()
         private set
@@ -152,7 +156,8 @@ internal constructor(
                 retire()
                 return
             }
-            connectedAtNanos = System.nanoTime()
+            connectedAtMs = nowMs()
+            connectedHeartbeatSeconds = transport.heartbeatSeconds
             diagnostics =
                 diagnostics.copy(
                     failure = RealtimeFailure.NONE,
@@ -172,6 +177,11 @@ internal constructor(
 
     private fun fail(epoch: Long, error: Throwable) {
         if (stopped.get() || terminal || epoch != attempt) return
+        val stableAfterMs =
+            maxOf(
+                120_000L,
+                maxOf(connectedHeartbeatSeconds, current?.longestHeartbeatSeconds ?: 0) * 2_000L,
+            )
         retire()
         val cause = RealtimeFailureClassifier.classify(error)
         diagnostics = diagnostics.copy(failure = cause)
@@ -196,12 +206,8 @@ internal constructor(
             }
             else -> {
                 // Brief successful handshakes must not restart an unstable network's backoff.
-                if (
-                    connectedAtNanos != 0L &&
-                        System.nanoTime() - connectedAtNanos >= TimeUnit.MINUTES.toNanos(2)
-                )
-                    failures = 0
-                connectedAtNanos = 0L
+                if (connectedAtMs?.let { nowMs() - it >= stableAfterMs } == true) failures = 0
+                connectedAtMs = null
                 failures = (failures + 1).coerceAtMost(100)
                 diagnostics = diagnostics.copy(retries = failures)
                 state(State.RETRYING)

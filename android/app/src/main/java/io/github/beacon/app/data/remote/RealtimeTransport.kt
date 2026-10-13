@@ -16,5 +16,11 @@ internal interface RealtimeTransport : AutoCloseable {
 
     fun ready()
 
+    val heartbeatSeconds: Int
+        get() = io.github.beacon.app.domain.model.RealtimeHeartbeat.DEFAULT_SECONDS
+
+    val longestHeartbeatSeconds: Int
+        get() = heartbeatSeconds
+
     fun coalesceHeartbeat() {}
 }

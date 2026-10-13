@@ -172,10 +172,16 @@ internal class RealtimeRuntimeController(
     private var networkRegistered = false
     private var conditionsRegistered = false
     private var conditionsBattery = false
+    private var powerPaused = false
+    private var powerSaving = false
     private val conditionsReceiver =
         object : android.content.BroadcastReceiver() {
-            override fun onReceive(context: android.content.Context, intent: Intent) =
+            override fun onReceive(context: android.content.Context, intent: Intent) {
                 networkChanged()
+                if (intent.action == Intent.ACTION_SCREEN_ON) {
+                    runCatching { worker.execute { if (!destroyed) coalesceNetworkWork() } }
+                }
+            }
         }
     private var configFailure = RealtimeFailure.NONE
     private var lastRecordedTransition: Pair<RuntimeEventKind, RealtimeFailure>? = null
@@ -231,8 +237,9 @@ internal class RealtimeRuntimeController(
     private val monitor = Runnable { networkChanged() }
 
     private fun updateConditions() {
-        val required = foreground && plan.mode == ReceiveMode.RULES
-        val batteryRequired = plan.lowBatteryEnabled || plan.realtimeWhileCharging
+        val required = foreground
+        val batteryRequired =
+            plan.mode == ReceiveMode.RULES && (plan.lowBatteryEnabled || plan.realtimeWhileCharging)
         if (required == conditionsRegistered && (!required || batteryRequired == conditionsBattery))
             return
         if (conditionsRegistered) {
@@ -247,6 +254,10 @@ internal class RealtimeRuntimeController(
                         service,
                         conditionsReceiver,
                         IntentFilter().apply {
+                            addAction(android.os.PowerManager.ACTION_DEVICE_IDLE_MODE_CHANGED)
+                            addAction(android.os.PowerManager.ACTION_POWER_SAVE_MODE_CHANGED)
+                            addAction(Intent.ACTION_SCREEN_ON)
+                            addAction(Intent.ACTION_SCREEN_OFF)
                             if (batteryRequired) addAction(Intent.ACTION_BATTERY_CHANGED)
                             addAction(Intent.ACTION_TIME_CHANGED)
                             addAction(Intent.ACTION_TIMEZONE_CHANGED)
@@ -326,7 +337,10 @@ internal class RealtimeRuntimeController(
                 // no timer is posted. If that callback could not be registered, nothing would ever
                 // wake this actor again, so a single fallback keeps reception from being stranded.
                 val delay =
-                    if (offline && networkRegistered) null
+                    if (powerPaused)
+                        if (conditionsRegistered) null
+                        else ReceiveDeadlinePolicy.OFFLINE_FALLBACK_MS
+                    else if (offline && networkRegistered) null
                     else if (offline) ReceiveDeadlinePolicy.OFFLINE_FALLBACK_MS
                     else
                         ReceiveDeadlinePolicy.delayMs(
@@ -373,6 +387,20 @@ internal class RealtimeRuntimeController(
         }
         if (!foreground) {
             status = "等待应用启动即时服务"
+            return
+        }
+        val power = service.getSystemService(android.os.PowerManager::class.java)
+        val saving = power.isPowerSaveMode && !power.isInteractive
+        if (saving != powerSaving) {
+            powerSaving = saving
+            reset()
+        }
+        powerPaused =
+            power.isDeviceIdleMode && !power.isIgnoringBatteryOptimizations(service.packageName)
+        if (powerPaused) {
+            if (session != null) reset()
+            status = "系统休眠 · 等待唤醒或维护窗口补收"
+            publishStatus()
             return
         }
         val manager = service.getSystemService(ConnectivityManager::class.java)
@@ -466,6 +494,7 @@ internal class RealtimeRuntimeController(
                     settings.token,
                     heartbeatSeconds = plan.heartbeatSeconds,
                     heartbeatPolicy = heartbeatPolicy,
+                    powerSaving = powerSaving,
                     batchOrdinaryMessages = plan.batchOrdinaryMessages,
                     onVerifiedHeartbeat = { seconds ->
                         runCatching {

@@ -12,6 +12,31 @@ internal class MessageSubmissionStore(
     private val barkSecret: () -> Pair<String, String>?,
 ) {
 
+    fun saveBatch(messages: List<IncomingMessage>, shouldContinue: () -> Boolean): Int {
+        require(
+            messages.size <= io.github.beacon.app.domain.receive.ReceiveBatchPipeline.MAX_BATCH_SIZE
+        )
+        if (messages.isEmpty()) return 0
+        val secret = runCatching { barkSecret() }.getOrNull()
+        val db = helper.writableDatabase
+        db.beginTransactionNonExclusive()
+        try {
+            var inserted = 0
+            for (message in messages) {
+                if (!shouldContinue())
+                    throw io.github.beacon.app.domain.receive.SyncCancelledException()
+                val resolved = io.github.beacon.app.data.remote.BarkContent.resolve(message, secret)
+                if (persist(db, resolved) == SaveResult.INSERTED) inserted++
+            }
+            if (!shouldContinue())
+                throw io.github.beacon.app.domain.receive.SyncCancelledException()
+            db.setTransactionSuccessful()
+            return inserted
+        } finally {
+            db.endTransaction()
+        }
+    }
+
     fun save(incoming: IncomingMessage): SaveResult {
         val message =
             io.github.beacon.app.data.remote.BarkContent.resolve(
@@ -19,70 +44,79 @@ internal class MessageSubmissionStore(
                 runCatching { barkSecret() }.getOrNull(),
             )
         val db = helper.writableDatabase
-        db.beginTransaction()
+        db.beginTransactionNonExclusive()
         try {
-            val deleted = rowExists(db, "tombstones", message.server, message.id)
-            val values =
-                ContentValues().apply {
-                    put("server", message.server)
-                    put("id", message.id)
-                    put("title", message.title)
-                    put("body", message.body)
-                    put("received", System.currentTimeMillis())
-                    put("source_created", message.createdAtMs)
-                    put("subtitle", message.subtitle)
-                    put("priority", message.priority)
-                    put("bark", message.bark)
-                    put("application_id", message.applicationId)
-                    put("application_name", message.applicationName)
-                    put(
-                        "actions",
-                        io.github.beacon.app.data.remote.MessageActionsCodec.encode(message.actions),
-                    )
-                    put("message_group", message.group)
-                    put("expires_at", message.expiresAtMs)
-                }
-            val result =
-                when {
-                    deleted -> SaveResult.DELETED
-                    rowExists(db, "messages", message.server, message.id) -> SaveResult.DUPLICATE
-                    else -> {
-                        if (
-                            !io.github.beacon.app.domain.policy.StoragePressurePolicy
-                                .allowsNewMessage(availableBytes())
-                        ) {
-                            throw android.database.sqlite.SQLiteFullException(
-                                "Reception storage reserve reached"
-                            )
-                        }
-                        db.insertOrThrow("messages", null, values)
-                        SaveResult.INSERTED
-                    }
-                }
-            db.execSQL(
-                "INSERT OR IGNORE INTO pending_ack(server,id) VALUES(?,?)",
-                arrayOf(message.server, message.id),
-            )
-            if (message.createdAtMs > 0)
-                db.execSQL(
-                    "INSERT OR IGNORE INTO receipt_times(server,id,created,deleted) VALUES(?,?,?,0)",
-                    arrayOf<Any>(message.server, message.id, message.createdAtMs),
-                )
-            if (
-                result == SaveResult.INSERTED &&
-                    message.server != "diagnostic-local" &&
-                    message.priority > 0
-            ) {
-                db.execSQL(
-                    "INSERT INTO notification_intents(server,id) VALUES(?,?)",
-                    arrayOf(message.server, message.id),
-                )
-            }
+            val result = persist(db, message)
             db.setTransactionSuccessful()
             return result
         } finally {
             db.endTransaction()
         }
+    }
+
+    private fun persist(
+        db: android.database.sqlite.SQLiteDatabase,
+        message: IncomingMessage,
+    ): SaveResult {
+        val deleted = rowExists(db, "tombstones", message.server, message.id)
+        val values =
+            ContentValues().apply {
+                put("server", message.server)
+                put("id", message.id)
+                put("title", message.title)
+                put("body", message.body)
+                put("received", System.currentTimeMillis())
+                put("source_created", message.createdAtMs)
+                put("subtitle", message.subtitle)
+                put("priority", message.priority)
+                put("bark", message.bark)
+                put("application_id", message.applicationId)
+                put("application_name", message.applicationName)
+                put(
+                    "actions",
+                    io.github.beacon.app.data.remote.MessageActionsCodec.encode(message.actions),
+                )
+                put("message_group", message.group)
+                put("expires_at", message.expiresAtMs)
+            }
+        val result =
+            when {
+                deleted -> SaveResult.DELETED
+                rowExists(db, "messages", message.server, message.id) -> SaveResult.DUPLICATE
+                else -> {
+                    if (
+                        !io.github.beacon.app.domain.policy.StoragePressurePolicy.allowsNewMessage(
+                            availableBytes()
+                        )
+                    ) {
+                        throw android.database.sqlite.SQLiteFullException(
+                            "Reception storage reserve reached"
+                        )
+                    }
+                    db.insertOrThrow("messages", null, values)
+                    SaveResult.INSERTED
+                }
+            }
+        db.execSQL(
+            "INSERT OR IGNORE INTO pending_ack(server,id) VALUES(?,?)",
+            arrayOf(message.server, message.id),
+        )
+        if (message.createdAtMs > 0)
+            db.execSQL(
+                "INSERT OR IGNORE INTO receipt_times(server,id,created,deleted) VALUES(?,?,?,0)",
+                arrayOf<Any>(message.server, message.id, message.createdAtMs),
+            )
+        if (
+            result == SaveResult.INSERTED &&
+                message.server != "diagnostic-local" &&
+                message.priority > 0
+        ) {
+            db.execSQL(
+                "INSERT INTO notification_intents(server,id) VALUES(?,?)",
+                arrayOf(message.server, message.id),
+            )
+        }
+        return result
     }
 
     fun ackCompleted(server: String, id: String) = ackCompleted(server, listOf(id))

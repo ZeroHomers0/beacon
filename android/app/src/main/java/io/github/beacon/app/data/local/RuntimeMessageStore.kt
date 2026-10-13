@@ -30,6 +30,26 @@ class RuntimeMessageStore(
         android.os.StatFs(context.filesDir.absolutePath).availableBytes
     },
 ) : SQLiteOpenHelper(context, "beacon-messages.db", null, 14), SyncStore, NotificationIntentStore {
+    init {
+        // A server ACK must not outlive a durable local commit after power loss.
+        // OpenParams configures every pooled connection; a raw PRAGMA changes only one.
+        if (android.os.Build.VERSION.SDK_INT >= 28) {
+            setOpenParams(
+                SQLiteDatabase.OpenParams.Builder()
+                    .addOpenFlags(SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING)
+                    .setSynchronousMode("FULL")
+                    .build()
+            )
+        } else {
+            // Older releases lack a pool-wide synchronous-mode setting. Preserve their
+            // rollback journal durability instead of accepting WAL's NORMAL default.
+            setWriteAheadLoggingEnabled(false)
+        }
+    }
+
+    override fun saveBatch(messages: List<IncomingMessage>, shouldContinue: () -> Boolean): Int =
+        submissionStore.saveBatch(messages, shouldContinue)
+
     override fun ackBatchCompleted(server: String, ids: List<String>) =
         submissionStore.ackCompleted(server, ids)
 

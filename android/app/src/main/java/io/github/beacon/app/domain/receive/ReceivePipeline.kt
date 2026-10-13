@@ -13,6 +13,16 @@ interface ReceiveStore {
     /** Must atomically save the message (or deletion decision) and pending ACK. */
     fun save(message: IncomingMessage): SaveResult
 
+    /** Implementations may commit a bounded page atomically before any server ACK. */
+    fun saveBatch(messages: List<IncomingMessage>, shouldContinue: () -> Boolean): Int {
+        var inserted = 0
+        for (message in messages) {
+            if (!shouldContinue()) throw SyncCancelledException()
+            if (save(message) == SaveResult.INSERTED) inserted++
+        }
+        return inserted
+    }
+
     fun ackCompleted(server: String, id: String)
 }
 

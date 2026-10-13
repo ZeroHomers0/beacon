@@ -26,11 +26,7 @@ class ReceiveBatchPipeline(
         require(messages.all { it.server == server })
         require(messages.map { it.id }.toSet().size == messages.size)
         messages.forEach(ReceiveMessageValidation::validate)
-        var inserted = 0
-        for (message in messages) {
-            if (!shouldContinue()) throw SyncCancelledException()
-            if (store.save(message) == SaveResult.INSERTED) inserted++
-        }
+        val inserted = store.saveBatch(messages, shouldContinue)
         if (!shouldContinue()) throw SyncCancelledException()
         val ids = messages.map { it.id }
         try {
