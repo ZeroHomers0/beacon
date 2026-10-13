@@ -13,6 +13,7 @@ import android.os.Build
 import io.github.beacon.app.MainActivity
 import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.NotificationSettings
+import io.github.beacon.app.domain.policy.MessageMarkdown
 import io.github.beacon.app.domain.receive.NotificationBatch
 
 class MessageNotifications(
@@ -86,6 +87,7 @@ class MessageNotifications(
         // notification on each post, so it is not consulted. A later post of the same batch cannot
         // alert twice because setOnlyAlertOnce is set below.
         val channel = if (!batch.alert) HISTORY else if (batch.priority >= 8) IMPORTANT else FRESH
+        val summary = body(batch)
         // Registering a channel is a binder round-trip, and these three used to be recreated on
         // every
         // single post. Seeding them only while one is missing is equivalent after the first post
@@ -112,7 +114,7 @@ class MessageNotifications(
             Notification.Builder(context, channel)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(if (settings.lockscreenPreview) title(batch) else "Beacon")
-                .setContentText(if (settings.lockscreenPreview) body(batch) else "有新消息，请打开应用查看")
+                .setContentText(if (settings.lockscreenPreview) summary else "有新消息，请打开应用查看")
                 .build()
         val notification =
             Notification.Builder(context, channel)
@@ -120,15 +122,8 @@ class MessageNotifications(
                 .setContentTitle(
                     if (batch.count == 1) batch.title.ifBlank { "Beacon 新消息" } else "Beacon 消息摘要"
                 )
-                .setContentText(
-                    if (batch.count == 1) batch.body else "本轮保存 ${batch.count} 条消息，点击查看"
-                )
-                .setStyle(
-                    Notification.BigTextStyle()
-                        .bigText(
-                            if (batch.count == 1) batch.body else "本轮保存 ${batch.count} 条消息，点击查看"
-                        )
-                )
+                .setContentText(summary)
+                .setStyle(Notification.BigTextStyle().bigText(summary))
                 .setContentIntent(open)
                 .setAutoCancel(true)
                 .setOnlyAlertOnce(true)
@@ -182,7 +177,7 @@ class MessageNotifications(
                     .setStyle(
                         android.app.Notification.BigPictureStyle()
                             .bigPicture(image)
-                            .setSummaryText(body(batch))
+                            .setSummaryText(summary)
                     )
                     .build()
             else notification
@@ -194,7 +189,8 @@ class MessageNotifications(
         if (batch.count == 1) batch.title.ifBlank { "Beacon 新消息" } else "Beacon 消息摘要"
 
     private fun body(batch: NotificationBatch): String =
-        if (batch.count == 1) batch.body else "本轮保存 ${batch.count} 条消息，点击查看"
+        if (batch.count == 1) MessageMarkdown.summary(batch.body, 300)
+        else "本轮保存 ${batch.count} 条消息，点击查看"
 
     /**
      * The single-message read plus the whole-batch read, both handled by the same non-exported

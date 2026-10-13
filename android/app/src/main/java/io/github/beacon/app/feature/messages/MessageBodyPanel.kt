@@ -12,7 +12,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 import io.github.beacon.app.data.remote.RemoteMessageImage
-import io.github.beacon.app.domain.policy.MessagePresentation
 import io.github.beacon.app.ui.components.*
 import io.github.beacon.app.ui.icons.BeaconIcons
 import kotlinx.coroutines.Dispatchers
@@ -22,52 +21,51 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 @Composable
-fun MessageLinksPanel(body: String) {
-    val links = remember(body) { MessagePresentation.links(body) }
-    val context = LocalContext.current
-    var selected by remember(body) { mutableStateOf<String?>(null) }
-    var failed by remember(body) { mutableStateOf(false) }
+fun MessageLinksPanel(links: List<String>) {
+    var selected by remember(links) { mutableStateOf<String?>(null) }
     if (links.isNotEmpty())
         UiSection(stringResource(R.string.message_links)) {
             links.forEach { link ->
                 SettingsRow(java.net.URI(link).host, link, BeaconIcons.OpenWeb) {
                     selected = link
-                    failed = false
                 }
             }
-            if (failed) BeaconText(stringResource(R.string.message_link_failed))
         }
-    selected?.let { link ->
-        BeaconAlertDialog(
-            onDismissRequest = { selected = null },
-            title = { BeaconText(stringResource(R.string.message_open_link)) },
-            text = { BeaconText(link) },
-            confirmButton = {
-                BeaconButton(
-                    onClick = {
-                        failed =
-                            runCatching {
-                                context.startActivity(
-                                    Intent(Intent.ACTION_VIEW, Uri.parse(link))
-                                        .addCategory(Intent.CATEGORY_BROWSABLE)
-                                )
-                            }
-                                .isFailure
-                        selected = null
-                    }
-                ) {
-                    BeaconText(stringResource(R.string.message_open_browser))
-                }
-            },
-            dismissButton = {
-                BeaconCancelButton(onClick = { selected = null })
-            },
-        )
-    }
+    selected?.let { link -> MessageLinkDialog(link) { selected = null } }
 }
 
 @Composable
-fun MessageMediaPanel(metadata: String) {
+internal fun MessageLinkDialog(link: String, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    var failed by remember(link) { mutableStateOf(false) }
+    BeaconAlertDialog(
+        onDismissRequest = onDismiss,
+        title = { BeaconText(stringResource(R.string.message_open_link)) },
+        text = {
+            Column {
+                BeaconText(link)
+                if (failed) BeaconText(stringResource(R.string.message_link_failed))
+            }
+        },
+        confirmButton = {
+            BeaconButton(onClick = {
+                failed = runCatching {
+                    context.startActivity(
+                        Intent(Intent.ACTION_VIEW, Uri.parse(link))
+                            .addCategory(Intent.CATEGORY_BROWSABLE)
+                    )
+                }.isFailure
+                if (!failed) onDismiss()
+            }) {
+                BeaconText(stringResource(R.string.message_open_browser))
+            }
+        },
+        dismissButton = { BeaconCancelButton(onClick = onDismiss) },
+    )
+}
+
+@Composable
+fun MessageMediaPanel(metadata: String, description: String? = null) {
     val iconPixels = with(androidx.compose.ui.platform.LocalDensity.current) { 48.dp.roundToPx() }
     val values = remember(metadata) { runCatching { JSONObject(metadata) }.getOrNull() }
     val image = values?.optString("image").orEmpty()
@@ -89,7 +87,10 @@ fun MessageMediaPanel(metadata: String) {
     if (image.isNotEmpty() || icon.isNotEmpty()) {
         if (!load)
             BeaconOutlinedButton(onClick = { load = true }) {
-                BeaconText(stringResource(R.string.msg_media_load))
+                BeaconText(
+                    if (description == null) stringResource(R.string.msg_media_load)
+                    else stringResource(R.string.message_markdown_load_image, description)
+                )
             }
         LaunchedEffect(load, metadata) {
             if (load) {
@@ -123,7 +124,7 @@ fun MessageMediaPanel(metadata: String) {
         bitmap?.let {
             Image(
                 it.asImageBitmap(),
-                stringResource(R.string.msg_media_image_description),
+                description ?: stringResource(R.string.msg_media_image_description),
                 Modifier.fillMaxWidth().heightIn(max = 320.dp),
             )
         }

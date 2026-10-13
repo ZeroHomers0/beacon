@@ -88,6 +88,7 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.12.4")
     implementation("androidx.work:work-runtime:2.11.2")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("io.noties.markwon:core:4.6.2")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
     implementation("androidx.compose.material3:material3")
     // Fixed official version: Kotlin 2.3.10; its Android Compose dependencies resolve together.

@@ -353,7 +353,9 @@ fun MessageItem(
                     overflow = TextOverflow.Ellipsis,
                 )
             BeaconText(
-                message.body,
+                remember(message.body) {
+                    io.github.beacon.app.domain.policy.MessageMarkdown.summary(message.body)
+                },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 3,

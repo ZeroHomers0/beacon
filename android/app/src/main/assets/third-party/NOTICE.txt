@@ -13,3 +13,11 @@ License, Version 2.0; the full text is in Apache-2.0.txt in this directory.
 
 MIUIX (top.yukonga.miuix.kmp:miuix-android:0.8.5) / compose-miuix-ui
 contributors, licensed under Apache-2.0.
+
+Markwon core 4.6.2 / Markwon contributors
+https://github.com/noties/Markwon
+Licensed under Apache-2.0; the full text is in Apache-2.0.txt.
+
+commonmark-java 0.13.0 / Copyright (c) 2015-2016, Atlassian Pty Ltd
+https://github.com/commonmark/commonmark-java
+Licensed under BSD-2-Clause; the full text is in commonmark-BSD-2-Clause.txt.

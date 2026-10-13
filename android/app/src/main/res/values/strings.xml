@@ -649,4 +649,10 @@
     <string name="time_picker_hour">时</string>
     <string name="time_picker_minute">分</string>
     <string name="message_application_short">应用 %1$s</string>
+    <string name="message_markdown_source">查看原文</string>
+    <string name="message_markdown_rendered">显示排版</string>
+    <string name="message_markdown_loading">正在排版…</string>
+    <string name="message_markdown_failed">排版失败，已显示原文</string>
+    <string name="message_markdown_load_image">加载图片：%1$s</string>
+    <string name="message_markdown_image_number">图片 %1$d</string>
 </resources>

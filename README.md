@@ -209,6 +209,8 @@ curl -X POST 'https://push.example.com/api/v1/push' \
 
 成功返回 HTTP 200，响应包含消息的 `id`、`sequence`、`expires_at_ms` 等信息。使用应用令牌发送时还包含 `application_id` 与 `application_name`；它们由服务器生成，不能由发送方指定。
 
+正文可直接发送 Markdown，无需额外格式字段，原生 API 与 Bark 接口均适用。新版 Android 客户端在详情页渲染标题、加粗、斜体、列表、引用、链接和代码块，并提供「查看原文」切换；通知与消息列表显示去除排版标记的短摘要。复制、分享和搜索仍使用原始正文。Markdown 中前五个不同的有效 HTTPS 图片地址提供点击加载入口，默认不下载图片；网页链接点击后确认打开。HTML 只显示为文本，暂不支持表格、公式等扩展语法。正文上限仍为 65536 UTF-8 字节，无需升级服务端，旧版客户端继续显示原文。
+
 #### 带操作按钮的消息（v1.1.3 起）
 
 每个操作必须包含 `title` 和 `url`，不接受其他字段。`title` 不能全为空白或包含控制字符，最多 64 UTF-8 字节；`url` 最多 2048 UTF-8 字节，必须为有效 HTTPS 地址，不能包含用户名或密码。`actions: null`、超过 3 个按钮或无效字段返回 `400 invalid_message`。

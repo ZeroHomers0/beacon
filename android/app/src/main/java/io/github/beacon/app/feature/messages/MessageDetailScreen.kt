@@ -134,14 +134,7 @@ fun MessageDetailScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                    SelectionContainer {
-                        BeaconText(
-                            message.body.ifBlank {
-                                stringResource(R.string.msg_detail_no_body_hint)
-                            },
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
-                    }
+                    MessageMarkdownBody(message.body)
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     MessageMediaPanel(message.bark)
                     Row(
@@ -167,7 +160,6 @@ fun MessageDetailScreen(
             }
                 .getOrDefault("")
             MessageActionsPanel(message.actions, barkUrl)
-            MessageLinksPanel(message.body)
             UiSection(stringResource(R.string.msg_detail_info_title)) {
                 DiagnosticRow(
                     stringResource(R.string.msg_detail_reminder_state_label),
