@@ -26,6 +26,10 @@ internal constructor(
         onState: (State) -> Unit,
         onSubscribed: () -> Unit,
         heartbeatSeconds: Int = io.github.beacon.app.domain.model.RealtimeHeartbeat.DEFAULT_SECONDS,
+        heartbeatPolicy: io.github.beacon.app.domain.receive.AdaptiveHeartbeatPolicy? = null,
+        batchOrdinaryMessages: Boolean = false,
+        onVerifiedHeartbeat: (Int) -> Unit = {},
+        onHeartbeat: () -> Unit = {},
     ) : this(
         configuration,
         password,
@@ -33,12 +37,24 @@ internal constructor(
         onState,
         onSubscribed,
         { failures ->
-            WebSocketTransport(
-                io.github.beacon.app.domain.model.RealtimeHeartbeat.forFailures(
-                    heartbeatSeconds,
-                    failures,
-                )
+            if (
+                configuration.adaptiveHeartbeatSupported &&
+                    (heartbeatPolicy != null || batchOrdinaryMessages)
             )
+                WebSocketTransport(
+                    heartbeatPolicy = heartbeatPolicy,
+                    controlIntervalSeconds = heartbeatSeconds,
+                    batch = batchOrdinaryMessages,
+                    onVerified = onVerifiedHeartbeat,
+                    onHeartbeat = onHeartbeat,
+                )
+            else
+                WebSocketTransport(
+                    io.github.beacon.app.domain.model.RealtimeHeartbeat.forFailures(
+                        heartbeatSeconds,
+                        failures,
+                    )
+                )
         },
     )
 
@@ -79,6 +95,8 @@ internal constructor(
     }
 
     fun stop() = close()
+
+    fun coalesceNetworkWork() = enqueue { current?.coalesceHeartbeat() }
 
     override fun close() {
         if (!stopped.compareAndSet(false, true)) return

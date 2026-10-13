@@ -19,6 +19,8 @@ class ReceivePlanStore(context: Context) {
                 scheduleRealtime = preferences.getBoolean("schedule_realtime", true),
                 lowBatteryEnabled = preferences.getBoolean("low_battery_enabled", false),
                 lowBatteryPercent = preferences.getInt("low_battery_percent", 20),
+                adaptiveHeartbeat = preferences.getBoolean("adaptive_heartbeat", true),
+                batchOrdinaryMessages = preferences.getBoolean("batch_ordinary_messages", false),
                 heartbeatSeconds =
                     preferences.getInt(
                         "heartbeat_seconds",
@@ -42,6 +44,8 @@ class ReceivePlanStore(context: Context) {
                 .putBoolean("low_battery_enabled", plan.lowBatteryEnabled)
                 .putInt("low_battery_percent", plan.lowBatteryPercent)
                 .putInt("heartbeat_seconds", plan.heartbeatSeconds)
+                .putBoolean("adaptive_heartbeat", plan.adaptiveHeartbeat)
+                .putBoolean("batch_ordinary_messages", plan.batchOrdinaryMessages)
                 .commit()
         )
     }

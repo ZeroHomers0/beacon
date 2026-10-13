@@ -163,6 +163,7 @@ func (a *API) capabilities(w http.ResponseWriter, r *http.Request) {
 		"delivery_window_ms":          domain.PendingLifetime.Milliseconds(),
 		"delivery_retention_protocol": 1,
 		"receipt_status":              true,
+		"reception_control":           1,
 		"receipt_window_ms":           domain.ReceiptLifetime.Milliseconds(),
 		"expired_messages":            expired,
 	})

@@ -86,7 +86,14 @@ export class BeaconInstance extends DurableObject<Env> implements Transport {
     )
       reject(503, "stream_capacity");
     const pair = new WebSocketPair();
-    pair[1].serializeAttachment({ device, hash } satisfies Attachment);
+    const control = request.headers.get("X-Beacon-Heartbeat") === "1";
+    pair[1].serializeAttachment({
+      device,
+      hash,
+      control,
+      batch: control && request.headers.get("X-Beacon-Reception") === "batch",
+      dirty: false,
+    } satisfies Attachment);
     this.ctx.acceptWebSocket(pair[1], [device]);
     // Client performs HTTP catch-up; do not send before the connection handshake.
     return new Response(null, { status: 101, webSocket: pair[0] });
@@ -108,6 +115,12 @@ export class BeaconInstance extends DurableObject<Env> implements Transport {
           continue;
         }
         try {
+          if (attachment.batch && Number(task.priority) < 8) {
+            attachment.dirty = true;
+            ws.serializeAttachment(attachment);
+            delivered = true;
+            continue;
+          }
           ws.send(payload);
           delivered = true;
         } catch {
@@ -157,8 +170,40 @@ export class BeaconInstance extends DurableObject<Env> implements Transport {
       }
     });
   }
-  webSocketMessage(ws: WebSocket): void {
-    ws.close(1008, "receive_only");
+  webSocketMessage(ws: WebSocket, payload: string | ArrayBuffer): void {
+    const attachment = ws.deserializeAttachment() as Attachment;
+    if (!attachment?.control || payload !== "@beacon/heartbeat/1") {
+      ws.close(1008, "receive_only");
+      return;
+    }
+    if (!this.store.authorized(attachment)) {
+      ws.close(1008, "unauthorized");
+      return;
+    }
+    try {
+      ws.send("@beacon/heartbeat_ack/1");
+      if (attachment.dirty) {
+        const page = this.store.page(
+          attachment.device,
+          0,
+          100,
+          true,
+          Date.now(),
+        );
+        attachment.dirty = page.has_more;
+        for (const item of page.messages)
+          ws.send(
+            JSON.stringify({
+              protocol: 1,
+              server_id: this.store.serverID,
+              message: item,
+            }),
+          );
+        ws.serializeAttachment(attachment);
+      }
+    } catch {
+      ws.close(1011, "delivery_failed");
+    }
   }
   webSocketClose(ws: WebSocket, code: number): void {
     // Abnormal/no-status codes are diagnostic values, never valid wire codes.

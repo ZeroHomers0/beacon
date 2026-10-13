@@ -27,13 +27,16 @@ type StreamHub struct {
 
 var streamWriteBuffers sync.Pool
 
-// Two missed 180-second client heartbeats plus scheduling slack. No server ping timer.
+// Covers the 300-second adaptive interval plus its acknowledgement timeout and scheduling slack.
+// Legacy clients keep their existing Ping/Pong; no server ping timer is needed.
 const streamIdleTimeout = 450 * time.Second
 
 type streamClient struct {
 	conn                    *websocket.Conn
 	device, token, clientID string
 	write                   sync.Mutex
+	batch                   bool
+	pending                 bool
 }
 
 func NewStreamHub(app *service.Service) *StreamHub {
@@ -99,6 +102,7 @@ func (h *StreamHub) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c := &streamClient{conn: conn, device: device, token: token, clientID: domain.ReceiverClientID(device, auth.HashToken(token))}
+	c.batch = r.Header.Get("X-Beacon-Heartbeat") == "1" && r.Header.Get("X-Beacon-Reception") == "batch"
 	h.clients[c] = struct{}{}
 	h.mu.Unlock()
 	defer func() { conn.Close(); h.mu.Lock(); delete(h.clients, c); h.mu.Unlock() }()
@@ -111,12 +115,41 @@ func (h *StreamHub) Handler(w http.ResponseWriter, r *http.Request) {
 		}
 		return conn.WriteControl(websocket.PongMessage, []byte(payload), time.Now().Add(5*time.Second))
 	})
-	// The stream is receive-only. Receipts use the authenticated, durable HTTP API.
+	// Only the negotiated, bounded heartbeat control is accepted; receipts remain HTTP.
 	for {
-		if _, _, err = conn.ReadMessage(); err != nil {
+		kind, payload, readErr := conn.ReadMessage()
+		if readErr != nil || kind != websocket.TextMessage || string(payload) != "@beacon/heartbeat/1" || r.Header.Get("X-Beacon-Heartbeat") != "1" {
 			return
 		}
-		return
+		if !h.authorized(c) {
+			return
+		}
+		_ = conn.SetReadDeadline(time.Now().Add(streamIdleTimeout))
+		c.write.Lock()
+		_ = conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+		err = conn.WriteMessage(websocket.TextMessage, []byte("@beacon/heartbeat_ack/1"))
+		if err == nil && c.pending {
+			var page domain.MessagePage
+			page, err = h.app.Messages(c.device, 0, 100, true)
+			if err == nil {
+				c.pending = page.HasMore
+				for _, item := range page.Messages {
+					var packet []byte
+					packet, err = json.Marshal(domain.RealtimeEnvelope{Protocol: 1, ServerID: h.app.ServerID(), Message: item})
+					if err != nil {
+						break
+					}
+					_ = conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+					if err = conn.WriteMessage(websocket.TextMessage, packet); err != nil {
+						break
+					}
+				}
+			}
+		}
+		c.write.Unlock()
+		if err != nil {
+			return
+		}
 	}
 }
 
@@ -168,6 +201,13 @@ func (h *StreamHub) Publish(ctx context.Context, serverID, deviceID string, mess
 			deadline = d
 		}
 		c.write.Lock()
+		if c.batch && message.Priority < 8 {
+			// Keep only a dirty flag. SQLite owns bodies, TTL, deletion and receipt state.
+			c.pending = true
+			c.write.Unlock()
+			delivered = true
+			continue
+		}
 		_ = c.conn.SetWriteDeadline(deadline)
 		err = c.conn.WriteMessage(websocket.TextMessage, payload)
 		c.write.Unlock()

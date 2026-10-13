@@ -60,6 +60,9 @@ internal class RealtimeRuntimeController(
     private var lastReceivedMs = 0L
     private var receiptNamespace: String? = null
     private var receiptRetryAtMs = 0L
+    private val heartbeatMemory = io.github.beacon.app.data.local.HeartbeatMemoryStore(service)
+
+    fun coalesceNetworkWork() = session?.coalesceNetworkWork()
 
     // Evaluated on the runtime actor. A failed receipt must still get periodic HTTP recovery.
     val canSkipPeriodicSync: Boolean
@@ -87,6 +90,7 @@ internal class RealtimeRuntimeController(
                             if (service.automaticHttpWaiting()) return@execute
                             var confirmed = false
                             try {
+                                coalesceNetworkWork()
                                 HttpMessageSync(settings, store, valid)
                                     .acknowledgePending(namespace)
                                 confirmed = true
@@ -430,6 +434,25 @@ internal class RealtimeRuntimeController(
         try {
             val settings = TransportSecretStore(service).load()
             val config = HttpMessageSync(settings, store, ::valid).realtimeConfiguration()
+            val properties = manager.getLinkProperties(network)
+            // Permission-free network fingerprint; always verify a hint before increasing probes.
+            val fingerprint =
+                listOf(
+                        settings.endpoint,
+                        if (wifi) "wifi" else "mobile",
+                        properties?.interfaceName,
+                        properties?.dnsServers?.mapNotNull { it.hostAddress }?.sorted(),
+                        properties?.routes?.mapNotNull { it.gateway?.hostAddress }?.sorted(),
+                    )
+                    .joinToString("|")
+            val memoryKey =
+                java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(fingerprint.toByteArray())
+                    .joinToString("") { "%02x".format(it.toInt() and 255) }
+            val heartbeatPolicy =
+                if (plan.adaptiveHeartbeat && config.adaptiveHeartbeatSupported)
+                    AdaptiveHeartbeatPolicy(heartbeatMemory.load(memoryKey))
+                else null
             receiptNamespace =
                 io.github.beacon.app.data.remote.MessageIdentity.namespace(
                     config.serverId,
@@ -442,6 +465,24 @@ internal class RealtimeRuntimeController(
                     config,
                     settings.token,
                     heartbeatSeconds = plan.heartbeatSeconds,
+                    heartbeatPolicy = heartbeatPolicy,
+                    batchOrdinaryMessages = plan.batchOrdinaryMessages,
+                    onVerifiedHeartbeat = { seconds ->
+                        runCatching {
+                            worker.execute { if (valid()) heartbeatMemory.save(memoryKey, seconds) }
+                        }
+                    },
+                    onHeartbeat = {
+                        runCatching {
+                            worker.execute {
+                                if (!valid()) return@execute
+                                receiptTask?.let { task ->
+                                    main.removeCallbacks(task)
+                                    task.run()
+                                }
+                            }
+                        }
+                    },
                     receive = { payload ->
                         if (!valid()) throw IOException("Session changed")
                         worker

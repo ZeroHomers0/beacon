@@ -52,16 +52,26 @@ class SettingsBackup(private val context: Context) {
             val names = fields.findAll(payload).map { it.groupValues[1] }.toList()
             val value = JSONObject(payload)
             val version = value.opt("version")
-            require(value.get("format") == "beacon_settings" && version in listOf(1, 2, 3))
+            require(value.get("format") == "beacon_settings" && version in listOf(1, 2, 3, 4))
             val expected =
                 when (version) {
                     1 -> keys
                     2 -> keys + ruleKeys
-                    else -> keys + ruleKeys + "heartbeat_seconds"
+                    3 -> keys + ruleKeys + "heartbeat_seconds"
+                    else ->
+                        keys +
+                            ruleKeys +
+                            setOf(
+                                "heartbeat_seconds",
+                                "adaptive_heartbeat",
+                                "batch_ordinary_messages",
+                            )
                 }
             require(names.size == expected.size && names.toSet() == expected)
             // Preserve the historical choice when restoring pre-heartbeat backups.
-            if (version != 3) value.put("heartbeat_seconds", 60)
+            if (version in listOf(1, 2)) value.put("heartbeat_seconds", 60)
+            if (version != 4)
+                value.put("adaptive_heartbeat", false).put("batch_ordinary_messages", false)
             if (version == 1)
                 value
                     .put("schedule_enabled", false)
@@ -91,6 +101,8 @@ class SettingsBackup(private val context: Context) {
                     lowBatteryEnabled = boolean("low_battery_enabled"),
                     lowBatteryPercent = number("low_battery_percent"),
                     heartbeatSeconds = number("heartbeat_seconds"),
+                    adaptiveHeartbeat = boolean("adaptive_heartbeat"),
+                    batchOrdinaryMessages = boolean("batch_ordinary_messages"),
                 )
                 .validate()
             NotificationSettings(
@@ -120,7 +132,7 @@ class SettingsBackup(private val context: Context) {
         val cleanup = CleanupPreferenceStore(context).settings().policy
         return JSONObject()
             .put("format", "beacon_settings")
-            .put("version", 3)
+            .put("version", 4)
             .put("interval", polling.intervalMinutes)
             .put("unmetered", polling.unmetered)
             .put("charging", polling.charging)
@@ -134,6 +146,8 @@ class SettingsBackup(private val context: Context) {
             .put("low_battery_enabled", plan.lowBatteryEnabled)
             .put("low_battery_percent", plan.lowBatteryPercent)
             .put("heartbeat_seconds", plan.heartbeatSeconds)
+            .put("adaptive_heartbeat", plan.adaptiveHeartbeat)
+            .put("batch_ordinary_messages", plan.batchOrdinaryMessages)
             .put("fresh_minutes", notification.freshMinutes)
             .put("outdated", notification.outdatedReminder.name)
             .put("lockscreen_preview", notification.lockscreenPreview)

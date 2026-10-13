@@ -199,6 +199,7 @@ export class API {
           delivery_window_ms: PENDING,
           delivery_retention_protocol: 1,
           receipt_status: true,
+          reception_control: 1,
           receipt_window_ms: RECEIPT,
           expired_messages: this.store.expiredCount(device),
         });

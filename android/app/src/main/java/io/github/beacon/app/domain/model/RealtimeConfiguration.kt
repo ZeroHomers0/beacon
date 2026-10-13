@@ -8,6 +8,7 @@ data class RealtimeConfiguration(
     val deviceId: String,
     val streamUrl: String,
     val clockOffsetMs: Long? = null,
+    val adaptiveHeartbeatSupported: Boolean = false,
 ) {
     fun validate() {
         require(listOf(serverId, deviceId).all { it.matches(Regex("[0-9a-f]{64}")) })

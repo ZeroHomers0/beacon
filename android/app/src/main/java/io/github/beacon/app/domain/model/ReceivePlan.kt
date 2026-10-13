@@ -22,6 +22,8 @@ data class ReceivePlan(
     val lowBatteryEnabled: Boolean = false,
     val lowBatteryPercent: Int = 20,
     val heartbeatSeconds: Int = RealtimeHeartbeat.DEFAULT_SECONDS,
+    val adaptiveHeartbeat: Boolean = true,
+    val batchOrdinaryMessages: Boolean = false,
 ) {
     fun validate() {
         RealtimeHeartbeat.validate(heartbeatSeconds)

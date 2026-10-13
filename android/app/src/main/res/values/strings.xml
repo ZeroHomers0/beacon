@@ -1,4 +1,8 @@
 <resources>
+    <string name="receive_adaptive_heartbeat">自适应心跳</string>
+    <string name="receive_adaptive_heartbeat_hint">自动在60～300秒内学习，按网络特征记忆已验证间隔。旧服务器使用下方固定间隔；间隔越长，静默断线发现越慢。</string>
+    <string name="receive_batch_ordinary">普通消息批量接收</string>
+    <string name="receive_batch_ordinary_hint">开启后，优先级0～7的消息等待下一次心跳集中到达，自适应模式通常约1～5分钟，固定模式按所选间隔；积压时分批投递，优先级8～10仍立即投递。断线、系统休眠可能进一步延迟。需要新版服务端。</string>
     <string name="channel_important">重要消息</string>
     <string name="ui_power_saving_mode">省电接收</string>
     <string name="ui_current_receive_mode">当前模式</string>

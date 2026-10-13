@@ -15,4 +15,6 @@ internal interface RealtimeTransport : AutoCloseable {
     fun connect(config: RealtimeConfiguration, password: String, listener: Listener)
 
     fun ready()
+
+    fun coalesceHeartbeat() {}
 }

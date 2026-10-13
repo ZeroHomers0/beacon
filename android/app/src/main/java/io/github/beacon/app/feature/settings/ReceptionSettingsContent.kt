@@ -66,7 +66,9 @@ internal fun LazyListScope.receptionSettingsItems(
         UiSection(stringResource(R.string.settings_receive_status_title)) {
             BeaconPreferenceToggle(
                 stringResource(R.string.settings_battery_saver_title),
-                receiveLabel(polling.copy(config = polling.config.copy(enabled = receptionForm.enabled))),
+                receiveLabel(
+                    polling.copy(config = polling.config.copy(enabled = receptionForm.enabled))
+                ),
                 receptionForm.enabled,
                 !busy,
             ) {
@@ -124,21 +126,39 @@ internal fun LazyListScope.receptionSettingsItems(
     if (receivePlan.mode != ReceiveMode.POWER_SAVING) {
         item {
             UiSection(stringResource(R.string.receive_heartbeat_title)) {
+                BeaconPreferenceToggle(
+                    stringResource(R.string.receive_adaptive_heartbeat),
+                    stringResource(R.string.receive_adaptive_heartbeat_hint),
+                    receptionForm.plan.adaptiveHeartbeat,
+                    !busy && runtimeState.receivePlanLoaded,
+                ) {
+                    receptionForm.plan = receptionForm.plan.copy(adaptiveHeartbeat = it)
+                    receptionForm.edited = true
+                }
                 BeaconDropdownPreference(
                     stringResource(R.string.receive_heartbeat_interval),
                     RealtimeHeartbeat.options.map {
                         stringResource(R.string.receive_heartbeat_seconds, it)
                     },
                     RealtimeHeartbeat.options.indexOf(receptionForm.plan.heartbeatSeconds),
-                    !busy && runtimeState.receivePlanLoaded,
+                    !busy &&
+                        runtimeState.receivePlanLoaded &&
+                        !receptionForm.plan.adaptiveHeartbeat,
                 ) {
                     receptionForm.plan =
-                        receptionForm.plan.copy(
-                            heartbeatSeconds = RealtimeHeartbeat.options[it]
-                        )
+                        receptionForm.plan.copy(heartbeatSeconds = RealtimeHeartbeat.options[it])
                     receptionForm.edited = true
                 }
                 SettingsHint(stringResource(R.string.receive_heartbeat_hint))
+                BeaconPreferenceToggle(
+                    stringResource(R.string.receive_batch_ordinary),
+                    stringResource(R.string.receive_batch_ordinary_hint),
+                    receptionForm.plan.batchOrdinaryMessages,
+                    !busy && runtimeState.receivePlanLoaded,
+                ) {
+                    receptionForm.plan = receptionForm.plan.copy(batchOrdinaryMessages = it)
+                    receptionForm.edited = true
+                }
             }
         }
     }

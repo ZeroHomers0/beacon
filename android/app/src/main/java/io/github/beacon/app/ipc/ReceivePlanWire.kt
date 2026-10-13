@@ -14,6 +14,8 @@ internal object ReceivePlanWire {
         parcel.writeInt(if (plan.lowBatteryEnabled) 1 else 0)
         parcel.writeInt(plan.lowBatteryPercent)
         parcel.writeInt(plan.heartbeatSeconds)
+        parcel.writeInt(if (plan.adaptiveHeartbeat) 1 else 0)
+        parcel.writeInt(if (plan.batchOrdinaryMessages) 1 else 0)
     }
 
     fun readExtras(parcel: Parcel, base: ReceivePlan): ReceivePlan {
@@ -28,6 +30,8 @@ internal object ReceivePlanWire {
                 lowBatteryPercent = parcel.readInt(),
                 // Older plans end after lowBatteryPercent. Never reorder existing fields.
                 heartbeatSeconds = if (parcel.dataAvail() >= 4) parcel.readInt() else 60,
+                adaptiveHeartbeat = if (parcel.dataAvail() >= 4) boolean() else false,
+                batchOrdinaryMessages = if (parcel.dataAvail() >= 4) boolean() else false,
             )
             .also { it.validate() }
     }

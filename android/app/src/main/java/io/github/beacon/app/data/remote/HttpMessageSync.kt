@@ -161,7 +161,8 @@ class HttpMessageSync(
         return RealtimeConfigurationDecoder.decode(reply.toString(), settings.endpoint)
             .copy(
                 clockOffsetMs =
-                    (receivedAt - serverAt).takeIf { serverAt > 0 && it in -300_000L..300_000L }
+                    (receivedAt - serverAt).takeIf { serverAt > 0 && it in -300_000L..300_000L },
+                adaptiveHeartbeatSupported = identity.opt("reception_control") == 1,
             )
             .also {
                 check(

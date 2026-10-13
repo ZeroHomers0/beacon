@@ -385,6 +385,7 @@ class RuntimeProbeService : Service() {
         var outcome = SyncOutcome.OK
         val message =
             try {
+                realtime.coalesceNetworkWork()
                 HttpMessageSync(settings, store, ::allowed).run()
             } catch (e: Exception) {
                 io.github.beacon.app.domain.receive.RetryAfterPolicy.from(e)?.let {
@@ -866,6 +867,8 @@ class RuntimeProbeService : Service() {
                                     if (realtime.plan.lowBatteryEnabled) "1" else "0",
                                     realtime.plan.lowBatteryPercent.toString(),
                                     realtime.plan.heartbeatSeconds.toString(),
+                                    if (realtime.plan.adaptiveHeartbeat) "1" else "0",
+                                    if (realtime.plan.batchOrdinaryMessages) "1" else "0",
                                 )
                             }
                             .get(45, java.util.concurrent.TimeUnit.SECONDS)
@@ -885,7 +888,7 @@ class RuntimeProbeService : Service() {
                         writeString(snapshot[11])
                         writeLong(snapshot[12].toLong())
                         writeInt(snapshot[13].toInt())
-                        for (index in 14..20) writeInt(snapshot[index].toInt())
+                        for (index in 14..22) writeInt(snapshot[index].toInt())
                     }
                     return true
                 }
