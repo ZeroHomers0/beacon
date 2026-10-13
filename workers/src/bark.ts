@@ -81,10 +81,18 @@ export async function bark(request: Request): Promise<Record<string, string>> {
   }
   let values: Record<string, string> = {};
   if (request.method === "POST") {
-    const media = request.headers.get("Content-Type") ?? "";
+    // Qinglong sets both Content-Type and content-type; Fetch combines them.
+    // Accept repeated declarations only when they identify the same format.
+    const declarations = (request.headers.get("Content-Type") ?? "")
+      .split(",")
+      .map((value) => value.trim());
+    const media = declarations[0];
     if (
-      !/^(application\/json|application\/x-www-form-urlencoded)(?:\s*;\s*charset\s*=\s*"?utf-8"?)?\s*$/i.test(
-        media,
+      !declarations.every(
+        (value) =>
+          /^(application\/json|application\/x-www-form-urlencoded)(?:\s*;\s*charset\s*=\s*(?:utf-8|"utf-8"))?\s*$/i.test(value) &&
+          value.split(";")[0].trim().toLowerCase() ===
+            media.split(";")[0].trim().toLowerCase(),
       )
     )
       reject(415, "unsupported_media_type");
