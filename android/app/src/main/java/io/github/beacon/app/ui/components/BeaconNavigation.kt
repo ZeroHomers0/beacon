@@ -47,9 +47,11 @@ fun BeaconScaffold(
             androidx.compose.material3.SnackbarHost(
                 snackbar,
                 Modifier.align(androidx.compose.ui.Alignment.BottomCenter)
+                    .widthIn(max = 480.dp)
                     .fillMaxWidth()
+                    .imePadding()
                     .navigationBarsPadding()
-                    .padding(start = 12.dp, end = 12.dp, bottom = 16.dp),
+                    .padding(start = 12.dp, end = 12.dp, bottom = 96.dp),
             ) { data ->
                 BeaconOperationSnackbar(data)
             }

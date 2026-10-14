@@ -17,7 +17,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -92,12 +91,7 @@ fun ReceiveModeButton(
                 drawCircle(
                     color = accent.copy(alpha = .75f),
                     radius = size.minDimension / 2 - width / 2,
-                    style =
-                        Stroke(
-                            width = width,
-                            pathEffect =
-                                PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 3.dp.toPx())),
-                        ),
+                    style = Stroke(width = width),
                 )
             }
         }
@@ -187,35 +181,47 @@ fun BeaconSummaryPill(label: String, icon: ImageVector, highlighted: Boolean = f
     }
 }
 
-/** A themed floating result, rather than Material's inverse-color snackbar inside MIUIX. */
+/** KSU-style floating feedback: high contrast, rounded corners and swipe dismissal. */
 @Composable
 fun BeaconOperationSnackbar(data: SnackbarData) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        tonalElevation = 3.dp,
-        shadowElevation = 4.dp,
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value != SwipeToDismissBoxValue.Settled) data.dismiss()
+            true
+        },
+    )
+    SwipeToDismissBox(
+        state = dismissState,
+        backgroundContent = {},
     ) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.inverseSurface,
+            contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+            shadowElevation = 6.dp,
         ) {
-            Icon(
-                BeaconIcons.Info,
-                null,
-                Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.primary,
-            )
-            BeaconText(
-                data.visuals.message,
-                Modifier.weight(1f),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            data.visuals.actionLabel?.let { label ->
-                BeaconTextButton(onClick = data::performAction) {
-                    BeaconText(label, color = MaterialTheme.colorScheme.primary)
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Icon(
+                    BeaconIcons.Info,
+                    null,
+                    Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.inversePrimary,
+                )
+                BeaconText(
+                    data.visuals.message,
+                    Modifier.weight(1f),
+                    color = MaterialTheme.colorScheme.inverseOnSurface,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                data.visuals.actionLabel?.let { label ->
+                    BeaconTextButton(onClick = data::performAction) {
+                        BeaconText(label, color = MaterialTheme.colorScheme.inversePrimary)
+                    }
                 }
             }
         }

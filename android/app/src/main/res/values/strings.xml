@@ -600,8 +600,6 @@
     <string name="admin_priority_normal">%1$d · 普通通知</string>
     <string name="admin_priority_important">%1$d · 重要通知</string>
     <string name="admin_application_hint">创建仅向所选设备发送消息的独立凭证，适合脚本和告警。凭证只显示一次，无接收或管理权限。</string>
-    <string name="admin_application_address_hint">发送应用推送地址为「服务器地址 + /api/v1/push」，发送时用 Authorization: Bearer 携带该应用的令牌。令牌只在创建时显示一次，服务端只保存哈希，无法再次读取。</string>
-    <string name="admin_copy_application_address">复制推送地址</string>
     <string name="admin_no_applications">暂无发送应用。</string>
     <string name="admin_device">目标设备</string>
     <string name="admin_revoke_application">撤销发送凭证</string>

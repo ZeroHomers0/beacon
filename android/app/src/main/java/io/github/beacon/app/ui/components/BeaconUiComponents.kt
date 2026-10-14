@@ -3,6 +3,7 @@
 package io.github.beacon.app.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -258,16 +259,43 @@ fun MessageItem(
                         enabled = !busy,
                         contentDescription = message.title,
                     )
-                BeaconText(
-                    message.title.ifBlank { stringResource(R.string.msg_untitled_message) },
+                Column(
                     Modifier.weight(1f),
-                    style =
-                        MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
-                        ),
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    BeaconText(
+                        message.title.ifBlank { stringResource(R.string.msg_untitled_message) },
+                        style =
+                            MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                            ),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (message.group.isNotBlank() || message.applicationId.isNotBlank())
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            if (message.applicationId.isNotBlank())
+                                MessageFilterTag(
+                                    label = message.applicationName.ifBlank {
+                                        stringResource(
+                                            R.string.message_application_short,
+                                            message.applicationId.take(8),
+                                        )
+                                    },
+                                    enabled = !busy && !selectionMode && onFilterApplication != null,
+                                    onClick = { onFilterApplication?.invoke() },
+                                )
+                            if (message.group.isNotBlank())
+                                MessageFilterTag(
+                                    label = message.group,
+                                    enabled = !busy && !selectionMode && onFilterGroup != null,
+                                    onClick = { onFilterGroup?.invoke() },
+                                )
+                        }
+                }
                 if (!message.isRead)
                     Box(
                         Modifier.size(6.dp)
@@ -315,36 +343,6 @@ fun MessageItem(
                         }
                     }
             }
-            if (message.group.isNotBlank() || message.applicationId.isNotBlank())
-                ActionFlow {
-                    if (message.group.isNotBlank())
-                        AssistChip(
-                            onClick = { onFilterGroup?.invoke() },
-                            enabled = !busy && !selectionMode && onFilterGroup != null,
-                            label = {
-                                BeaconText(
-                                    message.group,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            },
-                        )
-                    if (message.applicationId.isNotBlank())
-                        AssistChip(
-                            onClick = { onFilterApplication?.invoke() },
-                            enabled = !busy && !selectionMode && onFilterApplication != null,
-                            label = {
-                                BeaconText(
-                                    message.applicationName.ifBlank {
-                                        stringResource(
-                                            R.string.message_application_short,
-                                            message.applicationId.take(8),
-                                        )
-                                    }
-                                )
-                            },
-                        )
-                }
             if (message.subtitle.isNotBlank())
                 BeaconText(
                     message.subtitle,
@@ -380,5 +378,34 @@ fun MessageItem(
                     )
             }
         }
+    }
+}
+
+/** Compact metadata with a full touch target, positioned directly beneath the title. */
+@Composable
+private fun MessageFilterTag(label: String, enabled: Boolean, onClick: () -> Unit) {
+    Box(
+        Modifier.heightIn(min = 32.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(
+                enabled = enabled,
+                role = androidx.compose.ui.semantics.Role.Button,
+                onClick = onClick,
+            )
+            .padding(vertical = 4.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        BeaconText(
+            label,
+            Modifier.background(
+                    MaterialTheme.colorScheme.secondaryContainer,
+                    RoundedCornerShape(6.dp),
+                )
+                .padding(horizontal = 8.dp, vertical = 3.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }

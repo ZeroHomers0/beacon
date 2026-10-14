@@ -5,6 +5,13 @@ package io.github.beacon.app.ui
 import android.app.NotificationManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.SeekableTransitionState
 import androidx.compose.animation.core.rememberTransition
 import androidx.compose.animation.core.spring
@@ -803,157 +810,182 @@ fun BeaconApp(
                     val edge = if (ui.uiStyle == BeaconUiStyle.MIUIX) 12.dp else 16.dp
                     val listPadding =
                         PaddingValues(start = edge, end = edge, top = 12.dp, bottom = 24.dp)
-                    if (detail != null)
-                        MessageDetailScreen(
-                            detail,
-                            listModifier,
-                            onCopy = { body ->
-                                copyToClipboard(
-                                    context,
-                                    if (body) clipboardBodyLabel else clipboardTitleLabel,
-                                    if (body) detail.body else detail.title,
-                                )
-                            },
-                            onDelete = {
-                                ui.pendingDelete = listOf(MessageKey(detail.server, detail.id))
-                            },
-                            busy = busy,
-                            onShare = {
-                                io.github.beacon.app.feature.messages.shareMessage(context, detail)
-                            },
-                            onRemind = {
-                                actions.remindMessage(MessageKey(detail.server, detail.id))
-                            },
-                            onToggleRead = {
-                                actions.manageMessages(
-                                    if (detail.isRead) MessageAction.MARK_UNREAD
-                                    else MessageAction.MARK_READ,
-                                    listOf(MessageKey(detail.server, detail.id)),
-                                    preservePage = true,
-                                )
-                            },
-                        )
-                    else
-                        HorizontalPager(
-                            state = pager,
-                            modifier = Modifier.fillMaxSize(),
-                            userScrollEnabled = false,
-                            beyondViewportPageCount = 1,
-                            overscrollEffect = null,
-                        ) { visiblePage ->
-                            when (visiblePage) {
-                                0 ->
-                                    MessagesPage(
-                                        messageScroll,
-                                        Modifier.fillMaxSize().padding(insets),
-                                        listPadding,
-                                        runtimeState,
-                                        actions,
-                                        ui.search,
-                                        ui.readFilter,
-                                        ui.selectionMode,
-                                        ui.selectedKeys,
-                                        ui.selectionHint,
-                                        scrollModifier =
-                                            if (compactBar) Modifier
-                                            else
-                                                Modifier.nestedScroll(
-                                                    barBehavior.connection(ui.uiStyle)
-                                                ),
-                                        sharedTitle = sharedTitleLabel,
-                                        onSearch = { ui.search = it },
-                                        onApplyFilter = { text, filter ->
-                                            ui.applyFilter(actions, text, filter)
-                                        },
-                                        onConnectionSettings = {
-                                            ui.page = 1
-                                            ui.navigateSettings(SettingsScreen.CONNECTION)
-                                        },
-                                        onEnterSelection = { key ->
-                                            if (!ui.selectionMode) {
-                                                ui.selectionMode = true
-                                                ui.selectedKeys = listOf(key)
-                                            } else if (
-                                                key !in ui.selectedKeys &&
-                                                    ui.selectedKeys.size < 100
-                                            ) {
-                                                ui.selectedKeys = ui.selectedKeys + key
-                                            }
-                                            ui.selectionHint = ""
-                                        },
-                                        onSelectionChange = { ui.selectedKeys = it },
-                                        onSelectionHint = { ui.selectionHint = it },
-                                        onCopyText = { text, body ->
-                                            copyToClipboard(
-                                                context,
-                                                if (body) clipboardBodyLabel
-                                                else clipboardTitleLabel,
-                                                text,
-                                            )
-                                        },
+                    val layoutDirection = androidx.compose.ui.platform.LocalLayoutDirection.current
+                    AnimatedContent(
+                        targetState = detail,
+                        modifier = Modifier.fillMaxSize(),
+                        contentKey = { it?.let { message -> MessageKey(message.server, message.id) } },
+                        transitionSpec = {
+                            val forward = targetState != null
+                            val direction =
+                                if (layoutDirection == androidx.compose.ui.unit.LayoutDirection.Rtl) -1 else 1
+                            val motion = tween<androidx.compose.ui.unit.IntOffset>(300)
+                            val entry =
+                                slideInHorizontally(motion) {
+                                    direction * if (forward) it else -it / 4
+                                } + fadeIn(tween(220))
+                            val exit =
+                                slideOutHorizontally(motion) {
+                                    direction * if (forward) -it / 4 else it
+                                } + fadeOut(tween(220))
+                            (entry togetherWith exit)
+                                .apply { targetContentZIndex = if (forward) 1f else -1f }
+                                .using(androidx.compose.animation.SizeTransform(clip = true))
+                        },
+                        label = "message-detail-navigation",
+                    ) { detail ->
+                        if (detail != null)
+                            MessageDetailScreen(
+                                detail,
+                                listModifier,
+                                onCopy = { body ->
+                                    copyToClipboard(
+                                        context,
+                                        if (body) clipboardBodyLabel else clipboardTitleLabel,
+                                        if (body) detail.body else detail.title,
                                     )
-
-                                else ->
-                                    BeaconSettingsTransition(
-                                        settingsTransition,
-                                        ui.settingsNavigatingBack ||
-                                            settingsMotion.targetState == ui.settingsBackTarget,
-                                    ) { displayedSettingsScreen ->
-                                        SettingsPage(
-                                            displayedSettingsScreen,
-                                            settingsScrollStates.getValue(displayedSettingsScreen),
-                                            listModifier,
+                                },
+                                onDelete = {
+                                    ui.pendingDelete = listOf(MessageKey(detail.server, detail.id))
+                                },
+                                busy = busy,
+                                onShare = {
+                                    io.github.beacon.app.feature.messages.shareMessage(context, detail)
+                                },
+                                onRemind = {
+                                    actions.remindMessage(MessageKey(detail.server, detail.id))
+                                },
+                                onToggleRead = {
+                                    actions.manageMessages(
+                                        if (detail.isRead) MessageAction.MARK_UNREAD
+                                        else MessageAction.MARK_READ,
+                                        listOf(MessageKey(detail.server, detail.id)),
+                                        preservePage = true,
+                                    )
+                                },
+                            )
+                        else
+                            HorizontalPager(
+                                state = pager,
+                                modifier = Modifier.fillMaxSize(),
+                                userScrollEnabled = false,
+                                beyondViewportPageCount = 1,
+                                overscrollEffect = null,
+                            ) { visiblePage ->
+                                when (visiblePage) {
+                                    0 ->
+                                        MessagesPage(
+                                            messageScroll,
+                                            Modifier.fillMaxSize().padding(insets),
                                             listPadding,
                                             runtimeState,
                                             actions,
-                                            ui.connectionForm,
-                                            connectionDirty,
-                                            notificationPermission,
-                                            notificationHint,
-                                            ui.uiStyle,
-                                            ui.themeMode,
-                                            onNavigate = { ui.navigateSettings(it) },
-                                            receivePlan = ui.receivePlan,
-                                            receptionForm = ui.receptionForm,
-                                            onReceivePlanChange = { actions.receivePlan(it) },
-                                            onShowReceiveModes = { ui.receiveModesOpen = true },
-                                            onUiStyleChange = {
-                                                ui.uiStyle = it
+                                            ui.search,
+                                            ui.readFilter,
+                                            ui.selectionMode,
+                                            ui.selectedKeys,
+                                            ui.selectionHint,
+                                            scrollModifier =
+                                                if (compactBar) Modifier
+                                                else
+                                                    Modifier.nestedScroll(
+                                                        barBehavior.connection(ui.uiStyle)
+                                                    ),
+                                            sharedTitle = sharedTitleLabel,
+                                            onSearch = { ui.search = it },
+                                            onApplyFilter = { text, filter ->
+                                                ui.applyFilter(actions, text, filter)
                                             },
-                                            onThemeModeChange = {
-                                                ui.themeMode = it
+                                            onConnectionSettings = {
+                                                ui.page = 1
+                                                ui.navigateSettings(SettingsScreen.CONNECTION)
                                             },
-                                            onOperationDetails = { ui.operationDetails = it },
-                                            onFeedback = { message ->
-                                                uiScope.launch {
-                                                    snackbar.currentSnackbarData?.dismiss()
-                                                    snackbar.showSnackbar(
-                                                        message,
-                                                        duration = SnackbarDuration.Short,
-                                                    )
+                                            onEnterSelection = { key ->
+                                                if (!ui.selectionMode) {
+                                                    ui.selectionMode = true
+                                                    ui.selectedKeys = listOf(key)
+                                                } else if (
+                                                    key !in ui.selectedKeys &&
+                                                        ui.selectedKeys.size < 100
+                                                ) {
+                                                    ui.selectedKeys = ui.selectedKeys + key
                                                 }
+                                                ui.selectionHint = ""
                                             },
-                                            onPreviewReport = {
-                                                ui.supportPreview =
-                                                    viewModel.supportReport(
-                                                        context
-                                                            .getSystemService(
-                                                                NotificationManager::class.java
-                                                            )
-                                                            .areNotificationsEnabled()
-                                                    )
-                                                ui.reportCopied = false
+                                            onSelectionChange = { ui.selectedKeys = it },
+                                            onSelectionHint = { ui.selectionHint = it },
+                                            onCopyText = { text, body ->
+                                                copyToClipboard(
+                                                    context,
+                                                    if (body) clipboardBodyLabel
+                                                    else clipboardTitleLabel,
+                                                    text,
+                                                )
                                             },
-                                            onRequestNotificationPermission =
-                                                onRequestNotificationPermission,
-                                            onNotificationSettingsUnavailable =
-                                                onNotificationSettingsUnavailable,
-                                            updateState = ui.updateState,
-                                            onCheckUpdate = checkUpdateNow,
                                         )
-                                    }
+
+                                    else ->
+                                        BeaconSettingsTransition(
+                                            settingsTransition,
+                                            ui.settingsNavigatingBack ||
+                                                settingsMotion.targetState == ui.settingsBackTarget,
+                                        ) { displayedSettingsScreen ->
+                                            SettingsPage(
+                                                displayedSettingsScreen,
+                                                settingsScrollStates.getValue(displayedSettingsScreen),
+                                                listModifier,
+                                                listPadding,
+                                                runtimeState,
+                                                actions,
+                                                ui.connectionForm,
+                                                connectionDirty,
+                                                notificationPermission,
+                                                notificationHint,
+                                                ui.uiStyle,
+                                                ui.themeMode,
+                                                onNavigate = { ui.navigateSettings(it) },
+                                                receivePlan = ui.receivePlan,
+                                                receptionForm = ui.receptionForm,
+                                                onReceivePlanChange = { actions.receivePlan(it) },
+                                                onShowReceiveModes = { ui.receiveModesOpen = true },
+                                                onUiStyleChange = {
+                                                    ui.uiStyle = it
+                                                },
+                                                onThemeModeChange = {
+                                                    ui.themeMode = it
+                                                },
+                                                onOperationDetails = { ui.operationDetails = it },
+                                                onFeedback = { message ->
+                                                    uiScope.launch {
+                                                        snackbar.currentSnackbarData?.dismiss()
+                                                        snackbar.showSnackbar(
+                                                            message,
+                                                            duration = SnackbarDuration.Short,
+                                                        )
+                                                    }
+                                                },
+                                                onPreviewReport = {
+                                                    ui.supportPreview =
+                                                        viewModel.supportReport(
+                                                            context
+                                                                .getSystemService(
+                                                                    NotificationManager::class.java
+                                                                )
+                                                                .areNotificationsEnabled()
+                                                        )
+                                                    ui.reportCopied = false
+                                                },
+                                                onRequestNotificationPermission =
+                                                    onRequestNotificationPermission,
+                                                onNotificationSettingsUnavailable =
+                                                    onNotificationSettingsUnavailable,
+                                                updateState = ui.updateState,
+                                                onCheckUpdate = checkUpdateNow,
+                                            )
+                                        }
+                                }
                             }
-                        }
+                    }
                 }
             }
         }

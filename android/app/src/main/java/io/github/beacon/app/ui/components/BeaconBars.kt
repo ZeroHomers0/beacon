@@ -89,11 +89,12 @@ fun BeaconFilterChip(
     onClick: () -> Unit,
     label: @Composable () -> Unit,
     enabled: Boolean = true,
+    modifier: Modifier = Modifier,
 ) {
     if (miuix())
         top.yukonga.miuix.kmp.basic.Button(
             onClick,
-            Modifier.semantics { this.selected = selected },
+            modifier.semantics { this.selected = selected },
             enabled = enabled,
             minHeight = 48.dp,
             colors =
@@ -110,5 +111,5 @@ fun BeaconFilterChip(
                 label()
             }
         }
-    else androidx.compose.material3.FilterChip(selected, onClick, label, enabled = enabled)
+    else androidx.compose.material3.FilterChip(selected, onClick, label, modifier = modifier, enabled = enabled)
 }
