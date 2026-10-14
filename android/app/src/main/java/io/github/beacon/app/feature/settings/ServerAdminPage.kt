@@ -141,18 +141,19 @@ internal fun ServerAdminPage(
             item {
                 UiSection(stringResource(R.string.admin_overview)) {
                     DiagnosticRow(stringResource(R.string.admin_endpoint), state.endpoint)
+                    DiagnosticRow(stringResource(R.string.admin_version), state.version)
+                    DiagnosticRow(
+                        stringResource(R.string.admin_compatibility),
+                        stringResource(if (state.protocol == 1) R.string.admin_compatible_short else R.string.admin_protocol_unknown_short),
+                    )
                     SettingsMetricGrid(
                         listOf(
-                            stringResource(R.string.admin_version) to state.version,
-                            stringResource(R.string.admin_compatibility) to stringResource(
-                                if (state.protocol == 1) R.string.admin_compatible_short else R.string.admin_protocol_unknown_short,
-                            ),
                             stringResource(R.string.admin_devices) to state.devices.count { !it.revoked }.toString(),
                             stringResource(R.string.admin_messages) to state.messages.toString(),
                             stringResource(R.string.admin_pending) to state.pending.toString(),
-                            stringResource(R.string.admin_database) to android.text.format.Formatter.formatFileSize(context, state.databaseBytes),
                         ), columns = 3,
                     )
+                    DiagnosticRow(stringResource(R.string.admin_database), android.text.format.Formatter.formatFileSize(context, state.databaseBytes))
                     if (state.protocol != 1) SettingsHint(stringResource(R.string.admin_protocol_unknown))
                     SettingsHint(stringResource(R.string.admin_clear_messages_hint))
                     BeaconDangerButton(

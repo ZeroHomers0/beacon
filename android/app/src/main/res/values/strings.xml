@@ -245,12 +245,12 @@
     <string name="message_link_failed">没有可用的应用打开此链接</string>
     <string name="push_examples_title">推送 API 示例</string>
     <string name="push_examples_hint">复制后将标题和正文替换为需要推送的内容。示例包含推送密钥，请妥善保管。</string>
-    <string name="push_examples_curl">curl · URL</string>
-    <string name="push_examples_powershell">PowerShell · URL</string>
+    <string name="push_examples_curl">复制 curl 示例</string>
+    <string name="push_examples_powershell">复制 PowerShell 示例</string>
     <string name="message_share">分享消息</string>
     <string name="message_remind">重新提醒</string>
-    <string name="push_examples_json_curl">curl · JSON</string>
-    <string name="push_examples_json_powershell">PowerShell · JSON</string>
+    <string name="push_examples_json_curl">复制 JSON curl 示例</string>
+    <string name="push_examples_json_powershell">复制 JSON PowerShell 示例</string>
     <string name="message_share_failed">当前没有可用的分享应用</string>
     <string name="connection_manage">本机配置管理</string>
     <string name="connection_clear">清除本机配置</string>

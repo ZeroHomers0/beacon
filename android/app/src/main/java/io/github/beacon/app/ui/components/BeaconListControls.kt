@@ -13,8 +13,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.BeaconUiStyle
@@ -288,15 +289,18 @@ fun SettingsMetricGrid(metrics: List<Pair<String, String>>, modifier: Modifier =
                             Column(
                                 Modifier.padding(if (resolvedColumns == 3) 8.dp else 12.dp),
                                 verticalArrangement = Arrangement.SpaceBetween,
+                                horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
                                 BeaconText(
                                     label,
-                                    style = MaterialTheme.typography.labelMedium,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    style = MaterialTheme.typography.labelMedium.copy(textAlign = TextAlign.Center),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 BeaconText(
                                     value,
-                                    style = MaterialTheme.typography.titleMedium,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    style = MaterialTheme.typography.titleMedium.copy(textAlign = TextAlign.Center),
                                     color = MaterialTheme.colorScheme.primary,
                                 )
                             }

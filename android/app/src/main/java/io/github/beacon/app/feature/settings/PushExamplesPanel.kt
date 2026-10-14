@@ -22,30 +22,37 @@ fun PushExamplesPanel(actions: RuntimeActions, enabled: Boolean, endpoint: Strin
     var copied by remember { mutableStateOf(false) }
     UiSection(stringResource(R.string.push_examples_title)) {
         SettingsHint(stringResource(R.string.push_examples_hint))
-        val variants = listOf(false to false, true to false, false to true, true to true)
-        val labels = variants.map { (powershell, json) ->
-            stringResource(if (json && powershell) R.string.push_examples_json_powershell
-                else if (json) R.string.push_examples_json_curl
-                else if (powershell) R.string.push_examples_powershell else R.string.push_examples_curl)
-        }
-        BeaconCompactButtonGrid(labels, enabled = enabled) { index ->
-            val (powershell, json) = variants[index]
-            copied = false
-            actions.copyPushKey { key ->
-                val address = endpoint.trimEnd('/') + "/" + key
-                val example = runCatching {
-                    if (json) PushExamples.json(address, powershell)
-                    else PushExamples.create(address, powershell)
-                }
-                    .getOrNull()
-                if (example != null) {
-                    copied =
-                        copyToClipboard(
-                            context,
-                            resources.getString(R.string.settings_clipboard_push_example),
-                            example,
-                            sensitive = true,
-                        )
+        listOf(false to false, true to false, false to true, true to true).forEach {
+            (powershell, json) ->
+            // All four buttons copy to the clipboard; one action, one icon.
+            BeaconActionButton(
+                stringResource(
+                    if (json && powershell) R.string.push_examples_json_powershell
+                    else if (json) R.string.push_examples_json_curl
+                    else if (powershell) R.string.push_examples_powershell
+                    else R.string.push_examples_curl
+                ),
+                BeaconIcons.Copy,
+                Modifier.fillMaxWidth(),
+                enabled,
+            ) {
+                copied = false
+                actions.copyPushKey { key ->
+                    val address = endpoint.trimEnd('/') + "/" + key
+                    val example = runCatching {
+                        if (json) PushExamples.json(address, powershell)
+                        else PushExamples.create(address, powershell)
+                    }
+                        .getOrNull()
+                    if (example != null) {
+                        copied =
+                            copyToClipboard(
+                                context,
+                                resources.getString(R.string.settings_clipboard_push_example),
+                                example,
+                                sensitive = true,
+                            )
+                    }
                 }
             }
         }
