@@ -5,13 +5,6 @@ package io.github.beacon.app.ui
 import android.app.NotificationManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.PredictiveBackHandler
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.SeekableTransitionState
 import androidx.compose.animation.core.rememberTransition
 import androidx.compose.animation.core.spring
@@ -59,6 +52,7 @@ import io.github.beacon.app.ui.components.BeaconConfirmDialog
 import io.github.beacon.app.ui.components.BeaconDropdownMenu
 import io.github.beacon.app.ui.components.BeaconDropdownMenuItem
 import io.github.beacon.app.ui.components.BeaconIconButton
+import io.github.beacon.app.ui.components.BeaconMessageTransition
 import io.github.beacon.app.ui.components.BeaconPagerToolbar
 import io.github.beacon.app.ui.components.BeaconScaffold
 import io.github.beacon.app.ui.components.BeaconSelectableRow
@@ -73,8 +67,6 @@ import io.github.beacon.app.ui.components.ReceiveModeButton
 import io.github.beacon.app.ui.components.SettingsScreen
 import io.github.beacon.app.ui.components.copyToClipboard
 import io.github.beacon.app.ui.components.rememberBeaconBarBehavior
-import io.github.beacon.app.ui.components.SETTINGS_NAVIGATION_DURATION_MS
-import io.github.beacon.app.ui.components.settingsNavigationEasing
 import io.github.beacon.app.ui.components.settingsGestureFraction
 import io.github.beacon.app.ui.components.userOperationFeedback
 import io.github.beacon.app.ui.icons.BeaconIcons
@@ -367,6 +359,7 @@ fun BeaconApp(
         PredictiveBackHandler(enabled = predictiveDetailBack) { events ->
             val original = runtimeState.selectedMessage
             try {
+                detailMotion.seekTo(0f, null)
                 events.collect { event ->
                     detailMotion.seekTo(settingsGestureFraction(event.progress), null)
                 }
@@ -384,6 +377,7 @@ fun BeaconApp(
         PredictiveBackHandler(enabled = predictiveSettingsBack) { events ->
             val original = ui.settingsScreen
             try {
+                settingsMotion.seekTo(0f, ui.settingsBackTarget)
                 events.collect { event ->
                     settingsMotion.seekTo(
                         settingsGestureFraction(event.progress),
@@ -560,15 +554,13 @@ fun BeaconApp(
         val sharedTitleBar =
             windowHeightDp > 0.dp &&
                 windowHeightDp < SHARED_TITLE_MAX_HEIGHT &&
-                (ui.page == 0) &&
-                detail == null &&
                 !ui.selectionMode
         // A short window folds the title into the search row; opening the IME preserves this
         // layout.
-        val sharedTitleLabel = if (sharedTitleBar) stringResource(ui.pages[ui.page]) else null
+        val sharedTitleLabel = if (sharedTitleBar) stringResource(ui.pages[0]) else null
         val barBehavior = rememberBeaconBarBehavior()
         val compactBar =
-            sharedTitleBar ||
+            (sharedTitleBar && ui.page == 0) ||
                 (ui.page == 0 && ui.selectionMode) ||
                 detail != null ||
                 (ui.page == 1 && ui.settingsScreen != SettingsScreen.HOME)
@@ -578,264 +570,266 @@ fun BeaconApp(
                     snackbar = snackbar,
                     bottomBar = {},
                     topBar = {
-                        val renderSettingsBar: @Composable (Int, SettingsScreen) -> Unit =
-                            { barPage, displayedSettingsScreen ->
-                                BeaconTopBar(
-                                    if (detail != null)
-                                        stringResource(R.string.ui_message_detail_title)
-                                    else if (barPage == 1)
-                                        stringResource(displayedSettingsScreen.titleRes)
-                                    else if (barPage == 0 && ui.selectionMode)
-                                        stringResource(
-                                            R.string.msg_selected_count_label,
-                                            ui.selectedKeys.size,
-                                        )
-                                    else if (sharedTitleBar) ""
-                                    else stringResource(ui.pages[barPage]),
-                                    sharedTitleBar ||
-                                        (barPage == 0 && ui.selectionMode) ||
-                                        detail != null ||
-                                        (barPage == 1 &&
-                                            displayedSettingsScreen != SettingsScreen.HOME),
-                                    barBehavior,
-                                    navigationIcon = {
-                                        if (detail == null && barPage == 0 && ui.selectionMode)
-                                            BeaconActionIcon(
-                                                BeaconIcons.Close,
-                                                stringResource(
-                                                    R.string.ui_exit_multi_select_action
-                                                ),
-                                            ) {
-                                                ui.selectionMode = false
-                                                ui.selectedKeys = emptyList()
-                                                ui.selectionHint = ""
-                                            }
-                                        else if (detail != null)
-                                            BeaconIconButton(
-                                                onClick = { ui.closeDetail(actions) }
-                                            ) {
-                                                Icon(
-                                                    BeaconIcons.Back,
-                                                    stringResource(
-                                                        R.string.ui_back_to_messages_action
-                                                    ),
-                                                )
-                                            }
+                        BeaconMessageTransition(detailTransition) { displayedDetail ->
+                            val renderSettingsBar: @Composable (Int, SettingsScreen) -> Unit =
+                                { barPage, displayedSettingsScreen ->
+                                    BeaconTopBar(
+                                        if (displayedDetail != null)
+                                            stringResource(R.string.ui_message_detail_title)
                                         else if (barPage == 1)
-                                            BeaconIconButton(
-                                                onClick = {
-                                                    navigate(
-                                                        if (
-                                                            displayedSettingsScreen ==
-                                                                SettingsScreen.HOME
-                                                        )
-                                                            0
-                                                        else 1
-                                                    )
-                                                }
-                                            ) {
-                                                Icon(
-                                                    BeaconIcons.Back,
+                                            stringResource(displayedSettingsScreen.titleRes)
+                                        else if (barPage == 0 && ui.selectionMode)
+                                            stringResource(
+                                                R.string.msg_selected_count_label,
+                                                ui.selectedKeys.size,
+                                            )
+                                        else if (sharedTitleBar && barPage == 0) ""
+                                        else stringResource(ui.pages[barPage]),
+                                        (sharedTitleBar && barPage == 0) ||
+                                            (barPage == 0 && ui.selectionMode) ||
+                                            displayedDetail != null ||
+                                            (barPage == 1 &&
+                                                displayedSettingsScreen != SettingsScreen.HOME),
+                                        barBehavior,
+                                        navigationIcon = {
+                                            if (displayedDetail == null && barPage == 0 && ui.selectionMode)
+                                                BeaconActionIcon(
+                                                    BeaconIcons.Close,
                                                     stringResource(
-                                                        if (
-                                                            displayedSettingsScreen ==
-                                                                SettingsScreen.HOME
-                                                        )
-                                                            R.string.ui_back_to_messages_action
-                                                        else R.string.ui_back_to_settings_action
+                                                        R.string.ui_exit_multi_select_action
                                                     ),
-                                                )
-                                            }
-                                        else if (barPage == 0) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                ReceiveModeButton(
-                                                    polling.shouldSchedule &&
-                                                        runtimeState.serverReachable == true &&
-                                                        (ui.receivePlan.mode !=
-                                                            io.github.beacon.app.domain.model
-                                                                .ReceiveMode
-                                                                .REALTIME ||
-                                                            runtimeState.realtimeRunning),
-                                                    ui.receivePlan.mode,
-                                                    onClick = { ui.receiveModesOpen = true },
-                                                    onLongClick = {
-                                                        ui.page = 1
-                                                        ui.navigateSettings(
-                                                            if (
-                                                                runtimeState.configuredEndpoint
-                                                                    .isBlank() ||
-                                                                    runtimeState.serverReachable ==
-                                                                        false
-                                                            )
-                                                                SettingsScreen.CONNECTION
-                                                            else SettingsScreen.RECEPTION
-                                                        )
-                                                    },
-                                                    serverIssue =
-                                                        runtimeState.connectionSummaryLoaded &&
-                                                            (runtimeState.configuredEndpoint
-                                                                .isBlank() ||
-                                                                runtimeState.serverReachable ==
-                                                                    false),
-                                                    checkingServer = runtimeState.serverChecking,
-                                                    connected =
-                                                        runtimeState.serverReachable == true &&
-                                                            (ui.receivePlan.mode !=
-                                                                io.github.beacon.app.domain.model.ReceiveMode.REALTIME ||
-                                                                runtimeState.realtimeRunning),
-                                                )
-                                            }
-                                        }
-                                    },
-                                    actions = {
-                                        if (detail == null && barPage == 0 && ui.selectionMode) {
-                                            BeaconActionIcon(
-                                                BeaconIcons.DoneAll,
-                                                stringResource(R.string.ui_mark_read_action),
-                                                !busy && ui.selectedKeys.isNotEmpty(),
-                                            ) {
-                                                actions.manageMessages(
-                                                    MessageAction.MARK_READ,
-                                                    ui.selectedKeys,
-                                                    onComplete = { ui.selectedKeys = emptyList() },
-                                                )
-                                            }
-                                            BeaconActionIcon(
-                                                BeaconIcons.Messages,
-                                                stringResource(R.string.ui_mark_unread_action),
-                                                !busy && ui.selectedKeys.isNotEmpty(),
-                                            ) {
-                                                actions.manageMessages(
-                                                    MessageAction.MARK_UNREAD,
-                                                    ui.selectedKeys,
-                                                    onComplete = { ui.selectedKeys = emptyList() },
-                                                )
-                                            }
-                                            BeaconActionIcon(
-                                                BeaconIcons.Delete,
-                                                stringResource(R.string.ui_delete_selected_action),
-                                                !busy && ui.selectedKeys.isNotEmpty(),
-                                            ) {
-                                                ui.pendingDelete = ui.selectedKeys.toList()
-                                            }
-                                            val visibleKeys =
-                                                runtimeState.messages.map {
-                                                    MessageKey(it.server, it.id)
-                                                }
-                                            val allSelected =
-                                                visibleKeys.isNotEmpty() &&
-                                                    ui.selectedKeys.containsAll(visibleKeys)
-                                            val maxSelectionWarning =
-                                                stringResource(R.string.ui_max_selection_warning)
-                                            BeaconActionIcon(
-                                                if (allSelected) BeaconIcons.Close
-                                                else BeaconIcons.Check,
-                                                if (allSelected)
-                                                    stringResource(R.string.ui_deselect_page_action)
-                                                else stringResource(R.string.ui_select_page_action),
-                                                !busy,
-                                            ) {
-                                                val merged =
-                                                    (ui.selectedKeys + visibleKeys).distinct()
-                                                if (allSelected)
-                                                    ui.selectedKeys =
-                                                        ui.selectedKeys - visibleKeys.toSet()
-                                                else if (merged.size <= 100) {
-                                                    ui.selectedKeys = merged
+                                                ) {
+                                                    ui.selectionMode = false
+                                                    ui.selectedKeys = emptyList()
                                                     ui.selectionHint = ""
-                                                } else ui.selectionHint = maxSelectionWarning
-                                            }
-                                        } else if (detail == null && barPage == 0) {
-                                            if (busy)
-                                                Box(
-                                                    Modifier.size(48.dp),
-                                                    contentAlignment = Alignment.Center,
+                                                }
+                                            else if (displayedDetail != null)
+                                                BeaconIconButton(
+                                                    onClick = { ui.closeDetail(actions) }
                                                 ) {
-                                                    CircularProgressIndicator(
-                                                        Modifier.size(22.dp),
-                                                        strokeWidth = 2.dp,
+                                                    Icon(
+                                                        BeaconIcons.Back,
+                                                        stringResource(
+                                                            R.string.ui_back_to_messages_action
+                                                        ),
                                                     )
                                                 }
-                                            else
-                                                BeaconActionIcon(
-                                                    BeaconIcons.Sync,
-                                                    stringResource(R.string.action_sync_now),
-                                                ) {
-                                                    actions.transport()
-                                                }
-                                            Box {
-                                                BeaconActionIcon(
-                                                    BeaconIcons.Filter,
-                                                    stringResource(
-                                                        R.string.ui_filter_messages_title
-                                                    ),
-                                                    enabled = !busy,
-                                                ) {
-                                                    ui.filtersOpen = true
-                                                }
-                                                BeaconDropdownMenu(
-                                                    ui.filtersOpen,
-                                                    { ui.filtersOpen = false },
-                                                ) {
-                                                    MessageReadFilter.entries.forEach { filter ->
-                                                        BeaconDropdownMenuItem(
-                                                            text = {
-                                                                BeaconSelectableRow(
-                                                                    stringResource(
-                                                                        when (filter) {
-                                                                            MessageReadFilter.ALL ->
-                                                                                R.string
-                                                                                    .ui_filter_all_label
-                                                                            MessageReadFilter
-                                                                                .UNREAD ->
-                                                                                R.string
-                                                                                    .msg_unread_label
-                                                                            MessageReadFilter
-                                                                                .READ ->
-                                                                                R.string
-                                                                                    .msg_read_label
-                                                                        }
-                                                                    ),
-                                                                    filter == ui.readFilter,
-                                                                )
-                                                            },
-                                                            onClick = {
-                                                                ui.filtersOpen = false
-                                                                ui.applyFilter(
-                                                                    actions,
-                                                                    ui.search,
-                                                                    filter,
-                                                                )
-                                                            },
+                                            else if (barPage == 1)
+                                                BeaconIconButton(
+                                                    onClick = {
+                                                        navigate(
+                                                            if (
+                                                                displayedSettingsScreen ==
+                                                                    SettingsScreen.HOME
+                                                            )
+                                                                0
+                                                            else 1
                                                         )
                                                     }
+                                                ) {
+                                                    Icon(
+                                                        BeaconIcons.Back,
+                                                        stringResource(
+                                                            if (
+                                                                displayedSettingsScreen ==
+                                                                    SettingsScreen.HOME
+                                                            )
+                                                                R.string.ui_back_to_messages_action
+                                                            else R.string.ui_back_to_settings_action
+                                                        ),
+                                                    )
+                                                }
+                                            else if (barPage == 0) {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    ReceiveModeButton(
+                                                        polling.shouldSchedule &&
+                                                            runtimeState.serverReachable == true &&
+                                                            (ui.receivePlan.mode !=
+                                                                io.github.beacon.app.domain.model
+                                                                    .ReceiveMode
+                                                                    .REALTIME ||
+                                                                runtimeState.realtimeRunning),
+                                                        ui.receivePlan.mode,
+                                                        onClick = { ui.receiveModesOpen = true },
+                                                        onLongClick = {
+                                                            ui.page = 1
+                                                            ui.navigateSettings(
+                                                                if (
+                                                                    runtimeState.configuredEndpoint
+                                                                        .isBlank() ||
+                                                                        runtimeState.serverReachable ==
+                                                                            false
+                                                                )
+                                                                    SettingsScreen.CONNECTION
+                                                                else SettingsScreen.RECEPTION
+                                                            )
+                                                        },
+                                                        serverIssue =
+                                                            runtimeState.connectionSummaryLoaded &&
+                                                                (runtimeState.configuredEndpoint
+                                                                    .isBlank() ||
+                                                                    runtimeState.serverReachable ==
+                                                                        false),
+                                                        checkingServer = runtimeState.serverChecking,
+                                                        connected =
+                                                            runtimeState.serverReachable == true &&
+                                                                (ui.receivePlan.mode !=
+                                                                    io.github.beacon.app.domain.model.ReceiveMode.REALTIME ||
+                                                                    runtimeState.realtimeRunning),
+                                                    )
                                                 }
                                             }
-                                            BeaconActionIcon(
-                                                BeaconIcons.Settings,
-                                                stringResource(R.string.ui_nav_settings_title),
-                                                showBadge = updateState.hasUnreadUpdate,
-                                            ) {
-                                                ui.navigateSettings(SettingsScreen.HOME)
-                                                navigate(1)
+                                        },
+                                        actions = {
+                                            if (displayedDetail == null && barPage == 0 && ui.selectionMode) {
+                                                BeaconActionIcon(
+                                                    BeaconIcons.DoneAll,
+                                                    stringResource(R.string.ui_mark_read_action),
+                                                    !busy && ui.selectedKeys.isNotEmpty(),
+                                                ) {
+                                                    actions.manageMessages(
+                                                        MessageAction.MARK_READ,
+                                                        ui.selectedKeys,
+                                                        onComplete = { ui.selectedKeys = emptyList() },
+                                                    )
+                                                }
+                                                BeaconActionIcon(
+                                                    BeaconIcons.Messages,
+                                                    stringResource(R.string.ui_mark_unread_action),
+                                                    !busy && ui.selectedKeys.isNotEmpty(),
+                                                ) {
+                                                    actions.manageMessages(
+                                                        MessageAction.MARK_UNREAD,
+                                                        ui.selectedKeys,
+                                                        onComplete = { ui.selectedKeys = emptyList() },
+                                                    )
+                                                }
+                                                BeaconActionIcon(
+                                                    BeaconIcons.Delete,
+                                                    stringResource(R.string.ui_delete_selected_action),
+                                                    !busy && ui.selectedKeys.isNotEmpty(),
+                                                ) {
+                                                    ui.pendingDelete = ui.selectedKeys.toList()
+                                                }
+                                                val visibleKeys =
+                                                    runtimeState.messages.map {
+                                                        MessageKey(it.server, it.id)
+                                                    }
+                                                val allSelected =
+                                                    visibleKeys.isNotEmpty() &&
+                                                        ui.selectedKeys.containsAll(visibleKeys)
+                                                val maxSelectionWarning =
+                                                    stringResource(R.string.ui_max_selection_warning)
+                                                BeaconActionIcon(
+                                                    if (allSelected) BeaconIcons.Close
+                                                    else BeaconIcons.Check,
+                                                    if (allSelected)
+                                                        stringResource(R.string.ui_deselect_page_action)
+                                                    else stringResource(R.string.ui_select_page_action),
+                                                    !busy,
+                                                ) {
+                                                    val merged =
+                                                        (ui.selectedKeys + visibleKeys).distinct()
+                                                    if (allSelected)
+                                                        ui.selectedKeys =
+                                                            ui.selectedKeys - visibleKeys.toSet()
+                                                    else if (merged.size <= 100) {
+                                                        ui.selectedKeys = merged
+                                                        ui.selectionHint = ""
+                                                    } else ui.selectionHint = maxSelectionWarning
+                                                }
+                                            } else if (displayedDetail == null && barPage == 0) {
+                                                if (busy)
+                                                    Box(
+                                                        Modifier.size(48.dp),
+                                                        contentAlignment = Alignment.Center,
+                                                    ) {
+                                                        CircularProgressIndicator(
+                                                            Modifier.size(22.dp),
+                                                            strokeWidth = 2.dp,
+                                                        )
+                                                    }
+                                                else
+                                                    BeaconActionIcon(
+                                                        BeaconIcons.Sync,
+                                                        stringResource(R.string.action_sync_now),
+                                                    ) {
+                                                        actions.transport()
+                                                    }
+                                                Box {
+                                                    BeaconActionIcon(
+                                                        BeaconIcons.Filter,
+                                                        stringResource(
+                                                            R.string.ui_filter_messages_title
+                                                        ),
+                                                        enabled = !busy,
+                                                    ) {
+                                                        ui.filtersOpen = true
+                                                    }
+                                                    BeaconDropdownMenu(
+                                                        ui.filtersOpen,
+                                                        { ui.filtersOpen = false },
+                                                    ) {
+                                                        MessageReadFilter.entries.forEach { filter ->
+                                                            BeaconDropdownMenuItem(
+                                                                text = {
+                                                                    BeaconSelectableRow(
+                                                                        stringResource(
+                                                                            when (filter) {
+                                                                                MessageReadFilter.ALL ->
+                                                                                    R.string
+                                                                                        .ui_filter_all_label
+                                                                                MessageReadFilter
+                                                                                    .UNREAD ->
+                                                                                    R.string
+                                                                                        .msg_unread_label
+                                                                                MessageReadFilter
+                                                                                    .READ ->
+                                                                                    R.string
+                                                                                        .msg_read_label
+                                                                            }
+                                                                        ),
+                                                                        filter == ui.readFilter,
+                                                                    )
+                                                                },
+                                                                onClick = {
+                                                                    ui.filtersOpen = false
+                                                                    ui.applyFilter(
+                                                                        actions,
+                                                                        ui.search,
+                                                                        filter,
+                                                                    )
+                                                                },
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                                BeaconActionIcon(
+                                                    BeaconIcons.Settings,
+                                                    stringResource(R.string.ui_nav_settings_title),
+                                                    showBadge = updateState.hasUnreadUpdate,
+                                                ) {
+                                                    ui.navigateSettings(SettingsScreen.HOME)
+                                                    navigate(1)
+                                                }
                                             }
-                                        }
-                                    },
-                                )
-                            }
-                        val renderBar: @Composable (Int) -> Unit = { barPage ->
-                            if (barPage == 1 && detail == null)
-                                BeaconSettingsTransition(
-                                    settingsTransition,
-                                    ui.settingsNavigatingBack ||
-                                        settingsMotion.targetState == ui.settingsBackTarget,
-                                ) { screen ->
-                                    renderSettingsBar(barPage, screen)
+                                        },
+                                    )
                                 }
-                            else renderSettingsBar(barPage, ui.settingsScreen)
+                            val renderBar: @Composable (Int) -> Unit = { barPage ->
+                                if (barPage == 1 && displayedDetail == null)
+                                    BeaconSettingsTransition(
+                                        settingsTransition,
+                                        ui.settingsNavigatingBack ||
+                                            settingsMotion.targetState == ui.settingsBackTarget,
+                                    ) { screen ->
+                                        renderSettingsBar(barPage, screen)
+                                    }
+                                else renderSettingsBar(barPage, ui.settingsScreen)
+                            }
+                            if (displayedDetail != null) renderBar(ui.page)
+                            else BeaconPagerToolbar(pager, renderBar)
                         }
-                        if (detail != null) renderBar(ui.page)
-                        else BeaconPagerToolbar(pager, renderBar)
                     },
                 ) { insets ->
                     // Keyboard overlays the fixed layout; Scaffold only supplies system-bar/page
@@ -850,30 +844,10 @@ fun BeaconApp(
                     val edge = BeaconUiMetrics.PageInset
                     val listPadding =
                         PaddingValues(start = edge, end = edge, top = 12.dp, bottom = 24.dp)
-                    val layoutDirection = androidx.compose.ui.platform.LocalLayoutDirection.current
-                    detailTransition.AnimatedContent(
-                        modifier = Modifier.fillMaxSize(),
-                        contentKey = { it?.let { message -> MessageKey(message.server, message.id) } },
-                        transitionSpec = {
-                            val forward = targetState != null
-                            val direction =
-                                if (layoutDirection == androidx.compose.ui.unit.LayoutDirection.Rtl) -1 else 1
-                            val motion = tween<androidx.compose.ui.unit.IntOffset>(
-                                SETTINGS_NAVIGATION_DURATION_MS,
-                                easing = settingsNavigationEasing,
-                            )
-                            val entry =
-                                slideInHorizontally(motion) {
-                                    direction * if (forward) it else -it / 4
-                                } + fadeIn(tween(SETTINGS_NAVIGATION_DURATION_MS, easing = settingsNavigationEasing))
-                            val exit =
-                                slideOutHorizontally(motion) {
-                                    direction * if (forward) -it / 4 else it
-                                } + fadeOut(tween(SETTINGS_NAVIGATION_DURATION_MS, easing = settingsNavigationEasing))
-                            (entry togetherWith exit)
-                                .apply { targetContentZIndex = if (forward) 1f else -1f }
-                                .using(androidx.compose.animation.SizeTransform(clip = true))
-                        },
+                    // Scaffold follows the animated header height; animating body size again
+                    // would change the shared transition duration during a back gesture.
+                    BeaconMessageTransition(
+                        detailTransition, Modifier.fillMaxSize(), animateSize = false,
                     ) { detail ->
                         if (detail != null)
                             MessageDetailScreen(
@@ -970,6 +944,7 @@ fun BeaconApp(
                                             settingsTransition,
                                             ui.settingsNavigatingBack ||
                                                 settingsMotion.targetState == ui.settingsBackTarget,
+                                            animateSize = false,
                                         ) { displayedSettingsScreen ->
                                             SettingsPage(
                                                 displayedSettingsScreen,

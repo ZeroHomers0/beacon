@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.LayoutDirection
 fun BeaconSettingsTransition(
     transition: Transition<SettingsScreen>,
     navigatingBack: Boolean = false,
+    animateSize: Boolean = true,
     content: @Composable (SettingsScreen) -> Unit,
 ) {
     val direction = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1 else 1
@@ -54,9 +55,9 @@ fun BeaconSettingsTransition(
             (entry togetherWith exit)
                 .apply { targetContentZIndex = if (entering) 1f else -1f }
                 .using(
-                    SizeTransform(clip = true) { _, _ ->
+                    if (animateSize) SizeTransform(clip = true) { _, _ ->
                         tween(SETTINGS_NAVIGATION_DURATION_MS, easing = settingsNavigationEasing)
-                    }
+                    } else null
                 )
         },
         contentKey = { it },
