@@ -164,16 +164,13 @@ fun BeaconApp(
 
     BeaconTheme(ui.uiStyle, ui.themeMode) {
         val pager = rememberPagerState(initialPage = ui.page) { 2 }
+        val pageNavigationMotion = spring<Float>(
+            stiffness = 322.2f,
+            dampingRatio = 32.31f / (2f * kotlin.math.sqrt(322.2f)),
+            visibilityThreshold = 0.5f,
+        )
         LaunchedEffect(ui.page) {
-            pager.animateScrollToPage(
-                ui.page,
-                animationSpec =
-                    spring(
-                        stiffness = 322.2f,
-                        dampingRatio = 32.31f / (2f * kotlin.math.sqrt(322.2f)),
-                        visibilityThreshold = 0.5f,
-                    ),
-            )
+            pager.animateScrollToPage(ui.page, animationSpec = pageNavigationMotion)
         }
         LaunchedEffect(runtimeState.configuredEndpoint, runtimeState.connectionSummaryLoaded) {
             if (!ui.connectionForm.connectionEdited)
@@ -390,10 +387,32 @@ fun BeaconApp(
                 uiScope.launch { settingsMotion.animateTo(original) }
             }
         }
+        val predictivePageBack =
+            ui.page == 1 &&
+                ui.settingsScreen == SettingsScreen.HOME &&
+                runtimeState.selectedMessage == null &&
+                !runtimeState.messageBusy
+        PredictiveBackHandler(enabled = predictivePageBack) { events ->
+            focus.clearFocus()
+            try {
+                events.collect { event ->
+                    // Pager offsets stay in [-.5, .5]; switch the anchor halfway through.
+                    val position = 1f - event.progress.coerceIn(0f, 1f)
+                    val anchor = if (position < .5f) 0 else 1
+                    pager.scrollToPage(anchor, position - anchor)
+                }
+                navigate(0)
+            } catch (_: kotlinx.coroutines.CancellationException) {
+                uiScope.launch {
+                    pager.animateScrollToPage(ui.page, animationSpec = pageNavigationMotion)
+                }
+            }
+        }
         BackHandler(
             enabled =
                 !predictiveSettingsBack &&
                     !predictiveDetailBack &&
+                    !predictivePageBack &&
                     (runtimeState.selectedMessage != null ||
                         ui.page != 0 ||
                         ui.selectionMode ||
