@@ -63,9 +63,47 @@ fun MessagesPage(
     onSelectionHint: (String) -> Unit,
     onCopyText: (String, Boolean) -> Unit,
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
     val zone = java.time.ZoneId.systemDefault()
     val today = java.time.LocalDate.now(zone)
+    // Retain the previous date/zone refresh on parent updates without invalidating the list
+    // for every runtime change. Both values are immutable and the pair retains its identity.
+    val calendar = remember(zone, today) { zone to today }
+    MessagesContent(
+        scroll, modifier, padding, rememberMessageListState(runtimeState), actions,
+        search, readFilter, selectionMode, selectedKeys, selectionHint, scrollModifier,
+        sharedTitle, hideSharedTitle, onSearch, onApplyFilter, onConnectionSettings,
+        onEnterSelection, onSelectionChange, onSelectionHint, onCopyText, calendar,
+    )
+}
+
+// The remembered projection keeps the same identity for heartbeat/diagnostic updates, so
+// Compose can skip this entire subtree even while the surrounding toolbar updates.
+@Composable
+private fun MessagesContent(
+    scroll: androidx.compose.foundation.lazy.LazyListState,
+    modifier: Modifier,
+    padding: PaddingValues,
+    runtimeState: MessageListState,
+    actions: RuntimeActions,
+    search: String,
+    readFilter: MessageReadFilter,
+    selectionMode: Boolean,
+    selectedKeys: List<MessageKey>,
+    selectionHint: String,
+    scrollModifier: Modifier,
+    sharedTitle: String?,
+    hideSharedTitle: Boolean,
+    onSearch: (String) -> Unit,
+    onApplyFilter: (String, MessageReadFilter) -> Unit,
+    onConnectionSettings: () -> Unit,
+    onEnterSelection: (MessageKey) -> Unit,
+    onSelectionChange: (List<MessageKey>) -> Unit,
+    onSelectionHint: (String) -> Unit,
+    onCopyText: (String, Boolean) -> Unit,
+    calendar: Pair<java.time.ZoneId, java.time.LocalDate>,
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val (zone, today) = calendar
     val dates =
         remember(runtimeState.messages, zone) {
             runtimeState.messages.map { MessagePresentation.receivedDate(it, zone) }

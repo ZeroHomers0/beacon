@@ -33,6 +33,7 @@ class RuntimeRepository : RuntimeActions {
     private var preserveReadingWindow = false
     private var receivePlanInFlight = false
     private var receivePlanRefreshPending = false
+    private var receivePlanRefreshJob: kotlinx.coroutines.Job? = null
     private var pendingMessageRefresh = false
     private val refreshScope =
         kotlinx.coroutines.CoroutineScope(
@@ -86,6 +87,8 @@ class RuntimeRepository : RuntimeActions {
                     invalidateServerCheck()
                     receivePlanInFlight = false
                     receivePlanRefreshPending = false
+                    receivePlanRefreshJob?.cancel()
+                    receivePlanRefreshJob = null
                     pendingMessageRefresh = false
                 }
                 mutableState.update {
@@ -115,9 +118,9 @@ class RuntimeRepository : RuntimeActions {
                 backgroundListReleased = false
                 refreshConnectionSummary()
                 refreshPolling()
-                receivePlan()
+                executeReceivePlan(null)
             },
-            onRuntimeChanged = { receivePlan() },
+            onRuntimeChanged = { scheduleReceivePlanRefresh() },
         )
 
     override fun start(context: Context) = connection.start(context)
@@ -1146,8 +1149,32 @@ class RuntimeRepository : RuntimeActions {
         )
     }
 
-    override fun receivePlan(value: ReceivePlan?) {
+    private fun scheduleReceivePlanRefresh() {
         if (!state.value.runtimeConnected || !connection.connected) return
+        if (receivePlanInFlight) {
+            // A hint during a read may describe a newer delivery: keep one trailing read.
+            receivePlanRefreshPending = true
+            return
+        }
+        if (receivePlanRefreshJob != null) return
+        receivePlanRefreshJob = refreshScope.launch {
+            // Fixed window rather than a resetting debounce: a steady stream cannot starve
+            // message updates. Startup reads and mode writes remain immediate. This batches
+            // UI callers too, in addition to the service's existing broadcast coalescing.
+            kotlinx.coroutines.delay(75)
+            receivePlanRefreshJob = null
+            executeReceivePlan(null)
+        }
+    }
+
+    override fun receivePlan(value: ReceivePlan?) {
+        if (value == null) scheduleReceivePlanRefresh() else executeReceivePlan(value)
+    }
+
+    private fun executeReceivePlan(value: ReceivePlan?) {
+        if (!state.value.runtimeConnected || !connection.connected) return
+        receivePlanRefreshJob?.cancel()
+        receivePlanRefreshJob = null
         if (value == null && receivePlanInFlight) {
             receivePlanRefreshPending = true
             return
@@ -1192,10 +1219,11 @@ class RuntimeRepository : RuntimeActions {
                         deliveryRevision = result.deliveryRevision,
                     )
                 }
-                if (refreshAgain) receivePlan()
+                if (refreshAgain) scheduleReceivePlanRefresh()
             },
             { error ->
                 receivePlanInFlight = false
+                val refreshAgain = receivePlanRefreshPending
                 receivePlanRefreshPending = false
                 if (value != null)
                     setStatus(
@@ -1203,6 +1231,7 @@ class RuntimeRepository : RuntimeActions {
                             "模式保存失败：${OperationFailure.describe(error, crossProcess = true)}"
                         )
                     )
+                if (refreshAgain) scheduleReceivePlanRefresh()
             },
         )
     }

@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import io.github.beacon.app.R
 import io.github.beacon.app.domain.policy.MessageMarkdown
+import io.github.beacon.app.domain.policy.messageMarkdownDocuments
 import io.github.beacon.app.ui.components.BeaconText
 import io.github.beacon.app.ui.components.BeaconTextButton
 import io.noties.markwon.AbstractMarkwonPlugin
@@ -72,10 +73,10 @@ internal fun MessageMarkdownBody(body: String) {
         value = null
         value = withContext(Dispatchers.Default) {
             runCatching {
-                val document = markwon.parse(body)
+                val document = messageMarkdownDocuments.get(body)
                 RenderedBody(
-                    markwon.render(document), MessageMarkdown.pictures(document),
-                    MessageMarkdown.links(document), MessageMarkdown.links(document, includeExplicit = false),
+                    markwon.render(document.node), document.pictures,
+                    document.links, document.bareLinks,
                 )
             }.getOrElse { RenderedBody(SpannableString(body), emptyList(), emptyList(), emptyList(), failed = true) }
         }

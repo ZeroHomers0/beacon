@@ -123,6 +123,9 @@ open class MainActivity : ComponentActivity() {
 
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
+        if (level != ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) {
+            io.github.beacon.app.domain.policy.messageMarkdownDocuments.clear()
+        }
         if (
             level == ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN ||
                 level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND
