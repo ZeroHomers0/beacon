@@ -10,6 +10,22 @@ import io.github.beacon.app.domain.model.RuntimeState
 import io.github.beacon.app.ipc.RuntimeActions
 import io.github.beacon.app.ui.components.*
 
+@Composable
+internal fun rememberFirstUseGuideCompleted(): State<Boolean> {
+    val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    val preferences = remember(context) { context.getSharedPreferences("first_use_guide", 0) }
+    val completed = remember(preferences) { mutableStateOf(preferences.getBoolean("completed", false)) }
+    DisposableEffect(preferences) {
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { prefs, key ->
+            if (key == "completed") completed.value = prefs.getBoolean("completed", false)
+        }
+        preferences.registerOnSharedPreferenceChangeListener(listener)
+        completed.value = preferences.getBoolean("completed", false)
+        onDispose { preferences.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
+    return completed
+}
+
 /** Explicit, resumable onboarding; only an actual push can complete the delivery step. */
 @Composable
 fun FirstUseGuidePanel(

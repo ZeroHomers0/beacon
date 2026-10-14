@@ -63,6 +63,8 @@ fun SettingsPage(
     val context = androidx.compose.ui.platform.LocalContext.current
     val focus = LocalFocusManager.current
     val busy = runtimeState.messageBusy
+    val guideCompleted by rememberFirstUseGuideCompleted()
+    val showGuideFirst = !guideCompleted || runtimeState.configuredEndpoint.isBlank()
     val polling = runtimeState.pollingState
     var pendingReminderCount by
         androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Long?>(null) }
@@ -118,7 +120,7 @@ fun SettingsPage(
         when (screen) {
             SettingsScreen.HOME,
             SettingsScreen.APPEARANCE -> {
-                item {
+                if (showGuideFirst) item(key = "first-use-guide") {
                     SettingsGroup(stringResource(R.string.settings_guide_title)) {
                         SettingsRow(
                             stringResource(R.string.settings_guide_steps),
@@ -283,6 +285,12 @@ fun SettingsPage(
                         ) {
                             onNavigate(SettingsScreen.ABOUT)
                         }
+                        if (!showGuideFirst)
+                            SettingsRow(
+                                stringResource(R.string.settings_guide_title),
+                                stringResource(R.string.settings_guide_steps_hint),
+                                BeaconIcons.Guide,
+                            ) { onNavigate(SettingsScreen.GUIDE) }
                     }
                 }
             }

@@ -68,6 +68,7 @@ import io.github.beacon.app.ui.components.SettingsScreen
 import io.github.beacon.app.ui.components.copyToClipboard
 import io.github.beacon.app.ui.components.rememberBeaconBarBehavior
 import io.github.beacon.app.ui.components.settingsGestureFraction
+import io.github.beacon.app.ui.components.PredictiveBackReset
 import io.github.beacon.app.ui.components.userOperationFeedback
 import io.github.beacon.app.ui.icons.BeaconIcons
 import io.github.beacon.app.ui.theme.BeaconTheme
@@ -347,16 +348,23 @@ fun BeaconApp(
             ui.navigate(actions, runtimeState, index)
         }
         val settingsMotion = remember { SeekableTransitionState(ui.settingsScreen) }
+        val settingsBackReset = remember { PredictiveBackReset() }
         val settingsTransition = rememberTransition(settingsMotion, label = "Settings navigation")
-        LaunchedEffect(ui.settingsScreen) { settingsMotion.animateTo(ui.settingsScreen) }
+        LaunchedEffect(ui.settingsScreen) {
+            settingsBackReset.stop()
+            settingsMotion.animateTo(ui.settingsScreen)
+        }
         val detailMotion = remember { SeekableTransitionState(runtimeState.selectedMessage) }
+        val detailBackReset = remember { PredictiveBackReset() }
         val detailTransition = rememberTransition(detailMotion, label = "Message navigation")
         LaunchedEffect(runtimeState.selectedMessage) {
+            detailBackReset.stop()
             detailMotion.animateTo(runtimeState.selectedMessage)
         }
         val predictiveDetailBack =
             runtimeState.selectedMessage != null && !runtimeState.messageBusy
         PredictiveBackHandler(enabled = predictiveDetailBack) { events ->
+            detailBackReset.stop()
             val original = runtimeState.selectedMessage
             try {
                 detailMotion.seekTo(0f, null)
@@ -365,7 +373,7 @@ fun BeaconApp(
                 }
                 ui.closeDetail(actions)
             } catch (_: kotlinx.coroutines.CancellationException) {
-                uiScope.launch { detailMotion.animateTo(original) }
+                detailBackReset.launch(uiScope, detailMotion, original)
             }
         }
         val predictiveSettingsBack =
@@ -375,6 +383,7 @@ fun BeaconApp(
                 !connectionDirty &&
                 !runtimeState.messageBusy
         PredictiveBackHandler(enabled = predictiveSettingsBack) { events ->
+            settingsBackReset.stop()
             val original = ui.settingsScreen
             try {
                 settingsMotion.seekTo(0f, ui.settingsBackTarget)
@@ -386,7 +395,7 @@ fun BeaconApp(
                 }
                 navigate(1)
             } catch (_: kotlinx.coroutines.CancellationException) {
-                uiScope.launch { settingsMotion.animateTo(original) }
+                settingsBackReset.launch(uiScope, settingsMotion, original)
             }
         }
         val predictivePageBack =

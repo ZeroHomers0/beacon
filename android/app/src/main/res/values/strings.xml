@@ -441,7 +441,7 @@
     <string name="settings_guide_receive_hint">3. 选择接收模式并开启自动接收。出现后台延迟时，再检查后台权限。</string>
     <string name="settings_guide_receive_action">设置接收模式</string>
     <string name="settings_guide_test_hint">4. 发送测试消息，确认列表和通知正常，再锁屏验证后台接收。</string>
-    <string name="settings_guide_test_action">发送真实测试推送</string>
+    <string name="settings_guide_test_action">@string/settings_setup_test_send</string>
     <string name="settings_guide_done">完成向导</string>
     <string name="settings_archive_password_expired">密码至少 8 个字符，请重新选择文件并输入密码</string>
     <string name="settings_archive_title">消息导出与迁移</string>
@@ -477,7 +477,7 @@
     <string name="settings_rules_time_format">24 小时制，例如 22:00–08:00</string>
     <string name="settings_rules_battery_percent">%1$d%%</string>
     <string name="settings_rules_schedule_mode">时间段内接收方式</string>
-    <string name="settings_rules_other_times">其它时间的即时条件</string>
+    <string name="settings_rules_other_times">其他时间的即时条件</string>
     <string name="settings_rules_wifi_hint">任一条件满足即可；低电量保护仍优先。</string>
     <string name="settings_rules_fallback_hint">未匹配时使用省电接收，条件变化后自动更新。暂停接收后规则停止运行。</string>
     <string name="settings_rules_time_invalid">请选择有效的开始与结束时间，且两者不能相同</string>
@@ -522,7 +522,7 @@
     <string name="settings_update_install_unavailable">系统未提供安装应用的界面</string>
     <string name="settings_setup_test_title">测试接收链路</string>
     <string name="settings_setup_test_hint">向本机发送并同步一条真实消息，请确认列表和通知。后台效果需另行锁屏验证。</string>
-    <string name="settings_setup_test_send">发送测试</string>
+    <string name="settings_setup_test_send">发送测试消息</string>
     <string name="settings_cleanup_auto_title">自动清理</string>
     <string name="settings_cleanup_auto_toggle">自动清理本地消息</string>
     <string name="settings_cleanup_auto_hint">成功接收后按下方规则清理，每次最多 100 条，删除后无法恢复。</string>
@@ -530,7 +530,8 @@
     <string name="settings_cleanup_days">%1$d 天</string>
     <string name="settings_cleanup_count">%1$d 条</string>
     <string name="settings_storage_database">数据库占用</string>
-    <string name="settings_storage_receipts">待回执</string>
+    <string name="settings_storage_receipts">待回传</string>
+    <string name="settings_storage_receipts_hint">待回传：消息已保存在本机，接收结果尚待向服务器确认。</string>
     <string name="settings_cleanup_all_title">清理所有本地消息</string>
     <string name="settings_cleanup_all_hint">删除全部本地消息，无法恢复。服务器配置、接收确认和去重记录保留。</string>
     <string name="settings_cleanup_eligible">可清理</string>
@@ -551,7 +552,7 @@
     <string name="receive_heartbeat_seconds">%1$d 秒</string>
     <string name="receive_heartbeat_hint">用于保持连接，默认 60 秒。间隔越长，发现断线越慢；修改后自动重连。</string>
     <string name="admin_title">服务器管理</string>
-    <string name="admin_entry_hint">管理设备、应用和测试推送</string>
+    <string name="admin_entry_hint">管理设备与应用，发送测试消息</string>
     <string name="admin_login_title">管理员登录</string>
     <string name="admin_login_hint">使用服务器 secrets/web-admin-token 中的管理员令牌登录。令牌保存在本机，退出登录时清除。未绑定手机也可登录后绑定。</string>
     <string name="admin_endpoint">服务器地址</string>
@@ -568,7 +569,7 @@
     <string name="admin_messages">消息</string>
     <string name="admin_pending">待接收</string>
     <string name="admin_database">数据库</string>
-    <string name="admin_logout">退出管理</string>
+    <string name="admin_logout">退出登录</string>
     <string name="admin_refresh">刷新状态</string>
     <string name="admin_applications">应用</string>
     <string name="admin_test">测试</string>
@@ -598,7 +599,7 @@
     <string name="admin_test_title">推送标题</string>
     <string name="admin_test_body">推送正文</string>
     <string name="admin_test_hint">向所选设备发送真实消息。服务端接收后，请在设备上确认消息和通知。</string>
-    <string name="admin_send_test">发送测试推送</string>
+    <string name="admin_send_test">@string/settings_setup_test_send</string>
     <string name="admin_expires">有效期至</string>
     <string name="admin_secret_hint">凭证只显示一次，关闭后无法再查看。请先复制保存；遗失后需撤销并重新创建。</string>
     <string name="admin_copied">已复制</string>
@@ -608,7 +609,7 @@
     <string name="admin_revoke_application_hint">确定撤销「%1$s」的发送凭证？使用该凭证的程序将无法继续推送，此操作不能恢复。</string>
     <string name="admin_test_confirm">向「%1$s」发送真实测试消息？</string>
     <string name="admin_no_active_devices">暂无有效设备，请先创建绑定码并完成绑定。</string>
-    <string name="admin_logged_out">已退出管理并清除当前会话凭证。</string>
+    <string name="admin_logged_out">已退出登录，并清除本机管理员令牌。</string>
     <string name="admin_invalid_login">请输入有效的 HTTPS 根地址和 64 位十六进制管理员令牌。</string>
     <string name="admin_connected">管理员登录成功。</string>
     <string name="admin_refreshed">服务器状态已刷新。</string>

@@ -140,6 +140,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                 preview?.sampledAtMs?.let { formatMessageTime(it) } ?: "—",
             )
             SettingsHint(stringResource(R.string.storage_breakdown_note))
+            SettingsHint(stringResource(R.string.settings_storage_receipts_hint))
             SettingsHint(stringResource(R.string.storage_size_note))
         }
         UiSection(stringResource(R.string.settings_cleanup_auto_title)) {
