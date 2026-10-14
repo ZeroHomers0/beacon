@@ -53,7 +53,7 @@ fun MessageDetailScreen(
         Column(
             modifier
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = BeaconUiMetrics.PageInset, vertical = BeaconUiMetrics.SectionGap),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             BeaconCard(
@@ -63,7 +63,7 @@ fun MessageDetailScreen(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                     ),
             ) {
-                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column(Modifier.padding(BeaconUiMetrics.CardInset), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap)) {
                     Row(verticalAlignment = Alignment.Top) {
                         SelectionContainer(Modifier.weight(1f)) {
                             BeaconText(
@@ -167,52 +167,52 @@ fun MessageDetailScreen(
             }
                 .getOrDefault("")
             MessageActionsPanel(message.actions, barkUrl)
-            UiSection(stringResource(R.string.msg_detail_info_title)) {
-                DiagnosticRow(
-                    stringResource(R.string.msg_detail_reminder_state_label),
-                    stringResource(
-                        if (message.reminderPending) R.string.msg_detail_reminder_pending
-                        else R.string.msg_detail_reminder_none
-                    ),
-                )
-                BeaconText(
-                    stringResource(R.string.msg_detail_reminder_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                DiagnosticRow(
-                    stringResource(R.string.msg_detail_sent_time_label),
-                    detailTime(message.createdAtMs, missing),
-                )
-                DiagnosticRow(
-                    stringResource(R.string.msg_detail_received_time_label),
-                    detailTime(message.receivedAtMs, missing),
-                )
-                BeaconText(
-                    stringResource(R.string.msg_detail_timezone_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                BeaconTextButton(onClick = { rawInfo = !rawInfo }) {
-                    BeaconText(
-                        stringResource(
+            BeaconCard(
+                Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+            ) {
+                Column(
+                    Modifier.padding(BeaconUiMetrics.CardInset),
+                    verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
+                ) {
+                    BeaconTextButton(onClick = { rawInfo = !rawInfo }) {
+                        BeaconText(stringResource(
                             if (rawInfo) R.string.msg_detail_collapse_raw_action
                             else R.string.msg_detail_expand_raw_action
+                        ))
+                    }
+                    SettingsHint(stringResource(R.string.msg_detail_reminder_hint))
+                    SettingsHint(stringResource(R.string.msg_detail_timezone_hint))
+                    if (rawInfo) {
+                        DiagnosticRow(
+                            stringResource(R.string.msg_detail_reminder_state_label),
+                            stringResource(
+                                if (message.reminderPending) R.string.msg_detail_reminder_pending
+                                else R.string.msg_detail_reminder_none
+                            ),
                         )
-                    )
-                }
-                if (rawInfo)
-                    SelectionContainer {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            BeaconText(
-                                stringResource(R.string.msg_detail_id_desc, message.id),
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                            BeaconText(
-                                stringResource(R.string.msg_detail_source_desc, message.server),
-                                style = MaterialTheme.typography.bodySmall,
-                            )
+                        DiagnosticRow(
+                            stringResource(R.string.msg_detail_sent_time_label),
+                            detailTime(message.createdAtMs, missing),
+                        )
+                        DiagnosticRow(
+                            stringResource(R.string.msg_detail_received_time_label),
+                            detailTime(message.receivedAtMs, missing),
+                        )
+                        SelectionContainer {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                BeaconText(
+                                    stringResource(R.string.msg_detail_id_desc, message.id),
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                                BeaconText(
+                                    stringResource(R.string.msg_detail_source_desc, message.server),
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
                         }
                     }
+                }
             }
         }
     }

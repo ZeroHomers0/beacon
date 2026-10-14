@@ -18,11 +18,13 @@ internal fun NotificationSettingsPanel(state: RuntimeState, actions: RuntimeActi
     var loaded by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
+    var saveConfirmed by remember { mutableStateOf(false) }
     var attempt by remember { mutableIntStateOf(0) }
     LaunchedEffect(state.runtimeConnected, attempt) {
         loaded = false
         saving = false
         failed = false
+        saveConfirmed = false
         if (state.runtimeConnected)
             actions.notificationSettings(onFailure = { failed = true }) {
                 saved = it
@@ -32,6 +34,7 @@ internal fun NotificationSettingsPanel(state: RuntimeState, actions: RuntimeActi
     fun save(value: NotificationSettings) {
         saving = true
         failed = false
+        saveConfirmed = false
         actions.notificationSettings(
             value,
             onFailure = {
@@ -41,6 +44,7 @@ internal fun NotificationSettingsPanel(state: RuntimeState, actions: RuntimeActi
         ) {
             saved = it
             saving = false
+            saveConfirmed = true
         }
     }
     val enabled = loaded && !saving && state.runtimeConnected
@@ -84,6 +88,7 @@ internal fun NotificationSettingsPanel(state: RuntimeState, actions: RuntimeActi
                 save(saved.copy(lockscreenPreview = it))
             }
         }
+        BeaconSaveFeedback(saving = saving, failed = failed && loaded, saved = saveConfirmed)
         // The failure used to render inside the privacy card, which pointed at a setting that had
         // nothing to do with it; both read and write failures belong to the whole page.
         if (failed) {

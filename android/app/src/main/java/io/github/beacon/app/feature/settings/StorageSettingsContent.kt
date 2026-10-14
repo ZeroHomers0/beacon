@@ -26,10 +26,16 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
     val policy = settings.policy
     var settingsLoaded by remember { mutableStateOf(false) }
     var loadFailed by remember { mutableStateOf(false) }
+    var saving by remember { mutableStateOf(false) }
+    var saveConfirmed by remember { mutableStateOf(false) }
+    var saveFailed by remember { mutableStateOf(false) }
     var attempt by remember { mutableIntStateOf(0) }
     LaunchedEffect(state.runtimeConnected, attempt) {
         settingsLoaded = false
         loadFailed = false
+        saving = false
+        saveConfirmed = false
+        saveFailed = false
         if (state.runtimeConnected)
             actions.cleanupSettings(
                 null,
@@ -40,7 +46,19 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
             }
     }
     fun save(value: CleanupSettings) {
-        actions.cleanupSettings(value, onFailure = { loadFailed = true }) { settings = it }
+        saving = true
+        loadFailed = false
+        saveConfirmed = false
+        saveFailed = false
+        actions.cleanupSettings(value, onFailure = {
+            loadFailed = true
+            saving = false
+            saveFailed = true
+        }) {
+            settings = it
+            saving = false
+            saveConfirmed = true
+        }
     }
     var confirmation by remember { mutableStateOf<CleanupPreview?>(null) }
     var clearAllStage by remember { mutableIntStateOf(0) }
@@ -52,11 +70,12 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
         confirmation = null
         if (state.runtimeConnected && settingsLoaded) actions.previewCleanup(policy)
     }
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap)) {
+        BeaconSaveFeedback(saving = saving, saved = saveConfirmed)
         // Without this the page rendered every control disabled with no explanation; a failed read
         // is now visible and recoverable instead of looking like a broken toggle.
         if (loadFailed) {
-            UiSection(stringResource(R.string.storage_load_failed_title)) {
+            UiSection(stringResource(if (saveFailed) R.string.storage_save_failed_title else R.string.storage_load_failed_title)) {
                 BeaconText(state.status.text, color = MaterialTheme.colorScheme.error)
                 BeaconActionButton(
                     stringResource(R.string.action_retry),
@@ -128,7 +147,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                 resources.getString(R.string.settings_cleanup_auto_toggle),
                 resources.getString(R.string.settings_cleanup_auto_hint),
                 settings.automatic,
-                enabled = settingsLoaded && !state.messageBusy,
+                enabled = settingsLoaded && !state.messageBusy && !saving,
             ) {
                 save(settings.copy(automatic = it))
             }
@@ -145,7 +164,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                     else resources.getString(R.string.settings_cleanup_days, it)
                 },
                 days.indexOf(policy.days),
-                enabled = !state.messageBusy && settingsLoaded,
+                enabled = !state.messageBusy && settingsLoaded && !saving,
             ) {
                 save(settings.copy(policy = policy.copy(days = days[it])))
             }
@@ -153,7 +172,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                 stringResource(R.string.storage_max_messages),
                 limits.map { resources.getString(R.string.settings_cleanup_count, it) },
                 limits.indexOf(policy.maxMessages),
-                enabled = !state.messageBusy && settingsLoaded,
+                enabled = !state.messageBusy && settingsLoaded && !saving,
             ) {
                 save(settings.copy(policy = policy.copy(maxMessages = limits[it])))
             }
@@ -161,7 +180,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                 stringResource(R.string.storage_custom),
                 io.github.beacon.app.ui.icons.BeaconIcons.Tune,
                 Modifier.fillMaxWidth(),
-                !state.messageBusy && settingsLoaded,
+                !state.messageBusy && settingsLoaded && !saving,
             ) {
                 custom = true
             }
@@ -169,7 +188,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                 stringResource(R.string.storage_keep_unread),
                 stringResource(R.string.storage_keep_unread_desc),
                 policy.keepUnread,
-                enabled = !state.messageBusy && settingsLoaded,
+                enabled = !state.messageBusy && settingsLoaded && !saving,
             ) {
                 save(settings.copy(policy = policy.copy(keepUnread = it)))
             }
@@ -292,7 +311,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
             description = stringResource(R.string.storage_confirm_message, snapshot.planned),
             confirmText = stringResource(R.string.storage_clean_action),
             danger = false,
-            enabled = !state.messageBusy && settingsLoaded,
+            enabled = !state.messageBusy && settingsLoaded && !saving,
             onDismiss = { confirmation = null },
             onConfirm = {
                 confirmation = null

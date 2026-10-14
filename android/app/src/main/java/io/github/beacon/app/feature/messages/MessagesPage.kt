@@ -292,18 +292,38 @@ fun MessagesPage(
 
                             awaitingMessages || busy -> Unit
 
-                            else ->
+                            else -> {
+                                val filtered = search.isNotBlank() || readFilter != MessageReadFilter.ALL ||
+                                    runtimeState.messageQuery.serverId.isNotBlank()
+                                val unconfigured = runtimeState.configuredEndpoint.isBlank()
                                 BeaconEmptyState(
                                     BeaconIcons.Messages,
-                                    stringResource(R.string.msg_empty_no_match),
-                                    stringResource(R.string.msg_empty_hint),
+                                    stringResource(when {
+                                        filtered -> R.string.msg_empty_no_match
+                                        unconfigured -> R.string.msg_empty_unconfigured
+                                        else -> R.string.msg_empty_no_messages
+                                    }),
+                                    stringResource(when {
+                                        filtered -> R.string.msg_empty_filter_hint
+                                        unconfigured -> R.string.msg_empty_unconfigured_hint
+                                        else -> R.string.msg_empty_no_messages_hint
+                                    }),
                                 ) {
-                                    BeaconTextButton(onClick = { onConnectionSettings() }) {
-                                        BeaconText(
-                                            stringResource(R.string.msg_connection_settings_action)
-                                        )
+                                    BeaconTextButton(onClick = {
+                                        when {
+                                            filtered -> onApplyFilter("", MessageReadFilter.ALL)
+                                            unconfigured -> onConnectionSettings()
+                                            else -> actions.transport()
+                                        }
+                                    }) {
+                                        BeaconText(stringResource(when {
+                                            filtered -> R.string.msg_clear_filters_action
+                                            unconfigured -> R.string.settings_connection_section_title
+                                            else -> R.string.action_sync_now
+                                        }))
                                     }
                                 }
+                            }
                         }
                     }
                 runtimeState.messages.forEachIndexed { index, message ->

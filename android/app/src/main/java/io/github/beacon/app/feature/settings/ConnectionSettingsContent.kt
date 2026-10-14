@@ -25,6 +25,7 @@ import io.github.beacon.app.domain.model.RuntimeState
 import io.github.beacon.app.ipc.RuntimeActions
 import io.github.beacon.app.ui.components.BeaconActionButton
 import io.github.beacon.app.ui.components.BeaconActionPair
+import io.github.beacon.app.ui.components.BeaconSaveFeedback
 import io.github.beacon.app.ui.components.BeaconButton
 import io.github.beacon.app.ui.components.BeaconCancelButton
 import io.github.beacon.app.ui.components.BeaconText
@@ -34,6 +35,7 @@ import io.github.beacon.app.ui.components.NotificationPermissionState
 import io.github.beacon.app.ui.components.SettingsHint
 import io.github.beacon.app.ui.components.SettingsScreen
 import io.github.beacon.app.ui.components.UiSection
+import io.github.beacon.app.ui.components.connectionStatusLabel
 import io.github.beacon.app.ui.components.formatMessageTime
 import io.github.beacon.app.ui.components.copyToClipboard
 import io.github.beacon.app.ui.icons.BeaconIcons
@@ -83,7 +85,10 @@ internal fun LazyListScope.connectionSettingsItems(
                 )
                 val status = runtimeState.serverCheckResult.split(" · ")
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    BeaconText(status.first(), style = MaterialTheme.typography.titleMedium)
+                    val label = connectionStatusLabel(runtimeState)
+                    BeaconText(label, style = MaterialTheme.typography.titleMedium)
+                    if (status.first() != label && runtimeState.configuredEndpoint.isNotBlank())
+                        SettingsHint(status.first())
                     status.drop(1).forEach { detail -> SettingsHint(detail) }
                 }
             }
@@ -162,6 +167,7 @@ internal fun LazyListScope.connectionSettingsItems(
                     connectionForm.connectionError,
                     color = MaterialTheme.colorScheme.error,
                 )
+            BeaconSaveFeedback(changed = connectionDirty, saving = connectionDirty && busy)
             BeaconActionPair(
                 dismiss = {
                     BeaconCancelButton(

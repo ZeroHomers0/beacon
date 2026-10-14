@@ -65,6 +65,8 @@ import io.github.beacon.app.ui.components.BeaconSelectableRow
 import io.github.beacon.app.ui.components.BeaconSettingsTransition
 import io.github.beacon.app.ui.components.BeaconText
 import io.github.beacon.app.ui.components.BeaconTextButton
+import io.github.beacon.app.ui.components.BeaconUiMetrics
+import io.github.beacon.app.ui.components.connectionStatusLabel
 import io.github.beacon.app.ui.components.BeaconTopBar
 import io.github.beacon.app.ui.components.NotificationPermissionState
 import io.github.beacon.app.ui.components.ReceiveModeButton
@@ -298,6 +300,12 @@ fun BeaconApp(
                     ui.receiveModesOpen = false
                 },
                 onDismiss = { ui.receiveModesOpen = false },
+                connectionStatus = connectionStatusLabel(runtimeState),
+                onConnectionSettings = {
+                    ui.receiveModesOpen = false
+                    ui.page = 1
+                    ui.navigateSettings(SettingsScreen.CONNECTION)
+                },
             )
         val messageScroll = rememberLazyListState()
         androidx.lifecycle.compose.LifecycleEventEffect(
@@ -649,20 +657,7 @@ fun BeaconApp(
                                                                 .REALTIME ||
                                                             runtimeState.realtimeRunning),
                                                     ui.receivePlan.mode,
-                                                    onClick = {
-                                                        if (
-                                                            runtimeState.configuredEndpoint
-                                                                .isBlank() ||
-                                                                runtimeState.serverReachable ==
-                                                                    false ||
-                                                                runtimeState.serverChecking
-                                                        ) {
-                                                            ui.page = 1
-                                                            ui.navigateSettings(
-                                                                SettingsScreen.CONNECTION
-                                                            )
-                                                        } else ui.receiveModesOpen = true
-                                                    },
+                                                    onClick = { ui.receiveModesOpen = true },
                                                     onLongClick = {
                                                         ui.page = 1
                                                         ui.navigateSettings(
@@ -852,7 +847,7 @@ fun BeaconApp(
                                 if (compactBar) Modifier
                                 else Modifier.nestedScroll(barBehavior.connection(ui.uiStyle))
                             )
-                    val edge = if (ui.uiStyle == BeaconUiStyle.MIUIX) 12.dp else 16.dp
+                    val edge = BeaconUiMetrics.PageInset
                     val listPadding =
                         PaddingValues(start = edge, end = edge, top = 12.dp, bottom = 24.dp)
                     val layoutDirection = androidx.compose.ui.platform.LocalLayoutDirection.current

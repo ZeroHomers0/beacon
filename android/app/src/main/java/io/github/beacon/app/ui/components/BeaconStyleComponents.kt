@@ -74,8 +74,8 @@ fun BeaconButton(
         if (miuix())
             top.yukonga.miuix.kmp.basic.Button(
                 onClick,
-                if (LocalDialogAction.current) modifier.fillMaxWidth().height(48.dp)
-                else modifier.height(48.dp),
+                if (LocalDialogAction.current) modifier.fillMaxWidth().heightIn(min = BeaconUiMetrics.ControlMinHeight)
+                else modifier.heightIn(min = BeaconUiMetrics.ControlMinHeight),
                 enabled,
                 minHeight = 48.dp,
                 insideMargin = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
@@ -93,8 +93,8 @@ fun BeaconButton(
         else
             androidx.compose.material3.Button(
                 onClick,
-                if (LocalDialogAction.current) modifier.fillMaxWidth().height(48.dp)
-                else modifier.height(48.dp),
+                if (LocalDialogAction.current) modifier.fillMaxWidth().heightIn(min = BeaconUiMetrics.ControlMinHeight)
+                else modifier.heightIn(min = BeaconUiMetrics.ControlMinHeight),
                 enabled,
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                 content = content,
@@ -114,7 +114,7 @@ fun BeaconTextButton(
             if (miuix())
                 top.yukonga.miuix.kmp.basic.Button(
                     onClick,
-                    modifier.fillMaxWidth().height(48.dp),
+                    modifier.fillMaxWidth().heightIn(min = BeaconUiMetrics.ControlMinHeight),
                     enabled,
                     minHeight = 48.dp,
                     insideMargin = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
@@ -131,7 +131,7 @@ fun BeaconTextButton(
             else
                 androidx.compose.material3.FilledTonalButton(
                     onClick,
-                    modifier.fillMaxWidth().height(48.dp),
+                    modifier.fillMaxWidth().heightIn(min = BeaconUiMetrics.ControlMinHeight),
                     enabled,
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                     content = content,
@@ -139,7 +139,7 @@ fun BeaconTextButton(
         } else if (miuix())
             top.yukonga.miuix.kmp.basic.Button(
                 onClick,
-                modifier.height(48.dp),
+                modifier.heightIn(min = BeaconUiMetrics.ControlMinHeight),
                 enabled,
                 minHeight = 48.dp,
                 insideMargin = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
@@ -160,7 +160,7 @@ fun BeaconTextButton(
         else
             androidx.compose.material3.TextButton(
                 onClick,
-                modifier.height(48.dp),
+                modifier.heightIn(min = BeaconUiMetrics.ControlMinHeight),
                 enabled,
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                 content = content,
@@ -227,7 +227,7 @@ internal fun Modifier.named(name: String): Modifier =
 @Composable
 fun BeaconCard(
     modifier: Modifier = Modifier,
-    shape: Shape = androidx.compose.foundation.shape.RoundedCornerShape(22.dp),
+    shape: Shape = androidx.compose.foundation.shape.RoundedCornerShape(BeaconUiMetrics.CardRadius),
     colors: androidx.compose.material3.CardColors =
         androidx.compose.material3.CardDefaults.cardColors(),
     content: @Composable ColumnScope.() -> Unit,
@@ -235,7 +235,7 @@ fun BeaconCard(
     if (miuix())
         top.yukonga.miuix.kmp.basic.Card(
             modifier,
-            cornerRadius = 16.dp,
+            cornerRadius = BeaconUiMetrics.CardRadius,
             colors =
                 top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(
                     color = colors.containerColor
@@ -250,7 +250,7 @@ fun BeaconCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    shape: Shape = androidx.compose.foundation.shape.RoundedCornerShape(22.dp),
+    shape: Shape = androidx.compose.foundation.shape.RoundedCornerShape(BeaconUiMetrics.CardRadius),
     colors: androidx.compose.material3.CardColors =
         androidx.compose.material3.CardDefaults.cardColors(),
     content: @Composable ColumnScope.() -> Unit,
@@ -260,7 +260,7 @@ fun BeaconCard(
         if (enabled)
             top.yukonga.miuix.kmp.basic.Card(
                 modifier,
-                cornerRadius = 16.dp,
+                cornerRadius = BeaconUiMetrics.CardRadius,
                 colors =
                     top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(
                         color = colors.containerColor
@@ -321,8 +321,8 @@ fun BeaconDangerButton(
         androidx.compose.material3.Button(
             onClick = onClick,
             modifier =
-                if (LocalDialogAction.current) modifier.fillMaxWidth().height(48.dp)
-                else modifier.height(48.dp),
+                if (LocalDialogAction.current) modifier.fillMaxWidth().heightIn(min = BeaconUiMetrics.ControlMinHeight)
+                else modifier.heightIn(min = BeaconUiMetrics.ControlMinHeight),
             enabled = enabled,
             shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
             colors =

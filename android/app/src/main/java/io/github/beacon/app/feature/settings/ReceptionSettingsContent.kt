@@ -5,6 +5,8 @@ package io.github.beacon.app.feature.settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.*
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -18,6 +20,7 @@ import io.github.beacon.app.domain.model.ReceivePlan
 import io.github.beacon.app.domain.model.RuntimeState
 import io.github.beacon.app.ipc.RuntimeActions
 import io.github.beacon.app.ui.components.BeaconActionButton
+import io.github.beacon.app.ui.components.BeaconSaveFeedback
 import io.github.beacon.app.ui.components.BeaconButton
 import io.github.beacon.app.ui.components.BeaconDropdownPreference
 import io.github.beacon.app.ui.components.BeaconPreferenceToggle
@@ -226,18 +229,28 @@ internal fun LazyListScope.receptionSettingsItems(
     item {
         val planDirty = receptionForm.pendingPlan() != receivePlan
         val pollingDirty = receptionForm.differsFrom(polling.config)
-        val changed = (planDirty || pollingDirty) && receptionForm.scheduleValid
-        BeaconButton(
-            onClick = {
-                // The draft stays "edited" until the runtime reports the saved values back; a
-                // failed save therefore keeps the button enabled for a retry.
-                if (planDirty) onReceivePlanChange(receptionForm.pendingPlan())
-                if (pollingDirty) actions.setPolling(receptionForm.applyTo(polling.config))
-            },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !busy && changed,
-        ) {
-            BeaconText(stringResource(R.string.action_save))
+        val dirty = planDirty || pollingDirty
+        val changed = dirty && receptionForm.scheduleValid
+        var saveRequested by remember { mutableStateOf(false) }
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            BeaconSaveFeedback(
+                changed = dirty,
+                saving = saveRequested && dirty && busy,
+                saved = saveRequested && !dirty,
+            )
+            BeaconButton(
+                onClick = {
+                    // The draft stays "edited" until the runtime reports the saved values back; a
+                    // failed save therefore keeps the button enabled for a retry.
+                    saveRequested = true
+                    if (planDirty) onReceivePlanChange(receptionForm.pendingPlan())
+                    if (pollingDirty) actions.setPolling(receptionForm.applyTo(polling.config))
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !busy && changed,
+            ) {
+                BeaconText(stringResource(R.string.action_save))
+            }
         }
     }
 }

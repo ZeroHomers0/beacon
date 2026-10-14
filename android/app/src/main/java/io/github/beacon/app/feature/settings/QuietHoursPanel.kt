@@ -22,6 +22,7 @@ internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions) {
     var loaded by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
+    var saveConfirmed by remember { mutableStateOf(false) }
     var attempt by remember { mutableIntStateOf(0) }
     fun reset(value: QuietHours) {
         saved = value
@@ -121,6 +122,9 @@ internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions) {
                     attempt++
                 }
             }
+            if (loaded) BeaconSaveFeedback(
+                changed = changed, saving = saving, failed = failed, saved = saveConfirmed,
+            )
             BeaconActionPair(
                 dismiss = {
                     BeaconCancelButton(
@@ -128,6 +132,7 @@ internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions) {
                         onClick = {
                             reset(saved)
                             failed = false
+                            saveConfirmed = false
                         },
                     )
                 },
@@ -137,6 +142,7 @@ internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions) {
                         onClick = {
                             saving = true
                             failed = false
+                            saveConfirmed = false
                             actions.quietHours(
                                 draft.copy(startMinute = first!!, endMinute = last!!),
                                 onFailure = {
@@ -146,6 +152,7 @@ internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions) {
                             ) {
                                 reset(it)
                                 saving = false
+                                saveConfirmed = true
                             }
                         },
                     ) {

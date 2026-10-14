@@ -73,11 +73,11 @@ fun ActionFlow(content: @Composable FlowRowScope.() -> Unit) {
 fun UiSection(title: String, content: @Composable ColumnScope.() -> Unit) {
     BeaconCard(
         Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(BeaconUiMetrics.CardRadius),
         colors =
             CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(Modifier.padding(BeaconUiMetrics.CardInset), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap)) {
             BeaconText(title, style = MaterialTheme.typography.titleMedium)
             content()
         }
@@ -99,7 +99,7 @@ fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         BeaconText(
             title,
-            Modifier.padding(horizontal = 12.dp),
+            Modifier.padding(horizontal = BeaconUiMetrics.CardInset),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -227,7 +227,7 @@ fun MessageItem(
     BeaconCard(
         modifier =
             Modifier.fillMaxWidth()
-                .clip(RoundedCornerShape(22.dp))
+                .clip(RoundedCornerShape(BeaconUiMetrics.CardRadius))
                 .combinedClickable(
                     enabled = !busy,
                     onLongClickLabel = longPressLabel,
@@ -236,7 +236,7 @@ fun MessageItem(
                         onLongPress()
                     },
                 ),
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(BeaconUiMetrics.CardRadius),
         colors =
             CardDefaults.cardColors(
                 containerColor =
@@ -389,7 +389,8 @@ internal fun MessageFilterTag(
     onClick: (() -> Unit)? = null,
 ) {
     Box(
-        Modifier.heightIn(min = 32.dp)
+        Modifier.heightIn(min = if (onClick == null) 32.dp else BeaconUiMetrics.ControlMinHeight)
+            .widthIn(min = if (onClick == null) 0.dp else BeaconUiMetrics.ControlMinHeight)
             .clip(RoundedCornerShape(8.dp))
             .then(
                 if (onClick == null) Modifier
@@ -405,12 +406,12 @@ internal fun MessageFilterTag(
         BeaconText(
             label,
             Modifier.background(
-                    MaterialTheme.colorScheme.secondaryContainer,
+                    MaterialTheme.colorScheme.surfaceContainerHigh,
                     RoundedCornerShape(6.dp),
                 )
                 .padding(horizontal = 8.dp, vertical = 3.dp),
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )

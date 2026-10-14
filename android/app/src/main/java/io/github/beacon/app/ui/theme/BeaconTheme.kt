@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.view.WindowInsetsControllerCompat
 import io.github.beacon.app.domain.model.BeaconThemeMode
@@ -57,7 +58,10 @@ fun BeaconTheme(
                 onSurface = miuix.onSurface,
                 primaryContainer = miuix.primaryContainer,
                 onPrimaryContainer = miuix.onPrimaryContainer,
+                surfaceContainerLowest = miuix.background,
+                surfaceContainer = miuix.surfaceContainer,
                 surfaceContainerLow = miuix.surfaceContainer,
+                surfaceContainerHighest = miuix.surfaceContainerHigh,
                 surfaceContainerHigh = miuix.surfaceContainerHigh,
                 onSurfaceVariant = miuix.onSurfaceSecondary,
                 secondaryContainer = miuix.secondaryContainer,
@@ -66,7 +70,9 @@ fun BeaconTheme(
             )
         else colors
     CompositionLocalProvider(LocalBeaconUiStyle provides style) {
-        MaterialTheme(colorScheme = bridge, typography = Typography()) {
+        MaterialTheme(colorScheme = bridge, typography = Typography().let { base ->
+            base.copy(bodySmall = base.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp))
+        }) {
             top.yukonga.miuix.kmp.theme.MiuixTheme(colors = miuix) {
                 CompositionLocalProvider(
                     top.yukonga.miuix.kmp.theme.LocalContentColor provides miuix.onBackground,

@@ -19,12 +19,24 @@ fun ReceiveModeDialog(
     selected: ReceiveMode,
     onSelect: (ReceiveMode) -> Unit,
     onDismiss: () -> Unit,
+    connectionStatus: String = "",
+    onConnectionSettings: (() -> Unit)? = null,
 ) {
     BeaconAlertDialog(
         onDismissRequest = onDismiss,
         title = { BeaconText(stringResource(R.string.settings_reception_page_title)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap)) {
+                if (connectionStatus.isNotBlank()) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        BeaconText(connectionStatus, Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
+                        onConnectionSettings?.let { action ->
+                            BeaconTextButton(onClick = action) {
+                                BeaconText(stringResource(R.string.settings_connection_section_title))
+                            }
+                        }
+                    }
+                }
                 ReceiveMode.entries.forEach { mode ->
                     val available = true
                     Surface(

@@ -1,0 +1,12 @@
+package io.github.beacon.app.ui.components
+
+import androidx.compose.ui.unit.dp
+
+/** Shared geometry for both themes; compact metadata keeps its own smaller radius. */
+object BeaconUiMetrics {
+    val PageInset = 16.dp
+    val CardInset = 16.dp
+    val SectionGap = 12.dp
+    val CardRadius = 16.dp
+    val ControlMinHeight = 48.dp
+}

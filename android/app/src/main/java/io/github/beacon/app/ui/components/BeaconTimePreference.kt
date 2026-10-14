@@ -14,6 +14,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -33,6 +34,7 @@ fun BeaconTimePreference(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
+    val rowHeight = with(LocalDensity.current) { MaterialTheme.typography.titleMedium.lineHeight.toDp() + 8.dp }.coerceAtLeast(32.dp)
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
@@ -91,13 +93,14 @@ fun BeaconTimePreference(
                         "$label-hour-wheel",
                         Modifier.weight(1f),
                         enabled,
+                        rowHeight,
                     )
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         BeaconText(" ", style = MaterialTheme.typography.labelMedium)
-                        Box(Modifier.height(96.dp), contentAlignment = Alignment.Center) {
+                        Box(Modifier.height(rowHeight * 3), contentAlignment = Alignment.Center) {
                             BeaconText(":", style = MaterialTheme.typography.titleMedium)
                         }
                     }
@@ -108,6 +111,7 @@ fun BeaconTimePreference(
                         "$label-minute-wheel",
                         Modifier.weight(1f),
                         enabled,
+                        rowHeight,
                     )
                 }
             }
@@ -130,6 +134,7 @@ private fun TimeNumberWheel(
     tag: String,
     modifier: Modifier,
     enabled: Boolean,
+    rowHeight: androidx.compose.ui.unit.Dp,
 ) {
     val scope = rememberCoroutineScope()
     val selection by remember(state) { derivedStateOf { wheelSelection(state) } }
@@ -143,10 +148,10 @@ private fun TimeNumberWheel(
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Box(Modifier.fillMaxWidth().height(96.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxWidth().height(rowHeight * 3), contentAlignment = Alignment.Center) {
             Box(
                 Modifier.fillMaxWidth()
-                    .height(32.dp)
+                    .height(rowHeight)
                     .background(
                         MaterialTheme.colorScheme.primaryContainer,
                         RoundedCornerShape(10.dp),
@@ -155,7 +160,7 @@ private fun TimeNumberWheel(
             LazyColumn(
                 state = state,
                 modifier = Modifier.fillMaxSize().testTag(tag),
-                contentPadding = PaddingValues(vertical = 32.dp),
+                contentPadding = PaddingValues(vertical = rowHeight),
                 flingBehavior = rememberSnapFlingBehavior(state),
                 userScrollEnabled = enabled,
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -164,7 +169,7 @@ private fun TimeNumberWheel(
                     val text = String.format(Locale.ROOT, "%02d", number)
                     Box(
                         Modifier.fillMaxWidth()
-                            .height(32.dp)
+                            .height(rowHeight)
                             .clickable(enabled = enabled) {
                                 scope.launch { state.animateScrollToItem(number) }
                             }

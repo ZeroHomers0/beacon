@@ -35,3 +35,15 @@ fun userOperationFeedback(status: OperationStatus): String =
     if (status.kind == OperationKind.CONNECTION_LOST)
         stringResource(R.string.ui_local_data_attention_hint)
     else status.text
+
+@Composable
+fun connectionStatusLabel(state: io.github.beacon.app.domain.model.RuntimeState): String =
+    stringResource(when {
+        state.serverChecking -> R.string.connection_status_checking
+        state.configuredEndpoint.isBlank() -> R.string.connection_status_unconfigured
+        state.serverReachable == false -> R.string.connection_status_failed
+        state.serverReachable == null -> R.string.connection_status_unchecked
+        state.receivePlan.mode == io.github.beacon.app.domain.model.ReceiveMode.REALTIME &&
+            state.pollingState.config.enabled && !state.realtimeRunning -> R.string.connection_status_waiting
+        else -> R.string.connection_status_connected
+    })
