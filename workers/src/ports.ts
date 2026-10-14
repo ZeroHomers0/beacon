@@ -40,6 +40,7 @@ export interface Repository {
     credential: string,
   ): Record<string, unknown>;
   revokeApplication(id: string): void;
+  deleteApplication(id: string): number;
   save(
     sender: Sender,
     title: string,

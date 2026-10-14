@@ -1,6 +1,8 @@
 package store
 
 import (
+	"database/sql"
+	"errors"
 	"strings"
 
 	"beacon.local/server/internal/auth"
@@ -58,6 +60,46 @@ func (a *Store) RevokeApplication(id string) error {
 		return domain.ErrInvalidDevice
 	}
 	return nil
+}
+
+// DeleteApplication permanently removes a revoked sending application together with the messages
+// it sent. Only the application's own messages go: a message pushed with the device key has no
+// application, and one sent by another application of the same device stays. Active applications
+// are rejected, mirroring device deletion.
+//
+// A message already retired by retention leaves only a minimal receipt (device, id, expiry) with
+// no application on it, so a shared device's receipts cannot be attributed to one sender and are
+// left to age out inside the receipt window rather than guessed at.
+func (a *Store) DeleteApplication(id string) (int64, error) {
+	tx, err := a.db.Begin()
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+	var tokenHash string
+	if err = tx.QueryRow("SELECT token_hash FROM applications WHERE id=? AND revoked=1", id).Scan(&tokenHash); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, domain.ErrInvalidDevice
+		}
+		return 0, err
+	}
+	// Deleting the messages cascades to their queued realtime publications.
+	result, err := tx.Exec("DELETE FROM messages WHERE application_id=?", id)
+	if err != nil {
+		return 0, err
+	}
+	count, err := result.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+	// Idempotency records are keyed by the credential hash, which the application row still holds.
+	if _, err = tx.Exec("DELETE FROM push_requests WHERE credential=?", tokenHash); err != nil {
+		return 0, err
+	}
+	if _, err = tx.Exec("DELETE FROM applications WHERE id=?", id); err != nil {
+		return 0, err
+	}
+	return count, tx.Commit()
 }
 
 func (a *Store) ApplicationForToken(token string) (domain.Application, error) {

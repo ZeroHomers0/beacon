@@ -222,6 +222,13 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
             )
         }
 
+    fun deleteApplication(id: String) =
+        authenticated(R.string.admin_application_deleted) { client ->
+            client.deleteApplication(id)
+            // The application's messages are gone, so the overview counts are stale too.
+            parseOverview(client.overview()).copy(endpoint = client.endpoint, loggedIn = true)
+        }
+
     fun test(device: String, title: String, body: String, priority: Int) =
         authenticated(R.string.admin_test_accepted) { client ->
             client.test(device, title, body, priority)

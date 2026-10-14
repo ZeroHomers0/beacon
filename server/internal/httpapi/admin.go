@@ -176,4 +176,23 @@ func (a *API) registerAdmin(router *gin.Engine) {
 		}
 		writeJSON(c.Writer, 200, map[string]bool{"revoked": true})
 	})
+	admin.POST("/applications/delete", func(c *gin.Context) {
+		var body struct {
+			ID string `json:"id"`
+		}
+		if decodeJSON(c.Writer, c.Request, &body) != nil {
+			apiError(c.Writer, 400, "invalid_request")
+			return
+		}
+		count, err := a.service.DeleteApplication(body.ID)
+		if err != nil {
+			if errors.Is(err, domain.ErrInvalidDevice) {
+				apiError(c.Writer, 400, "invalid_application")
+			} else {
+				apiError(c.Writer, 500, "storage_error")
+			}
+			return
+		}
+		writeJSON(c.Writer, 200, map[string]any{"deleted": count, "application_deleted": true})
+	})
 }

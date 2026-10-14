@@ -27,6 +27,8 @@ interface ServerAdministration {
     fun application(id: String, name: String, priority: Int): JSONObject
 
     fun revokeApplication(id: String): JSONObject
+
+    fun deleteApplication(id: String): JSONObject = throw UnsupportedOperationException()
 }
 
 /** Independent administrator session. Never uses receive credentials or follows redirects. */
@@ -45,7 +47,8 @@ class ServerAdminClient(
 
     override fun clearMessages(): JSONObject = request("messages/clear", JSONObject())
 
-    override fun deleteDevice(id: String): JSONObject = request("devices/delete", JSONObject().put("device_id", id))
+    override fun deleteDevice(id: String): JSONObject =
+        request("devices/delete", JSONObject().put("device_id", id))
 
     override fun overview(): JSONObject = request("overview")
 
@@ -73,6 +76,9 @@ class ServerAdminClient(
 
     override fun revokeApplication(id: String): JSONObject =
         request("applications/revoke", JSONObject().put("id", id))
+
+    override fun deleteApplication(id: String): JSONObject =
+        request("applications/delete", JSONObject().put("id", id))
 
     private fun request(path: String, body: JSONObject? = null): JSONObject {
         val builder =

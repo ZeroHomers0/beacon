@@ -605,6 +605,9 @@
     <string name="admin_no_applications">暂无发送应用。</string>
     <string name="admin_device">目标设备</string>
     <string name="admin_revoke_application">撤销发送凭证</string>
+    <string name="admin_delete_application">删除发送应用</string>
+    <string name="admin_delete_application_hint">彻底删除已撤销的发送应用「%1$s」及其发送的消息和投递队列。此操作不可恢复。</string>
+    <string name="admin_application_deleted">发送应用及其消息已删除</string>
     <string name="admin_test_title">推送标题</string>
     <string name="admin_test_body">推送正文</string>
     <string name="admin_test_hint">将真实消息发送到所选设备。服务端接收成功后，还需在目标设备确认通知是否出现。</string>

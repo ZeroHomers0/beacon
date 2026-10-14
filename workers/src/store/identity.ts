@@ -183,6 +183,30 @@ export class IdentityStore {
       reject(400, "invalid_application");
     this.rows("UPDATE applications SET revoked=1 WHERE id=?", id);
   }
+  // Permanently remove a revoked application and the messages it sent. Only its own messages
+  // go: a device-key push stores an empty application_id, and another application's messages
+  // stay. Deleting a message cascades to its queued realtime publication. A message that
+  // retention already retired leaves only a minimal receipt with no application on it, so a
+  // shared device's receipts cannot be attributed to one sender and age out on their own.
+  deleteApplication(id: string): number {
+    return this.storage.transactionSync(() => {
+      const row = this.first(
+        "SELECT token_hash FROM applications WHERE id=? AND revoked=1",
+        id,
+      );
+      if (!row) reject(400, "invalid_application");
+      const count = Number(
+        this.first(
+          "SELECT count(*) AS n FROM messages WHERE application_id=?",
+          id,
+        )!.n,
+      );
+      this.rows("DELETE FROM messages WHERE application_id=?", id);
+      this.rows("DELETE FROM push_requests WHERE credential=?", row.token_hash);
+      this.rows("DELETE FROM applications WHERE id=?", id);
+      return count;
+    });
+  }
   // Persist admission counters: eviction/hibernation must not refill a burst.
   admit(key: string, now: number, burst: number, rate: number): void {
     const old = this.first(

@@ -54,6 +54,7 @@ internal fun ServerAdminPage(
     var testPriority by rememberSaveable { mutableIntStateOf(5) }
     var pendingDevice by remember { mutableStateOf<AdminDevice?>(null) }
     var pendingApplication by remember { mutableStateOf<AdminApplication?>(null) }
+    var deletingApplication by remember { mutableStateOf<AdminApplication?>(null) }
     // Two-stage cloud purge: 1 = warning, 2 = final confirmation. Mirrors local cleanup.
     var clearStage by remember { mutableIntStateOf(0) }
     var deletingDevice by remember { mutableStateOf<AdminDevice?>(null) }
@@ -81,6 +82,7 @@ internal fun ServerAdminPage(
             deletingDevice = null
             clearStage = 0
             pendingApplication = null
+            deletingApplication = null
             confirmTest = false
         }
     }
@@ -398,6 +400,15 @@ internal fun ServerAdminPage(
                                 ) {
                                     BeaconText(stringResource(R.string.admin_revoke_application))
                                 }
+                            // Only a revoked credential can be removed, mirroring device deletion.
+                            if (app.revoked)
+                                BeaconDangerButton(
+                                    onClick = { deletingApplication = app },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    enabled = !state.busy,
+                                ) {
+                                    BeaconText(stringResource(R.string.admin_delete_application))
+                                }
                         }
                     }
                 }
@@ -564,6 +575,17 @@ internal fun ServerAdminPage(
             onConfirm = {
                 pendingApplication = null
                 model.revokeApplication(app.id)
+            },
+        )
+    }
+    deletingApplication?.let { app ->
+        BeaconConfirmDialog(
+            title = stringResource(R.string.admin_delete_application),
+            description = stringResource(R.string.admin_delete_application_hint, app.name),
+            onDismiss = { deletingApplication = null },
+            onConfirm = {
+                deletingApplication = null
+                model.deleteApplication(app.id)
             },
         )
     }

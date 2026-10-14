@@ -11,6 +11,7 @@ type ApplicationRepository interface {
 	CreateApplication(string, string, int) (domain.ApplicationCredential, error)
 	ListApplications() ([]domain.Application, error)
 	RevokeApplication(string) error
+	DeleteApplication(string) (int64, error)
 	ApplicationForToken(string) (domain.Application, error)
 	SavePriorityMessage(string, string, string, string, int, string, string, ...string) (domain.Message, error)
 }
@@ -22,6 +23,15 @@ func (s *Service) ListApplications() ([]domain.Application, error) {
 	return s.repository.ListApplications()
 }
 func (s *Service) RevokeApplication(id string) error { return s.repository.RevokeApplication(id) }
+
+// DeleteApplication keeps the same shape as device deletion: the identifier must look like a
+// credential id before the repository is allowed to touch rows.
+func (s *Service) DeleteApplication(id string) (int64, error) {
+	if !validAdminDevice(id) {
+		return 0, domain.ErrInvalidDevice
+	}
+	return s.repository.DeleteApplication(id)
+}
 
 // Legacy device push keys remain valid. Application credentials are send-only.
 func (s *Service) PushCredential(token, title, subtitle, body string, priority *int, extensions ...string) (domain.Message, error) {

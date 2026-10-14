@@ -353,6 +353,7 @@ export class API {
       "/api/admin/test": ["device_id", "title", "subtitle", "body", "priority"],
       "/api/admin/applications": ["device_id", "name", "default_priority"],
       "/api/admin/applications/revoke": ["id"],
+      "/api/admin/applications/delete": ["id"],
     };
     if (!routes[path]) reject(404, "not_found");
     method(request, "POST");
@@ -385,6 +386,13 @@ export class API {
       if (!validID(payload.id)) reject(400, "invalid_application");
       this.store.revokeApplication(payload.id);
       return json({ revoked: true });
+    }
+    if (path === "/api/admin/applications/delete") {
+      if (!validID(payload.id)) reject(400, "invalid_application");
+      return json({
+        deleted: this.store.deleteApplication(payload.id),
+        application_deleted: true,
+      });
     }
     if (!validID(payload.device_id)) reject(400, "invalid_device");
     if (path.endsWith("/revoke")) {
