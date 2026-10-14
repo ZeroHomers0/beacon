@@ -242,52 +242,12 @@ fun BeaconApp(
             )
                 ui.receptionForm.reset(runtimeState.pollingState.config, runtimeState.receivePlan)
         }
-        ui.pendingReceiveMode?.let { mode ->
-            BeaconAlertDialog(
-                onDismissRequest = { ui.pendingReceiveMode = null },
-                title = { BeaconText(stringResource(R.string.receive_unsaved_title)) },
-                text = { BeaconText(stringResource(R.string.receive_unsaved_hint)) },
-                confirmButton = {
-                    BeaconButton(
-                        onClick = {
-                            ui.receptionForm.reset(
-                                runtimeState.pollingState.config,
-                                runtimeState.receivePlan,
-                            )
-                            actions.receivePlan(ui.receivePlan.copy(mode = mode))
-                            ui.pendingReceiveMode = null
-                        }
-                    ) {
-                        BeaconText(stringResource(R.string.receive_discard_switch))
-                    }
-                },
-                dismissButton = {
-                    BeaconTextButton(
-                        onClick = {
-                            ui.pendingReceiveMode = null
-                            ui.page = 1
-                            ui.navigateSettings(SettingsScreen.RECEPTION)
-                        }
-                    ) {
-                        BeaconText(stringResource(R.string.receive_return_save))
-                    }
-                },
-            )
-        }
         if (ui.receiveModesOpen)
             ReceiveModeDialog(
                 ui.receivePlan.mode,
                 onSelect = { mode ->
-                    if (
-                        mode != ui.receivePlan.mode &&
-                            ui.receptionForm.edited &&
-                            ui.receptionForm.differsFrom(
-                                runtimeState.pollingState.config,
-                                runtimeState.receivePlan,
-                            )
-                    ) {
-                        ui.pendingReceiveMode = mode
-                    } else {
+                    if (mode != ui.receivePlan.mode) {
+                        ui.receptionForm.reset(runtimeState.pollingState.config, runtimeState.receivePlan.copy(mode = mode))
                         actions.receivePlan(ui.receivePlan.copy(mode = mode))
                     }
                     ui.receiveModesOpen = false
@@ -380,7 +340,6 @@ fun BeaconApp(
             ui.page == 1 &&
                 ui.settingsScreen != SettingsScreen.HOME &&
                 runtimeState.selectedMessage == null &&
-                !connectionDirty &&
                 !runtimeState.messageBusy
         PredictiveBackHandler(enabled = predictiveSettingsBack) { events ->
             settingsBackReset.stop()
@@ -488,24 +447,6 @@ fun BeaconApp(
                     BeaconTextButton(onClick = { ui.supportPreview = null }) {
                         BeaconText(stringResource(R.string.action_close))
                     }
-                },
-            )
-        }
-        ui.pendingPage?.let { destination ->
-            BeaconConfirmDialog(
-                title = stringResource(R.string.ui_discard_connection_title),
-                description = stringResource(R.string.ui_unsaved_connection_hint),
-                confirmText = stringResource(R.string.ui_discard_and_leave_action),
-                danger = false,
-                dismissText = stringResource(R.string.ui_continue_editing_action),
-                onDismiss = { ui.pendingPage = null },
-                onConfirm = {
-                    ui.connectionForm.endpoint = runtimeState.configuredEndpoint
-                    ui.connectionForm.bindingCode = ""
-                    ui.connectionForm.connectionError = ""
-                    ui.connectionForm.connectionEdited = false
-                    ui.pendingPage = null
-                    ui.finishNavigation(destination)
                 },
             )
         }
@@ -821,6 +762,20 @@ fun BeaconApp(
                                                     ui.navigateSettings(SettingsScreen.HOME)
                                                     navigate(1)
                                                 }
+                                            } else if (displayedDetail == null && barPage == 1 && displayedSettingsScreen == SettingsScreen.RECEPTION) {
+                                                val form = ui.receptionForm
+                                                BeaconActionIcon(
+                                                    BeaconIcons.Save, stringResource(R.string.action_save),
+                                                    runtimeState.runtimeConnected && runtimeState.receivePlanLoaded && !busy &&
+                                                        form.edited && form.scheduleValid && form.differsFrom(runtimeState.pollingState.config, runtimeState.receivePlan),
+                                                ) {
+                                                    actions.saveReception(form.pendingPlan(), form.applyTo(runtimeState.pollingState.config))
+                                                }
+                                            } else if (displayedDetail == null && barPage == 1 && displayedSettingsScreen == SettingsScreen.NOTIFICATION_RULES) {
+                                                BeaconActionIcon(
+                                                    BeaconIcons.Save, stringResource(R.string.action_save),
+                                                    runtimeState.runtimeConnected && !busy && ui.quietHoursForm.canSave,
+                                                ) { ui.quietHoursForm.save(actions) }
                                             }
                                         },
                                     )
@@ -1006,6 +961,7 @@ fun BeaconApp(
                                                     onNotificationSettingsUnavailable,
                                                 updateState = ui.updateState,
                                                 onCheckUpdate = checkUpdateNow,
+                                                quietHoursForm = ui.quietHoursForm,
                                             )
                                         }
                                 }

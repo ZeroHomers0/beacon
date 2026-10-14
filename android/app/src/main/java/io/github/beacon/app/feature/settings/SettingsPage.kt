@@ -58,6 +58,7 @@ fun SettingsPage(
     onNotificationSettingsUnavailable: () -> Unit,
     updateState: UpdateCheckState,
     onCheckUpdate: () -> Unit,
+    quietHoursForm: QuietHoursFormState = androidx.compose.runtime.remember { QuietHoursFormState() },
 ) {
     val resources = androidx.compose.ui.platform.LocalResources.current
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -80,7 +81,6 @@ fun SettingsPage(
         )
             actions.pendingReminders { pendingReminderCount = it }
     }
-    var developerExpanded by rememberSaveable { mutableStateOf(false) }
     // Resolved here because its only use site is a non-composable callback.
     val bindingFormatHint = stringResource(R.string.binding_format_hint)
     if (screen == SettingsScreen.SERVER_ADMIN) {
@@ -89,7 +89,6 @@ fun SettingsPage(
             scroll,
             modifier,
             padding,
-            onConnection = { onNavigate(SettingsScreen.CONNECTION) },
             onUseBinding = { endpoint, code, name ->
                 val current = actions.state.value
                 if (
@@ -342,8 +341,6 @@ fun SettingsPage(
                     actions,
                     connectionForm,
                     connectionDirty,
-                    notificationPermission,
-                    onNavigate,
                     busy,
                     context,
                     focus,
@@ -357,7 +354,7 @@ fun SettingsPage(
             }
             SettingsScreen.NOTIFICATION_RULES -> {
                 item { NotificationSettingsPanel(runtimeState, actions) }
-                item { QuietHoursPanel(runtimeState, actions) }
+                item { QuietHoursPanel(runtimeState, actions, quietHoursForm) }
                 item { NotificationSoundPanel() }
             }
             SettingsScreen.NOTIFICATIONS -> {
@@ -376,8 +373,6 @@ fun SettingsPage(
                 diagnosticsSettingsItems(
                     runtimeState,
                     actions,
-                    developerExpanded,
-                    { developerExpanded = it },
                     onPreviewReport,
                     onOperationDetails,
                     busy,

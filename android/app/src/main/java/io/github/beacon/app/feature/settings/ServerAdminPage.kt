@@ -28,7 +28,6 @@ internal fun ServerAdminPage(
     scroll: LazyListState,
     modifier: Modifier,
     padding: PaddingValues,
-    onConnection: () -> Unit,
     onUseBinding: (String, String, String) -> Unit,
     onFeedback: (String) -> Unit,
     canBindCurrent: Boolean = false,
@@ -107,31 +106,6 @@ internal fun ServerAdminPage(
         modifier = modifier.testTag("server-admin-list"),
         contentPadding = padding,
     ) {
-        item {
-            SettingsGroup(stringResource(R.string.admin_this_phone)) {
-                SettingsRow(
-                    stringResource(R.string.admin_local_binding),
-                    defaultEndpoint.ifBlank { stringResource(R.string.settings_guide_unbound) },
-                    BeaconIcons.Server,
-                    onConnection,
-                )
-                if (state.loggedIn && defaultEndpoint.isBlank()) {
-                    BeaconActionButton(
-                        stringResource(R.string.admin_use_binding),
-                        BeaconIcons.Guide,
-                        Modifier.fillMaxWidth(),
-                        canBindCurrent && !state.busy,
-                    ) {
-                        model.bindThisPhone(android.os.Build.MODEL.take(32), ::bindCurrent)
-                    }
-                }
-                if (bindingSubmitted && localBindingResult.isNotBlank())
-                    OperationResultPanel(
-                        stringResource(R.string.admin_local_binding_result),
-                        localBindingResult,
-                    )
-            }
-        }
         if (!state.loggedIn) {
             item {
                 UiSection(stringResource(R.string.admin_login_title)) {
@@ -167,28 +141,19 @@ internal fun ServerAdminPage(
             item {
                 UiSection(stringResource(R.string.admin_overview)) {
                     DiagnosticRow(stringResource(R.string.admin_endpoint), state.endpoint)
-                    DiagnosticRow(stringResource(R.string.admin_version), state.version)
-                    DiagnosticRow(
-                        stringResource(R.string.admin_compatibility),
-                        stringResource(
-                            if (state.protocol == 1) R.string.admin_compatible
-                            else R.string.admin_protocol_unknown
-                        ),
-                    )
-                    DiagnosticRow(stringResource(R.string.admin_server_id), state.serverId)
                     SettingsMetricGrid(
                         listOf(
-                            stringResource(R.string.admin_devices) to
-                                state.devices.count { !it.revoked }.toString(),
+                            stringResource(R.string.admin_version) to state.version,
+                            stringResource(R.string.admin_compatibility) to stringResource(
+                                if (state.protocol == 1) R.string.admin_compatible_short else R.string.admin_protocol_unknown_short,
+                            ),
+                            stringResource(R.string.admin_devices) to state.devices.count { !it.revoked }.toString(),
                             stringResource(R.string.admin_messages) to state.messages.toString(),
                             stringResource(R.string.admin_pending) to state.pending.toString(),
-                            stringResource(R.string.admin_database) to
-                                android.text.format.Formatter.formatFileSize(
-                                    context,
-                                    state.databaseBytes,
-                                ),
-                        )
+                            stringResource(R.string.admin_database) to android.text.format.Formatter.formatFileSize(context, state.databaseBytes),
+                        ), columns = 3,
                     )
+                    if (state.protocol != 1) SettingsHint(stringResource(R.string.admin_protocol_unknown))
                     SettingsHint(stringResource(R.string.admin_clear_messages_hint))
                     BeaconDangerButton(
                         onClick = { clearStage = 1 },
@@ -255,6 +220,25 @@ internal fun ServerAdminPage(
         if (state.loggedIn)
             when (tab) {
                 0 -> {
+                    if (defaultEndpoint.isBlank() || bindingSubmitted) item {
+                        UiSection(stringResource(R.string.admin_this_phone)) {
+                            if (defaultEndpoint.isBlank()) {
+                                BeaconActionButton(
+                                    stringResource(R.string.admin_use_binding),
+                                    BeaconIcons.Guide,
+                                    Modifier.fillMaxWidth(),
+                                    canBindCurrent && !state.busy,
+                                ) {
+                                    model.bindThisPhone(android.os.Build.MODEL.take(32), ::bindCurrent)
+                                }
+                            }
+                            if (bindingSubmitted && localBindingResult.isNotBlank())
+                                OperationResultPanel(
+                                    stringResource(R.string.admin_local_binding_result),
+                                    localBindingResult,
+                                )
+                        }
+                    }
                     item {
                         UiSection(stringResource(R.string.admin_create_binding)) {
                             AdminField(

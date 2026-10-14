@@ -8,6 +8,7 @@ object RuntimeProtocol {
     const val RECONCILE_POLLING = IBinder.FIRST_CALL_TRANSACTION + 42
     const val SCHEDULE_TEST = IBinder.FIRST_CALL_TRANSACTION + 43
     const val PING = IBinder.FIRST_CALL_TRANSACTION
+    const val CHECKPOINT_STORAGE = PING + 44
     const val RECENT = PING + 1
     const val INJECT_TEST = PING + 2
     const val DELETE = PING + 3

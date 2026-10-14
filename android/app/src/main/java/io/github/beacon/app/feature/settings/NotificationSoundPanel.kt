@@ -21,48 +21,39 @@ fun NotificationSoundPanel() {
     var hint by remember { mutableStateOf("") }
     UiSection(stringResource(R.string.settings_sound_title)) {
         SettingsHint(stringResource(R.string.settings_sound_hint))
-        for ((kind, title, importance, name, description) in
-            listOf(
-                SoundChannel(
-                    NotificationChannelKind.FRESH,
-                    resources.getString(R.string.settings_sound_normal),
-                    NotificationManager.IMPORTANCE_DEFAULT,
-                    resources.getString(R.string.channel_fresh),
-                    resources.getString(R.string.channel_fresh_desc),
-                ),
-                SoundChannel(
-                    NotificationChannelKind.IMPORTANT,
-                    resources.getString(R.string.settings_sound_important),
-                    NotificationManager.IMPORTANCE_HIGH,
-                    resources.getString(R.string.channel_important),
-                    resources.getString(R.string.channel_important_desc),
-                ),
-            )) BeaconOutlinedButton(
-            modifier = Modifier.fillMaxWidth(),
-            onClick = {
-                runCatching {
-                    val manager = context.getSystemService(NotificationManager::class.java)
-                    // The channel already exists whenever a message was ever posted, and
-                    // re-creating it
-                    // would rename the user's configured channel back to this label. Seeding it is
-                    // only
-                    // for the case where the settings screen opens before the first notification.
-                    if (manager.getNotificationChannel(kind.id) == null)
-                        manager.createNotificationChannel(
-                            NotificationChannel(kind.id, name, importance).apply {
-                                this.description = description
-                            }
-                        )
-                    context.startActivity(
-                        Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
-                            .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                            .putExtra(Settings.EXTRA_CHANNEL_ID, kind.id)
+        val channels = listOf(
+            SoundChannel(
+                NotificationChannelKind.FRESH,
+                resources.getString(R.string.settings_sound_normal),
+                NotificationManager.IMPORTANCE_DEFAULT,
+                resources.getString(R.string.channel_fresh),
+                resources.getString(R.string.channel_fresh_desc),
+            ),
+            SoundChannel(
+                NotificationChannelKind.IMPORTANT,
+                resources.getString(R.string.settings_sound_important),
+                NotificationManager.IMPORTANCE_HIGH,
+                resources.getString(R.string.channel_important),
+                resources.getString(R.string.channel_important_desc),
+            ),
+        )
+        BeaconCompactButtonGrid(channels.map { it.title }) { index ->
+            val (kind, _, importance, name, description) = channels[index]
+            runCatching {
+                val manager = context.getSystemService(NotificationManager::class.java)
+                // Seed only missing channels; preserve the user's existing channel settings.
+                if (manager.getNotificationChannel(kind.id) == null)
+                    manager.createNotificationChannel(
+                        NotificationChannel(kind.id, name, importance).apply {
+                            this.description = description
+                        }
                     )
-                }
-                    .onFailure { hint = resources.getString(R.string.settings_sound_unavailable) }
-            },
-        ) {
-            BeaconText(title)
+                context.startActivity(
+                    Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+                        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                        .putExtra(Settings.EXTRA_CHANNEL_ID, kind.id)
+                )
+            }.onFailure { hint = resources.getString(R.string.settings_sound_unavailable) }
         }
         if (hint.isNotEmpty()) BeaconText(hint)
     }

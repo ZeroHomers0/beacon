@@ -52,8 +52,6 @@ open class MainActivity : ComponentActivity() {
                 stoppedWithOperation ||
                 ui.receiveModesOpen ||
                 ui.filtersOpen ||
-                ui.pendingReceiveMode != null ||
-                ui.pendingPage != null ||
                 ui.pendingDelete != null ||
                 ui.supportPreview != null ||
                 ui.operationDetails != null ||

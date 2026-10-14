@@ -393,4 +393,4 @@ Go 服务端需要设置 `BEACON_WEB_ADMIN_TOKEN` 才会启用管理接口；Wor
 
 ### 推送密钥泄露或遇到其他问题怎么办？
 
-撤销受影响的设备并重新绑定，或单独撤销泄露的应用令牌，再更新脚本中的密钥。Go 服务端也可用 `-rotate-device <设备ID>` 生成新凭据，然后在 App 中导入。反馈问题请到 [GitHub Issues](https://github.com/ZeroHomers0/beacon/issues)，附上版本、部署方式、复现步骤和脱敏诊断信息。不要公开管理令牌、绑定码、推送密钥或私人消息内容；反向代理访问日志也应避免记录带密钥和正文的 Bark URL。
+撤销受影响的设备并创建新绑定码，在 App 中重新绑定；也可单独撤销泄露的应用令牌，再更新脚本中的密钥。反馈问题请到 [GitHub Issues](https://github.com/ZeroHomers0/beacon/issues)，附上版本、部署方式、复现步骤和脱敏诊断信息。不要公开管理令牌、绑定码、推送密钥或私人消息内容；反向代理访问日志也应避免记录带密钥和正文的 Bark URL。

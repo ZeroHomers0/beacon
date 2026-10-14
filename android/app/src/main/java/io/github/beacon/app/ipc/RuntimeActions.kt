@@ -103,6 +103,10 @@ interface RuntimeActions {
 
     fun clearAllMessages() {}
 
+    fun checkpointStorage() {}
+
+    fun saveReception(plan: io.github.beacon.app.domain.model.ReceivePlan, polling: PollingConfig) {}
+
     fun pendingReminders(onReady: (Long) -> Unit) {}
 
     fun cleanupSettings(

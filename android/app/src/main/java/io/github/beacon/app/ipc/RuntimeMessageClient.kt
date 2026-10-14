@@ -8,6 +8,11 @@ internal data class RuntimeMessagePage(val page: MessagePage)
 
 /** Typed history IPC. UI and repositories never encode or decode parcels. */
 internal class RuntimeMessageClient(private val binder: IBinder) {
+    fun checkpointStorage(): Boolean =
+        binder.request(RuntimeProtocol.CHECKPOINT_STORAGE) {
+            it.readInt().also { value -> require(value in 0..1) } == 1
+        }
+
     fun clearAllMessages(): Long =
         binder.request(RuntimeProtocol.CLEAR_ALL_MESSAGES) {
             it.readLong().also { value -> require(value >= 0) }

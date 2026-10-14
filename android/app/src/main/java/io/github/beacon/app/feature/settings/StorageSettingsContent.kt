@@ -6,15 +6,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.CleanupPreview
 import io.github.beacon.app.domain.model.CleanupSettings
 import io.github.beacon.app.domain.model.RuntimeState
-import io.github.beacon.app.domain.model.StorageHealth
-import io.github.beacon.app.domain.model.StoragePressure
 import io.github.beacon.app.ipc.RuntimeActions
 import io.github.beacon.app.ui.components.*
 
@@ -27,14 +23,12 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
     var settingsLoaded by remember { mutableStateOf(false) }
     var loadFailed by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
-    var saveConfirmed by remember { mutableStateOf(false) }
     var saveFailed by remember { mutableStateOf(false) }
     var attempt by remember { mutableIntStateOf(0) }
     LaunchedEffect(state.runtimeConnected, attempt) {
         settingsLoaded = false
         loadFailed = false
         saving = false
-        saveConfirmed = false
         saveFailed = false
         if (state.runtimeConnected)
             actions.cleanupSettings(
@@ -48,7 +42,6 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
     fun save(value: CleanupSettings) {
         saving = true
         loadFailed = false
-        saveConfirmed = false
         saveFailed = false
         actions.cleanupSettings(value, onFailure = {
             loadFailed = true
@@ -57,7 +50,6 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
         }) {
             settings = it
             saving = false
-            saveConfirmed = true
         }
     }
     var confirmation by remember { mutableStateOf<CleanupPreview?>(null) }
@@ -71,7 +63,6 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
         if (state.runtimeConnected && settingsLoaded) actions.previewCleanup(policy)
     }
     Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap)) {
-        BeaconSaveFeedback(saving = saving, saved = saveConfirmed)
         // Without this the page rendered every control disabled with no explanation; a failed read
         // is now visible and recoverable instead of looking like a broken toggle.
         if (loadFailed) {
@@ -88,7 +79,6 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
             }
         }
         UiSection(stringResource(R.string.storage_usage_title)) {
-            StorageUsageChart(preview)
             SettingsMetricGrid(
                 listOf(
                     Pair(
@@ -122,18 +112,13 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                         } ?: "—",
                     ),
                     Pair(
-                        stringResource(R.string.storage_deleted_records),
-                        preview?.tombstones?.let {
-                            resources.getString(R.string.settings_cleanup_count, it)
-                        } ?: "—",
-                    ),
-                    Pair(
                         stringResource(R.string.storage_wal),
                         preview?.walBytes?.let {
                             android.text.format.Formatter.formatFileSize(context, it)
                         } ?: "—",
                     ),
-                )
+                ),
+                columns = 3,
             )
             DiagnosticRow(
                 stringResource(R.string.storage_sampled),
@@ -142,6 +127,14 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
             SettingsHint(stringResource(R.string.storage_breakdown_note))
             SettingsHint(stringResource(R.string.settings_storage_receipts_hint))
             SettingsHint(stringResource(R.string.storage_size_note))
+            SettingsHint(stringResource(R.string.storage_wal_hint))
+            BeaconActionButton(
+                stringResource(R.string.storage_wal_clear),
+                io.github.beacon.app.ui.icons.BeaconIcons.Storage,
+                Modifier.fillMaxWidth(),
+                state.runtimeConnected && !state.messageBusy && preview != null && preview.walBytes > 0,
+                actions::checkpointStorage,
+            )
         }
         UiSection(stringResource(R.string.settings_cleanup_auto_title)) {
             BeaconPreferenceToggle(
@@ -195,7 +188,6 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
             }
             SettingsHint(stringResource(R.string.storage_manual_note))
         }
-        StorageHealthPanel(preview)
         UiSection(stringResource(R.string.storage_preview_title)) {
             if (preview != null) {
                 SettingsMetricGrid(
@@ -206,7 +198,8 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                             resources.getString(R.string.settings_cleanup_count, preview.protected),
                         stringResource(R.string.settings_cleanup_planned) to
                             resources.getString(R.string.settings_cleanup_count, preview.planned),
-                    )
+                    ),
+                    columns = 3,
                 )
                 BeaconText(
                     stringResource(
@@ -318,91 +311,6 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                 confirmation = null
                 actions.applyCleanup(snapshot.token)
             },
-        )
-    }
-}
-
-@Composable
-private fun StorageUsageChart(preview: CleanupPreview?) {
-    val resources = androidx.compose.ui.platform.LocalResources.current
-    val total = preview?.total ?: 0L
-    val unread = preview?.unread ?: 0L
-    val read = (total - unread).coerceAtLeast(0L)
-    val primary = MaterialTheme.colorScheme.primary
-    val secondary = MaterialTheme.colorScheme.tertiaryContainer
-    val fraction = if (total > 0) unread.toFloat() / total else 0f
-    val animated by
-        androidx.compose.animation.core.animateFloatAsState(fraction, label = "message counts")
-    Column(
-        Modifier.fillMaxWidth(),
-        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Box(
-            Modifier.size(128.dp).semantics {
-                contentDescription =
-                    resources.getString(
-                        R.string.settings_storage_chart_description,
-                        total,
-                        unread,
-                        read,
-                    )
-            },
-            contentAlignment = androidx.compose.ui.Alignment.Center,
-        ) {
-            androidx.compose.foundation.Canvas(Modifier.fillMaxSize().padding(12.dp)) {
-                val stroke =
-                    androidx.compose.ui.graphics.drawscope.Stroke(
-                        18.dp.toPx(),
-                        cap = androidx.compose.ui.graphics.StrokeCap.Butt,
-                    )
-                drawArc(secondary, -90f, 360f, false, style = stroke)
-                if (animated > 0) drawArc(primary, -90f, animated * 360f, false, style = stroke)
-            }
-            Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
-                BeaconText(
-                    if (preview == null) "—" else total.toString(),
-                    style = MaterialTheme.typography.titleLarge,
-                )
-                BeaconText(
-                    resources.getString(R.string.settings_storage_local_messages),
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-            Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
-                BeaconText(stringResource(R.string.msg_unread_label), color = primary)
-                BeaconText(if (preview == null) "—" else unread.toString())
-            }
-            Column(horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
-                BeaconText(stringResource(R.string.msg_read_label))
-                BeaconText(if (preview == null) "—" else read.toString())
-            }
-        }
-        BeaconText(
-            resources.getString(R.string.settings_storage_chart_hint),
-            style = MaterialTheme.typography.bodySmall,
-        )
-    }
-}
-
-@Composable
-internal fun StorageHealthPanel(preview: CleanupPreview?) {
-    val available = preview?.availableBytes ?: -1L
-    val low = StorageHealth.pressure(available) == StoragePressure.LOW
-    UiSection(stringResource(R.string.storage_device_space)) {
-        DiagnosticRow(
-            stringResource(R.string.storage_available),
-            if (available < 0) stringResource(R.string.storage_space_unknown)
-            else android.text.format.Formatter.formatFileSize(LocalContext.current, available),
-        )
-        BeaconText(
-            stringResource(if (low) R.string.storage_space_low else R.string.storage_space_note),
-            style = MaterialTheme.typography.bodySmall,
-            color =
-                if (low) MaterialTheme.colorScheme.error
-                else MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

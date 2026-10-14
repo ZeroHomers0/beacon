@@ -20,7 +20,6 @@ import io.github.beacon.app.domain.model.ReceivePlan
 import io.github.beacon.app.domain.model.RuntimeState
 import io.github.beacon.app.ipc.RuntimeActions
 import io.github.beacon.app.ui.components.BeaconActionButton
-import io.github.beacon.app.ui.components.BeaconSaveFeedback
 import io.github.beacon.app.ui.components.BeaconButton
 import io.github.beacon.app.ui.components.BeaconDropdownPreference
 import io.github.beacon.app.ui.components.BeaconPreferenceToggle
@@ -38,10 +37,9 @@ import io.github.beacon.app.ui.components.receiveModeTitle
 import io.github.beacon.app.ui.icons.BeaconIcons
 
 /**
- * The reception page edits one draft and saves it with one button at the bottom.
+ * The reception page edits one draft, saved through its toolbar action.
  *
- * The mode row is the exception: it writes through immediately, because switching modes already
- * raises its own unsaved-changes prompt.
+ * The mode row writes through immediately; switching modes resets the previous draft.
  */
 internal fun LazyListScope.receptionSettingsItems(
     runtimeState: RuntimeState,
@@ -223,33 +221,6 @@ internal fun LazyListScope.receptionSettingsItems(
                     receptionForm.edited = true
                 }
                 SettingsHint(stringResource(R.string.settings_auto_receive_note_hint))
-            }
-        }
-    }
-    item {
-        val planDirty = receptionForm.pendingPlan() != receivePlan
-        val pollingDirty = receptionForm.differsFrom(polling.config)
-        val dirty = planDirty || pollingDirty
-        val changed = dirty && receptionForm.scheduleValid
-        var saveRequested by remember { mutableStateOf(false) }
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            BeaconSaveFeedback(
-                changed = dirty,
-                saving = saveRequested && dirty && busy,
-                saved = saveRequested && !dirty,
-            )
-            BeaconButton(
-                onClick = {
-                    // The draft stays "edited" until the runtime reports the saved values back; a
-                    // failed save therefore keeps the button enabled for a retry.
-                    saveRequested = true
-                    if (planDirty) onReceivePlanChange(receptionForm.pendingPlan())
-                    if (pollingDirty) actions.setPolling(receptionForm.applyTo(polling.config))
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !busy && changed,
-            ) {
-                BeaconText(stringResource(R.string.action_save))
             }
         }
     }

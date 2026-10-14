@@ -42,6 +42,10 @@ private data class RenderedBody(
 
 @Composable
 internal fun MessageMarkdownBody(body: String) {
+    if (body.isBlank()) {
+        BeaconText(stringResource(R.string.msg_detail_no_body_hint), style = MaterialTheme.typography.bodyLarge)
+        return
+    }
     var raw by rememberSaveable { mutableStateOf(false) }
     var selectedLink by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
@@ -82,7 +86,7 @@ internal fun MessageMarkdownBody(body: String) {
         }
     }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        BeaconTextButton(onClick = { raw = !raw }) {
+        if (rendered?.let { !it.failed && it.text.toString() != body } == true) BeaconTextButton(onClick = { raw = !raw }) {
             BeaconText(stringResource(if (raw) R.string.message_markdown_rendered else R.string.message_markdown_source))
         }
         if (raw || rendered?.failed == true || body.isBlank()) {

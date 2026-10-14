@@ -211,7 +211,7 @@ fun BeaconIconButton(
     if (miuix())
         top.yukonga.miuix.kmp.basic.IconButton(
             onClick,
-            modifier,
+            modifier.semantics(mergeDescendants = true) { if (!enabled) disabled() },
             enabled,
             minHeight = 48.dp,
             minWidth = 48.dp,

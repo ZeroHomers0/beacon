@@ -9,9 +9,8 @@ import io.github.beacon.app.domain.model.ReceivePlan
  * automatic interval and the rule conditions all live here until the page's single save button
  * submits them.
  *
- * The mode selector is deliberately not part of the draft. It already carries its own prompt for
- * unsaved changes, so switching modes writes through immediately instead of silently rewriting
- * the plan the user is still editing.
+ * The mode selector writes through immediately. Switching modes resets the previous draft;
+ * the toolbar save icon indicates modifications to the remaining configuration.
  */
 class ReceptionFormState {
     var plan by mutableStateOf(ReceivePlan())

@@ -90,6 +90,8 @@ class RuntimeMessageStore(
 
     fun previewCleanup(policy: CleanupPolicy): CleanupPreview = cleanupStore.previewCleanup(policy)
 
+    fun checkpointWal(): Boolean = cleanupStore.checkpointWal()
+
     /** Preserve any manual preview while doing a bounded, protected automatic batch. */
     fun automaticCleanup(policy: CleanupPolicy): MessageMutationResult =
         cleanupStore.automaticCleanup(policy)

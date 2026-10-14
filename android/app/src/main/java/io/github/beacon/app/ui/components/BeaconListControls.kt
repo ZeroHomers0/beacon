@@ -137,7 +137,10 @@ fun BeaconActionIcon(
 ) {
     BeaconIconButton(onClick = onClick, enabled = enabled) {
         BadgedBox(badge = { if (showBadge) Badge() }) {
-            Icon(icon, description, Modifier.size(24.dp))
+            Icon(
+                icon, description, Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 1f else 0.38f),
+            )
         }
     }
 }
@@ -253,11 +256,12 @@ fun DiagnosticRow(label: String, value: String) {
 
 /** Compact numeric facts, preserving readable values at large font sizes. */
 @Composable
-fun SettingsMetricGrid(metrics: List<Pair<String, String>>) {
+fun SettingsMetricGrid(metrics: List<Pair<String, String>>, modifier: Modifier = Modifier, columns: Int? = null) {
+    require(columns == null || columns > 0)
     val density = LocalDensity.current
     val measurer = rememberTextMeasurer()
     val widest =
-        metrics.maxOfOrNull { (label, value) ->
+        if (columns != null) 0 else metrics.maxOfOrNull { (label, value) ->
             maxOf(
                 measurer
                     .measure(label, MaterialTheme.typography.labelMedium, maxLines = 1)
@@ -269,22 +273,21 @@ fun SettingsMetricGrid(metrics: List<Pair<String, String>>) {
                     .width,
             )
         } ?: 0
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
+    BoxWithConstraints(modifier.fillMaxWidth()) {
         val cellWidth = widest + with(density) { 24.dp.roundToPx() }
-        val columns =
-            if (cellWidth * 2 + with(density) { 8.dp.roundToPx() } <= constraints.maxWidth) 2 else 1
+        val resolvedColumns = columns ?: if (cellWidth * 2 + with(density) { 8.dp.roundToPx() } <= constraints.maxWidth) 2 else 1
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            metrics.chunked(columns).forEach { pair ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            metrics.chunked(resolvedColumns).forEach { pair ->
+                Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     pair.forEach { (label, value) ->
                         Surface(
-                            Modifier.weight(1f),
+                            Modifier.weight(1f).fillMaxHeight(),
                             shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
                             color = MaterialTheme.colorScheme.surfaceContainerLow,
                         ) {
                             Column(
-                                Modifier.padding(12.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                                Modifier.padding(if (resolvedColumns == 3) 8.dp else 12.dp),
+                                verticalArrangement = Arrangement.SpaceBetween,
                             ) {
                                 BeaconText(
                                     label,
@@ -299,7 +302,7 @@ fun SettingsMetricGrid(metrics: List<Pair<String, String>>) {
                             }
                         }
                     }
-                    if (columns == 2 && pair.size == 1) Spacer(Modifier.weight(1f))
+                    repeat(resolvedColumns - pair.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         }

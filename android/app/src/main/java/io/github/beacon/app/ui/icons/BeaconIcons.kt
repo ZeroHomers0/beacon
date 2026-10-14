@@ -8,6 +8,9 @@ import androidx.compose.ui.unit.dp
 
 /** Material Symbols Rounded (Apache-2.0), except the original receive-mode drawings below. */
 object BeaconIcons {
+    // Original floppy-disk drawing for toolbar save actions.
+    val Save = vector("Save", 24f, 24f,
+        "M3 3h14l4 4v14H3V3Zm2 2v14h14V7.8L16.2 5H15v6H7V5H5Zm4 0v4h4V5H9Zm-2 8h10v4H7v-4Z")
     // Archive box with an upward arrow for portable settings and message backups.
     val Backup =
         vector(

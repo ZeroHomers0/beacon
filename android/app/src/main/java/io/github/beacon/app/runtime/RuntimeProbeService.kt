@@ -473,6 +473,7 @@ class RuntimeProbeService : Service() {
                             io.github.beacon.app.ipc.RuntimeProtocol.BIND_DEVICE,
                             io.github.beacon.app.ipc.RuntimeProtocol.COPY_PUSH_KEY,
                             io.github.beacon.app.ipc.RuntimeProtocol.PREVIEW_CLEANUP,
+                            io.github.beacon.app.ipc.RuntimeProtocol.CHECKPOINT_STORAGE,
                             io.github.beacon.app.ipc.RuntimeProtocol.APPLY_CLEANUP,
                             io.github.beacon.app.ipc.RuntimeProtocol.CLEANUP_SETTINGS,
                             io.github.beacon.app.ipc.RuntimeProtocol.RECEIVE_PLAN,
@@ -1006,6 +1007,16 @@ class RuntimeProbeService : Service() {
                     }
                     return true
                 }
+                if (code == io.github.beacon.app.ipc.RuntimeProtocol.CHECKPOINT_STORAGE) {
+                    if (data.dataAvail() != 0) throw SecurityException("Unexpected payload")
+                    val complete = worker.submit<Boolean> { store.checkpointWal() }
+                        .get(45, java.util.concurrent.TimeUnit.SECONDS)
+                    requireNotNull(reply).apply {
+                        writeNoException()
+                        writeInt(if (complete) 1 else 0)
+                    }
+                    return true
+                }
                 if (code == io.github.beacon.app.ipc.RuntimeProtocol.APPLY_CLEANUP) {
                     val token =
                         requireNotNull(data.readString()).also { require(it.length in 1..64) }
@@ -1480,7 +1491,7 @@ class RuntimeProbeService : Service() {
                                                 SyncReport(
                                                     SyncOutcome.OK,
                                                     if (config.enabled) "接收设置已保存，正在应用调度"
-                                                    else "自动接收已暂停；保留历史和待确认接收记录，可主动手动同步",
+                                                    else "自动接收已暂停；保留历史和待回传记录，可主动手动同步",
                                                 )
                                             }
                                             code == NOTIFY ->

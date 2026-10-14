@@ -14,152 +14,92 @@ import io.github.beacon.app.ui.icons.BeaconIcons
 import java.util.Locale
 
 @Composable
-internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions) {
-    var saved by remember { mutableStateOf(QuietHours()) }
-    var draft by remember { mutableStateOf(saved) }
-    var start by remember { mutableStateOf("22:00") }
-    var end by remember { mutableStateOf("08:00") }
-    var loaded by remember { mutableStateOf(false) }
-    var saving by remember { mutableStateOf(false) }
-    var failed by remember { mutableStateOf(false) }
-    var saveConfirmed by remember { mutableStateOf(false) }
-    var attempt by remember { mutableIntStateOf(0) }
-    fun reset(value: QuietHours) {
-        saved = value
-        draft = value
-        start = formatMinute(value.startMinute)
-        end = formatMinute(value.endMinute)
-    }
-    LaunchedEffect(state.runtimeConnected, attempt) {
-        loaded = false
-        saving = false
-        failed = false
-        if (state.runtimeConnected)
-            actions.quietHours(null, onFailure = { failed = true }) {
-                reset(it)
-                loaded = true
-            }
-    }
-    val first = parseMinute(start)
-    val last = parseMinute(end)
-    val valid = first != null && last != null && first != last && draft.weekdays != 0
-    // The two time fields live outside [draft], so the pending value must fold them back in before
-    // it can be compared with what is saved; otherwise editing only a time leaves save disabled.
-    val changed =
-        draft.copy(
-            startMinute = first ?: draft.startMinute,
-            endMinute = last ?: draft.endMinute,
-        ) != saved
-    val editable = loaded && !saving && state.runtimeConnected
-    val labels = stringResource(R.string.quiet_weekdays).split(",")
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        UiSection(stringResource(R.string.quiet_title)) {
-            BeaconPreferenceToggle(
-                stringResource(R.string.quiet_enable),
-                stringResource(R.string.quiet_description),
-                draft.enabled,
-                enabled = editable,
-            ) {
-                draft = draft.copy(enabled = it)
-            }
-            BeaconDropdownPreference(
-                stringResource(R.string.quiet_behavior),
-                listOf(
-                    stringResource(R.string.quiet_silent),
-                    stringResource(R.string.quiet_save_only),
-                ),
-                draft.behavior.ordinal,
-                enabled = editable,
-            ) {
-                draft = draft.copy(behavior = QuietHoursBehavior.entries[it])
-            }
-            SettingsHint(stringResource(R.string.quiet_behavior_hint))
+internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions, form: QuietHoursFormState = remember { QuietHoursFormState() }) {
+    with(form) {
+        LaunchedEffect(state.runtimeConnected, attempt) {
+            loaded = false
+            saving = false
+            failed = false
+            if (state.runtimeConnected)
+                actions.quietHours(null, onFailure = { failed = true }) {
+                    reset(it)
+                    loaded = true
+                }
         }
-        UiSection(stringResource(R.string.quiet_schedule)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                BeaconTimePreference(
-                    start,
-                    { start = it },
-                    stringResource(R.string.quiet_start),
-                    Modifier.weight(1f),
+        val editable = loaded && !saving && state.runtimeConnected
+        val labels = stringResource(R.string.quiet_weekdays).split(",")
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            UiSection(stringResource(R.string.quiet_title)) {
+                BeaconPreferenceToggle(
+                    stringResource(R.string.quiet_enable),
+                    stringResource(R.string.quiet_description),
+                    draft.enabled,
                     enabled = editable,
-                )
-                BeaconTimePreference(
-                    end,
-                    { end = it },
-                    stringResource(R.string.quiet_end),
-                    Modifier.weight(1f),
+                ) {
+                    draft = draft.copy(enabled = it)
+                }
+                BeaconDropdownPreference(
+                    stringResource(R.string.quiet_behavior),
+                    listOf(
+                        stringResource(R.string.quiet_silent),
+                        stringResource(R.string.quiet_save_only),
+                    ),
+                    draft.behavior.ordinal,
                     enabled = editable,
-                )
+                ) {
+                    draft = draft.copy(behavior = QuietHoursBehavior.entries[it])
+                }
+                SettingsHint(stringResource(R.string.quiet_behavior_hint))
             }
-            SettingsHint(stringResource(R.string.quiet_time_hint))
-            ActionFlow {
-                labels.forEachIndexed { index, label ->
-                    val bit = 1 shl index
-                    BeaconFilterChip(
-                        draft.weekdays and bit != 0,
-                        { draft = draft.copy(weekdays = draft.weekdays xor bit) },
-                        { BeaconText(label) },
+            UiSection(stringResource(R.string.quiet_schedule)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    BeaconTimePreference(
+                        start,
+                        { start = it },
+                        stringResource(R.string.quiet_start),
+                        Modifier.weight(1f),
+                        enabled = editable,
+                    )
+                    BeaconTimePreference(
+                        end,
+                        { end = it },
+                        stringResource(R.string.quiet_end),
+                        Modifier.weight(1f),
                         enabled = editable,
                     )
                 }
-            }
-            SettingsHint(stringResource(R.string.quiet_day_hint))
-            if (loaded && !valid)
-                BeaconText(
-                    stringResource(R.string.quiet_invalid),
-                    color = MaterialTheme.colorScheme.error,
-                )
-            if (failed) {
-                BeaconText(state.status.text, color = MaterialTheme.colorScheme.error)
-                BeaconActionButton(
-                    stringResource(R.string.action_retry),
-                    BeaconIcons.History,
-                    Modifier.fillMaxWidth(),
-                    !saving && state.runtimeConnected,
-                ) {
-                    failed = false
-                    attempt++
-                }
-            }
-            if (loaded) BeaconSaveFeedback(
-                changed = changed, saving = saving, failed = failed, saved = saveConfirmed,
-            )
-            BeaconActionPair(
-                dismiss = {
-                    BeaconCancelButton(
-                        enabled = editable && (changed || !valid),
-                        onClick = {
-                            reset(saved)
-                            failed = false
-                            saveConfirmed = false
-                        },
-                    )
-                },
-                confirm = {
-                    BeaconButton(
-                        enabled = editable && valid && changed,
-                        onClick = {
-                            saving = true
-                            failed = false
-                            saveConfirmed = false
-                            actions.quietHours(
-                                draft.copy(startMinute = first!!, endMinute = last!!),
-                                onFailure = {
-                                    saving = false
-                                    failed = true
-                                },
-                            ) {
-                                reset(it)
-                                saving = false
-                                saveConfirmed = true
-                            }
-                        },
-                    ) {
-                        BeaconText(stringResource(R.string.action_save))
+                SettingsHint(stringResource(R.string.quiet_time_hint))
+                ActionFlow {
+                    labels.forEachIndexed { index, label ->
+                        val bit = 1 shl index
+                        BeaconFilterChip(
+                            draft.weekdays and bit != 0,
+                            { draft = draft.copy(weekdays = draft.weekdays xor bit) },
+                            { BeaconText(label) },
+                            enabled = editable,
+                        )
                     }
-                },
-            )
+                }
+                SettingsHint(stringResource(R.string.quiet_day_hint))
+                if (loaded && !valid)
+                    BeaconText(
+                        stringResource(R.string.quiet_invalid),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                if (failed) {
+                    BeaconText(state.status.text, color = MaterialTheme.colorScheme.error)
+                    BeaconActionButton(
+                        stringResource(R.string.action_retry),
+                        BeaconIcons.History,
+                        Modifier.fillMaxWidth(),
+                        !saving && state.runtimeConnected,
+                    ) {
+                        failed = false
+                        attempt++
+                    }
+                }
+
+            }
         }
     }
 }

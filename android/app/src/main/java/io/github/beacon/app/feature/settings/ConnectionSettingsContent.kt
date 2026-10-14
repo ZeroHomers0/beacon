@@ -24,16 +24,11 @@ import io.github.beacon.app.domain.model.BindingRequest
 import io.github.beacon.app.domain.model.RuntimeState
 import io.github.beacon.app.ipc.RuntimeActions
 import io.github.beacon.app.ui.components.BeaconActionButton
-import io.github.beacon.app.ui.components.BeaconActionPair
-import io.github.beacon.app.ui.components.BeaconSaveFeedback
 import io.github.beacon.app.ui.components.BeaconButton
-import io.github.beacon.app.ui.components.BeaconCancelButton
 import io.github.beacon.app.ui.components.BeaconText
 import io.github.beacon.app.ui.components.BeaconTextField
 import io.github.beacon.app.ui.components.DiagnosticRow
-import io.github.beacon.app.ui.components.NotificationPermissionState
 import io.github.beacon.app.ui.components.SettingsHint
-import io.github.beacon.app.ui.components.SettingsScreen
 import io.github.beacon.app.ui.components.UiSection
 import io.github.beacon.app.ui.components.connectionStatusLabel
 import io.github.beacon.app.ui.components.formatMessageTime
@@ -46,21 +41,11 @@ internal fun LazyListScope.connectionSettingsItems(
     actions: RuntimeActions,
     connectionForm: ConnectionFormState,
     connectionDirty: Boolean,
-    notificationPermission: NotificationPermissionState,
-    onNavigate: (SettingsScreen) -> Unit,
     busy: Boolean,
     context: Context,
     focus: FocusManager,
     bindingFormatHint: String,
 ) {
-    item {
-        SetupChecklistPanel(
-            runtimeState,
-            notificationPermission == NotificationPermissionState.ALLOWED,
-            actions,
-            { onNavigate(SettingsScreen.NOTIFICATIONS) },
-        )
-    }
     item {
         UiSection(stringResource(R.string.server_status_title)) {
             Row(
@@ -167,59 +152,42 @@ internal fun LazyListScope.connectionSettingsItems(
                     connectionForm.connectionError,
                     color = MaterialTheme.colorScheme.error,
                 )
-            BeaconSaveFeedback(changed = connectionDirty, saving = connectionDirty && busy)
-            BeaconActionPair(
-                dismiss = {
-                    BeaconCancelButton(
-                        modifier = Modifier.heightIn(min = 48.dp),
-                        enabled = !busy && connectionDirty,
-                        onClick = {
-                            connectionForm.endpoint = runtimeState.configuredEndpoint
-                            connectionForm.bindingCode = ""
-                            connectionForm.connectionEdited = false
-                            connectionForm.connectionError = ""
+            BeaconButton(
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                enabled =
+                    !busy &&
+                        connectionDirty &&
+                        connectionForm.endpoint.isNotBlank() &&
+                        connectionForm.bindingCode.isNotBlank(),
+                onClick = {
+                    run {
+                        val request =
+                            BindingRequest(
+                                connectionForm.endpoint.trim(),
+                                connectionForm.bindingCode
+                                    .trim()
+                                    .lowercase(java.util.Locale.ROOT),
+                                connectionForm.deviceName.trim(),
+                            )
+                        try {
+                            request.validate(BuildConfig.DEBUG)
                             focus.clearFocus()
-                        },
-                    )
-                },
-                confirm = {
-                    BeaconButton(
-                        modifier = Modifier.heightIn(min = 48.dp),
-                        enabled =
-                            !busy &&
-                                connectionDirty &&
-                                connectionForm.endpoint.isNotBlank() &&
-                                connectionForm.bindingCode.isNotBlank(),
-                        onClick = {
-                            run {
-                                val request =
-                                    BindingRequest(
-                                        connectionForm.endpoint.trim(),
-                                        connectionForm.bindingCode
-                                            .trim()
-                                            .lowercase(java.util.Locale.ROOT),
-                                        connectionForm.deviceName.trim(),
-                                    )
-                                try {
-                                    request.validate(BuildConfig.DEBUG)
-                                    focus.clearFocus()
-                                    actions.bindDevice(request) {
-                                        connectionForm.endpoint = request.endpoint
-                                        connectionForm.bindingCode = ""
-                                        connectionForm.connectionEdited = false
-                                        connectionForm.connectionError = ""
-                                    }
-                                } catch (_: Exception) {
-                                    connectionForm.connectionError = bindingFormatHint
-                                }
-                                return@BeaconButton
+                            actions.bindDevice(request) {
+                                connectionForm.endpoint = request.endpoint
+                                connectionForm.bindingCode = ""
+                                connectionForm.connectionEdited = false
+                                connectionForm.connectionError = ""
                             }
-                        },
-                    ) {
-                        BeaconText(stringResource(R.string.binding_action))
+                        } catch (_: Exception) {
+                            connectionForm.connectionError = bindingFormatHint
+                        }
+                        return@BeaconButton
                     }
                 },
-            )
+            ) {
+                BeaconText(stringResource(R.string.binding_action))
+            }
+
             BeaconActionButton(
                 stringResource(R.string.binding_copy_push_address),
                 BeaconIcons.Copy,
@@ -249,6 +217,5 @@ internal fun LazyListScope.connectionSettingsItems(
             runtimeState.configuredEndpoint,
         )
     }
-    item { CredentialRotationPanel(runtimeState, actions, connectionForm) }
     item { ClearConnectionPanel(runtimeState, actions, connectionForm) }
 }

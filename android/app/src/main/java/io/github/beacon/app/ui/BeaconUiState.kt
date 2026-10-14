@@ -38,8 +38,8 @@ class BeaconUiState(
 
     val connectionForm = ConnectionFormState()
     val receptionForm = io.github.beacon.app.feature.settings.ReceptionFormState()
+    val quietHoursForm = io.github.beacon.app.feature.settings.QuietHoursFormState()
     val updateState = io.github.beacon.app.feature.settings.UpdateCheckState()
-    var pendingReceiveMode by mutableStateOf<io.github.beacon.app.domain.model.ReceiveMode?>(null)
 
     private val uiStyleState = mutableStateOf(styleStore.load())
 
@@ -129,7 +129,6 @@ class BeaconUiState(
         actions.closeDetail()
     }
 
-    var pendingPage by mutableStateOf<Int?>(null)
     var supportPreview by mutableStateOf<String?>(null)
     var operationDetails by mutableStateOf<String?>(null)
     var reportCopied by mutableStateOf(false)
@@ -154,15 +153,7 @@ class BeaconUiState(
 
     fun navigate(actions: RuntimeActions, runtime: RuntimeState, index: Int) {
         closeDetail(actions)
-        val leavingDirtyConnection =
-            page == 1 &&
-                settingsScreen == SettingsScreen.CONNECTION &&
-                !runtime.messageBusy &&
-                connectionDirty(runtime)
-        if (leavingDirtyConnection) pendingPage = index
-        else {
-            finishNavigation(index)
-        }
+        finishNavigation(index)
     }
 
     private class SavedStateProperty<T>(

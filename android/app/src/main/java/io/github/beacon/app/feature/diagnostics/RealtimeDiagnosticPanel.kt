@@ -45,18 +45,6 @@ internal fun RealtimeDiagnosticPanel(
                 }
             ),
         )
-        DiagnosticRow(
-            stringResource(R.string.realtime_diag_attempts_label),
-            stringResource(
-                R.string.realtime_diag_attempts_value,
-                diagnostics.attempts,
-                diagnostics.retries,
-            ),
-        )
-        DiagnosticRow(
-            stringResource(R.string.realtime_diag_connected_at_label),
-            time(diagnostics.connectedAtMs),
-        )
         BeaconActionButton(
             stringResource(R.string.realtime_retry),
             BeaconIcons.Realtime,
@@ -87,20 +75,6 @@ internal fun RealtimeDiagnosticPanel(
                 }
             ),
         )
-        DiagnosticRow(
-            stringResource(R.string.realtime_diag_recovery_at_label),
-            time(state.recovery.atMs),
-        )
-        if (state.recovery.attempts > 0)
-            DiagnosticRow(
-                stringResource(R.string.realtime_diag_recovery_attempts_label),
-                state.recovery.attempts.toString(),
-            )
         SettingsHint(stringResource(R.string.realtime_diag_recovery_note))
     }
 }
-
-@Composable
-private fun time(value: Long): String =
-    if (value <= 0) stringResource(R.string.realtime_diag_recovery_none)
-    else java.text.DateFormat.getDateTimeInstance().format(java.util.Date(value))

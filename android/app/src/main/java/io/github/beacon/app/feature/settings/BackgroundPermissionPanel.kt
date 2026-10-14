@@ -27,7 +27,6 @@ fun BackgroundPermissionPanel() {
     var restricted by remember { mutableStateOf<Boolean?>(null) }
     var exempt by remember { mutableStateOf<Boolean?>(null) }
     var unavailable by remember { mutableStateOf(false) }
-    var refreshed by remember { mutableStateOf(false) }
     fun refresh() {
         restricted =
             runCatching {
@@ -102,39 +101,23 @@ fun BackgroundPermissionPanel() {
                 ),
             )
             SettingsHint(stringResource(R.string.background_restriction_hint))
-            BeaconActionPair(
-                dismiss = {
-                    BeaconOutlinedButton(onClick = { appDetails() }) {
-                        BeaconText(stringResource(R.string.background_open_app_settings))
-                    }
-                },
-                confirm = {
-                    BeaconButton(
-                        onClick = {
-                            openSettings(
-                                Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-                            )
-                        }
-                    ) {
-                        BeaconText(stringResource(R.string.background_open_battery_settings))
-                    }
-                },
-            )
+            BeaconButton(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = {
+                    openSettings(
+                        Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                    )
+                }
+            ) {
+                BeaconText(stringResource(R.string.background_open_battery_settings))
+            }
+
         }
         if (unavailable)
             BeaconText(
                 stringResource(R.string.background_settings_unavailable),
                 color = MaterialTheme.colorScheme.error,
             )
-        BeaconOutlinedButton(
-            onClick = {
-                refresh()
-                refreshed = true
-            },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            BeaconText(stringResource(R.string.action_refresh_status))
-        }
-        if (refreshed) SettingsHint(resources.getString(R.string.settings_refresh_done))
+
     }
 }

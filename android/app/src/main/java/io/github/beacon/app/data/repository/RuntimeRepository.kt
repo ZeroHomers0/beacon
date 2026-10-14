@@ -879,7 +879,24 @@ class RuntimeRepository : RuntimeActions {
         connection.execute(
             { RuntimeMessageClient(it).pendingReminderCount() },
             onReady,
-            { setStatus(OperationStatus.result("待显示通知数量读取失败，请重试")) },
+            { setStatus(OperationStatus.result("待通知数量读取失败，请重试")) },
+        )
+    }
+
+    override fun checkpointStorage() {
+        if (state.value.messageBusy || !ready()) return
+        mutableState.update { it.copy(dataBusy = true) }
+        connection.execute(
+            { RuntimeMessageClient(it).checkpointStorage() },
+            { complete ->
+                mutableState.update { it.copy(dataBusy = false) }
+                setStatus(OperationStatus.result(
+                    if (complete) "临时日志已清理，消息与接收记录保留"
+                    else "临时日志暂时被占用，请稍后重试",
+                ))
+                state.value.cleanupPolicy?.let(::previewCleanup)
+            },
+            { error -> failData("临时日志清理失败：${OperationFailure.describe(error, crossProcess = true)}") },
         )
     }
 
@@ -947,7 +964,7 @@ class RuntimeRepository : RuntimeActions {
                         else selected.copy(isRead = request.action == MessageAction.MARK_READ)
                     val text =
                         when (request.action) {
-                            MessageAction.MARK_READ -> "已标为已读 ${result.changed} 条；待显示通知与接收确认记录保留"
+                            MessageAction.MARK_READ -> "已标为已读 ${result.changed} 条；待通知与接收确认记录保留"
                             MessageAction.MARK_UNREAD -> "已标为未读 ${result.changed} 条；不会重新提醒"
                             MessageAction.DELETE -> "已删除 ${result.changed} 条本地消息"
                         }
@@ -1042,7 +1059,7 @@ class RuntimeRepository : RuntimeActions {
                 transportBusy = true,
                 status =
                     OperationStatus.pending(
-                        if (notifyOnly) "正在处理待显示通知"
+                        if (notifyOnly) "正在处理待通知"
                         else if (settings == null) "正在同步" else "正在保存连接配置"
                     ),
             )
@@ -1145,6 +1162,40 @@ class RuntimeRepository : RuntimeActions {
             },
             { error ->
                 failTransport("接收设置失败（${OperationFailure.describe(error, crossProcess = true)}）")
+            },
+        )
+    }
+
+    override fun saveReception(plan: ReceivePlan, polling: PollingConfig) {
+        if (state.value.messageBusy || !ready()) return
+        plan.validate()
+        polling.validate()
+        val current = state.value
+        mutableState.update { it.copy(transportBusy = true) }
+        connection.execute(
+            { binder ->
+                val client = RuntimeControlClient(binder)
+                // Apply both halves on the same serial executor, then read the confirmed snapshot.
+                if (polling != current.pollingState.config) client.setPolling(polling)
+                val confirmed = client.receivePlan(if (plan != current.receivePlan) plan else null)
+                binder.request(RuntimeProtocol.RECONCILE_POLLING) { Unit }
+                confirmed
+            },
+            { result ->
+                mutableState.update {
+                    it.copy(
+                        transportBusy = false, receivePlan = result.plan, receivePlanLoaded = true,
+                        pollingState = result.polling, realtimeStatus = result.status,
+                        realtimeRunning = result.running, realtimeDiagnostics = result.diagnostics,
+                        recovery = result.recovery,
+                    )
+                }
+                launchRealtime()
+                receivePlan()
+            },
+            { error ->
+                failTransport("接收设置保存或调度失败：${OperationFailure.describe(error, crossProcess = true)}")
+                receivePlan()
             },
         )
     }

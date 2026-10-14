@@ -25,6 +25,16 @@ internal class MessageCleanupStore(
 
     private var preparedCleanup: PreparedCleanup? = null
 
+    /** Merge committed WAL pages and truncate the log through SQLite, never unlink live files. */
+    fun checkpointWal(): Boolean {
+        val db = helper.writableDatabase
+        check(!db.inTransaction())
+        return db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE)", null).use { cursor ->
+            check(cursor.moveToFirst())
+            cursor.getInt(0) == 0
+        }
+    }
+
     /** Invalidate any outstanding preview, e.g. when the message set changed underneath it. */
     fun discardPreview() {
         preparedCleanup = null

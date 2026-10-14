@@ -142,15 +142,22 @@ fun MessageDetailScreen(
                             )
                         }
                     MessageMarkdownBody(message.body)
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                    MessageMediaPanel(message.bark)
+                    val hasMedia = remember(message.bark) {
+                        runCatching { org.json.JSONObject(message.bark) }.getOrNull()?.let {
+                            it.optString("image").isNotBlank() || it.optString("icon").isNotBlank()
+                        } == true
+                    }
+                    if (hasMedia) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        MessageMediaPanel(message.bark)
+                    }
                     Row(
                         Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         BeaconText(
-                            detailTime(message.createdAtMs, missing),
+                            stringResource(R.string.msg_detail_sent_time_label) + " · " + detailTime(message.createdAtMs, missing),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

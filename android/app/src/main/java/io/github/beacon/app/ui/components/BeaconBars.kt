@@ -91,25 +91,7 @@ fun BeaconFilterChip(
     enabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
-    if (miuix())
-        top.yukonga.miuix.kmp.basic.Button(
-            onClick,
-            modifier.semantics { this.selected = selected },
-            enabled = enabled,
-            minHeight = 48.dp,
-            colors =
-                if (selected) top.yukonga.miuix.kmp.basic.ButtonDefaults.buttonColorsPrimary()
-                else top.yukonga.miuix.kmp.basic.ButtonDefaults.buttonColors(),
-        ) {
-            val color =
-                if (selected) top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onPrimary
-                else top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSecondaryVariant
-            CompositionLocalProvider(
-                top.yukonga.miuix.kmp.theme.LocalContentColor provides color,
-                androidx.compose.material3.LocalContentColor provides color,
-            ) {
-                label()
-            }
-        }
-    else androidx.compose.material3.FilterChip(selected, onClick, label, modifier = modifier, enabled = enabled)
+    val buttonModifier = modifier.semantics { this.selected = selected }
+    if (selected) BeaconButton(onClick, buttonModifier, enabled) { label() }
+    else BeaconOutlinedButton(onClick, buttonModifier, enabled) { label() }
 }
