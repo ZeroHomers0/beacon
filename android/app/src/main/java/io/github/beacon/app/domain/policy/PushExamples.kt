@@ -3,6 +3,23 @@ package io.github.beacon.app.domain.policy
 import java.net.URI
 
 object PushExamples {
+    /**
+     * The native entry point a sending application posts to. The address deliberately carries no
+     * credential: an application token is shown once at creation and never leaves the server, so
+     * the caller keeps it and adds its own `Authorization: Bearer` header.
+     */
+    fun nativeEndpoint(endpoint: String): String {
+        val uri = URI(endpoint)
+        require(
+            uri.scheme in listOf("https", "http") &&
+                uri.host != null &&
+                uri.rawUserInfo == null &&
+                uri.rawQuery == null &&
+                uri.rawFragment == null
+        )
+        return endpoint.trimEnd('/') + "/api/v1/push"
+    }
+
     fun create(address: String, powershell: Boolean): String {
         validate(address)
         val url = address.trimEnd('/') + "/Beacon/Hello%20from%20Beacon"

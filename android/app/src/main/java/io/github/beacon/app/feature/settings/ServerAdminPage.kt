@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.beacon.app.R
+import io.github.beacon.app.domain.policy.PushExamples
 import io.github.beacon.app.ui.components.*
 import io.github.beacon.app.ui.icons.BeaconIcons
 
@@ -58,6 +59,9 @@ internal fun ServerAdminPage(
     var deletingDevice by remember { mutableStateOf<AdminDevice?>(null) }
     var confirmTest by remember { mutableStateOf(false) }
     var copied by remember { mutableStateOf(false) }
+    // Copying an application address leaves no other trace on screen, so the card that owns the
+    // action confirms it in place.
+    var copiedApplication by remember { mutableStateOf("") }
     var bindingSubmitted by rememberSaveable { mutableStateOf(false) }
     val currentBind by rememberUpdatedState(onUseBinding)
     val currentCanBind by rememberUpdatedState(canBindCurrent && defaultEndpoint.isBlank())
@@ -89,14 +93,16 @@ internal fun ServerAdminPage(
             model.dismissFeedback()
         }
     }
-    fun copy(value: String) {
-        copied =
+    fun copy(value: String, label: Int = R.string.admin_title): Boolean {
+        val accepted =
             copyToClipboard(
                 context,
-                resources.getString(R.string.admin_title),
+                resources.getString(label),
                 value,
                 sensitive = true,
             )
+        copied = accepted
+        return accepted
     }
     BeaconSettingsList(
         state = scroll,
@@ -331,6 +337,7 @@ internal fun ServerAdminPage(
                                 priority = PRIORITY_TIERS[it]
                             }
                             SettingsHint(stringResource(R.string.admin_application_hint))
+                            SettingsHint(stringResource(R.string.admin_application_address_hint))
                             BeaconActionButton(
                                 stringResource(R.string.admin_create_application),
                                 BeaconIcons.CredentialUpdate,
@@ -360,6 +367,29 @@ internal fun ServerAdminPage(
                                     else R.string.admin_active
                                 ),
                             )
+                            if (!app.revoked)
+                                BeaconActionButton(
+                                    stringResource(R.string.admin_copy_application_address),
+                                    BeaconIcons.Copy,
+                                    Modifier.fillMaxWidth(),
+                                    !state.busy,
+                                ) {
+                                    copiedApplication = ""
+                                    val address = runCatching {
+                                        PushExamples.nativeEndpoint(state.endpoint)
+                                    }
+                                        .getOrNull()
+                                    if (
+                                        address != null &&
+                                            copy(
+                                                address,
+                                                R.string.settings_clipboard_push_address,
+                                            )
+                                    )
+                                        copiedApplication = app.id
+                                }
+                            if (copiedApplication == app.id)
+                                SettingsHint(stringResource(R.string.settings_copied_hint))
                             if (!app.revoked)
                                 BeaconDangerButton(
                                     onClick = { pendingApplication = app },
