@@ -195,7 +195,6 @@
     <string name="receive_fallback_title">省电回退设置</string>
     <string name="receive_fallback_hint">未满足即时接收条件时，使用以下省电设置。</string>
     <string name="receive_actual_fallback">按已保存规则选择接收方式；低电量优先于时间段和充电 / Wi-Fi 条件。</string>
-    <string name="receive_mode_realtime_title">即时接收设置</string>
     <string name="settings_background_permissions_title">后台权限</string>
     <string name="settings_background_permissions_desc">开启自启动，省电策略设为无限制</string>
     <string name="background_autostart_title">自启动</string>
@@ -287,13 +286,6 @@
     <string name="notification_channels">通知渠道</string>
     <string name="notification_copy_failed">复制失败</string>
     <string name="notification_channel_failed">无法打开渠道设置，请使用系统通知设置入口</string>
-    <string name="connection_help">配置与接收说明</string>
-    <string name="help_binding_title">绑定服务器</string>
-    <string name="help_mode_title">选择接收模式</string>
-    <string name="help_permission_title">检查权限与离线提醒</string>
-    <string name="help_binding_body">使用 HTTPS 根地址和单次绑定码绑定。绑定后可复制推送地址或示例；接收凭证与发送密钥不能互换。</string>
-    <string name="help_mode_body">省电按周期接收，即时通过 WebSocket 接收，规则按条件选择、未匹配时回退省电。手动同步可补收，重复消息自动去重。</string>
-    <string name="help_permission_body">通知权限、渠道、免打扰和过时规则共同控制提醒。仅保存不显示通知；后台延迟请检查后台权限。</string>
     <string name="channel_fresh">新消息提醒</string>
     <string name="channel_history">静音与历史消息</string>
     <string name="channel_runtime">自动接收运行状态</string>
@@ -581,8 +573,8 @@
     <string name="admin_database">数据库</string>
     <string name="admin_logout">退出管理</string>
     <string name="admin_refresh">刷新状态</string>
-    <string name="admin_applications">发送应用</string>
-    <string name="admin_test">测试推送</string>
+    <string name="admin_applications">应用</string>
+    <string name="admin_test">测试</string>
     <string name="admin_create_binding">创建绑定码</string>
     <string name="admin_device_name">设备名称</string>
     <string name="admin_binding_hint">10分钟内有效，仅能使用一次。其他手机请在「服务器配置」中填写地址与绑定码。</string>

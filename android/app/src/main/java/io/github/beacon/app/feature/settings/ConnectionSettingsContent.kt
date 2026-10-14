@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -246,26 +245,4 @@ internal fun LazyListScope.connectionSettingsItems(
     }
     item { CredentialRotationPanel(runtimeState, actions, connectionForm) }
     item { ClearConnectionPanel(runtimeState, actions, connectionForm) }
-    item { ConnectionHelpPanel() }
-}
-
-@Composable
-fun ConnectionHelpPanel() {
-    UiSection(stringResource(R.string.connection_help)) {
-        BeaconText(
-            stringResource(R.string.help_binding_title),
-            style = androidx.compose.material3.MaterialTheme.typography.titleSmall,
-        )
-        BeaconText(stringResource(R.string.help_binding_body))
-        BeaconText(
-            stringResource(R.string.help_mode_title),
-            style = androidx.compose.material3.MaterialTheme.typography.titleSmall,
-        )
-        BeaconText(stringResource(R.string.help_mode_body))
-        BeaconText(
-            stringResource(R.string.help_permission_title),
-            style = androidx.compose.material3.MaterialTheme.typography.titleSmall,
-        )
-        BeaconText(stringResource(R.string.help_permission_body))
-    }
 }

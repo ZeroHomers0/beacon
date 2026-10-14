@@ -61,11 +61,14 @@ fun ReceiveModeButton(
     onLongClick: () -> Unit,
     serverIssue: Boolean = false,
     checkingServer: Boolean = false,
+    connected: Boolean = receiving,
 ) {
-    val accent = if (serverIssue) MaterialTheme.colorScheme.error else receiveModeColor(mode)
+    val accent =
+        if (connected && !serverIssue && !checkingServer) receiveModeColor(mode)
+        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .6f)
     val description =
-        if (serverIssue) stringResource(R.string.server_warning_action)
-        else if (checkingServer) stringResource(R.string.server_checking)
+        if (checkingServer) stringResource(R.string.server_checking)
+        else if (serverIssue) stringResource(R.string.server_warning_action)
         else
             stringResource(R.string.settings_reception_page_title) +
                 " · " +
@@ -85,23 +88,20 @@ fun ReceiveModeButton(
             ),
         contentAlignment = Alignment.Center,
     ) {
-        if (receiving && !serverIssue && !checkingServer) {
-            Canvas(Modifier.matchParentSize().padding(1.dp)) {
-                val width = 1.5.dp.toPx()
-                drawCircle(
-                    color = accent.copy(alpha = .75f),
-                    radius = size.minDimension / 2 - width / 2,
-                    style = Stroke(width = width),
-                )
-            }
+        Canvas(Modifier.matchParentSize().padding(1.dp)) {
+            val width = 1.5.dp.toPx()
+            drawCircle(
+                color = accent.copy(alpha = .75f),
+                radius = size.minDimension / 2 - width / 2,
+                style = Stroke(width = width),
+            )
         }
         Box(
             Modifier.size(40.dp).background(accent.copy(alpha = .1f), CircleShape),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                if (serverIssue) BeaconIcons.Warning
-                else if (checkingServer) BeaconIcons.Sync else receiveModeIcon(mode),
+                receiveModeIcon(mode),
                 description,
                 Modifier.size(26.dp),
                 tint = accent,

@@ -383,14 +383,21 @@ fun MessageItem(
 
 /** Compact metadata with a full touch target, positioned directly beneath the title. */
 @Composable
-private fun MessageFilterTag(label: String, enabled: Boolean, onClick: () -> Unit) {
+internal fun MessageFilterTag(
+    label: String,
+    enabled: Boolean = true,
+    onClick: (() -> Unit)? = null,
+) {
     Box(
         Modifier.heightIn(min = 32.dp)
             .clip(RoundedCornerShape(8.dp))
-            .clickable(
-                enabled = enabled,
-                role = androidx.compose.ui.semantics.Role.Button,
-                onClick = onClick,
+            .then(
+                if (onClick == null) Modifier
+                else Modifier.clickable(
+                    enabled = enabled,
+                    role = androidx.compose.ui.semantics.Role.Button,
+                    onClick = onClick,
+                )
             )
             .padding(vertical = 4.dp),
         contentAlignment = Alignment.Center,

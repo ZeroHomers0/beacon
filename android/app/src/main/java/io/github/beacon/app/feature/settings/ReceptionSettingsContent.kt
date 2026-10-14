@@ -162,13 +162,6 @@ internal fun LazyListScope.receptionSettingsItems(
             }
         }
     }
-    if (receivePlan.mode == ReceiveMode.REALTIME) {
-        item {
-            UiSection(stringResource(R.string.receive_mode_realtime_title)) {
-                SettingsHint(stringResource(R.string.receive_mode_pending_hint))
-            }
-        }
-    }
     if (receivePlan.mode != ReceiveMode.REALTIME) {
         item {
             UiSection(

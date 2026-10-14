@@ -71,6 +71,8 @@ import io.github.beacon.app.ui.components.ReceiveModeButton
 import io.github.beacon.app.ui.components.SettingsScreen
 import io.github.beacon.app.ui.components.copyToClipboard
 import io.github.beacon.app.ui.components.rememberBeaconBarBehavior
+import io.github.beacon.app.ui.components.SETTINGS_NAVIGATION_DURATION_MS
+import io.github.beacon.app.ui.components.settingsNavigationEasing
 import io.github.beacon.app.ui.components.settingsGestureFraction
 import io.github.beacon.app.ui.components.userOperationFeedback
 import io.github.beacon.app.ui.icons.BeaconIcons
@@ -350,6 +352,24 @@ fun BeaconApp(
         val settingsMotion = remember { SeekableTransitionState(ui.settingsScreen) }
         val settingsTransition = rememberTransition(settingsMotion, label = "Settings navigation")
         LaunchedEffect(ui.settingsScreen) { settingsMotion.animateTo(ui.settingsScreen) }
+        val detailMotion = remember { SeekableTransitionState(runtimeState.selectedMessage) }
+        val detailTransition = rememberTransition(detailMotion, label = "Message navigation")
+        LaunchedEffect(runtimeState.selectedMessage) {
+            detailMotion.animateTo(runtimeState.selectedMessage)
+        }
+        val predictiveDetailBack =
+            runtimeState.selectedMessage != null && !runtimeState.messageBusy
+        PredictiveBackHandler(enabled = predictiveDetailBack) { events ->
+            val original = runtimeState.selectedMessage
+            try {
+                events.collect { event ->
+                    detailMotion.seekTo(settingsGestureFraction(event.progress), null)
+                }
+                ui.closeDetail(actions)
+            } catch (_: kotlinx.coroutines.CancellationException) {
+                uiScope.launch { detailMotion.animateTo(original) }
+            }
+        }
         val predictiveSettingsBack =
             ui.page == 1 &&
                 ui.settingsScreen != SettingsScreen.HOME &&
@@ -373,6 +393,7 @@ fun BeaconApp(
         BackHandler(
             enabled =
                 !predictiveSettingsBack &&
+                    !predictiveDetailBack &&
                     (runtimeState.selectedMessage != null ||
                         ui.page != 0 ||
                         ui.selectionMode ||
@@ -643,6 +664,11 @@ fun BeaconApp(
                                                                 runtimeState.serverReachable ==
                                                                     false),
                                                     checkingServer = runtimeState.serverChecking,
+                                                    connected =
+                                                        runtimeState.serverReachable == true &&
+                                                            (ui.receivePlan.mode !=
+                                                                io.github.beacon.app.domain.model.ReceiveMode.REALTIME ||
+                                                                runtimeState.realtimeRunning),
                                                 )
                                             }
                                         }
@@ -811,28 +837,29 @@ fun BeaconApp(
                     val listPadding =
                         PaddingValues(start = edge, end = edge, top = 12.dp, bottom = 24.dp)
                     val layoutDirection = androidx.compose.ui.platform.LocalLayoutDirection.current
-                    AnimatedContent(
-                        targetState = detail,
+                    detailTransition.AnimatedContent(
                         modifier = Modifier.fillMaxSize(),
                         contentKey = { it?.let { message -> MessageKey(message.server, message.id) } },
                         transitionSpec = {
                             val forward = targetState != null
                             val direction =
                                 if (layoutDirection == androidx.compose.ui.unit.LayoutDirection.Rtl) -1 else 1
-                            val motion = tween<androidx.compose.ui.unit.IntOffset>(300)
+                            val motion = tween<androidx.compose.ui.unit.IntOffset>(
+                                SETTINGS_NAVIGATION_DURATION_MS,
+                                easing = settingsNavigationEasing,
+                            )
                             val entry =
                                 slideInHorizontally(motion) {
                                     direction * if (forward) it else -it / 4
-                                } + fadeIn(tween(220))
+                                } + fadeIn(tween(SETTINGS_NAVIGATION_DURATION_MS, easing = settingsNavigationEasing))
                             val exit =
                                 slideOutHorizontally(motion) {
                                     direction * if (forward) -it / 4 else it
-                                } + fadeOut(tween(220))
+                                } + fadeOut(tween(SETTINGS_NAVIGATION_DURATION_MS, easing = settingsNavigationEasing))
                             (entry togetherWith exit)
                                 .apply { targetContentZIndex = if (forward) 1f else -1f }
                                 .using(androidx.compose.animation.SizeTransform(clip = true))
                         },
-                        label = "message-detail-navigation",
                     ) { detail ->
                         if (detail != null)
                             MessageDetailScreen(

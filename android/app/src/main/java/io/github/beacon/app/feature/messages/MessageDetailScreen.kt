@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package io.github.beacon.app.feature.messages
 
 import androidx.compose.foundation.layout.*
@@ -116,16 +118,21 @@ fun MessageDetailScreen(
                         }
                     }
                     if (message.group.isNotBlank() || message.applicationId.isNotBlank())
-                        BeaconText(
-                            listOf(
-                                    message.group,
-                                    message.applicationName.ifBlank { message.applicationId },
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            if (message.applicationId.isNotBlank())
+                                MessageFilterTag(
+                                    message.applicationName.ifBlank {
+                                        stringResource(
+                                            R.string.message_application_short,
+                                            message.applicationId.take(8),
+                                        )
+                                    }
                                 )
-                                .filter { it.isNotBlank() }
-                                .joinToString(" · "),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
+                            if (message.group.isNotBlank()) MessageFilterTag(message.group)
+                        }
                     if (message.subtitle.isNotBlank())
                         SelectionContainer {
                             BeaconText(

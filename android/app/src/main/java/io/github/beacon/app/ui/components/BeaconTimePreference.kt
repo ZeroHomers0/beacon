@@ -38,10 +38,10 @@ fun BeaconTimePreference(
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
     ) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             BeaconText(
                 label,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             key(value) {
@@ -94,11 +94,11 @@ fun BeaconTimePreference(
                     )
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        BeaconText(" ", style = MaterialTheme.typography.bodyMedium)
-                        Box(Modifier.height(132.dp), contentAlignment = Alignment.Center) {
-                            BeaconText(":", style = MaterialTheme.typography.headlineSmall)
+                        BeaconText(" ", style = MaterialTheme.typography.labelMedium)
+                        Box(Modifier.height(96.dp), contentAlignment = Alignment.Center) {
+                            BeaconText(":", style = MaterialTheme.typography.titleMedium)
                         }
                     }
                     TimeNumberWheel(
@@ -136,17 +136,17 @@ private fun TimeNumberWheel(
     Column(
         modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         BeaconText(
             label,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Box(Modifier.fillMaxWidth().height(132.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxWidth().height(96.dp), contentAlignment = Alignment.Center) {
             Box(
                 Modifier.fillMaxWidth()
-                    .height(44.dp)
+                    .height(32.dp)
                     .background(
                         MaterialTheme.colorScheme.primaryContainer,
                         RoundedCornerShape(10.dp),
@@ -155,7 +155,7 @@ private fun TimeNumberWheel(
             LazyColumn(
                 state = state,
                 modifier = Modifier.fillMaxSize().testTag(tag),
-                contentPadding = PaddingValues(vertical = 44.dp),
+                contentPadding = PaddingValues(vertical = 32.dp),
                 flingBehavior = rememberSnapFlingBehavior(state),
                 userScrollEnabled = enabled,
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -164,7 +164,7 @@ private fun TimeNumberWheel(
                     val text = String.format(Locale.ROOT, "%02d", number)
                     Box(
                         Modifier.fillMaxWidth()
-                            .height(44.dp)
+                            .height(32.dp)
                             .clickable(enabled = enabled) {
                                 scope.launch { state.animateScrollToItem(number) }
                             }
@@ -176,7 +176,7 @@ private fun TimeNumberWheel(
                     ) {
                         BeaconText(
                             text,
-                            style = MaterialTheme.typography.headlineSmall,
+                            style = MaterialTheme.typography.titleMedium,
                             color =
                                 if (number == selection)
                                     MaterialTheme.colorScheme.onPrimaryContainer

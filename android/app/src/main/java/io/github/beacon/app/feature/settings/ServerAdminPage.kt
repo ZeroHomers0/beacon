@@ -236,7 +236,14 @@ internal fun ServerAdminPage(
                                 BeaconFilterChip(
                                     selected = tab == index,
                                     onClick = { tab = index },
-                                    label = { BeaconText(stringResource(label)) },
+                                    label = {
+                                        Box(
+                                            Modifier.fillMaxWidth(),
+                                            contentAlignment = androidx.compose.ui.Alignment.Center,
+                                        ) {
+                                            BeaconText(stringResource(label), maxLines = 1)
+                                        }
+                                    },
                                     enabled = !state.busy,
                                     modifier = Modifier.weight(1f),
                                 )
