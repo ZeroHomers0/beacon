@@ -28,7 +28,10 @@ class NotificationReadReceiver : BroadcastReceiver() {
         executor.execute {
             try {
                 RuntimeMessageStore(context).use { store ->
-                    if (store.readFromNotification(keys) > 0) revision.incrementAndGet()
+                    if (store.readFromNotification(keys) > 0) {
+                        revision.incrementAndGet()
+                        io.github.beacon.app.runtime.RuntimeUiEvents.changed(context)
+                    }
                 }
                 context
                     .getSystemService(NotificationManager::class.java)
@@ -48,10 +51,10 @@ class NotificationReadReceiver : BroadcastReceiver() {
         if (servers.isEmpty() || servers.size != ids.size || servers.size > MESSAGE_LIMIT)
             return emptyList()
         return runCatching {
-                servers.indices.map { index ->
-                    MessageKey(servers[index].orEmpty(), ids[index].orEmpty()).also { it.validate() }
-                }
+            servers.indices.map { index ->
+                MessageKey(servers[index].orEmpty(), ids[index].orEmpty()).also { it.validate() }
             }
+        }
             .getOrNull()
             .orEmpty()
     }

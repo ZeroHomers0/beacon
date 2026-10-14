@@ -218,7 +218,10 @@ class RuntimeProbeService : Service() {
 
     /** Journals a recovery outcome; presentation must never take down reception. */
     private fun recordRecovery(status: RecoveryStatus, attempts: Int) {
-        runCatching { RecoveryStatusStore(this).record(status, attempts) }
+        runCatching {
+            RecoveryStatusStore(this).record(status, attempts)
+            RuntimeUiEvents.changed(this)
+        }
     }
 
     /** Only an explicit user stop or an explicit start may clear the bounded budget. */
@@ -318,6 +321,7 @@ class RuntimeProbeService : Service() {
         val enabledChanged = pollingState.config.enabled != revised.config.enabled
         val schedulingChanged = pollingState.shouldSchedule != revised.shouldSchedule
         pollingState = revised
+        RuntimeUiEvents.changed(this)
         reconcileSchedule()
 
         if (enabledChanged)
@@ -400,6 +404,8 @@ class RuntimeProbeService : Service() {
             }
         if (outcome == SyncOutcome.OK && allowed())
             networkWork.completed(expectedGeneration, android.os.SystemClock.elapsedRealtime())
+        // A failed or cancelled sync may have committed earlier pages. Refresh those too.
+        realtime.messagesChanged()
         if (automatic)
             saveState(
                 pollingState.copy(
@@ -1538,6 +1544,7 @@ class RuntimeProbeService : Service() {
                                                     "仅用于验证保存、去重与删除墓碑；不是服务器消息。",
                                                 )
                                             )
+                                        realtime.messagesChanged()
                                     }
                                     if (code == DELETE)
                                         store.remove(requireNotNull(server), requireNotNull(id))
@@ -1570,7 +1577,20 @@ class RuntimeProbeService : Service() {
             }
         }
 
-    override fun onBind(intent: Intent): IBinder = endpoint
+    override fun onBind(intent: Intent): IBinder {
+        RuntimeUiEvents.observe(this, true)
+        return endpoint
+    }
+
+    override fun onUnbind(intent: Intent): Boolean {
+        RuntimeUiEvents.observe(this, false)
+        return true
+    }
+
+    override fun onRebind(intent: Intent) {
+        super.onRebind(intent)
+        RuntimeUiEvents.observe(this, true)
+    }
 
     private fun writeMessage(reply: Parcel, message: IncomingMessage) {
         reply.writeString(message.server)
@@ -1606,6 +1626,7 @@ class RuntimeProbeService : Service() {
     }
 
     override fun onDestroy() {
+        RuntimeUiEvents.observe(this, false)
         serverProbe.shutdownNow()
         if (realtimeDelegate.isInitialized()) realtime.cancel()
         worker.execute {

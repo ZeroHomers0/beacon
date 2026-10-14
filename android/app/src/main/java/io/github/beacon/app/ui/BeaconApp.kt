@@ -128,7 +128,8 @@ fun BeaconApp(
         lifecycleOwner.lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.RESUMED) {
             while (true) {
                 actions.receivePlan()
-                delay(5000)
+                // Runtime events refresh changes immediately; this only repairs missed hints.
+                delay(60_000)
             }
         }
     }

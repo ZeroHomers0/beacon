@@ -2,12 +2,6 @@
 
 package io.github.beacon.app.ui.components
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -19,14 +13,12 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -95,18 +87,7 @@ fun ReceiveModeButton(
         contentAlignment = Alignment.Center,
     ) {
         if (receiving && !serverIssue && !checkingServer) {
-            val transition = rememberInfiniteTransition(label = "Reception running")
-            val rotation by
-                transition.animateFloat(
-                    initialValue = 0f,
-                    targetValue = 360f,
-                    animationSpec =
-                        infiniteRepeatable(tween(12000, easing = LinearEasing), RepeatMode.Restart),
-                    label = "Dashed ring rotation",
-                )
-            Canvas(
-                Modifier.matchParentSize().padding(1.dp).graphicsLayer { rotationZ = rotation }
-            ) {
+            Canvas(Modifier.matchParentSize().padding(1.dp)) {
                 val width = 1.5.dp.toPx()
                 drawCircle(
                     color = accent.copy(alpha = .75f),

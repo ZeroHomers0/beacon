@@ -64,6 +64,11 @@ internal class RealtimeRuntimeController(
 
     fun coalesceNetworkWork() = session?.coalesceNetworkWork()
 
+    fun messagesChanged() {
+        deliveryRevision++
+        RuntimeUiEvents.changed(service)
+    }
+
     // Evaluated on the runtime actor. A failed receipt must still get periodic HTTP recovery.
     val canSkipPeriodicSync: Boolean
         get() = running && receiptNamespace?.let { store.pendingIds(it).isEmpty() } == true
@@ -527,7 +532,7 @@ internal class RealtimeRuntimeController(
                                 if (saved == SaveResult.INSERTED) insertedInBatch++
                                 lastReceivedMs = System.currentTimeMillis()
                                 queueReceipts(settings, message.server, ::valid)
-                                deliveryRevision++
+                                messagesChanged()
                                 queueNotifications()
                             }
                             .get(45, TimeUnit.SECONDS)
@@ -617,6 +622,7 @@ internal class RealtimeRuntimeController(
     private var publishedStatus: String? = null
 
     private fun publishStatus() {
+        RuntimeUiEvents.changed(service)
         val text = status
         main.post {
             if (foreground && !destroyed && publishedStatus != text) {

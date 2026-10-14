@@ -12,17 +12,31 @@ import io.github.beacon.app.core.serialExecutor
 import io.github.beacon.app.domain.model.OperationStatus
 import io.github.beacon.app.domain.policy.OperationFailure
 
-/** Serial service-call executor with generation guards against callbacks from a released binding. */
+/**
+ * Serial service-call executor with generation guards against callbacks from a released binding.
+ */
 internal class RuntimeConnection(
     private val serviceClass: Class<*>,
     private val onStatus: (OperationStatus, Boolean) -> Unit,
     private val onConnected: () -> Unit,
+    private val onRuntimeChanged: () -> Unit = {},
 ) {
     private val worker = serialExecutor("beacon-ui-ipc")
     private val probeWorker = serialExecutor("beacon-ui-probe")
     private val main = Handler(Looper.getMainLooper())
     @Volatile private var binding: ServiceConnection? = null
     @Volatile private var binder: IBinder? = null
+    private var eventsContext: Context? = null
+    private val eventsReceiver =
+        object : android.content.BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                if (
+                    intent.action == io.github.beacon.app.runtime.RuntimeUiEvents.ACTION &&
+                        connected
+                )
+                    onRuntimeChanged()
+            }
+        }
     var context: Context? = null
         private set
 
@@ -49,7 +63,8 @@ internal class RuntimeConnection(
                                 val version = reply.readInt()
                                 val process = reply.readString()
                                 check(
-                                    pid > 0 && pid != android.os.Process.myPid() &&
+                                    pid > 0 &&
+                                        pid != android.os.Process.myPid() &&
                                         version == BuildConfig.VERSION_CODE &&
                                         process == app.packageName + ":runtime"
                                 )
@@ -108,6 +123,19 @@ internal class RuntimeConnection(
                 false,
             )
         }
+        if (binding === callback) {
+            runCatching {
+                androidx.core.content.ContextCompat.registerReceiver(
+                    app,
+                    eventsReceiver,
+                    android.content.IntentFilter(
+                        io.github.beacon.app.runtime.RuntimeUiEvents.ACTION
+                    ),
+                    androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED,
+                )
+                eventsContext = app
+            }
+        }
         main.postDelayed(
             {
                 if (binding === callback && binder == null)
@@ -151,6 +179,8 @@ internal class RuntimeConnection(
 
     fun stop(status: OperationStatus) {
         main.removeCallbacksAndMessages(null)
+        eventsContext?.let { runCatching { it.unregisterReceiver(eventsReceiver) } }
+        eventsContext = null
         val callback = binding ?: return
         binding = null
         binder = null

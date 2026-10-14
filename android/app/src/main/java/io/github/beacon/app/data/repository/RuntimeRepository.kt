@@ -14,9 +14,13 @@ import io.github.beacon.app.ipc.RuntimeMessageClient
 import io.github.beacon.app.ipc.RuntimeProtocol
 import io.github.beacon.app.ipc.request
 import io.github.beacon.app.runtime.RuntimeProbeService
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 /** Coordinates application operations; binding and the wire format live in ipc. */
 class RuntimeRepository : RuntimeActions {
@@ -28,6 +32,26 @@ class RuntimeRepository : RuntimeActions {
     private var backgroundListReleased = false
     private var preserveReadingWindow = false
     private var receivePlanInFlight = false
+    private var receivePlanRefreshPending = false
+    private var pendingMessageRefresh = false
+    private val refreshScope =
+        kotlinx.coroutines.CoroutineScope(
+            kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main.immediate
+        )
+
+    init {
+        refreshScope.launch {
+            state
+                .map { it.messageBusy }
+                .distinctUntilChanged()
+                .collect { busy ->
+                    if (!busy && pendingMessageRefresh) {
+                        pendingMessageRefresh = false
+                        receivePlan()
+                    }
+                }
+        }
+    }
 
     fun saveReadingAnchor(key: MessageKey?) {
         backgroundAnchor = key
@@ -61,6 +85,8 @@ class RuntimeRepository : RuntimeActions {
                 if (!connected) {
                     invalidateServerCheck()
                     receivePlanInFlight = false
+                    receivePlanRefreshPending = false
+                    pendingMessageRefresh = false
                 }
                 mutableState.update {
                     it.copy(
@@ -91,6 +117,7 @@ class RuntimeRepository : RuntimeActions {
                 refreshPolling()
                 receivePlan()
             },
+            onRuntimeChanged = { receivePlan() },
         )
 
     override fun start(context: Context) = connection.start(context)
@@ -201,7 +228,10 @@ class RuntimeRepository : RuntimeActions {
 
     override fun stop(status: OperationStatus) = connection.stop(status)
 
-    fun close() = connection.close()
+    fun close() {
+        refreshScope.cancel()
+        connection.close()
+    }
 
     /** Called only after the idle UI composition is disposed and its binding is released. */
     fun releaseBackgroundDetail() {
@@ -210,7 +240,12 @@ class RuntimeRepository : RuntimeActions {
         backgroundListReleased = true
         pageHistory = listOf(Long.MAX_VALUE)
         mutableState.update {
-            it.copy(messages = emptyList(), messagesLoaded = false, nextMessageCursor = null, cleanupPreview = null)
+            it.copy(
+                messages = emptyList(),
+                messagesLoaded = false,
+                nextMessageCursor = null,
+                cleanupPreview = null,
+            )
         }
     }
 
@@ -364,7 +399,11 @@ class RuntimeRepository : RuntimeActions {
             serverProbeInFlight = false
             serverCheckGeneration++
         }
-        if (!state.value.runtimeConnected || !connection.connected || !state.value.connectionSummaryLoaded) {
+        if (
+            !state.value.runtimeConnected ||
+                !connection.connected ||
+                !state.value.connectionSummaryLoaded
+        ) {
             // Remember the owed check until the connection summary has been read.
             pendingServerCheck = manual || pendingServerCheck == true
             return
@@ -642,6 +681,7 @@ class RuntimeRepository : RuntimeActions {
         injectTest: Boolean = false,
         delete: IncomingMessage? = null,
         showStatus: Boolean = true,
+        deliveryRevision: Long? = null,
     ) {
         if (state.value.messageBusy) return
         try {
@@ -681,6 +721,7 @@ class RuntimeRepository : RuntimeActions {
                         messageQuery = query.copy(before = Long.MAX_VALUE, anchor = null),
                         messagePageIndex = index,
                         messagesLoaded = true,
+                        deliveryRevision = deliveryRevision ?: it.deliveryRevision,
                         dataBusy = false,
                         status =
                             if (showStatus)
@@ -1107,14 +1148,20 @@ class RuntimeRepository : RuntimeActions {
 
     override fun receivePlan(value: ReceivePlan?) {
         if (!state.value.runtimeConnected || !connection.connected) return
-        if (value == null && receivePlanInFlight) return
+        if (value == null && receivePlanInFlight) {
+            receivePlanRefreshPending = true
+            return
+        }
         if (value != null && state.value.messageBusy) return
         receivePlanInFlight = true
         connection.execute(
             { RuntimeControlClient(it).receivePlan(value) },
             { result ->
                 receivePlanInFlight = false
+                val refreshAgain = receivePlanRefreshPending
+                receivePlanRefreshPending = false
                 val changed = result.deliveryRevision != state.value.deliveryRevision
+                pendingMessageRefresh = changed && state.value.messageBusy
                 val firstRead = !state.value.receivePlanLoaded
                 mutableState.update {
                     it.copy(
@@ -1124,21 +1171,32 @@ class RuntimeRepository : RuntimeActions {
                         realtimeRunning = result.running,
                         realtimeDiagnostics = result.diagnostics,
                         recovery = result.recovery,
-                        deliveryRevision = result.deliveryRevision,
+                        // Only the successful page read consumes a delivery revision. Busy
+                        // or failed reads must leave the next hint/fallback able to retry.
+                        deliveryRevision = it.deliveryRevision,
                         pollingState = result.polling,
                     )
                 }
                 if (value != null || firstRead) launchRealtime()
                 if (changed && !state.value.messageBusy) {
                     val current = state.value
-                    val anchor = if (preserveReadingWindow) {
-                        current.messages.firstOrNull()?.let { MessageKey(it.server, it.id) }
-                    } else null
-                    loadPage(current.messageQuery.copy(anchor = anchor), listOf(Long.MAX_VALUE), 0, showStatus = false)
+                    val anchor =
+                        if (preserveReadingWindow) {
+                            current.messages.firstOrNull()?.let { MessageKey(it.server, it.id) }
+                        } else null
+                    loadPage(
+                        current.messageQuery.copy(anchor = anchor),
+                        listOf(Long.MAX_VALUE),
+                        0,
+                        showStatus = false,
+                        deliveryRevision = result.deliveryRevision,
+                    )
                 }
+                if (refreshAgain) receivePlan()
             },
             { error ->
                 receivePlanInFlight = false
+                receivePlanRefreshPending = false
                 if (value != null)
                     setStatus(
                         OperationStatus.result(
