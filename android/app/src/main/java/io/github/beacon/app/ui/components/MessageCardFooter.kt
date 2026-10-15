@@ -5,6 +5,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
@@ -37,21 +38,49 @@ internal fun MessageCardFooter(
                 color = MaterialTheme.colorScheme.tertiary,
             )
         }
-        Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically) {
+        FooterTags(Modifier.weight(1f)) {
             if (message.applicationId.isNotBlank()) MessageFilterTag(
                 label = message.applicationName.ifBlank { stringResource(R.string.message_application_short, message.applicationId.take(8)) },
-                modifier = Modifier.weight(1f, fill = false).widthIn(max = 88.dp),
                 compact = true,
                 enabled = !busy && !selectionMode && onFilterApplication != null,
                 onClick = { onFilterApplication?.invoke() },
             )
             if (message.group.isNotBlank()) MessageFilterTag(
                 label = message.group,
-                modifier = Modifier.weight(1f, fill = false).widthIn(max = 88.dp),
                 compact = true,
                 enabled = !busy && !selectionMode && onFilterGroup != null,
                 onClick = { onFilterGroup?.invoke() },
             )
+        }
+    }
+}
+
+/** Keep short labels at their natural width and give the remaining space to the longer label. */
+@Composable
+private fun FooterTags(modifier: Modifier, content: @Composable () -> Unit) {
+    Layout(content = content, modifier = modifier) { children, constraints ->
+        val gap = if (children.size > 1) 4.dp.roundToPx() else 0
+        val available = (constraints.maxWidth - gap).coerceAtLeast(0)
+        val widths = children.map { it.maxIntrinsicWidth(constraints.maxHeight) }.toMutableList()
+        if (widths.size == 1) widths[0] = widths[0].coerceAtMost(available)
+        else if (widths.size == 2 && widths.sum() > available) {
+            val half = available / 2
+            when {
+                widths[0] <= half -> widths[1] = available - widths[0]
+                widths[1] <= half -> widths[0] = available - widths[1]
+                else -> { widths[0] = half; widths[1] = available - half }
+            }
+        }
+        val placeables = children.mapIndexed { index, child ->
+            child.measure(constraints.copy(minWidth = 0, maxWidth = widths[index], minHeight = 0))
+        }
+        val height = placeables.maxOfOrNull { it.height } ?: 0
+        layout(constraints.maxWidth, height) {
+            var x = constraints.maxWidth - placeables.sumOf { it.width } - gap
+            placeables.forEach { child ->
+                child.placeRelative(x, (height - child.height) / 2)
+                x += child.width + gap
+            }
         }
     }
 }

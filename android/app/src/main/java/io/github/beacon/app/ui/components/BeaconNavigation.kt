@@ -5,9 +5,10 @@
 
 package io.github.beacon.app.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarItem as MaterialNavigationItem
 import androidx.compose.runtime.*
@@ -167,6 +168,8 @@ fun BeaconDropdownPreference(
             BoxWithConstraints(
                 Modifier.fillMaxWidth()
                     .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f), androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
                     .clickable(
                         enabled = enabled,
                         role = androidx.compose.ui.semantics.Role.Button,
@@ -217,7 +220,7 @@ fun BeaconDropdownPreference(
                             BeaconText(title, style = MaterialTheme.typography.bodyLarge)
                             BeaconText(
                                 items.getOrElse(selectedIndex) { "" },
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodyMedium,
                             )
                         }
@@ -229,7 +232,7 @@ fun BeaconDropdownPreference(
                         )
                         BeaconText(
                             value,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }

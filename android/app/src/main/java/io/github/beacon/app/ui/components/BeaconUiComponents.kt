@@ -354,10 +354,6 @@ internal fun MessageFilterTag(
     enabled: Boolean = true,
     onClick: (() -> Unit)? = null,
 ) {
-    val visible = if (compact) remember(label) {
-        val count = label.codePointCount(0, label.length)
-        if (count <= 6) label else label.substring(0, label.offsetByCodePoints(0, 6)) + "…"
-    } else label
     Box(
         modifier.heightIn(min = if (compact || onClick == null) 32.dp else BeaconUiMetrics.ControlMinHeight)
             .widthIn(min = if (compact) 32.dp else if (onClick == null) 0.dp else BeaconUiMetrics.ControlMinHeight)
@@ -375,7 +371,7 @@ internal fun MessageFilterTag(
         contentAlignment = Alignment.Center,
     ) {
         BeaconText(
-            visible,
+            label,
             Modifier.background(
                     MaterialTheme.colorScheme.surfaceContainerHigh,
                     RoundedCornerShape(6.dp),

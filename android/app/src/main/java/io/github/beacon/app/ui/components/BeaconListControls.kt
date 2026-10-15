@@ -217,14 +217,15 @@ internal fun diagnosticRowFits(
 @Composable
 fun DiagnosticRow(label: String, value: String) {
     val labelStyle = MaterialTheme.typography.labelLarge
-    val valueStyle = MaterialTheme.typography.bodyMedium
+    val valueStyle = MaterialTheme.typography.bodyMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
     val measurer = rememberTextMeasurer()
     val gapPx = with(LocalDensity.current) { DIAGNOSTIC_ROW_GAP.roundToPx() }
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
         shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
     ) {
         BoxWithConstraints(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
             val labelWidth = measurer.measure(label, labelStyle, maxLines = 1).size.width
