@@ -8,6 +8,9 @@ import androidx.compose.ui.unit.dp
 
 /** Material Symbols Rounded (Apache-2.0), except the original receive-mode drawings below. */
 object BeaconIcons {
+    val ReadAll = vector("ReadAll", 24f, 24f,
+        "M1 12.5 2.5 11 7 15.5 17.5 5 19 6.5 7 18.5 1 12.5Z",
+        "M11 15.5 21.5 5 23 6.5 11 18.5 9.5 17 11 15.5Z")
     // Original floppy-disk drawing for toolbar save actions.
     val Save = vector("Save", 24f, 24f,
         "M3 3h14l4 4v14H3V3Zm2 2v14h14V7.8L16.2 5H15v6H7V5H5Zm4 0v4h4V5H9Zm-2 8h10v4H7v-4Z")

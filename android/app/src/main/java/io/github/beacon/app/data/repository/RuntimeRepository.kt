@@ -900,6 +900,26 @@ class RuntimeRepository : RuntimeActions {
         )
     }
 
+    override fun markAllRead() {
+        if (state.value.messageBusy || !ready()) return
+        mutableState.update { it.copy(dataBusy = true) }
+        connection.execute(
+            { RuntimeMessageClient(it).markAllRead() },
+            { changed ->
+                mutableState.update {
+                    it.copy(
+                        dataBusy = false, cleanupPreview = null,
+                        selectedMessage = it.selectedMessage?.copy(isRead = true),
+                        status = OperationStatus.result("已标为已读 $changed 条"),
+                    )
+                }
+                val query = state.value.messageQuery
+                readMessages(search = query.search, serverId = query.serverId, readFilter = query.readFilter, showStatus = false)
+            },
+            { error -> failData("全部已读未完成，请刷新核对：${OperationFailure.describe(error, crossProcess = true)}") },
+        )
+    }
+
     override fun clearAllMessages() {
         if (state.value.messageBusy || !ready()) return
         mutableState.update { it.copy(dataBusy = true) }

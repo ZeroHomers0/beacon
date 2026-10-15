@@ -10,6 +10,10 @@ import io.github.beacon.app.domain.model.MessageMutationResult
 /** Explicit message mutations: local deletion with tombstoning and read-state changes. */
 internal class MessageMutationStore(private val helper: SQLiteOpenHelper) {
 
+    /** One atomic update across every server and page; receipts and notices remain unchanged. */
+    fun markAllRead(): Long =
+        updateStatement(helper.writableDatabase, MessageManagementSql.MARK_ALL_READ, emptyArray()).toLong()
+
     fun remove(server: String, id: String) {
         mutate(MessageMutation(MessageAction.DELETE, listOf(MessageKey(server, id))))
     }

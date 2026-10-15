@@ -175,6 +175,8 @@ class RuntimeMessageStore(
     fun remove(server: String, id: String) = mutationStore.remove(server, id)
 
     /** Explicit destructive action; preserve cursors, pending confirmations and deduplication. */
+    fun markAllRead(): Long = mutationStore.markAllRead()
+
     fun clearAllMessages(): Long = mutationStore.clearAllMessages()
 
     fun pendingReminderCount(): Long = queryStore.pendingReminderCount()

@@ -75,8 +75,6 @@ internal fun LazyListScope.receptionSettingsItems(
                 receptionForm.edited = true
             }
             SettingsHint(stringResource(R.string.settings_receive_switch_hint))
-            if (receivePlan.mode == ReceiveMode.RULES)
-                SettingsHint(stringResource(R.string.receive_actual_fallback))
             if (polling.blocked.isNotBlank())
                 BeaconText(polling.blocked, color = MaterialTheme.colorScheme.error)
             DiagnosticRow(
@@ -172,8 +170,6 @@ internal fun LazyListScope.receptionSettingsItems(
                 val interval = receptionForm.interval
                 val unmetered = receptionForm.unmetered
                 val charging = receptionForm.charging
-                if (receivePlan.mode == ReceiveMode.RULES)
-                    SettingsHint(stringResource(R.string.receive_fallback_hint))
                 val intervals = (listOf(15, 30, 60, 120) + interval).distinct().sorted()
                 BeaconDropdownPreference(
                     stringResource(R.string.receive_interval),
@@ -200,25 +196,26 @@ internal fun LazyListScope.receptionSettingsItems(
                     receptionForm.interval = intervals[it]
                     receptionForm.edited = true
                 }
-                BeaconPreferenceToggle(
-                    stringResource(R.string.receive_unmetered_title),
-                    stringResource(R.string.settings_unmetered_hint),
-                    unmetered,
-                    !busy,
-                ) {
-                    receptionForm.unmetered = it
-                    receptionForm.edited = true
+                Column {
+                    BeaconPreferenceToggle(
+                        stringResource(R.string.receive_unmetered_title),
+                        "",
+                        unmetered,
+                        !busy,
+                    ) {
+                        receptionForm.unmetered = it
+                        receptionForm.edited = true
+                    }
+                    BeaconPreferenceToggle(
+                        stringResource(R.string.receive_charging_title),
+                        "",
+                        charging,
+                        !busy,
+                    ) {
+                        receptionForm.charging = it
+                        receptionForm.edited = true
+                    }
                 }
-                BeaconPreferenceToggle(
-                    stringResource(R.string.receive_charging_title),
-                    stringResource(R.string.settings_charging_wait_hint),
-                    charging,
-                    !busy,
-                ) {
-                    receptionForm.charging = it
-                    receptionForm.edited = true
-                }
-                SettingsHint(stringResource(R.string.settings_auto_receive_note_hint))
             }
         }
     }

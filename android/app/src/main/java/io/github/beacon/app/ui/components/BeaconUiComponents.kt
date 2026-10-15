@@ -23,6 +23,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.BeaconUiStyle
 import io.github.beacon.app.domain.model.IncomingMessage
@@ -272,29 +273,7 @@ fun MessageItem(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    if (message.group.isNotBlank() || message.applicationId.isNotBlank())
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
-                        ) {
-                            if (message.applicationId.isNotBlank())
-                                MessageFilterTag(
-                                    label = message.applicationName.ifBlank {
-                                        stringResource(
-                                            R.string.message_application_short,
-                                            message.applicationId.take(8),
-                                        )
-                                    },
-                                    enabled = !busy && !selectionMode && onFilterApplication != null,
-                                    onClick = { onFilterApplication?.invoke() },
-                                )
-                            if (message.group.isNotBlank())
-                                MessageFilterTag(
-                                    label = message.group,
-                                    enabled = !busy && !selectionMode && onFilterGroup != null,
-                                    onClick = { onFilterGroup?.invoke() },
-                                )
-                        }
+
                 }
                 if (!message.isRead)
                     Box(
@@ -359,38 +338,30 @@ fun MessageItem(
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
             )
-            FlowRow(
-                Modifier.fillMaxWidth().padding(top = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                BeaconText(
-                    formatMessageTime(message.createdAtMs),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                )
-                if (message.reminderPending)
-                    BeaconText(
-                        stringResource(R.string.msg_reminder_pending_label),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.tertiary,
-                    )
-            }
+            MessageCardFooter(
+                message, busy, selectionMode, onFilterApplication, onFilterGroup,
+            )
         }
     }
 }
 
-/** Compact metadata with a full touch target, positioned directly beneath the title. */
+/** Metadata chips; compact mode is reserved for the list footer. */
 @Composable
 internal fun MessageFilterTag(
     label: String,
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
     enabled: Boolean = true,
     onClick: (() -> Unit)? = null,
 ) {
+    val visible = if (compact) remember(label) {
+        val count = label.codePointCount(0, label.length)
+        if (count <= 6) label else label.substring(0, label.offsetByCodePoints(0, 6)) + "…"
+    } else label
     Box(
-        Modifier.heightIn(min = if (onClick == null) 32.dp else BeaconUiMetrics.ControlMinHeight)
-            .widthIn(min = if (onClick == null) 0.dp else BeaconUiMetrics.ControlMinHeight)
+        modifier.heightIn(min = if (compact || onClick == null) 32.dp else BeaconUiMetrics.ControlMinHeight)
+            .widthIn(min = if (compact) 32.dp else if (onClick == null) 0.dp else BeaconUiMetrics.ControlMinHeight)
+            .semantics { if (compact) contentDescription = label }
             .clip(RoundedCornerShape(8.dp))
             .then(
                 if (onClick == null) Modifier
@@ -404,13 +375,13 @@ internal fun MessageFilterTag(
         contentAlignment = Alignment.Center,
     ) {
         BeaconText(
-            label,
+            visible,
             Modifier.background(
                     MaterialTheme.colorScheme.surfaceContainerHigh,
                     RoundedCornerShape(6.dp),
                 )
                 .padding(horizontal = 8.dp, vertical = 3.dp),
-            style = MaterialTheme.typography.labelSmall,
+            style = if (compact) MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 14.sp) else MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

@@ -689,6 +689,11 @@ fun BeaconApp(
                                                     } else ui.selectionHint = maxSelectionWarning
                                                 }
                                             } else if (displayedDetail == null && barPage == 0) {
+                                                BeaconActionIcon(
+                                                    BeaconIcons.ReadAll,
+                                                    stringResource(R.string.ui_mark_all_read_action),
+                                                    enabled = runtimeState.runtimeConnected && runtimeState.messagesLoaded && !busy,
+                                                ) { actions.markAllRead() }
                                                 if (busy)
                                                     Box(
                                                         Modifier.size(48.dp),

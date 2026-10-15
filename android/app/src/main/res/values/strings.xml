@@ -1,4 +1,5 @@
 <resources>
+    <string name="ui_mark_all_read_action">全部已读</string>
     <string name="receive_adaptive_heartbeat">自适应心跳</string>
     <string name="receive_adaptive_heartbeat_hint">按网络调整至 60～300 秒；旧版服务器使用固定间隔。</string>
     <string name="receive_batch_ordinary">普通消息批量接收</string>
@@ -70,10 +71,8 @@
     <string name="settings_allow_notifications_action">允许通知</string>
     <string name="settings_app_tagline_hint">推送消息，集中管理</string>
     <string name="settings_appearance_section_desc">外观与交互</string>
-    <string name="settings_auto_receive_note_hint">自动同步需满足所有已开启条件，系统可能延后执行。立即同步不受这些条件限制。</string>
     <string name="settings_auto_receive_title">省电接收设置</string>
     <string name="settings_battery_saver_title">启用自动接收</string>
-    <string name="settings_charging_wait_hint">未充电时暂停自动同步</string>
     <string name="settings_connection_section_title">服务器配置</string>
     <string name="settings_first_setup_hint">使用服务器地址和一次性绑定码绑定设备</string>
     <string name="settings_interface_section_title">界面</string>
@@ -96,7 +95,6 @@
     <string name="settings_style_light_label">浅色</string>
     <string name="settings_style_system_label">跟随系统</string>
     <string name="settings_system_notification_title">系统通知设置</string>
-    <string name="settings_unmetered_hint">网络是否计费由系统判定，Wi-Fi 也可能是计费网络。</string>
     <string name="ui_back_to_messages_action">返回消息列表</string>
     <string name="ui_back_to_settings_action">返回设置</string>
     <string name="ui_battery_saver_on_desc">自动接收已开启</string>
@@ -177,8 +175,6 @@
     <string name="settings_reception_page_title">接收模式</string>
     <string name="settings_receive_switch_hint">关闭后停止自动接收，仍可立即同步。</string>
     <string name="receive_fallback_title">省电回退设置</string>
-    <string name="receive_fallback_hint">未满足即时接收条件时，使用以下省电设置。</string>
-    <string name="receive_actual_fallback">按已保存规则选择接收方式；低电量优先于时间段和充电 / Wi-Fi 条件。</string>
     <string name="settings_background_permissions_title">后台权限</string>
     <string name="settings_background_permissions_desc">开启自启动，省电策略设为无限制</string>
     <string name="background_autostart_title">自启动</string>
@@ -403,24 +399,16 @@
     <string name="settings_sound_important">重要消息提示音</string>
     <string name="settings_sound_unavailable">无法打开提示音设置，请在系统应用通知设置中选择对应渠道</string>
     <string name="settings_clipboard_push_example">Beacon 推送 API 示例</string>
-    <string name="settings_rules_priority">规则优先级</string>
-    <string name="settings_rules_priority_order">低电量保护 → 指定时间段 → 充电或 Wi-Fi → 省电回退</string>
-    <string name="settings_rules_priority_hint">按顺序匹配，首个符合条件的规则生效；立即同步不受限制。</string>
+    <string name="settings_rules_conditions">接收规则</string>
+    <string name="settings_rules_priority_order">低电量保护 → 每日时间段 → 充电或 Wi-Fi → 省电回退</string>
     <string name="settings_rules_battery">低电量保护</string>
-    <string name="settings_rules_battery_toggle">低电量时使用省电接收</string>
-    <string name="settings_rules_battery_hint">优先于时间段和充电 / Wi-Fi 条件。</string>
     <string name="settings_rules_battery_threshold">剩余电量不高于</string>
     <string name="settings_rules_schedule">每日时间段</string>
-    <string name="settings_rules_schedule_toggle">启用时间段</string>
-    <string name="settings_rules_schedule_hint">使用手机当前时区，支持跨夜；开始与结束时间需不同。</string>
     <string name="settings_rules_start">开始时间</string>
     <string name="settings_rules_end">结束时间</string>
-    <string name="settings_rules_time_format">24 小时制，例如 22:00–08:00</string>
     <string name="settings_rules_battery_percent">%1$d%%</string>
     <string name="settings_rules_schedule_mode">时间段内接收方式</string>
     <string name="settings_rules_other_times">其他时间的即时条件</string>
-    <string name="settings_rules_wifi_hint">任一条件满足即可；低电量保护仍优先。</string>
-    <string name="settings_rules_fallback_hint">未匹配时使用省电接收，条件变化后自动更新。暂停接收后规则停止运行。</string>
     <string name="settings_rules_time_invalid">请选择有效的开始与结束时间，且两者不能相同</string>
     <string name="settings_backup_export_done">设置已导出为 JSON 文件</string>
     <string name="settings_backup_export_failed">文件保存失败，请重新导出</string>

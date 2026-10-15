@@ -13,6 +13,11 @@ internal class RuntimeMessageClient(private val binder: IBinder) {
             it.readInt().also { value -> require(value in 0..1) } == 1
         }
 
+    fun markAllRead(): Long =
+        binder.request(RuntimeProtocol.MARK_ALL_READ) {
+            it.readLong().also { value -> require(value >= 0) }
+        }
+
     fun clearAllMessages(): Long =
         binder.request(RuntimeProtocol.CLEAR_ALL_MESSAGES) {
             it.readLong().also { value -> require(value >= 0) }

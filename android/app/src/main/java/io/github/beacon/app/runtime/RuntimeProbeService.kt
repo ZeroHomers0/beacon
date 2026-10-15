@@ -474,6 +474,7 @@ class RuntimeProbeService : Service() {
                             io.github.beacon.app.ipc.RuntimeProtocol.COPY_PUSH_KEY,
                             io.github.beacon.app.ipc.RuntimeProtocol.PREVIEW_CLEANUP,
                             io.github.beacon.app.ipc.RuntimeProtocol.CHECKPOINT_STORAGE,
+                            io.github.beacon.app.ipc.RuntimeProtocol.MARK_ALL_READ,
                             io.github.beacon.app.ipc.RuntimeProtocol.APPLY_CLEANUP,
                             io.github.beacon.app.ipc.RuntimeProtocol.CLEANUP_SETTINGS,
                             io.github.beacon.app.ipc.RuntimeProtocol.RECEIVE_PLAN,
@@ -1004,6 +1005,16 @@ class RuntimeProbeService : Service() {
                         writeLong(preview.walBytes)
                         writeLong(preview.availableBytes)
                         writeLong(preview.sampledAtMs)
+                    }
+                    return true
+                }
+                if (code == io.github.beacon.app.ipc.RuntimeProtocol.MARK_ALL_READ) {
+                    if (data.dataAvail() != 0) throw SecurityException("Unexpected payload")
+                    val changed = worker.submit<Long> { store.markAllRead() }
+                        .get(45, java.util.concurrent.TimeUnit.SECONDS)
+                    requireNotNull(reply).apply {
+                        writeNoException()
+                        writeLong(changed)
                     }
                     return true
                 }

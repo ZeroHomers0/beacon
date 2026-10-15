@@ -101,6 +101,8 @@ interface RuntimeActions {
 
     fun applyCleanup(token: String) {}
 
+    fun markAllRead() {}
+
     fun clearAllMessages() {}
 
     fun checkpointStorage() {}

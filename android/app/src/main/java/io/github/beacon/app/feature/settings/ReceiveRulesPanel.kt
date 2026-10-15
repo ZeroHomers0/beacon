@@ -18,96 +18,87 @@ internal fun ReceiveRulesPanel(form: ReceptionFormState, busy: Boolean) {
     val plan = form.plan
     val start = form.scheduleStartText
     val end = form.scheduleEndText
-    val first = form.scheduleStart
-    val last = form.scheduleEnd
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        UiSection(stringResource(R.string.settings_rules_priority)) {
-            resources
-                .getString(R.string.settings_rules_priority_order)
-                .split(" → ")
-                .forEachIndexed { index, rule -> DiagnosticRow("${index + 1}", rule) }
-            SettingsHint(resources.getString(R.string.settings_rules_priority_hint))
+    UiSection(stringResource(R.string.settings_rules_conditions)) {
+        SettingsHint(resources.getString(R.string.settings_rules_priority_order))
+        BeaconPreferenceToggle(
+            resources.getString(R.string.settings_rules_battery),
+            "",
+            plan.lowBatteryEnabled,
+            !busy,
+        ) {
+            form.plan = plan.copy(lowBatteryEnabled = it)
+            form.edited = true
         }
-        UiSection(stringResource(R.string.settings_rules_battery)) {
-            BeaconPreferenceToggle(
-                resources.getString(R.string.settings_rules_battery_toggle),
-                resources.getString(R.string.settings_rules_battery_hint),
-                plan.lowBatteryEnabled,
+        if (plan.lowBatteryEnabled) {
+            val levels =
+                (listOf(10, 15, 20, 25, 30, 40, 50) + plan.lowBatteryPercent)
+                    .distinct()
+                    .sorted()
+            BeaconDropdownPreference(
+                resources.getString(R.string.settings_rules_battery_threshold),
+                levels.map { resources.getString(R.string.settings_rules_battery_percent, it) },
+                levels.indexOf(plan.lowBatteryPercent),
                 !busy,
             ) {
-                form.plan = plan.copy(lowBatteryEnabled = it)
+                form.plan = plan.copy(lowBatteryPercent = levels[it])
                 form.edited = true
             }
-            if (plan.lowBatteryEnabled) {
-                val levels =
-                    (listOf(10, 15, 20, 25, 30, 40, 50) + plan.lowBatteryPercent)
-                        .distinct()
-                        .sorted()
-                BeaconDropdownPreference(
-                    resources.getString(R.string.settings_rules_battery_threshold),
-                    levels.map { resources.getString(R.string.settings_rules_battery_percent, it) },
-                    levels.indexOf(plan.lowBatteryPercent),
-                    !busy,
-                ) {
-                    form.plan = plan.copy(lowBatteryPercent = levels[it])
-                    form.edited = true
-                }
-            }
         }
-        UiSection(stringResource(R.string.settings_rules_schedule)) {
-            BeaconPreferenceToggle(
-                resources.getString(R.string.settings_rules_schedule_toggle),
-                resources.getString(R.string.settings_rules_schedule_hint),
-                plan.scheduleEnabled,
+        androidx.compose.material3.HorizontalDivider()
+
+        BeaconPreferenceToggle(
+            resources.getString(R.string.settings_rules_schedule),
+            "",
+            plan.scheduleEnabled,
+            !busy,
+        ) {
+            form.plan = plan.copy(scheduleEnabled = it)
+            form.edited = true
+        }
+        if (plan.scheduleEnabled) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                BeaconTimePreference(
+                    start,
+                    {
+                        form.scheduleStartText = it
+                        form.edited = true
+                    },
+                    stringResource(R.string.settings_rules_start),
+                    Modifier.weight(1f),
+                    enabled = !busy,
+                )
+                BeaconTimePreference(
+                    end,
+                    {
+                        form.scheduleEndText = it
+                        form.edited = true
+                    },
+                    stringResource(R.string.settings_rules_end),
+                    Modifier.weight(1f),
+                    enabled = !busy,
+                )
+            }
+            if (!form.scheduleValid)
+                BeaconText(
+                    stringResource(R.string.settings_rules_time_invalid),
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.error,
+                )
+            BeaconDropdownPreference(
+                resources.getString(R.string.settings_rules_schedule_mode),
+                listOf(
+                    resources.getString(R.string.receive_mode_realtime),
+                    resources.getString(R.string.ui_power_saving_mode),
+                ),
+                if (plan.scheduleRealtime) 0 else 1,
                 !busy,
             ) {
-                form.plan = plan.copy(scheduleEnabled = it)
+                form.plan = plan.copy(scheduleRealtime = it == 0)
                 form.edited = true
             }
-            if (plan.scheduleEnabled) {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    BeaconTimePreference(
-                        start,
-                        {
-                            form.scheduleStartText = it
-                            form.edited = true
-                        },
-                        stringResource(R.string.settings_rules_start),
-                        Modifier.weight(1f),
-                        enabled = !busy,
-                    )
-                    BeaconTimePreference(
-                        end,
-                        {
-                            form.scheduleEndText = it
-                            form.edited = true
-                        },
-                        stringResource(R.string.settings_rules_end),
-                        Modifier.weight(1f),
-                        enabled = !busy,
-                    )
-                }
-                if (!form.scheduleValid)
-                    BeaconText(
-                        stringResource(R.string.settings_rules_time_invalid),
-                        color = androidx.compose.material3.MaterialTheme.colorScheme.error,
-                    )
-                else SettingsHint(resources.getString(R.string.settings_rules_time_format))
-                BeaconDropdownPreference(
-                    resources.getString(R.string.settings_rules_schedule_mode),
-                    listOf(
-                        resources.getString(R.string.receive_mode_realtime),
-                        resources.getString(R.string.ui_power_saving_mode),
-                    ),
-                    if (plan.scheduleRealtime) 0 else 1,
-                    !busy,
-                ) {
-                    form.plan = plan.copy(scheduleRealtime = it == 0)
-                    form.edited = true
-                }
-            }
         }
-        UiSection(stringResource(R.string.settings_rules_other_times)) {
+        androidx.compose.material3.HorizontalDivider()
+        BeaconText(stringResource(R.string.settings_rules_other_times), style = androidx.compose.material3.MaterialTheme.typography.titleSmall)
+        Column {
             BeaconPreferenceToggle(
                 resources.getString(R.string.receive_rule_charging),
                 "",
@@ -119,14 +110,13 @@ internal fun ReceiveRulesPanel(form: ReceptionFormState, busy: Boolean) {
             }
             BeaconPreferenceToggle(
                 resources.getString(R.string.receive_rule_wifi),
-                resources.getString(R.string.settings_rules_wifi_hint),
+                "",
                 plan.realtimeOnWifi,
                 !busy,
             ) {
                 form.plan = plan.copy(realtimeOnWifi = it)
                 form.edited = true
             }
-            SettingsHint(resources.getString(R.string.settings_rules_fallback_hint))
         }
     }
 }
