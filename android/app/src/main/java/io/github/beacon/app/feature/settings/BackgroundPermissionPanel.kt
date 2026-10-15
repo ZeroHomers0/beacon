@@ -80,25 +80,31 @@ fun BackgroundPermissionPanel() {
             }
         }
         UiSection(stringResource(R.string.background_restriction_title)) {
-            DiagnosticRow(
-                stringResource(R.string.background_system_restriction),
-                stringResource(
-                    when (restricted) {
-                        true -> R.string.background_restricted
-                        false -> R.string.background_not_restricted
-                        null -> R.string.background_unknown
-                    }
-                ),
-            )
-            DiagnosticRow(
-                stringResource(R.string.background_battery_optimization),
-                stringResource(
-                    when (exempt) {
-                        true -> R.string.background_exempt
-                        false -> R.string.background_optimized
-                        null -> R.string.background_unknown
-                    }
-                ),
+            SettingsFieldGroup(
+                {
+                    DiagnosticRow(
+                        stringResource(R.string.background_system_restriction),
+                        stringResource(
+                            when (restricted) {
+                                true -> R.string.background_restricted
+                                false -> R.string.background_not_restricted
+                                null -> R.string.background_unknown
+                            }
+                        ),
+                    )
+                },
+                {
+                    DiagnosticRow(
+                        stringResource(R.string.background_battery_optimization),
+                        stringResource(
+                            when (exempt) {
+                                true -> R.string.background_exempt
+                                false -> R.string.background_optimized
+                                null -> R.string.background_unknown
+                            }
+                        ),
+                    )
+                },
             )
             SettingsHint(stringResource(R.string.background_restriction_hint))
             BeaconButton(

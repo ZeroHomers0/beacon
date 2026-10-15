@@ -19,6 +19,7 @@ import io.github.beacon.app.domain.model.BeaconUiStyle
 import io.github.beacon.app.domain.model.ReceivePlan
 import io.github.beacon.app.domain.model.RuntimeState
 import io.github.beacon.app.ipc.RuntimeActions
+import io.github.beacon.app.ui.components.SettingsFieldGroup
 import io.github.beacon.app.ui.components.BeaconDropdownPreference
 import io.github.beacon.app.ui.components.BeaconSettingsList
 import io.github.beacon.app.ui.components.NotificationPermissionState
@@ -188,28 +189,34 @@ fun SettingsPage(
                 }
                 item {
                     SettingsGroup(stringResource(R.string.settings_interface_section_title)) {
-                        BeaconDropdownPreference(
-                            stringResource(R.string.appearance_style),
-                            listOf("Material 3", "MIUIX"),
-                            uiStyle.ordinal,
-                            icon = BeaconIcons.Palette,
-                            settingsRow = true,
-                        ) {
-                            onUiStyleChange(BeaconUiStyle.entries[it])
-                        }
-                        BeaconDropdownPreference(
-                            stringResource(R.string.appearance_theme),
-                            listOf(
-                                stringResource(R.string.settings_style_system_label),
-                                stringResource(R.string.settings_style_light_label),
-                                stringResource(R.string.settings_style_dark_label),
-                            ),
-                            themeMode.ordinal,
-                            icon = BeaconIcons.ThemeMode,
-                            settingsRow = true,
-                        ) {
-                            onThemeModeChange(BeaconThemeMode.entries[it])
-                        }
+                        SettingsFieldGroup(
+                            {
+                                BeaconDropdownPreference(
+                                    stringResource(R.string.appearance_style),
+                                    listOf("Material 3", "MIUIX"),
+                                    uiStyle.ordinal,
+                                    icon = BeaconIcons.Palette,
+                                    settingsRow = true,
+                                ) {
+                                    onUiStyleChange(BeaconUiStyle.entries[it])
+                                }
+                            },
+                            {
+                                BeaconDropdownPreference(
+                                    stringResource(R.string.appearance_theme),
+                                    listOf(
+                                        stringResource(R.string.settings_style_system_label),
+                                        stringResource(R.string.settings_style_light_label),
+                                        stringResource(R.string.settings_style_dark_label),
+                                    ),
+                                    themeMode.ordinal,
+                                    icon = BeaconIcons.ThemeMode,
+                                    settingsRow = true,
+                                ) {
+                                    onThemeModeChange(BeaconThemeMode.entries[it])
+                                }
+                            },
+                        )
                     }
                 }
                 item {

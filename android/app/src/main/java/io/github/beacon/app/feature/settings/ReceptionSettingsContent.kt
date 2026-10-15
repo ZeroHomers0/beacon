@@ -19,6 +19,7 @@ import io.github.beacon.app.domain.model.ReceiveMode
 import io.github.beacon.app.domain.model.ReceivePlan
 import io.github.beacon.app.domain.model.RuntimeState
 import io.github.beacon.app.ipc.RuntimeActions
+import io.github.beacon.app.ui.components.SettingsFieldGroup
 import io.github.beacon.app.ui.components.BeaconActionButton
 import io.github.beacon.app.ui.components.BeaconButton
 import io.github.beacon.app.ui.components.BeaconDropdownPreference
@@ -123,29 +124,35 @@ internal fun LazyListScope.receptionSettingsItems(
     if (receivePlan.mode != ReceiveMode.POWER_SAVING) {
         item {
             UiSection(stringResource(R.string.receive_heartbeat_title)) {
-                BeaconPreferenceToggle(
-                    stringResource(R.string.receive_adaptive_heartbeat),
-                    stringResource(R.string.receive_adaptive_heartbeat_hint),
-                    receptionForm.plan.adaptiveHeartbeat,
-                    !busy && runtimeState.receivePlanLoaded,
-                ) {
-                    receptionForm.plan = receptionForm.plan.copy(adaptiveHeartbeat = it)
-                    receptionForm.edited = true
-                }
-                BeaconDropdownPreference(
-                    stringResource(R.string.receive_heartbeat_interval),
-                    RealtimeHeartbeat.options.map {
-                        stringResource(R.string.receive_heartbeat_seconds, it)
+                SettingsFieldGroup(
+                    {
+                        BeaconPreferenceToggle(
+                            stringResource(R.string.receive_adaptive_heartbeat),
+                            stringResource(R.string.receive_adaptive_heartbeat_hint),
+                            receptionForm.plan.adaptiveHeartbeat,
+                            !busy && runtimeState.receivePlanLoaded,
+                        ) {
+                            receptionForm.plan = receptionForm.plan.copy(adaptiveHeartbeat = it)
+                            receptionForm.edited = true
+                        }
                     },
-                    RealtimeHeartbeat.options.indexOf(receptionForm.plan.heartbeatSeconds),
-                    !busy &&
-                        runtimeState.receivePlanLoaded &&
-                        !receptionForm.plan.adaptiveHeartbeat,
-                ) {
-                    receptionForm.plan =
-                        receptionForm.plan.copy(heartbeatSeconds = RealtimeHeartbeat.options[it])
-                    receptionForm.edited = true
-                }
+                    {
+                        BeaconDropdownPreference(
+                            stringResource(R.string.receive_heartbeat_interval),
+                            RealtimeHeartbeat.options.map {
+                                stringResource(R.string.receive_heartbeat_seconds, it)
+                            },
+                            RealtimeHeartbeat.options.indexOf(receptionForm.plan.heartbeatSeconds),
+                            !busy &&
+                                runtimeState.receivePlanLoaded &&
+                                !receptionForm.plan.adaptiveHeartbeat,
+                        ) {
+                            receptionForm.plan =
+                                receptionForm.plan.copy(heartbeatSeconds = RealtimeHeartbeat.options[it])
+                            receptionForm.edited = true
+                        }
+                    },
+                )
                 SettingsHint(stringResource(R.string.receive_heartbeat_hint))
                 BeaconPreferenceToggle(
                     stringResource(R.string.receive_batch_ordinary),
@@ -197,24 +204,30 @@ internal fun LazyListScope.receptionSettingsItems(
                     receptionForm.edited = true
                 }
                 Column {
-                    BeaconPreferenceToggle(
-                        stringResource(R.string.receive_unmetered_title),
-                        "",
-                        unmetered,
-                        !busy,
-                    ) {
-                        receptionForm.unmetered = it
-                        receptionForm.edited = true
-                    }
-                    BeaconPreferenceToggle(
-                        stringResource(R.string.receive_charging_title),
-                        "",
-                        charging,
-                        !busy,
-                    ) {
-                        receptionForm.charging = it
-                        receptionForm.edited = true
-                    }
+                    SettingsFieldGroup(
+                        {
+                            BeaconPreferenceToggle(
+                                stringResource(R.string.receive_unmetered_title),
+                                "",
+                                unmetered,
+                                !busy,
+                            ) {
+                                receptionForm.unmetered = it
+                                receptionForm.edited = true
+                            }
+                        },
+                        {
+                            BeaconPreferenceToggle(
+                                stringResource(R.string.receive_charging_title),
+                                "",
+                                charging,
+                                !busy,
+                            ) {
+                                receptionForm.charging = it
+                                receptionForm.edited = true
+                            }
+                        },
+                    )
                 }
             }
         }

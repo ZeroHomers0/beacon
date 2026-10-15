@@ -140,11 +140,19 @@ internal fun ServerAdminPage(
         } else {
             item {
                 UiSection(stringResource(R.string.admin_overview)) {
-                    DiagnosticRow(stringResource(R.string.admin_endpoint), state.endpoint)
-                    DiagnosticRow(stringResource(R.string.admin_version), state.version)
-                    DiagnosticRow(
-                        stringResource(R.string.admin_compatibility),
-                        stringResource(if (state.protocol == 1) R.string.admin_compatible_short else R.string.admin_protocol_unknown_short),
+                    SettingsFieldGroup(
+                        {
+                            DiagnosticRow(stringResource(R.string.admin_endpoint), state.endpoint)
+                        },
+                        {
+                            DiagnosticRow(stringResource(R.string.admin_version), state.version)
+                        },
+                        {
+                            DiagnosticRow(
+                                stringResource(R.string.admin_compatibility),
+                                stringResource(if (state.protocol == 1) R.string.admin_compatible_short else R.string.admin_protocol_unknown_short),
+                            )
+                        },
                     )
                     SettingsMetricGrid(
                         listOf(
@@ -263,13 +271,19 @@ internal fun ServerAdminPage(
                         item { SettingsHint(stringResource(R.string.admin_no_devices)) }
                     items(state.devices, key = { "device-${it.id}" }) { device ->
                         UiSection(device.name) {
-                            DiagnosticRow(stringResource(R.string.admin_device_id), device.id)
-                            DiagnosticRow(
-                                stringResource(R.string.admin_status),
-                                stringResource(
-                                    if (device.revoked) R.string.admin_revoked
-                                    else R.string.admin_active
-                                ),
+                            SettingsFieldGroup(
+                                {
+                                    DiagnosticRow(stringResource(R.string.admin_device_id), device.id)
+                                },
+                                {
+                                    DiagnosticRow(
+                                        stringResource(R.string.admin_status),
+                                        stringResource(
+                                            if (device.revoked) R.string.admin_revoked
+                                            else R.string.admin_active
+                                        ),
+                                    )
+                                },
                             )
                             if (device.revoked)
                                 BeaconDangerButton(
@@ -341,20 +355,28 @@ internal fun ServerAdminPage(
                         item { SettingsHint(stringResource(R.string.admin_no_applications)) }
                     items(state.applications, key = { "application-${it.id}" }) { app ->
                         UiSection(app.name) {
-                            DiagnosticRow(
-                                stringResource(R.string.admin_device),
-                                state.devices.find { it.id == app.deviceId }?.name ?: app.deviceId,
-                            )
-                            DiagnosticRow(
-                                stringResource(R.string.admin_priority),
-                                stringResource(priorityLabel(app.priority), app.priority),
-                            )
-                            DiagnosticRow(
-                                stringResource(R.string.admin_status),
-                                stringResource(
-                                    if (app.revoked) R.string.admin_revoked
-                                    else R.string.admin_active
-                                ),
+                            SettingsFieldGroup(
+                                {
+                                    DiagnosticRow(
+                                        stringResource(R.string.admin_device),
+                                        state.devices.find { it.id == app.deviceId }?.name ?: app.deviceId,
+                                    )
+                                },
+                                {
+                                    DiagnosticRow(
+                                        stringResource(R.string.admin_priority),
+                                        stringResource(priorityLabel(app.priority), app.priority),
+                                    )
+                                },
+                                {
+                                    DiagnosticRow(
+                                        stringResource(R.string.admin_status),
+                                        stringResource(
+                                            if (app.revoked) R.string.admin_revoked
+                                            else R.string.admin_active
+                                        ),
+                                    )
+                                },
                             )
                             if (!app.revoked)
                                 BeaconDangerButton(

@@ -99,24 +99,30 @@ internal fun ReceiveRulesPanel(form: ReceptionFormState, busy: Boolean) {
         androidx.compose.material3.HorizontalDivider()
         BeaconText(stringResource(R.string.settings_rules_other_times), style = androidx.compose.material3.MaterialTheme.typography.titleSmall)
         Column {
-            BeaconPreferenceToggle(
-                resources.getString(R.string.receive_rule_charging),
-                "",
-                plan.realtimeWhileCharging,
-                !busy,
-            ) {
-                form.plan = plan.copy(realtimeWhileCharging = it)
-                form.edited = true
-            }
-            BeaconPreferenceToggle(
-                resources.getString(R.string.receive_rule_wifi),
-                "",
-                plan.realtimeOnWifi,
-                !busy,
-            ) {
-                form.plan = plan.copy(realtimeOnWifi = it)
-                form.edited = true
-            }
+            SettingsFieldGroup(
+                {
+                    BeaconPreferenceToggle(
+                        resources.getString(R.string.receive_rule_charging),
+                        "",
+                        plan.realtimeWhileCharging,
+                        !busy,
+                    ) {
+                        form.plan = plan.copy(realtimeWhileCharging = it)
+                        form.edited = true
+                    }
+                },
+                {
+                    BeaconPreferenceToggle(
+                        resources.getString(R.string.receive_rule_wifi),
+                        "",
+                        plan.realtimeOnWifi,
+                        !busy,
+                    ) {
+                        form.plan = plan.copy(realtimeOnWifi = it)
+                        form.edited = true
+                    }
+                },
+            )
         }
     }
 }

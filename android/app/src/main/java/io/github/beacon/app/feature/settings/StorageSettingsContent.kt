@@ -137,39 +137,51 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
             )
         }
         UiSection(stringResource(R.string.settings_cleanup_auto_title)) {
-            BeaconPreferenceToggle(
-                resources.getString(R.string.settings_cleanup_auto_toggle),
-                resources.getString(R.string.settings_cleanup_auto_hint),
-                settings.automatic,
-                enabled = settingsLoaded && !state.messageBusy && !saving,
-            ) {
-                save(settings.copy(automatic = it))
-            }
-            DiagnosticRow(
-                stringResource(R.string.storage_last_result_label),
-                io.github.beacon.app.domain.policy.CleanupResultPresentation.compact(settings.lastResult),
+            SettingsFieldGroup(
+                {
+                    BeaconPreferenceToggle(
+                        resources.getString(R.string.settings_cleanup_auto_toggle),
+                        resources.getString(R.string.settings_cleanup_auto_hint),
+                        settings.automatic,
+                        enabled = settingsLoaded && !state.messageBusy && !saving,
+                    ) {
+                        save(settings.copy(automatic = it))
+                    }
+                },
+                {
+                    DiagnosticRow(
+                        stringResource(R.string.storage_last_result_label),
+                        io.github.beacon.app.domain.policy.CleanupResultPresentation.compact(settings.lastResult),
+                    )
+                },
             )
         }
         UiSection(stringResource(R.string.storage_rules_title)) {
-            BeaconDropdownPreference(
-                stringResource(R.string.storage_retention),
-                days.map {
-                    if (it == 0) resources.getString(R.string.settings_cleanup_forever)
-                    else resources.getString(R.string.settings_cleanup_days, it)
+            SettingsFieldGroup(
+                {
+                    BeaconDropdownPreference(
+                        stringResource(R.string.storage_retention),
+                        days.map {
+                            if (it == 0) resources.getString(R.string.settings_cleanup_forever)
+                            else resources.getString(R.string.settings_cleanup_days, it)
+                        },
+                        days.indexOf(policy.days),
+                        enabled = !state.messageBusy && settingsLoaded && !saving,
+                    ) {
+                        save(settings.copy(policy = policy.copy(days = days[it])))
+                    }
                 },
-                days.indexOf(policy.days),
-                enabled = !state.messageBusy && settingsLoaded && !saving,
-            ) {
-                save(settings.copy(policy = policy.copy(days = days[it])))
-            }
-            BeaconDropdownPreference(
-                stringResource(R.string.storage_max_messages),
-                limits.map { resources.getString(R.string.settings_cleanup_count, it) },
-                limits.indexOf(policy.maxMessages),
-                enabled = !state.messageBusy && settingsLoaded && !saving,
-            ) {
-                save(settings.copy(policy = policy.copy(maxMessages = limits[it])))
-            }
+                {
+                    BeaconDropdownPreference(
+                        stringResource(R.string.storage_max_messages),
+                        limits.map { resources.getString(R.string.settings_cleanup_count, it) },
+                        limits.indexOf(policy.maxMessages),
+                        enabled = !state.messageBusy && settingsLoaded && !saving,
+                    ) {
+                        save(settings.copy(policy = policy.copy(maxMessages = limits[it])))
+                    }
+                },
+            )
             BeaconActionButton(
                 stringResource(R.string.storage_custom),
                 io.github.beacon.app.ui.icons.BeaconIcons.Tune,

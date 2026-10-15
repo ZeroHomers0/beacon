@@ -50,28 +50,34 @@ internal fun NotificationSettingsPanel(state: RuntimeState, actions: RuntimeActi
         }
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         UiSection(stringResource(R.string.notification_age_title)) {
-            BeaconDropdownPreference(
-                stringResource(R.string.notification_fresh_window),
-                minutes.map {
-                    if (it < 60) stringResource(R.string.notification_minutes, it)
-                    else stringResource(R.string.notification_hours, it / 60)
+            SettingsFieldGroup(
+                {
+                    BeaconDropdownPreference(
+                        stringResource(R.string.notification_fresh_window),
+                        minutes.map {
+                            if (it < 60) stringResource(R.string.notification_minutes, it)
+                            else stringResource(R.string.notification_hours, it / 60)
+                        },
+                        minutes.indexOf(saved.freshMinutes),
+                        enabled = enabled,
+                    ) {
+                        save(saved.copy(freshMinutes = minutes[it]))
+                    }
                 },
-                minutes.indexOf(saved.freshMinutes),
-                enabled = enabled,
-            ) {
-                save(saved.copy(freshMinutes = minutes[it]))
-            }
-            BeaconDropdownPreference(
-                stringResource(R.string.notification_outdated_behavior),
-                listOf(
-                    stringResource(R.string.quiet_silent),
-                    stringResource(R.string.quiet_save_only),
-                ),
-                saved.outdatedReminder.ordinal,
-                enabled = enabled,
-            ) {
-                save(saved.copy(outdatedReminder = OutdatedReminder.entries[it]))
-            }
+                {
+                    BeaconDropdownPreference(
+                        stringResource(R.string.notification_outdated_behavior),
+                        listOf(
+                            stringResource(R.string.quiet_silent),
+                            stringResource(R.string.quiet_save_only),
+                        ),
+                        saved.outdatedReminder.ordinal,
+                        enabled = enabled,
+                    ) {
+                        save(saved.copy(outdatedReminder = OutdatedReminder.entries[it]))
+                    }
+                },
+            )
 
         }
         UiSection(stringResource(R.string.notification_privacy_title)) {

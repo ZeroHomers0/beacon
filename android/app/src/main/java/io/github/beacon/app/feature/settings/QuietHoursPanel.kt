@@ -30,25 +30,31 @@ internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions, form:
         val labels = stringResource(R.string.quiet_weekdays).split(",")
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             UiSection(stringResource(R.string.quiet_title)) {
-                BeaconPreferenceToggle(
-                    stringResource(R.string.quiet_enable),
-                    "",
-                    draft.enabled,
-                    enabled = editable,
-                ) {
-                    draft = draft.copy(enabled = it)
-                }
-                BeaconDropdownPreference(
-                    stringResource(R.string.quiet_behavior),
-                    listOf(
-                        stringResource(R.string.quiet_silent),
-                        stringResource(R.string.quiet_save_only),
-                    ),
-                    draft.behavior.ordinal,
-                    enabled = editable,
-                ) {
-                    draft = draft.copy(behavior = QuietHoursBehavior.entries[it])
-                }
+                SettingsFieldGroup(
+                    {
+                        BeaconPreferenceToggle(
+                            stringResource(R.string.quiet_enable),
+                            "",
+                            draft.enabled,
+                            enabled = editable,
+                        ) {
+                            draft = draft.copy(enabled = it)
+                        }
+                    },
+                    {
+                        BeaconDropdownPreference(
+                            stringResource(R.string.quiet_behavior),
+                            listOf(
+                                stringResource(R.string.quiet_silent),
+                                stringResource(R.string.quiet_save_only),
+                            ),
+                            draft.behavior.ordinal,
+                            enabled = editable,
+                        ) {
+                            draft = draft.copy(behavior = QuietHoursBehavior.entries[it])
+                        }
+                    },
+                )
             }
             UiSection(stringResource(R.string.quiet_schedule)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {

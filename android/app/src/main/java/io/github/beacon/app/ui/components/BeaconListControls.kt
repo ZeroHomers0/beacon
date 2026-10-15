@@ -224,10 +224,9 @@ fun DiagnosticRow(label: String, value: String) {
     Surface(
         modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
         shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
+        color = androidx.compose.ui.graphics.Color.Transparent,
     ) {
-        BoxWithConstraints(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+        BoxWithConstraints(Modifier.padding(vertical = 10.dp)) {
             val labelWidth = measurer.measure(label, labelStyle, maxLines = 1).size.width
             val valueWidth = measurer.measure(value, valueStyle, maxLines = 1).size.width
             val fits =

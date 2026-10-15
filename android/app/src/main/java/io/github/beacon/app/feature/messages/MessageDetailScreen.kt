@@ -187,20 +187,28 @@ fun MessageDetailScreen(
                     SettingsHint(stringResource(R.string.msg_detail_reminder_hint))
                     SettingsHint(stringResource(R.string.msg_detail_timezone_hint))
                     if (rawInfo) {
-                        DiagnosticRow(
-                            stringResource(R.string.msg_detail_reminder_state_label),
-                            stringResource(
-                                if (message.reminderPending) R.string.msg_detail_reminder_pending
-                                else R.string.msg_detail_reminder_none
-                            ),
-                        )
-                        DiagnosticRow(
-                            stringResource(R.string.msg_detail_sent_time_label),
-                            detailTime(message.createdAtMs, missing),
-                        )
-                        DiagnosticRow(
-                            stringResource(R.string.msg_detail_received_time_label),
-                            detailTime(message.receivedAtMs, missing),
+                        SettingsFieldGroup(
+                            {
+                                DiagnosticRow(
+                                    stringResource(R.string.msg_detail_reminder_state_label),
+                                    stringResource(
+                                        if (message.reminderPending) R.string.msg_detail_reminder_pending
+                                        else R.string.msg_detail_reminder_none
+                                    ),
+                                )
+                            },
+                            {
+                                DiagnosticRow(
+                                    stringResource(R.string.msg_detail_sent_time_label),
+                                    detailTime(message.createdAtMs, missing),
+                                )
+                            },
+                            {
+                                DiagnosticRow(
+                                    stringResource(R.string.msg_detail_received_time_label),
+                                    detailTime(message.receivedAtMs, missing),
+                                )
+                            },
                         )
                         SelectionContainer {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
