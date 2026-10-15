@@ -4,7 +4,6 @@ import android.content.Context
 import io.github.beacon.app.domain.model.PollingConfig
 import io.github.beacon.app.domain.model.PollingState
 import io.github.beacon.app.domain.model.SyncOutcome
-import io.github.beacon.app.domain.policy.SyncResultText
 import org.json.JSONObject
 
 /** Only the reception service serial executor reads or commits this preference file. */
@@ -30,9 +29,9 @@ object PollingWire {
             .put("blocked", state.blocked)
             .put("attempt", state.lastAttemptMs)
             .put("success", state.lastSuccessMs)
-            .put("result", state.lastResult)
             .put("revision", state.revision)
             .put("outcome", state.lastOutcome?.name ?: "")
+            .put("successInserted", state.lastSuccessInserted)
             .toString()
 
     fun decode(json: String): PollingState {
@@ -51,9 +50,9 @@ object PollingWire {
             value.getString("blocked"),
             value.getLong("attempt"),
             value.getLong("success"),
-            SyncResultText.normalize(value.getString("result")),
             value.getLong("revision"),
             outcome,
+            if (value.has("successInserted")) value.getInt("successInserted").coerceAtLeast(0) else null,
         )
     }
 }

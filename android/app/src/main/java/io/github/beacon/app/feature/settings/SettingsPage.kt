@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
@@ -51,18 +49,17 @@ fun SettingsPage(
     onThemeModeChange: (BeaconThemeMode) -> Unit,
     onOperationDetails: (String) -> Unit,
     onFeedback: (String) -> Unit,
-    onPreviewReport: () -> Unit,
     onRequestNotificationPermission: () -> Unit,
     onNotificationSettingsUnavailable: () -> Unit,
     updateState: UpdateCheckState,
     onCheckUpdate: () -> Unit,
-    quietHoursForm: QuietHoursFormState = androidx.compose.runtime.remember { QuietHoursFormState() },
+    quietHoursForm: QuietHoursFormState =
+        androidx.compose.runtime.remember { QuietHoursFormState() },
 ) {
     val resources = androidx.compose.ui.platform.LocalResources.current
     val context = androidx.compose.ui.platform.LocalContext.current
     val focus = LocalFocusManager.current
     val busy = runtimeState.messageBusy
-    var migrationHelpOpen by rememberSaveable { mutableStateOf(false) }
     val polling = runtimeState.pollingState
     var pendingReminderCount by
         androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Long?>(null) }
@@ -80,12 +77,22 @@ fun SettingsPage(
     }
     // Resolved here because its only use site is a non-composable callback.
     val bindingFormatHint = stringResource(R.string.binding_format_hint)
-    if (screen == SettingsScreen.SERVER_ADMIN) {
+    if (
+        screen in
+            setOf(
+                SettingsScreen.SERVER_ADMIN,
+                SettingsScreen.SERVER_DEVICES,
+                SettingsScreen.SERVER_APPLICATIONS,
+                SettingsScreen.SERVER_TEST,
+            )
+    ) {
         ServerAdminPage(
             runtimeState.configuredEndpoint,
             scroll,
             modifier,
             padding,
+            screen = screen,
+            onNavigate = onNavigate,
             onUseBinding = { endpoint, code, name ->
                 val current = actions.state.value
                 if (
@@ -114,7 +121,8 @@ fun SettingsPage(
     }
     BeaconSettingsList(state = scroll, modifier = modifier, contentPadding = padding) {
         when (screen) {
-            SettingsScreen.HOME, SettingsScreen.APPEARANCE -> {
+            SettingsScreen.HOME,
+            SettingsScreen.APPEARANCE -> {
                 item {
                     SettingsGroup(stringResource(R.string.settings_receive_section_title)) {
                         SettingsRow(
@@ -141,7 +149,9 @@ fun SettingsPage(
                             notificationHint?.let { stringResource(it) }
                                 ?: when (notificationPermission) {
                                     NotificationPermissionState.ALLOWED ->
-                                        stringResource(R.string.settings_notifications_allowed_label)
+                                        stringResource(
+                                            R.string.settings_notifications_allowed_label
+                                        )
                                     NotificationPermissionState.DENIED ->
                                         stringResource(R.string.app_system_notification_denied_hint)
                                     NotificationPermissionState.UNKNOWN ->
@@ -178,7 +188,9 @@ fun SettingsPage(
                             uiStyle.ordinal,
                             icon = BeaconIcons.Palette,
                             settingsRow = true,
-                        ) { onUiStyleChange(BeaconUiStyle.entries[it]) }
+                        ) {
+                            onUiStyleChange(BeaconUiStyle.entries[it])
+                        }
                         BeaconDropdownPreference(
                             stringResource(R.string.appearance_theme),
                             listOf(
@@ -218,13 +230,6 @@ fun SettingsPage(
                             onNavigate(SettingsScreen.BACKUP)
                         }
                         SettingsRow(
-                            stringResource(R.string.settings_advanced_section_title),
-                            "",
-                            BeaconIcons.Diagnostics,
-                        ) {
-                            onNavigate(SettingsScreen.DIAGNOSTICS)
-                        }
-                        SettingsRow(
                             title = stringResource(R.string.settings_update_title),
                             subtitle = "",
                             icon = BeaconIcons.Update,
@@ -255,14 +260,19 @@ fun SettingsPage(
                             stringResource(R.string.settings_guide_title),
                             "",
                             BeaconIcons.Guide,
-                        ) { onNavigate(SettingsScreen.GUIDE) }
+                        ) {
+                            onNavigate(SettingsScreen.GUIDE)
+                        }
                     }
                 }
             }
             SettingsScreen.QUIET_HOURS -> {
                 item { QuietHoursPanel(runtimeState, actions, quietHoursForm, scheduleOnly = true) }
             }
-            SettingsScreen.SERVER_ADMIN -> Unit
+            SettingsScreen.SERVER_ADMIN,
+            SettingsScreen.SERVER_DEVICES,
+            SettingsScreen.SERVER_APPLICATIONS,
+            SettingsScreen.SERVER_TEST -> Unit
             SettingsScreen.GUIDE -> {
                 item {
                     FirstUseGuidePanel(
@@ -276,19 +286,11 @@ fun SettingsPage(
             SettingsScreen.BACKUP -> {
                 item {
                     SettingsGroup(stringResource(R.string.settings_backup_settings_title)) {
-                        val backupBusy = busy || runtimeState.transportBusy || !runtimeState.runtimeConnected
+                        val backupBusy =
+                            busy || runtimeState.transportBusy || !runtimeState.runtimeConnected
                         SettingsBackupPanel(actions, backupBusy, grouped = false)
                         io.github.beacon.app.ui.components.SettingsFieldDivider()
                         HistoryArchivePanel(actions, backupBusy, grouped = false)
-                    }
-                }
-                item {
-                    SettingsGroup(stringResource(R.string.ui_v2_migration_title)) {
-                        SettingsRow(
-                            stringResource(R.string.ui_v2_migration_entry),
-                            stringResource(R.string.ui_v2_migration_entry_hint),
-                            BeaconIcons.Backup,
-                        ) { migrationHelpOpen = true }
                     }
                 }
             }
@@ -329,8 +331,12 @@ fun SettingsPage(
             SettingsScreen.NOTIFICATION_RULES -> {
                 item { NotificationSettingsPanel(runtimeState, actions) }
                 item {
-                    QuietHoursPanel(runtimeState, actions, quietHoursForm,
-                        onSchedule = { onNavigate(SettingsScreen.QUIET_HOURS) })
+                    QuietHoursPanel(
+                        runtimeState,
+                        actions,
+                        quietHoursForm,
+                        onSchedule = { onNavigate(SettingsScreen.QUIET_HOURS) },
+                    )
                 }
                 item { NotificationSoundPanel() }
             }
@@ -346,42 +352,9 @@ fun SettingsPage(
                     context,
                 )
             }
-            SettingsScreen.DIAGNOSTICS -> {
-                diagnosticsSettingsItems(
-                    runtimeState,
-                    actions,
-                    onPreviewReport,
-                    onOperationDetails,
-                    busy,
-                    context,
-                )
-            }
             SettingsScreen.ABOUT -> {
                 aboutSettingsItems(resources, context, onOperationDetails)
             }
         }
     }
-    if (migrationHelpOpen)
-        io.github.beacon.app.ui.components.BeaconAlertDialog(
-            onDismissRequest = { migrationHelpOpen = false },
-            title = {
-                io.github.beacon.app.ui.components.BeaconText(
-                    stringResource(R.string.ui_v2_migration_title)
-                )
-            },
-            text = {
-                io.github.beacon.app.ui.components.BeaconText(
-                    stringResource(R.string.ui_v2_backup_migration)
-                )
-            },
-            confirmButton = {
-                io.github.beacon.app.ui.components.BeaconButton(
-                    onClick = { migrationHelpOpen = false }
-                ) {
-                    io.github.beacon.app.ui.components.BeaconText(
-                        stringResource(R.string.ui_got_it_action)
-                    )
-                }
-            },
-        )
 }

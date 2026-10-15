@@ -9,27 +9,18 @@
     <string name="ui_v2_quiet_scope_short">只影响通知提醒，不停止消息接收</string>
     <string name="ui_v2_quiet_effect">免打扰期间</string>
     <string name="ui_v2_quiet_section">免打扰</string>
-    <string name="ui_v2_developer_tools">开发者工具</string>
     <string name="ui_v2_docs">使用与部署文档</string>
     <string name="ui_v2_licenses">开源许可</string>
     <string name="ui_v2_license_failed">开源许可读取失败，请重试。</string>
     <string name="ui_v2_license_loading">正在读取开源许可。</string>
-    <string name="ui_v2_project_links">项目与文档</string>
     <string name="ui_v2_copy_device_id">复制完整设备 ID</string>
     <string name="ui_v2_priority">消息优先级</string>
     <string name="ui_v2_read_state">阅读状态</string>
     <string name="ui_v2_expiry">有效期截止时间</string>
-    <string name="ui_v2_server_metrics">服务器概况</string>
-    <string name="ui_v2_backup_migration">在新设备安装 Beacon 后，导入设置和消息记录，再使用服务器绑定码绑定新设备。设备凭据不会随设置备份迁移。</string>
-    <string name="ui_v2_migration_title">设备迁移</string>
-    <string name="ui_v2_migration_entry">迁移到新设备</string>
-    <string name="ui_v2_migration_entry_hint">查看现有迁移流程与说明</string>
     <string name="ui_v2_export_settings_hint">保存当前配置</string>
     <string name="ui_v2_import_settings_hint">从备份文件恢复</string>
     <string name="ui_v2_export_history_hint">保存本地历史消息</string>
     <string name="ui_v2_import_history_hint">从备份恢复历史</string>
     <string name="ui_v2_expand_examples">展开 API 示例</string>
-    <string name="ui_v2_collapse_examples">收起 API 示例</string>
     <string name="ui_v2_power_conditions_title">省电接收条件</string>
-    <string name="ui_v2_normal_label">正常</string>
 </resources>

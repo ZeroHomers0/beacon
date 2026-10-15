@@ -379,7 +379,6 @@ class RuntimeProbeService : Service() {
                     saveState(
                         pollingState.copy(
                             blocked = PollingPolicy.blockingReason(SyncOutcome.CONFIG),
-                            lastResult = "连接配置不可用",
                             lastAttemptMs = attemptedAtMs,
                         )
                     )
@@ -387,10 +386,12 @@ class RuntimeProbeService : Service() {
                 return SyncReport(SyncOutcome.CONFIG, "连接配置不可用，请重新保存配置")
             }
         var outcome = SyncOutcome.OK
+        var insertedCount: Int? = null
         val message =
             try {
                 realtime.coalesceNetworkWork()
-                HttpMessageSync(settings, store, ::allowed).run()
+                val sync = HttpMessageSync(settings, store, ::allowed)
+                sync.run().also { insertedCount = sync.insertedCount }
             } catch (e: Exception) {
                 io.github.beacon.app.domain.receive.RetryAfterPolicy.from(e)?.let {
                     networkWork.defer(
@@ -414,7 +415,8 @@ class RuntimeProbeService : Service() {
                     lastSuccessMs =
                         if (outcome == SyncOutcome.OK) System.currentTimeMillis()
                         else pollingState.lastSuccessMs,
-                    lastResult = message,
+                    lastSuccessInserted = if (outcome == SyncOutcome.OK) insertedCount
+                        else pollingState.lastSuccessInserted,
                     lastOutcome = outcome,
                 )
             )
@@ -769,7 +771,6 @@ class RuntimeProbeService : Service() {
                                 pollingState.copy(
                                     config = pollingState.config.copy(enabled = false),
                                     blocked = "",
-                                    lastResult = "服务器配置已清除，自动接收已暂停",
                                 )
                             )
                             realtime.reset()
@@ -1086,7 +1087,6 @@ class RuntimeProbeService : Service() {
                                     pollingState.copy(
                                         config = pollingState.config.copy(enabled = false),
                                         blocked = "",
-                                        lastResult = "服务端已撤销当前设备，自动接收已暂停",
                                     )
                                 )
                                 realtime.reset()
@@ -1158,7 +1158,7 @@ class RuntimeProbeService : Service() {
                                 saved = true
                                 generation.incrementAndGet()
                                 realtime.reset()
-                                saveState(pollingState.copy(blocked = "", lastResult = "当前设备凭证已更新"))
+                                saveState(pollingState.copy(blocked = ""))
                                 recordEvent(RuntimeEventKind.CREDENTIALS_ROTATED)
                                 realtime.reconcile()
                                 SyncReport(SyncOutcome.OK, "新凭证已验证并加密保存；历史与接收开关保留，请更新发送脚本中的推送地址")
@@ -1210,7 +1210,7 @@ class RuntimeProbeService : Service() {
                                     recordEvent(RuntimeEventKind.CONNECTION_SAVED)
                                     generation.incrementAndGet()
                                     saveState(
-                                        pollingState.copy(blocked = "", lastResult = "服务器绑定成功")
+                                        pollingState.copy(blocked = "")
                                     )
                                     realtime.reset()
                                     realtime.reconcile()
@@ -1477,7 +1477,6 @@ class RuntimeProbeService : Service() {
                                                 saveState(
                                                     pollingState.copy(
                                                         blocked = "",
-                                                        lastResult = "连接配置已更新",
                                                     )
                                                 )
                                                 realtime.reset()

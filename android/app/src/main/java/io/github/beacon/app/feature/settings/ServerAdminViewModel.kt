@@ -46,6 +46,7 @@ data class AdminUiState(
     val devices: List<AdminDevice> = emptyList(),
     val applications: List<AdminApplication> = emptyList(),
     val secret: AdminSecret? = null,
+    val testDeviceId: String = "",
 )
 
 /** Administrator credentials use an independent Keystore; never saved state or settings exports. */
@@ -55,6 +56,11 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
 
     private val mutable = MutableStateFlow(AdminUiState())
     val state = mutable.asStateFlow()
+
+    fun selectTestDevice(id: String) {
+        mutable.value = mutable.value.copy(testDeviceId = id)
+    }
+
     private var session: ServerAdministration? = null
     private var job: Job? = null
     private var generation = 0

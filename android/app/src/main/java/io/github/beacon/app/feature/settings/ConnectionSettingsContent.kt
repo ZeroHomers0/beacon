@@ -3,16 +3,13 @@
 package io.github.beacon.app.feature.settings
 
 import android.content.Context
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -24,16 +21,15 @@ import io.github.beacon.app.domain.model.BindingRequest
 import io.github.beacon.app.domain.model.RuntimeState
 import io.github.beacon.app.ipc.RuntimeActions
 import io.github.beacon.app.ui.components.BeaconActionButton
-import io.github.beacon.app.ui.components.BeaconCard
 import io.github.beacon.app.ui.components.BeaconButton
+import io.github.beacon.app.ui.components.BeaconCard
 import io.github.beacon.app.ui.components.BeaconText
 import io.github.beacon.app.ui.components.BeaconTextField
-import io.github.beacon.app.ui.components.SettingsStatusSummary
-import io.github.beacon.app.ui.components.SettingsHint
 import io.github.beacon.app.ui.components.SettingsSection
+import io.github.beacon.app.ui.components.SettingsStatusSummary
 import io.github.beacon.app.ui.components.connectionStatusLabel
-import io.github.beacon.app.ui.components.formatMessageTime
 import io.github.beacon.app.ui.components.copyToClipboard
+import io.github.beacon.app.ui.components.formatMessageTime
 import io.github.beacon.app.ui.icons.BeaconIcons
 
 internal fun LazyListScope.connectionSettingsItems(
@@ -51,49 +47,63 @@ internal fun LazyListScope.connectionSettingsItems(
     item {
         BeaconCard(Modifier.fillMaxWidth()) {
             Column(
-                Modifier.fillMaxWidth().padding(io.github.beacon.app.ui.components.BeaconUiMetrics.CardInset),
-                verticalArrangement = Arrangement.spacedBy(io.github.beacon.app.ui.components.BeaconUiMetrics.SectionGap),
+                Modifier.fillMaxWidth()
+                    .padding(io.github.beacon.app.ui.components.BeaconUiMetrics.CardInset),
+                verticalArrangement =
+                    Arrangement.spacedBy(
+                        io.github.beacon.app.ui.components.BeaconUiMetrics.SectionGap
+                    ),
             ) {
-                val label = if (runtimeState.serverReachable == true)
-                    resources.getString(R.string.connection_status_connected)
-                else connectionStatusLabel(runtimeState)
-                val details = when {
-                    runtimeState.serverReachable == true -> resources.getString(R.string.server_status_protocols)
-                    runtimeState.serverReachable == false -> runtimeState.serverCheckResult.substringAfter(" · ", runtimeState.serverCheckResult)
-                    else -> ""
-                }
-            SettingsStatusSummary(
-                label,
-                details,
-                icon = when {
-                    runtimeState.serverChecking -> BeaconIcons.Sync
-                    runtimeState.serverReachable == false -> BeaconIcons.Warning
-                    else -> BeaconIcons.Cloud
-                },
-                tint = if (runtimeState.serverReachable == false) MaterialTheme.colorScheme.error
-                    else if (runtimeState.serverReachable == true) io.github.beacon.app.ui.theme.beaconSuccessColor()
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                loading = runtimeState.serverChecking,
-                badgeLabel = if (runtimeState.serverReachable == true)
-                    resources.getString(R.string.ui_v2_normal_label) else null,
-            )
+                val label =
+                    if (runtimeState.serverReachable == true)
+                        resources.getString(R.string.connection_status_connected)
+                    else connectionStatusLabel(runtimeState)
+                val details =
+                    when {
+                        runtimeState.serverReachable == true ->
+                            resources.getString(R.string.server_status_protocols)
+                        runtimeState.serverReachable == false ->
+                            runtimeState.serverCheckResult.substringAfter(
+                                " · ",
+                                runtimeState.serverCheckResult,
+                            )
+                        else -> ""
+                    }
+                SettingsStatusSummary(
+                    label,
+                    details,
+                    icon =
+                        when {
+                            runtimeState.serverChecking -> BeaconIcons.Sync
+                            runtimeState.serverReachable == false -> BeaconIcons.Warning
+                            else -> BeaconIcons.Cloud
+                        },
+                    tint =
+                        if (runtimeState.serverReachable == false) MaterialTheme.colorScheme.error
+                        else if (runtimeState.serverReachable == true)
+                            io.github.beacon.app.ui.theme.beaconSuccessColor()
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                    loading = runtimeState.serverChecking,
+                )
                 BeaconText(
-                    stringResource(R.string.server_last_checked) + " · " + formatMessageTime(runtimeState.serverCheckedAtMs),
+                    stringResource(R.string.server_last_checked) +
+                        " · " +
+                        formatMessageTime(runtimeState.serverCheckedAtMs),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            BeaconActionButton(
-                stringResource(
-                    if (runtimeState.serverChecking) R.string.server_checking
-                    else R.string.server_check_action
-                ),
-                BeaconIcons.Realtime,
-                Modifier.fillMaxWidth(),
-                !runtimeState.serverChecking &&
-                    runtimeState.runtimeConnected &&
-                    runtimeState.configuredEndpoint.isNotBlank(),
-                actions::checkServer,
-            )
+                )
+                BeaconActionButton(
+                    stringResource(
+                        if (runtimeState.serverChecking) R.string.server_checking
+                        else R.string.server_check_action
+                    ),
+                    BeaconIcons.Realtime,
+                    Modifier.fillMaxWidth(),
+                    !runtimeState.serverChecking &&
+                        runtimeState.runtimeConnected &&
+                        runtimeState.configuredEndpoint.isNotBlank(),
+                    actions::checkServer,
+                )
             }
         }
     }
@@ -161,9 +171,7 @@ internal fun LazyListScope.connectionSettingsItems(
                         val request =
                             BindingRequest(
                                 connectionForm.endpoint.trim(),
-                                connectionForm.bindingCode
-                                    .trim()
-                                    .lowercase(java.util.Locale.ROOT),
+                                connectionForm.bindingCode.trim().lowercase(java.util.Locale.ROOT),
                                 connectionForm.deviceName.trim(),
                             )
                         try {
@@ -192,7 +200,8 @@ internal fun LazyListScope.connectionSettingsItems(
                 !busy && runtimeState.configuredEndpoint.isNotBlank(),
             ) {
                 actions.copyPushKey { address ->
-                    val copied = copyToClipboard(
+                    val copied =
+                        copyToClipboard(
                             context,
                             resources.getString(R.string.settings_clipboard_push_key),
                             address,

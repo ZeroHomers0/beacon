@@ -146,7 +146,7 @@ fun BeaconTextButton(
         ) {
             CompositionLocalProvider(
                 top.yukonga.miuix.kmp.theme.LocalContentColor provides
-                    (if (enabled) MaterialTheme.colorScheme.primary
+                    (if (enabled) MaterialTheme.colorScheme.onSurface
                     else MaterialTheme.colorScheme.onSurface.copy(alpha = .38f))
             ) {
                 content()
@@ -158,6 +158,9 @@ fun BeaconTextButton(
             modifier.heightIn(min = BeaconUiMetrics.ControlMinHeight),
             enabled,
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+            colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            ),
             content = content,
         )
 }

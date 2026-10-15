@@ -3,6 +3,7 @@
 package io.github.beacon.app.feature.settings
 
 import androidx.activity.compose.LocalActivity
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -32,6 +33,8 @@ internal fun ServerAdminPage(
     onFeedback: (String) -> Unit,
     canBindCurrent: Boolean = false,
     localBindingResult: String = "",
+    screen: SettingsScreen,
+    onNavigate: (SettingsScreen) -> Unit,
 ) {
     val activity = checkNotNull(LocalActivity.current as? androidx.activity.ComponentActivity)
     val model = remember(activity) { ViewModelProvider(activity)[ServerAdminViewModel::class.java] }
@@ -42,10 +45,17 @@ internal fun ServerAdminPage(
     var endpoint by rememberSaveable { mutableStateOf(defaultEndpoint) }
     // Never make administrator input saveable: Android saved instance state is not a secret store.
     var token by remember { mutableStateOf("") }
-    var tab by rememberSaveable { mutableIntStateOf(0) }
+    val tab =
+        when (screen) {
+            SettingsScreen.SERVER_DEVICES -> 0
+            SettingsScreen.SERVER_APPLICATIONS -> 1
+            SettingsScreen.SERVER_TEST -> 2
+            else -> -1
+        }
+    var creating by rememberSaveable(screen) { mutableStateOf(false) }
     var bindingName by rememberSaveable { mutableStateOf("") }
     var appName by rememberSaveable { mutableStateOf("") }
-    var deviceId by rememberSaveable { mutableStateOf("") }
+    var deviceId by rememberSaveable { mutableStateOf(state.testDeviceId) }
     var priority by rememberSaveable { mutableIntStateOf(5) }
     var testTitle by rememberSaveable { mutableStateOf("") }
     var testBody by rememberSaveable { mutableStateOf("") }
@@ -137,7 +147,7 @@ internal fun ServerAdminPage(
                     }
                 }
             }
-        } else {
+        } else if (tab == -1) {
             item {
                 SettingsSection(stringResource(R.string.admin_overview)) {
                     SettingsFieldGroup(
@@ -150,58 +160,69 @@ internal fun ServerAdminPage(
                         {
                             DiagnosticRow(
                                 stringResource(R.string.admin_compatibility),
-                                stringResource(if (state.protocol == 1) R.string.admin_compatible_short else R.string.admin_protocol_unknown_short),
+                                stringResource(
+                                    if (state.protocol == 1) R.string.admin_compatible_short
+                                    else R.string.admin_protocol_unknown_short
+                                ),
                             )
                         },
                     )
-                }
-            }
-            item {
-                SettingsSection(stringResource(R.string.ui_v2_server_metrics)) {
+                    SettingsFieldDivider()
                     SettingsMetricGrid(
                         listOf(
-                            stringResource(R.string.admin_devices) to state.devices.count { !it.revoked }.toString(),
+                            stringResource(R.string.admin_devices) to
+                                state.devices.count { !it.revoked }.toString(),
                             stringResource(R.string.admin_messages) to state.messages.toString(),
                             stringResource(R.string.admin_pending) to state.pending.toString(),
-                        ), columns = 3,
+                        ),
+                        columns = 3,
                     )
-                    DiagnosticRow(stringResource(R.string.admin_database), android.text.format.Formatter.formatFileSize(context, state.databaseBytes))
-                    if (state.protocol != 1) SettingsHint(stringResource(R.string.admin_protocol_unknown))
+                    DiagnosticRow(
+                        stringResource(R.string.admin_database),
+                        android.text.format.Formatter.formatFileSize(context, state.databaseBytes),
+                    )
+                    if (state.protocol != 1)
+                        SettingsHint(stringResource(R.string.admin_protocol_unknown))
 
                     BeaconActionButton(
-                        stringResource(if (state.busy) R.string.admin_loading else R.string.admin_refresh),
-                        BeaconIcons.Sync, Modifier.fillMaxWidth(), !state.busy, model::refresh,
+                        stringResource(
+                            if (state.busy) R.string.admin_loading else R.string.admin_refresh
+                        ),
+                        BeaconIcons.Sync,
+                        Modifier.fillMaxWidth(),
+                        !state.busy,
+                        model::refresh,
                     )
                 }
             }
             item {
-                SettingsSection(stringResource(R.string.admin_manage_section)) {
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                SettingsGroup(stringResource(R.string.admin_manage_section)) {
+                    Row(Modifier.fillMaxWidth()) {
+                        AdminManagementEntry(
+                            stringResource(R.string.admin_devices),
+                            BeaconIcons.Server,
+                            Modifier.weight(1f),
+                            !state.busy,
+                        ) {
+                            onNavigate(SettingsScreen.SERVER_DEVICES)
+                        }
+                        AdminManagementEntry(
+                            stringResource(R.string.admin_applications),
+                            BeaconIcons.CredentialUpdate,
+                            Modifier.weight(1f),
+                            !state.busy,
+                        ) {
+                            onNavigate(SettingsScreen.SERVER_APPLICATIONS)
+                        }
+                    }
+                    SettingsFieldDivider()
+                    SettingsActionRow(
+                        stringResource(R.string.admin_test),
+                        "",
+                        BeaconIcons.Messages,
+                        !state.busy,
                     ) {
-                        listOf(
-                                R.string.admin_devices,
-                                R.string.admin_applications,
-                                R.string.admin_test,
-                            )
-                            .forEachIndexed { index, label ->
-                                BeaconFilterChip(
-                                    selected = tab == index,
-                                    onClick = { tab = index },
-                                    label = {
-                                        Box(
-                                            Modifier.padding(horizontal = 4.dp),
-                                            contentAlignment = androidx.compose.ui.Alignment.Center,
-                                        ) {
-                                            BeaconText(stringResource(label))
-                                        }
-                                    },
-                                    enabled = !state.busy,
-                                    modifier = Modifier.weight(1f).heightIn(min = BeaconUiMetrics.ControlMinHeight),
-                                )
-                            }
+                        onNavigate(SettingsScreen.SERVER_TEST)
                     }
                 }
             }
@@ -209,181 +230,174 @@ internal fun ServerAdminPage(
         if (state.loggedIn)
             when (tab) {
                 0 -> {
-                    if (defaultEndpoint.isBlank() || bindingSubmitted) item {
-                        SettingsSection(stringResource(R.string.admin_this_phone)) {
-                            if (defaultEndpoint.isBlank()) {
+                    if (defaultEndpoint.isBlank() || bindingSubmitted)
+                        item {
+                            SettingsSection(stringResource(R.string.admin_this_phone)) {
+                                if (defaultEndpoint.isBlank()) {
+                                    BeaconActionButton(
+                                        stringResource(R.string.admin_use_binding),
+                                        BeaconIcons.Guide,
+                                        Modifier.fillMaxWidth(),
+                                        canBindCurrent && !state.busy,
+                                    ) {
+                                        model.bindThisPhone(
+                                            android.os.Build.MODEL.take(32),
+                                            ::bindCurrent,
+                                        )
+                                    }
+                                }
+                                if (bindingSubmitted && localBindingResult.isNotBlank())
+                                    OperationResultPanel(
+                                        stringResource(R.string.admin_local_binding_result),
+                                        localBindingResult,
+                                    )
+                            }
+                        }
+                    item {
+                        SettingsGroup("") {
+                            SettingsActionRow(
+                                stringResource(R.string.admin_create_binding),
+                                "",
+                                BeaconIcons.Guide,
+                                !state.busy,
+                            ) {
+                                creating = !creating
+                            }
+                        }
+                    }
+                    if (creating)
+                        item {
+                            SettingsSection("") {
+                                AdminField(
+                                    bindingName,
+                                    { bindingName = it.take(40) },
+                                    R.string.admin_device_name,
+                                    !state.busy,
+                                )
+                                SettingsHint(stringResource(R.string.admin_binding_hint))
                                 BeaconActionButton(
-                                    stringResource(R.string.admin_use_binding),
+                                    stringResource(R.string.admin_create_binding),
                                     BeaconIcons.Guide,
                                     Modifier.fillMaxWidth(),
-                                    canBindCurrent && !state.busy,
+                                    !state.busy && bindingName.isNotBlank(),
                                 ) {
-                                    model.bindThisPhone(android.os.Build.MODEL.take(32), ::bindCurrent)
+                                    model.createBinding(bindingName)
                                 }
                             }
-                            if (bindingSubmitted && localBindingResult.isNotBlank())
-                                OperationResultPanel(
-                                    stringResource(R.string.admin_local_binding_result),
-                                    localBindingResult,
-                                )
                         }
-                    }
-                    item {
-                        SettingsSection(stringResource(R.string.admin_create_binding)) {
-                            AdminField(
-                                bindingName,
-                                { bindingName = it.take(40) },
-                                R.string.admin_device_name,
-                                !state.busy,
-                            )
-                            SettingsHint(stringResource(R.string.admin_binding_hint))
-                            BeaconActionButton(
-                                stringResource(R.string.admin_create_binding),
-                                BeaconIcons.Guide,
-                                Modifier.fillMaxWidth(),
-                                !state.busy && bindingName.isNotBlank(),
-                            ) {
-                                model.createBinding(bindingName)
-                            }
-                        }
-                    }
                     if (state.devices.isEmpty())
                         item { SettingsHint(stringResource(R.string.admin_no_devices)) }
                     items(state.devices, key = { "device-${it.id}" }) { device ->
-                        SettingsSection(device.name) {
-                            SettingsFieldGroup(
-                                {
-                                    DiagnosticRow(stringResource(R.string.admin_device_id), device.id)
-                                },
-                                {
-                                    DiagnosticRow(
-                                        stringResource(R.string.admin_status),
-                                        stringResource(
-                                            if (device.revoked) R.string.admin_revoked
-                                            else R.string.admin_active
-                                        ),
-                                    )
-                                },
-                            )
-                            BeaconActionButton(
-                                stringResource(R.string.ui_v2_copy_device_id), BeaconIcons.Copy,
-                                Modifier.fillMaxWidth(), !state.busy,
-                            ) {
-                                if (copy(device.id, R.string.admin_device_id))
-                                    onFeedback(resources.getString(R.string.settings_copied_hint))
-                            }
-                            if (device.revoked)
-                                BeaconDangerButton(
-                                    onClick = { deletingDevice = device },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    enabled = !state.busy,
-                                ) {
-                                    BeaconText(stringResource(R.string.admin_delete_device))
-                                }
-                            if (!device.revoked)
-                                BeaconActionPair(
-                                    {
-                                        BeaconOutlinedButton(
-                                            onClick = {
-                                                deviceId = device.id
-                                                tab = 2
-                                            },
-                                            enabled = !state.busy,
-                                        ) {
-                                            BeaconText(stringResource(R.string.admin_test))
+                        AdminListCard(
+                            device.name,
+                            device.id,
+                            stringResource(
+                                if (device.revoked) R.string.admin_revoked
+                                else R.string.admin_active
+                            ),
+                            !state.busy,
+                            buildList {
+                                add(
+                                    R.string.ui_v2_copy_device_id to
+                                        {
+                                            if (copy(device.id, R.string.admin_device_id))
+                                                onFeedback(
+                                                    resources.getString(
+                                                        R.string.settings_copied_hint
+                                                    )
+                                                )
                                         }
-                                    },
-                                    {
-                                        BeaconDangerButton(
-                                            onClick = { pendingDevice = device },
-                                            enabled = !state.busy,
-                                        ) {
-                                            BeaconText(stringResource(R.string.admin_revoke_device))
-                                        }
-                                    },
                                 )
-                        }
+                                if (device.revoked)
+                                    add(R.string.admin_delete_device to { deletingDevice = device })
+                                else {
+                                    add(
+                                        R.string.admin_test to
+                                            {
+                                                deviceId = device.id
+                                                model.selectTestDevice(device.id)
+                                                onNavigate(SettingsScreen.SERVER_TEST)
+                                            }
+                                    )
+                                    add(R.string.admin_revoke_device to { pendingDevice = device })
+                                }
+                            },
+                        )
                     }
                 }
                 1 -> {
                     item {
-                        SettingsSection(stringResource(R.string.admin_create_application)) {
-                            DevicePicker(active, deviceId, { deviceId = it }, !state.busy)
-                            AdminField(
-                                appName,
-                                { appName = it.take(40) },
-                                R.string.admin_application_name,
-                                !state.busy,
-                            )
-                            // Only the tiers the client distinguishes are offered; the server,
-                            // protocol and Bark entry still accept the full 0-10 range.
-                            BeaconDropdownPreference(
-                                stringResource(R.string.admin_priority),
-                                PRIORITY_TIERS.map { value ->
-                                    stringResource(priorityLabel(value), value)
-                                },
-                                PRIORITY_TIERS.indexOf(priority).coerceAtLeast(0),
-                                enabled = !state.busy,
-                                stacked = true,
-                            ) {
-                                priority = PRIORITY_TIERS[it]
-                            }
-                            SettingsHint(stringResource(R.string.admin_application_hint))
-                            BeaconActionButton(
+                        SettingsGroup("") {
+                            SettingsActionRow(
                                 stringResource(R.string.admin_create_application),
+                                "",
                                 BeaconIcons.CredentialUpdate,
-                                Modifier.fillMaxWidth(),
-                                !state.busy && deviceId.isNotBlank() && appName.isNotBlank(),
+                                !state.busy,
                             ) {
-                                model.createApplication(deviceId, appName, priority)
+                                creating = !creating
                             }
                         }
                     }
+                    if (creating)
+                        item {
+                            SettingsSection("") {
+                                DevicePicker(active, deviceId, { deviceId = it }, !state.busy)
+                                AdminField(
+                                    appName,
+                                    { appName = it.take(40) },
+                                    R.string.admin_application_name,
+                                    !state.busy,
+                                )
+                                // Only the tiers the client distinguishes are offered; the server,
+                                // protocol and Bark entry still accept the full 0-10 range.
+                                BeaconDropdownPreference(
+                                    stringResource(R.string.admin_priority),
+                                    PRIORITY_TIERS.map { value ->
+                                        stringResource(priorityLabel(value), value)
+                                    },
+                                    PRIORITY_TIERS.indexOf(priority).coerceAtLeast(0),
+                                    enabled = !state.busy,
+                                    stacked = true,
+                                ) {
+                                    priority = PRIORITY_TIERS[it]
+                                }
+                                SettingsHint(stringResource(R.string.admin_application_hint))
+                                BeaconActionButton(
+                                    stringResource(R.string.admin_create_application),
+                                    BeaconIcons.CredentialUpdate,
+                                    Modifier.fillMaxWidth(),
+                                    !state.busy && deviceId.isNotBlank() && appName.isNotBlank(),
+                                ) {
+                                    model.createApplication(deviceId, appName, priority)
+                                }
+                            }
+                        }
                     if (state.applications.isEmpty())
                         item { SettingsHint(stringResource(R.string.admin_no_applications)) }
                     items(state.applications, key = { "application-${it.id}" }) { app ->
-                        SettingsSection(app.name) {
-                            SettingsFieldGroup(
-                                {
-                                    DiagnosticRow(
-                                        stringResource(R.string.admin_device),
-                                        state.devices.find { it.id == app.deviceId }?.name ?: app.deviceId,
-                                    )
-                                },
-                                {
-                                    DiagnosticRow(
-                                        stringResource(R.string.admin_priority),
-                                        stringResource(priorityLabel(app.priority), app.priority),
-                                    )
-                                },
-                                {
-                                    DiagnosticRow(
-                                        stringResource(R.string.admin_status),
-                                        stringResource(
-                                            if (app.revoked) R.string.admin_revoked
-                                            else R.string.admin_active
-                                        ),
-                                    )
-                                },
-                            )
-                            if (!app.revoked)
-                                BeaconDangerButton(
-                                    onClick = { pendingApplication = app },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    enabled = !state.busy,
-                                ) {
-                                    BeaconText(stringResource(R.string.admin_revoke_application))
-                                }
-                            // Only a revoked credential can be removed, mirroring device deletion.
-                            if (app.revoked)
-                                BeaconDangerButton(
-                                    onClick = { deletingApplication = app },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    enabled = !state.busy,
-                                ) {
-                                    BeaconText(stringResource(R.string.admin_delete_application))
-                                }
-                        }
+                        AdminListCard(
+                            app.name,
+                            state.devices.find { it.id == app.deviceId }?.name ?: app.deviceId,
+                            stringResource(priorityLabel(app.priority), app.priority) +
+                                " · " +
+                                stringResource(
+                                    if (app.revoked) R.string.admin_revoked
+                                    else R.string.admin_active
+                                ),
+                            !state.busy,
+                            listOf(
+                                if (app.revoked)
+                                    R.string.admin_delete_application to
+                                        {
+                                            deletingApplication = app
+                                        }
+                                else
+                                    R.string.admin_revoke_application to
+                                        {
+                                            pendingApplication = app
+                                        }
+                            ),
+                        )
                     }
                 }
                 2 ->
@@ -429,21 +443,28 @@ internal fun ServerAdminPage(
                         }
                     }
             }
-        if (state.loggedIn) item {
-            SettingsSection(stringResource(R.string.settings_danger_section_title)) {
-                BeaconDangerButton(
-                    onClick = { clearStage = 1 },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !state.busy,
-                ) {
-                    BeaconText(stringResource(R.string.admin_clear_messages))
+        if (state.loggedIn && tab == -1)
+            item {
+                SettingsSection(stringResource(R.string.settings_danger_section_title)) {
+                    BeaconDangerButton(
+                        onClick = { clearStage = 1 },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !state.busy,
+                    ) {
+                        BeaconText(stringResource(R.string.admin_clear_messages))
+                    }
+                    BeaconOutlinedButton(
+                        onClick = {
+                            model.logout()
+                            token = ""
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !state.busy,
+                    ) {
+                        BeaconText(stringResource(R.string.admin_logout))
+                    }
                 }
-                BeaconOutlinedButton(
-                    onClick = { model.logout(); token = "" },
-                    modifier = Modifier.fillMaxWidth(), enabled = !state.busy,
-                ) { BeaconText(stringResource(R.string.admin_logout)) }
             }
-        }
     }
     state.secret?.let { secret ->
         BeaconAlertDialog(
@@ -479,13 +500,23 @@ internal fun ServerAdminPage(
                         }
                     if (secret.example.isNotEmpty())
                         BeaconOutlinedButton(onClick = { copy(secret.example) }) {
-                            BeaconText(stringResource(if (copiedValue == secret.example) R.string.admin_copied else R.string.admin_copy_example))
+                            BeaconText(
+                                stringResource(
+                                    if (copiedValue == secret.example) R.string.admin_copied
+                                    else R.string.admin_copy_example
+                                )
+                            )
                         }
                 }
             },
             dismissButton = {
                 BeaconOutlinedButton(onClick = { copy(secret.value) }) {
-                    BeaconText(stringResource(if (copiedValue == secret.value) R.string.admin_copied else R.string.admin_copy))
+                    BeaconText(
+                        stringResource(
+                            if (copiedValue == secret.value) R.string.admin_copied
+                            else R.string.admin_copy
+                        )
+                    )
                 }
             },
             confirmButton = {
@@ -596,6 +627,79 @@ internal fun ServerAdminPage(
             },
             danger = false,
         )
+}
+
+@Composable
+private fun AdminManagementEntry(
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier
+            .clickable(
+                enabled = enabled,
+                role = androidx.compose.ui.semantics.Role.Button,
+                onClick = onClick,
+            )
+            .padding(BeaconUiMetrics.CardInset)
+            .heightIn(min = BeaconUiMetrics.ControlMinHeight),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        androidx.compose.material3.Icon(icon, null, Modifier.size(20.dp))
+        BeaconText(
+            title,
+            Modifier.weight(1f),
+            style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
+        )
+        androidx.compose.material3.Icon(BeaconIcons.Arrow, null, Modifier.size(16.dp))
+    }
+}
+
+@Composable
+private fun AdminListCard(
+    title: String,
+    subtitle: String,
+    status: String,
+    enabled: Boolean,
+    actions: List<Pair<Int, () -> Unit>>,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+    BeaconCard(Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                BeaconText(
+                    title,
+                    style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
+                )
+                SettingsHint(subtitle)
+                SettingsHint(status)
+            }
+            Box {
+                BeaconIconButton(onClick = { menuOpen = true }, enabled = enabled) {
+                    androidx.compose.material3.Icon(
+                        BeaconIcons.More,
+                        stringResource(R.string.admin_more_actions),
+                    )
+                }
+                BeaconDropdownMenu(menuOpen && enabled, { menuOpen = false }) {
+                    actions.forEach { (label, action) ->
+                        BeaconDropdownMenuItem({ BeaconText(stringResource(label)) }) {
+                            menuOpen = false
+                            action()
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable

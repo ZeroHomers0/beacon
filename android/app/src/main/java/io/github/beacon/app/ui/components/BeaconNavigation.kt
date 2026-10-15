@@ -208,7 +208,7 @@ fun BeaconDropdownPreference(
                             icon,
                             null,
                             Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     if (useStacked) {
                         Column(
@@ -218,7 +218,7 @@ fun BeaconDropdownPreference(
                             BeaconText(title, style = MaterialTheme.typography.bodyLarge)
                             BeaconText(
                                 items.getOrElse(selectedIndex) { "" },
-                                color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 style = MaterialTheme.typography.bodyMedium,
                             )
                         }
@@ -230,7 +230,7 @@ fun BeaconDropdownPreference(
                         )
                         BeaconText(
                             value,
-                            color = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }

@@ -53,7 +53,6 @@ open class MainActivity : ComponentActivity() {
                 ui.receiveModesOpen ||
                 ui.filtersOpen ||
                 ui.pendingDelete != null ||
-                ui.supportPreview != null ||
                 ui.operationDetails != null ||
                 viewModel.state.value.messageBusy
         )

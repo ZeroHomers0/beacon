@@ -2,7 +2,6 @@ package io.github.beacon.app.feature.settings
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -45,11 +44,14 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
         saving = true
         loadFailed = false
         saveFailed = false
-        actions.cleanupSettings(value, onFailure = {
-            loadFailed = true
-            saving = false
-            saveFailed = true
-        }) {
+        actions.cleanupSettings(
+            value,
+            onFailure = {
+                loadFailed = true
+                saving = false
+                saveFailed = true
+            },
+        ) {
             settings = it
             saving = false
             onSaved()
@@ -69,7 +71,12 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
         // Without this the page rendered every control disabled with no explanation; a failed read
         // is now visible and recoverable instead of looking like a broken toggle.
         if (loadFailed && !custom) {
-            SettingsSection(stringResource(if (saveFailed) R.string.storage_save_failed_title else R.string.storage_load_failed_title)) {
+            SettingsSection(
+                stringResource(
+                    if (saveFailed) R.string.storage_save_failed_title
+                    else R.string.storage_load_failed_title
+                )
+            ) {
                 BeaconText(state.status.text, color = MaterialTheme.colorScheme.error)
                 BeaconActionButton(
                     stringResource(R.string.action_retry),
@@ -86,88 +93,85 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                 Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),
                 verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
             ) {
-            BeaconText(
-                stringResource(R.string.storage_local_database),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            BeaconText(
-                preview?.databaseBytes?.let { android.text.format.Formatter.formatFileSize(context, it) } ?: "—",
-                style = MaterialTheme.typography.headlineLarge,
-            )
-            SettingsMetricGrid(
-                listOf(
-                    Pair(
-                        resources.getString(R.string.ui_nav_messages_title),
-                        preview?.total?.toString() ?: "—",
-                    ),
-                    Pair(
-                        resources.getString(R.string.msg_unread_label),
-                        preview?.unread?.toString() ?: "—",
-                    ),
-                    Pair(
-                        resources.getString(R.string.settings_storage_receipts),
-                        preview?.pending?.toString() ?: "—",
-                    ),
-                ),
-                columns = 3,
-            )
-            SettingsFieldDivider()
-            Row(
-                Modifier.fillMaxWidth(),
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                val pendingNotifications = preview?.pendingNotifications?.let {
-                    resources.getString(R.string.settings_cleanup_count, it)
-                } ?: "—"
-                val walSize = preview?.walBytes?.let {
-                    android.text.format.Formatter.formatFileSize(context, it)
-                } ?: "—"
                 BeaconText(
-                    resources.getString(R.string.storage_pending_wal_summary, pendingNotifications, walSize),
-                    Modifier.weight(1f),
+                    stringResource(R.string.storage_local_database),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
                 )
-                BeaconTextButton(
-                    onClick = { actions.previewCleanup(policy) },
-                    enabled = state.runtimeConnected && settingsLoaded && !state.messageBusy,
+                BeaconText(
+                    preview?.databaseBytes?.let {
+                        android.text.format.Formatter.formatFileSize(context, it)
+                    } ?: "—",
+                    style = MaterialTheme.typography.headlineLarge,
+                )
+                SettingsMetricGrid(
+                    listOf(
+                        Pair(
+                            resources.getString(R.string.ui_nav_messages_title),
+                            preview?.total?.toString() ?: "—",
+                        ),
+                        Pair(
+                            resources.getString(R.string.msg_unread_label),
+                            preview?.unread?.toString() ?: "—",
+                        ),
+                        Pair(
+                            resources.getString(R.string.settings_storage_receipts),
+                            preview?.pending?.toString() ?: "—",
+                        ),
+                    ),
+                    columns = 3,
+                )
+                SettingsFieldDivider()
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    BeaconText(stringResource(R.string.storage_refresh))
+                    val pendingNotifications =
+                        preview?.pendingNotifications?.let {
+                            resources.getString(R.string.settings_cleanup_count, it)
+                        } ?: "—"
+                    val walSize =
+                        preview?.walBytes?.let {
+                            android.text.format.Formatter.formatFileSize(context, it)
+                        } ?: "—"
+                    BeaconText(
+                        resources.getString(
+                            R.string.storage_pending_wal_summary,
+                            pendingNotifications,
+                            walSize,
+                        ),
+                        Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                    )
+                    BeaconTextButton(
+                        onClick = { actions.previewCleanup(policy) },
+                        enabled = state.runtimeConnected && settingsLoaded && !state.messageBusy,
+                    ) {
+                        BeaconText(stringResource(R.string.storage_refresh))
+                    }
                 }
-            }
-            BeaconText(
-                stringResource(R.string.storage_sampled_inline, preview?.sampledAtMs?.let { formatMessageTime(it) } ?: "—"),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            }
-        }
-        BeaconCard(Modifier.fillMaxWidth()) {
-            Column(
-                Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),
-                verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
-            ) {
-            Surface(
-                color = MaterialTheme.colorScheme.secondaryContainer,
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-            ) {
                 BeaconText(
-                    stringResource(R.string.storage_breakdown_note),
-                    Modifier.fillMaxWidth().padding(12.dp),
+                    stringResource(
+                        R.string.storage_sampled_inline,
+                        preview?.sampledAtMs?.let { formatMessageTime(it) } ?: "—",
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
-            BeaconActionButton(
-                stringResource(R.string.storage_wal_clear),
-                io.github.beacon.app.ui.icons.BeaconIcons.Storage,
-                Modifier.fillMaxWidth(),
-                state.runtimeConnected && !state.messageBusy && preview != null && preview.walBytes > 0,
-                actions::checkpointStorage,
-            )
+                SettingsFieldDivider()
+                BeaconActionButton(
+                    stringResource(R.string.storage_wal_clear),
+                    io.github.beacon.app.ui.icons.BeaconIcons.Storage,
+                    Modifier.fillMaxWidth(),
+                    state.runtimeConnected &&
+                        !state.messageBusy &&
+                        preview != null &&
+                        preview.walBytes > 0,
+                    actions::checkpointStorage,
+                )
             }
         }
         SettingsSection(stringResource(R.string.settings_cleanup_auto_title)) {
@@ -175,7 +179,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                 {
                     BeaconPreferenceToggle(
                         resources.getString(R.string.settings_cleanup_auto_toggle),
-                        resources.getString(R.string.settings_cleanup_auto_hint),
+                        "",
                         settings.automatic,
                         enabled = settingsLoaded && !state.messageBusy && !saving,
                     ) {
@@ -185,7 +189,9 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                 {
                     DiagnosticRow(
                         stringResource(R.string.storage_last_result_label),
-                        io.github.beacon.app.domain.policy.CleanupResultPresentation.compact(settings.lastResult),
+                        io.github.beacon.app.domain.policy.CleanupResultPresentation.compact(
+                            settings.lastResult
+                        ),
                     )
                 },
             )

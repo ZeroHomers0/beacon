@@ -21,9 +21,8 @@ fun SettingsStatusSummary(
     title: String,
     details: String,
     icon: ImageVector = BeaconIcons.Diagnostics,
-    tint: Color = MaterialTheme.colorScheme.primary,
+    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     loading: Boolean = false,
-    badgeLabel: String? = null,
 ) {
     val iconSize = 48.dp
     Row(
@@ -49,19 +48,6 @@ fun SettingsStatusSummary(
                 )
             if (details.isNotBlank()) SettingsHint(details)
         }
-        if (badgeLabel != null)
-            androidx.compose.material3.Surface(
-                color = tint.copy(alpha = 0.12f),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
-            ) {
-                BeaconText(
-                    badgeLabel,
-                    Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = tint,
-                    maxLines = 1,
-                )
-            }
     }
 }
 

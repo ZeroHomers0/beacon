@@ -5,13 +5,10 @@ package io.github.beacon.app.feature.settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.*
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.PollingState
 import io.github.beacon.app.domain.model.RealtimeHeartbeat
@@ -19,23 +16,19 @@ import io.github.beacon.app.domain.model.ReceiveMode
 import io.github.beacon.app.domain.model.ReceivePlan
 import io.github.beacon.app.domain.model.RuntimeState
 import io.github.beacon.app.ipc.RuntimeActions
-import io.github.beacon.app.ui.components.SettingsFieldGroup
-import io.github.beacon.app.ui.components.BeaconActionButton
 import io.github.beacon.app.ui.components.BeaconButton
 import io.github.beacon.app.ui.components.BeaconDropdownPreference
 import io.github.beacon.app.ui.components.BeaconPreferenceToggle
 import io.github.beacon.app.ui.components.BeaconText
 import io.github.beacon.app.ui.components.DiagnosticRow
 import io.github.beacon.app.ui.components.OperationResultPanel
+import io.github.beacon.app.ui.components.SettingsFieldGroup
 import io.github.beacon.app.ui.components.SettingsGroup
-import io.github.beacon.app.ui.components.SettingsHint
 import io.github.beacon.app.ui.components.SettingsRow
 import io.github.beacon.app.ui.components.SettingsSection
 import io.github.beacon.app.ui.components.formatMessageTime
-import io.github.beacon.app.ui.components.receiveLabel
 import io.github.beacon.app.ui.components.receiveModeIcon
 import io.github.beacon.app.ui.components.receiveModeTitle
-import io.github.beacon.app.ui.icons.BeaconIcons
 
 /**
  * The reception page edits one draft, saved through its toolbar action.
@@ -68,34 +61,43 @@ internal fun LazyListScope.receptionSettingsItems(
             if (polling.blocked.isNotBlank())
                 BeaconText(polling.blocked, color = MaterialTheme.colorScheme.error)
             DiagnosticRow(
-                stringResource(R.string.settings_last_sync_success_desc),
+                stringResource(R.string.settings_last_sync_success_desc) +
+                    (polling.lastSuccessInserted?.let {
+                        " · " + stringResource(R.string.receive_success_count, it)
+                    } ?: ""),
                 formatMessageTime(polling.lastSuccessMs),
             )
-            if (receivePlan.mode != ReceiveMode.POWER_SAVING)
+            if (receivePlan.mode != ReceiveMode.POWER_SAVING) {
+                io.github.beacon.app.ui.components.SettingsFieldDivider()
                 OperationResultPanel(
                     stringResource(R.string.receive_realtime_status_title),
-                    runtimeState.realtimeStatus,
+                    runtimeState.realtimeStatus.removePrefix(
+                        stringResource(R.string.receive_mode_realtime)
+                    ),
                 )
-            OperationResultPanel(
-                stringResource(R.string.receive_latest_result_title),
-                polling.lastResult,
-            )
+            }
+            io.github.beacon.app.ui.components.SettingsFieldDivider()
             io.github.beacon.app.ui.components.BeaconActionPair(
                 dismiss = {
                     io.github.beacon.app.ui.components.BeaconOutlinedButton(
-                        modifier = Modifier.fillMaxWidth(), enabled = !busy,
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !busy,
                         onClick = {
-                        actions.refreshPolling { result ->
-                            actions.receivePlan()
-                            onOperationDetails(result)
-                        }
+                            actions.refreshPolling { result ->
+                                actions.receivePlan()
+                                onOperationDetails(result)
+                            }
                         },
                     ) {
                         BeaconText(stringResource(R.string.action_refresh_status))
                     }
                 },
                 confirm = {
-                    BeaconButton(onClick = { actions.transport() }, modifier = Modifier.fillMaxWidth(), enabled = !busy) {
+                    BeaconButton(
+                        onClick = { actions.transport() },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !busy,
+                    ) {
                         BeaconText(stringResource(R.string.action_sync_now))
                     }
                 },
@@ -125,7 +127,7 @@ internal fun LazyListScope.receptionSettingsItems(
                     {
                         BeaconPreferenceToggle(
                             stringResource(R.string.receive_adaptive_heartbeat),
-                            stringResource(R.string.receive_adaptive_heartbeat_hint),
+                            "",
                             receptionForm.plan.adaptiveHeartbeat,
                             !busy && runtimeState.receivePlanLoaded,
                         ) {
@@ -145,15 +147,16 @@ internal fun LazyListScope.receptionSettingsItems(
                                 !receptionForm.plan.adaptiveHeartbeat,
                         ) {
                             receptionForm.plan =
-                                receptionForm.plan.copy(heartbeatSeconds = RealtimeHeartbeat.options[it])
+                                receptionForm.plan.copy(
+                                    heartbeatSeconds = RealtimeHeartbeat.options[it]
+                                )
                             receptionForm.edited = true
                         }
-                        SettingsHint(stringResource(R.string.receive_heartbeat_hint))
                     },
                     {
                         BeaconPreferenceToggle(
                             stringResource(R.string.receive_batch_ordinary),
-                            stringResource(R.string.receive_batch_ordinary_hint),
+                            "",
                             receptionForm.plan.batchOrdinaryMessages,
                             !busy && runtimeState.receivePlanLoaded,
                         ) {

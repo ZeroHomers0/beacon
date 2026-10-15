@@ -28,6 +28,9 @@ class HttpMessageSync(
     private val shouldContinue: () -> Boolean = { true },
     private val nowMs: () -> Long = SystemClock::elapsedRealtime,
 ) {
+    var insertedCount: Int = 0
+        private set
+
     companion object {
         // Synchronous requests need no dispatcher thread. One short-lived idle connection also
         // serves burst receipts and polling pages, without retaining credentials in client state.
@@ -235,6 +238,7 @@ class HttpMessageSync(
     }
 
     fun run(): String {
+        insertedCount = 0
         settings.validate(BuildConfig.DEBUG)
         val capabilities = request("/api/v1/capabilities")
         val receivedTime = System.currentTimeMillis()
@@ -300,6 +304,7 @@ class HttpMessageSync(
                         receivedTime,
                     )
                 inserted += pipeline.accept(decoded.messages)
+                insertedCount = inserted
                 cursor = decoded.cursor
                 if (!pending) store.advanceCursor(namespace, cursor)
                 if (!decoded.hasMore) break

@@ -8,6 +8,10 @@ import androidx.compose.ui.unit.dp
 
 /** Material Symbols Rounded (Apache-2.0), except the original receive-mode drawings below. */
 object BeaconIcons {
+    val Code = vector(
+        "Code", 24f, 24f,
+        "M8.6 5.6 2.2 12l6.4 6.4L10 17l-5-5 5-5-1.4-1.4Zm6.8 0L14 7l5 5-5 5 1.4 1.4 6.4-6.4-6.4-6.4Z",
+    )
     val ReadAll = vector("ReadAll", 24f, 24f,
         "M1 12.5 2.5 11 7 15.5 17.5 5 19 6.5 7 18.5 1 12.5Z",
         "M11 15.5 21.5 5 23 6.5 11 18.5 9.5 17 11 15.5Z")

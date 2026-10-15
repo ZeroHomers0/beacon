@@ -16,9 +16,9 @@ data class PollingState(
     val blocked: String = "",
     val lastAttemptMs: Long = 0,
     val lastSuccessMs: Long = 0,
-    val lastResult: String = "尚未自动同步",
     val revision: Long = 0,
     val lastOutcome: SyncOutcome? = null,
+    val lastSuccessInserted: Int? = null,
 ) {
     val shouldSchedule: Boolean
         get() = config.enabled && blocked.isEmpty()

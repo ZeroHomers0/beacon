@@ -137,9 +137,7 @@ class BeaconUiState(
         actions.closeDetail()
     }
 
-    var supportPreview by mutableStateOf<String?>(null)
     var operationDetails by mutableStateOf<String?>(null)
-    var reportCopied by mutableStateOf(false)
 
     fun applyFilter(
         actions: RuntimeActions,

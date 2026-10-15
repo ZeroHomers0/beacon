@@ -93,12 +93,10 @@ internal class RealtimeRuntimeController(
                             receiptTask = null
                             if (!valid()) return@execute
                             if (service.automaticHttpWaiting()) return@execute
-                            var confirmed = false
                             try {
                                 coalesceNetworkWork()
                                 HttpMessageSync(settings, store, valid)
                                     .acknowledgePending(namespace)
-                                confirmed = true
                                 if (valid() && store.pendingIds(namespace).isNotEmpty())
                                     queueReceipts(settings, namespace, valid)
                             } catch (_: SyncAuthenticationException) {
@@ -126,10 +124,7 @@ internal class RealtimeRuntimeController(
                                     polling()
                                         .copy(
                                             lastSuccessMs = lastReceivedMs,
-                                            lastResult =
-                                                "即时接收：新增 $insertedInBatch 条消息 · 收到 $receivedInBatch 条" +
-                                                    if (confirmed) " · 接收回执已提交"
-                                                    else " · 接收回执等待自动重试",
+                                            lastSuccessInserted = insertedInBatch,
                                             lastOutcome = SyncOutcome.OK,
                                         )
                                 )

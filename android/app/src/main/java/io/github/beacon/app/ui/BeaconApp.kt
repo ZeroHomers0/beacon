@@ -2,7 +2,6 @@
 
 package io.github.beacon.app.ui
 
-import android.app.NotificationManager
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.core.SeekableTransitionState
@@ -12,8 +11,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -174,7 +171,6 @@ fun BeaconApp(
         val snackbar = remember { SnackbarHostState() }
         // Clipboard labels are consumed inside onClick lambdas, so they resolve outside those
         // scopes.
-        val redactedDiagLabel = stringResource(R.string.ui_redacted_diag_title)
         val clipboardBodyLabel = stringResource(R.string.ui_widget_body_label)
         val clipboardTitleLabel = stringResource(R.string.ui_widget_title_label)
         val updateLatestCopy = stringResource(R.string.settings_update_latest)
@@ -407,41 +403,6 @@ fun BeaconApp(
             delay(350)
             if (!runtimeState.messageBusy && ui.search != runtimeState.messageQuery.search)
                 ui.applyFilter(actions, ui.search, ui.readFilter)
-        }
-        ui.supportPreview?.let { report ->
-            BeaconAlertDialog(
-                onDismissRequest = { ui.supportPreview = null },
-                title = { BeaconText(stringResource(R.string.ui_redacted_report_title)) },
-                text = {
-                    Column(Modifier.heightIn(max = 480.dp).verticalScroll(rememberScrollState())) {
-                        androidx.compose.foundation.text.selection.SelectionContainer {
-                            BeaconText(report, style = MaterialTheme.typography.bodySmall)
-                        }
-                        if (ui.reportCopied)
-                            BeaconText(stringResource(R.string.ui_report_copied_hint))
-                    }
-                },
-                confirmButton = {
-                    BeaconTextButton(
-                        onClick = {
-                            ui.reportCopied =
-                                copyToClipboard(
-                                    context,
-                                    redactedDiagLabel,
-                                    report,
-                                    sensitive = true,
-                                )
-                        }
-                    ) {
-                        BeaconText(stringResource(R.string.diag_copy_report_action))
-                    }
-                },
-                dismissButton = {
-                    BeaconTextButton(onClick = { ui.supportPreview = null }) {
-                        BeaconText(stringResource(R.string.action_close))
-                    }
-                },
-            )
         }
         ui.pendingDelete?.let { keys ->
             BeaconConfirmDialog(
@@ -940,17 +901,6 @@ fun BeaconApp(
                                                             duration = SnackbarDuration.Short,
                                                         )
                                                     }
-                                                },
-                                                onPreviewReport = {
-                                                    ui.supportPreview =
-                                                        viewModel.supportReport(
-                                                            context
-                                                                .getSystemService(
-                                                                    NotificationManager::class.java
-                                                                )
-                                                                .areNotificationsEnabled()
-                                                        )
-                                                    ui.reportCopied = false
                                                 },
                                                 onRequestNotificationPermission =
                                                     onRequestNotificationPermission,

@@ -18,10 +18,10 @@ import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 import io.github.beacon.app.ipc.RuntimeActions
 import io.github.beacon.app.ui.components.BeaconActionButton
-import io.github.beacon.app.ui.components.BeaconUiMetrics
 import io.github.beacon.app.ui.components.BeaconButton
 import io.github.beacon.app.ui.components.BeaconCard
 import io.github.beacon.app.ui.components.BeaconText
+import io.github.beacon.app.ui.components.BeaconUiMetrics
 import io.github.beacon.app.ui.components.NotificationPermissionState
 import io.github.beacon.app.ui.components.SettingsGroup
 import io.github.beacon.app.ui.components.SettingsHint
@@ -45,66 +45,61 @@ internal fun LazyListScope.notificationPermissionSettingsItems(
                 Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),
                 verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
             ) {
-            val allowed = notificationPermission == NotificationPermissionState.ALLOWED
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Icon(
-                    if (allowed) BeaconIcons.Check else BeaconIcons.Warning,
-                    null,
-                    tint =
-                        if (allowed) io.github.beacon.app.ui.theme.beaconSuccessColor()
-                        else if (notificationPermission == NotificationPermissionState.DENIED) MaterialTheme.colorScheme.error
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Column(Modifier.weight(1f)) {
-                    BeaconText(
-                        if (notificationPermission == NotificationPermissionState.UNKNOWN)
-                            stringResource(R.string.diag_not_read_label)
-                        else if (allowed)
-                            stringResource(R.string.settings_notifications_allowed_label)
-                        else stringResource(R.string.settings_notifications_denied_label),
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                }
-                if (allowed)
-                    BeaconText(
-                        stringResource(R.string.ui_v2_normal_label),
-                        color = io.github.beacon.app.ui.theme.beaconSuccessColor(),
-                        style = MaterialTheme.typography.labelMedium,
-                    )
-            }
-            if (notificationPermission == NotificationPermissionState.DENIED)
-                BeaconButton(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = {
-                        if (Build.VERSION.SDK_INT >= 33) onRequestNotificationPermission()
-                        else {
-                            try {
-                                context.startActivity(
-                                    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                                        .putExtra(
-                                            Settings.EXTRA_APP_PACKAGE,
-                                            context.packageName,
-                                        )
-                                )
-                            } catch (_: android.content.ActivityNotFoundException) {
-                                onNotificationSettingsUnavailable()
-                            } catch (_: SecurityException) {
-                                onNotificationSettingsUnavailable()
-                            }
-                        }
-                    },
+                val allowed = notificationPermission == NotificationPermissionState.ALLOWED
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    BeaconText(
-                        stringResource(
-                            if (Build.VERSION.SDK_INT >= 33)
-                                R.string.settings_allow_notifications_action
-                            else R.string.settings_system_notification_title
-                        )
+                    Icon(
+                        if (allowed) BeaconIcons.Check else BeaconIcons.Warning,
+                        null,
+                        tint =
+                            if (allowed) io.github.beacon.app.ui.theme.beaconSuccessColor()
+                            else if (notificationPermission == NotificationPermissionState.DENIED)
+                                MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    Column(Modifier.weight(1f)) {
+                        BeaconText(
+                            if (notificationPermission == NotificationPermissionState.UNKNOWN)
+                                stringResource(R.string.diag_not_read_label)
+                            else if (allowed)
+                                stringResource(R.string.settings_notifications_allowed_label)
+                            else stringResource(R.string.settings_notifications_denied_label),
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                    }
                 }
+                if (notificationPermission == NotificationPermissionState.DENIED)
+                    BeaconButton(
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = {
+                            if (Build.VERSION.SDK_INT >= 33) onRequestNotificationPermission()
+                            else {
+                                try {
+                                    context.startActivity(
+                                        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                            .putExtra(
+                                                Settings.EXTRA_APP_PACKAGE,
+                                                context.packageName,
+                                            )
+                                    )
+                                } catch (_: android.content.ActivityNotFoundException) {
+                                    onNotificationSettingsUnavailable()
+                                } catch (_: SecurityException) {
+                                    onNotificationSettingsUnavailable()
+                                }
+                            }
+                        },
+                    ) {
+                        BeaconText(
+                            stringResource(
+                                if (Build.VERSION.SDK_INT >= 33)
+                                    R.string.settings_allow_notifications_action
+                                else R.string.settings_system_notification_title
+                            )
+                        )
+                    }
             }
         }
     }

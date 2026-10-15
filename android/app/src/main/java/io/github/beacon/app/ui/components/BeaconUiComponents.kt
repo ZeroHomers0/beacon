@@ -44,12 +44,14 @@ enum class SettingsScreen(val titleRes: Int) {
     NOTIFICATION_RULES(R.string.quiet_title),
     BACKGROUND(R.string.settings_background_permissions_title),
     APPEARANCE(R.string.ui_nav_settings_title), // Legacy saved route; content now resolves to HOME.
-    DIAGNOSTICS(R.string.settings_advanced_section_title),
     ABOUT(R.string.settings_about_title),
     STORAGE(R.string.settings_storage_title),
     BACKUP(R.string.settings_backup_title),
     GUIDE(R.string.settings_guide_title),
     SERVER_ADMIN(R.string.admin_title),
+    SERVER_DEVICES(R.string.admin_devices),
+    SERVER_APPLICATIONS(R.string.admin_applications),
+    SERVER_TEST(R.string.admin_test),
     QUIET_HOURS(R.string.quiet_schedule),
 }
 
@@ -112,7 +114,7 @@ fun SettingsHint(text: String) {
 @Composable
 fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.GroupTitleGap)) {
-        BeaconText(
+        if (title.isNotBlank()) BeaconText(
             title,
             Modifier.padding(horizontal = BeaconUiMetrics.CardInset).semantics { heading() },
             style = MaterialTheme.typography.labelLarge,
