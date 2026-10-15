@@ -44,7 +44,7 @@ internal fun ReceiveRulesPanel(form: ReceptionFormState, busy: Boolean) {
                 form.edited = true
             }
         }
-        androidx.compose.material3.HorizontalDivider()
+        SettingsFieldDivider()
 
         BeaconPreferenceToggle(
             resources.getString(R.string.settings_rules_schedule),
@@ -96,7 +96,7 @@ internal fun ReceiveRulesPanel(form: ReceptionFormState, busy: Boolean) {
                 form.edited = true
             }
         }
-        androidx.compose.material3.HorizontalDivider()
+        SettingsFieldDivider()
         BeaconText(stringResource(R.string.settings_rules_other_times), style = androidx.compose.material3.MaterialTheme.typography.titleSmall)
         Column {
             SettingsFieldGroup(

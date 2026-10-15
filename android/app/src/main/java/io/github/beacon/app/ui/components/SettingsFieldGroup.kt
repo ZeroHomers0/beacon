@@ -13,12 +13,18 @@ import androidx.compose.ui.unit.dp
 fun SettingsFieldGroup(vararg rows: @Composable () -> Unit) {
     Column(Modifier.fillMaxWidth()) {
         rows.forEachIndexed { index, row ->
-            if (index > 0) HorizontalDivider(
-                Modifier.fillMaxWidth(),
-                thickness = 0.5.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-            )
+            if (index > 0) SettingsFieldDivider()
             row()
         }
     }
+}
+
+/** Shared separator for fields inside a settings card, never for top-level navigation rows. */
+@Composable
+fun SettingsFieldDivider() {
+    HorizontalDivider(
+        Modifier.fillMaxWidth(),
+        thickness = 0.5.dp,
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+    )
 }
