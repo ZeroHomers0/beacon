@@ -18,7 +18,9 @@ import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 import io.github.beacon.app.ipc.RuntimeActions
 import io.github.beacon.app.ui.components.BeaconActionButton
+import io.github.beacon.app.ui.components.BeaconUiMetrics
 import io.github.beacon.app.ui.components.BeaconButton
+import io.github.beacon.app.ui.components.BeaconCard
 import io.github.beacon.app.ui.components.BeaconText
 import io.github.beacon.app.ui.components.NotificationPermissionState
 import io.github.beacon.app.ui.components.SettingsGroup
@@ -38,7 +40,11 @@ internal fun LazyListScope.notificationPermissionSettingsItems(
     context: Context,
 ) {
     item {
-        SettingsSection(stringResource(R.string.settings_notifications_section_title)) {
+        BeaconCard(Modifier.fillMaxWidth()) {
+            Column(
+                Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),
+                verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
+            ) {
             val allowed = notificationPermission == NotificationPermissionState.ALLOWED
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -62,6 +68,12 @@ internal fun LazyListScope.notificationPermissionSettingsItems(
                         style = MaterialTheme.typography.titleMedium,
                     )
                 }
+                if (allowed)
+                    BeaconText(
+                        stringResource(R.string.ui_v2_normal_label),
+                        color = io.github.beacon.app.ui.theme.beaconSuccessColor(),
+                        style = MaterialTheme.typography.labelMedium,
+                    )
             }
             if (notificationPermission == NotificationPermissionState.DENIED)
                 BeaconButton(
@@ -93,6 +105,7 @@ internal fun LazyListScope.notificationPermissionSettingsItems(
                         )
                     )
                 }
+            }
         }
     }
     item {
@@ -121,9 +134,7 @@ internal fun LazyListScope.notificationPermissionSettingsItems(
                 (pendingReminderCount?.let {
                     if (it > 0) resources.getString(R.string.settings_reminders_pending, it)
                     else resources.getString(R.string.settings_reminders_empty)
-                } ?: resources.getString(R.string.settings_reminders_loading)) +
-                    " " +
-                    stringResource(R.string.settings_process_read_hint)
+                } ?: resources.getString(R.string.settings_reminders_loading))
             )
             BeaconActionButton(
                 stringResource(R.string.settings_reminders_send),

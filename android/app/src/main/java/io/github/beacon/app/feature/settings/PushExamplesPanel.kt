@@ -1,6 +1,6 @@
 package io.github.beacon.app.feature.settings
 
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -20,43 +20,46 @@ fun PushExamplesPanel(actions: RuntimeActions, enabled: Boolean, endpoint: Strin
     val resources = androidx.compose.ui.platform.LocalResources.current
     val context = LocalContext.current
     var expanded by rememberSaveable { mutableStateOf(false) }
-    SettingsSection(stringResource(R.string.push_examples_title)) {
-        SettingsHint(stringResource(R.string.push_examples_hint))
-        BeaconTextButton(onClick = { expanded = !expanded }) {
-            BeaconText(stringResource(
-                if (expanded) R.string.ui_v2_collapse_examples else R.string.ui_v2_expand_examples
-            ))
-        }
+    SettingsGroup(stringResource(R.string.ui_v2_developer_tools)) {
+        SettingsRow(
+            stringResource(R.string.push_examples_title),
+            stringResource(R.string.ui_v2_examples_formats),
+            BeaconIcons.Diagnostics,
+        ) { expanded = !expanded }
         if (expanded) {
-            listOf(false to false, true to false, false to true, true to true).forEach {
-                (powershell, json) ->
-                // All four buttons copy to the clipboard; one action, one icon.
-                BeaconActionButton(
-                    stringResource(
-                        if (json && powershell) R.string.push_examples_json_powershell
-                        else if (json) R.string.push_examples_json_curl
-                        else if (powershell) R.string.push_examples_powershell
-                        else R.string.push_examples_curl
-                    ),
-                    BeaconIcons.Copy,
-                    Modifier.fillMaxWidth(),
-                    enabled,
-                ) {
-                    actions.copyPushKey { key ->
-                        val address = endpoint.trimEnd('/') + "/" + key
-                        val example = runCatching {
-                            if (json) PushExamples.json(address, powershell)
-                            else PushExamples.create(address, powershell)
-                        }
-                            .getOrNull()
-                        if (example != null) {
-                            val copied = copyToClipboard(
+            Column(
+                Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),
+                verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
+            ) {
+                SettingsHint(stringResource(R.string.push_examples_hint))
+                listOf(false to false, true to false, false to true, true to true).forEach {
+                    (powershell, json) ->
+                    BeaconActionButton(
+                        stringResource(
+                            if (json && powershell) R.string.push_examples_json_powershell
+                            else if (json) R.string.push_examples_json_curl
+                            else if (powershell) R.string.push_examples_powershell
+                            else R.string.push_examples_curl
+                        ),
+                        BeaconIcons.Copy,
+                        Modifier.fillMaxWidth(),
+                        enabled,
+                    ) {
+                        actions.copyPushKey { key ->
+                            val address = endpoint.trimEnd('/') + "/" + key
+                            val example = runCatching {
+                                if (json) PushExamples.json(address, powershell)
+                                else PushExamples.create(address, powershell)
+                            }.getOrNull()
+                            if (example != null) {
+                                val copied = copyToClipboard(
                                     context,
                                     resources.getString(R.string.settings_clipboard_push_example),
                                     example,
                                     sensitive = true,
                                 )
-                            if (copied) onFeedback(resources.getString(R.string.settings_copied_hint))
+                                if (copied) onFeedback(resources.getString(R.string.settings_copied_hint))
+                            }
                         }
                     }
                 }

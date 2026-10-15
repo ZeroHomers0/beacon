@@ -1,14 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="ui_v2_appearance_title">界面设置</string>
-    <string name="ui_v2_appearance_hint">两种风格共享功能和设置，控件保留各自原生交互。</string>
-    <string name="ui_v2_material_hint">Android 原生控件，支持设备上的系统动态配色</string>
-    <string name="ui_v2_miuix_hint">MIUI / HyperOS 风格的原生控件与弹窗</string>
+    <string name="ui_v2_server_config_title">服务器配置</string>
+    <string name="ui_v2_style_material3">Material 3</string>
+    <string name="ui_v2_style_miuix">MIUIX</string>
+    <string name="ui_v2_receive_mode_dialog_title">选择接收模式</string>
+    <string name="ui_v2_receive_strategy">接收策略</string>
+    <string name="ui_v2_examples_formats">curl / PowerShell / JSON</string>
     <string name="ui_v2_quiet_scope">免打扰只影响通知提醒，不停止消息接收。关闭后保留时间和重复日期设置。</string>
-    <string name="ui_v2_quiet_effect">提醒范围</string>
+    <string name="ui_v2_quiet_effect">免打扰期间</string>
+    <string name="ui_v2_quiet_section">免打扰</string>
     <string name="ui_v2_quiet_overnight">此时段跨越午夜，结束时间为次日。</string>
-    <string name="ui_v2_tools">工具</string>
-    <string name="ui_v2_test_hint">使用现有服务器管理功能验证推送链路</string>
+    <string name="ui_v2_developer_tools">开发者工具</string>
     <string name="ui_v2_docs">使用与部署文档</string>
     <string name="ui_v2_licenses">开源许可</string>
     <string name="ui_v2_license_failed">开源许可读取失败，请重试。</string>
@@ -20,8 +22,11 @@
     <string name="ui_v2_expiry">有效期截止时间</string>
     <string name="ui_v2_server_metrics">服务器概况</string>
     <string name="ui_v2_backup_migration">在新设备安装 Beacon 后，导入设置和消息记录，再使用服务器绑定码绑定新设备。设备凭据不会随设置备份迁移。</string>
-    <string name="ui_v2_migration_title">设备迁移说明</string>
+    <string name="ui_v2_migration_title">设备迁移</string>
+    <string name="ui_v2_migration_entry">迁移到新设备</string>
+    <string name="ui_v2_migration_entry_hint">查看现有迁移流程与说明</string>
     <string name="ui_v2_expand_examples">展开 API 示例</string>
     <string name="ui_v2_collapse_examples">收起 API 示例</string>
     <string name="ui_v2_power_conditions_title">省电接收条件</string>
+    <string name="ui_v2_normal_label">正常</string>
 </resources>

@@ -67,15 +67,15 @@
     <string name="msg_unread_label">未读</string>
     <string name="msg_untitled_message">无标题消息</string>
     <string name="settings_about_title">关于 Beacon</string>
-    <string name="settings_advanced_section_desc">高级连接、事件记录与诊断工具</string>
+    <string name="settings_advanced_section_desc">运行状态、接收记录与诊断报告</string>
     <string name="settings_advanced_section_title">诊断与工具</string>
     <string name="settings_allow_notifications_action">允许通知</string>
-    <string name="settings_app_tagline_hint">推送消息，集中管理</string>
+    <string name="settings_app_tagline_hint">自部署消息推送客户端</string>
     <string name="settings_appearance_section_desc">外观与交互</string>
     <string name="settings_auto_receive_title">自动接收</string>
     <string name="settings_battery_saver_title">启用自动接收</string>
-    <string name="settings_connection_section_title">服务器配置</string>
-    <string name="settings_first_setup_hint">使用服务器地址和一次性绑定码绑定设备</string>
+    <string name="settings_connection_section_title">连接配置</string>
+    <string name="settings_first_setup_hint">服务器地址与设备绑定</string>
     <string name="settings_interface_section_title">界面</string>
     <string name="settings_last_sync_success_desc">最近自动同步成功</string>
     <string name="settings_misc_section_title">其他</string>
@@ -86,7 +86,6 @@
     <string name="settings_notifications_section_title">通知权限</string>
     <string name="settings_open_notification_settings_hint">请手动进入应用的系统通知设置</string>
     <string name="settings_preview_report_action">预览诊断报告</string>
-    <string name="settings_process_read_hint">关闭通知仍会保存消息。标为已读不触发通知，已提交系统的通知不重复补发。</string>
     <string name="settings_receive_diagnostics_title">接收诊断</string>
     <string name="settings_receive_section_title">接收与通知</string>
     <string name="settings_receive_status_title">运行状态</string>
@@ -174,7 +173,7 @@
     <string name="receive_rule_charging">充电时即时接收</string>
     <string name="receive_rule_wifi">Wi-Fi 时即时接收</string>
     <string name="settings_reception_page_title">接收模式</string>
-    <string name="settings_receive_switch_hint">关闭后停止自动接收，仍可立即同步。</string>
+    <string name="settings_receive_switch_hint">按所选模式自动接收消息</string>
     <string name="receive_fallback_title">省电回退设置</string>
     <string name="settings_background_permissions_title">后台权限</string>
     <string name="settings_background_permissions_desc">自启动与电池管理</string>
@@ -206,7 +205,7 @@
     <string name="binding_device_name">设备名称</string>
     <string name="binding_code">绑定码</string>
     <string name="binding_code_placeholder">粘贴服务器生成的 32 位绑定码</string>
-    <string name="binding_hint">绑定码仅可使用一次，默认 10 分钟过期。绑定成功后替换当前连接，保留历史消息和接收设置。</string>
+    <string name="binding_hint">绑定码仅可使用一次，有效期 10 分钟。</string>
     <string name="binding_format_hint">请填写有效的 HTTPS 地址、32 位绑定码；设备名称最多 128 字节。</string>
     <string name="binding_action">绑定服务器</string>
     <string name="binding_copy_push_address">复制推送密钥</string>
@@ -233,7 +232,7 @@
     <string name="message_open_browser">打开浏览器</string>
     <string name="message_link_failed">没有可用的应用打开此链接</string>
     <string name="push_examples_title">推送 API 示例</string>
-    <string name="push_examples_hint">复制后将标题和正文替换为需要推送的内容。示例包含推送密钥，请妥善保管。</string>
+    <string name="push_examples_hint">示例包含推送密钥，请妥善保管。</string>
     <string name="push_examples_curl">复制 curl 示例</string>
     <string name="push_examples_powershell">复制 PowerShell 示例</string>
     <string name="message_share">分享消息</string>
@@ -381,7 +380,7 @@
     <string name="settings_guide_test_action">@string/settings_setup_test_send</string>
     <string name="settings_guide_done">完成向导</string>
     <string name="settings_archive_password_expired">密码至少 8 个字符，请重新选择文件并输入密码</string>
-    <string name="settings_archive_title">消息导出与迁移</string>
+    <string name="settings_archive_title">消息记录</string>
     <string name="settings_archive_hint">导出全部本地消息和已读状态，可用密码加密。导入会合并历史并保留本机删除记录，不重新显示通知。新设备需重新绑定；文件最大 32 MiB。</string>
     <string name="settings_archive_export">导出消息记录</string>
     <string name="settings_archive_import">导入消息记录</string>
@@ -412,7 +411,7 @@
     <string name="settings_backup_export_done">设置已导出为 JSON 文件</string>
     <string name="settings_backup_export_failed">文件保存失败，请重新导出</string>
     <string name="settings_backup_invalid_file">文件过大、格式或设置值无效，请选择 Beacon 设置 JSON</string>
-    <string name="settings_backup_settings_title">设置备份</string>
+    <string name="settings_backup_settings_title">数据备份</string>
     <string name="settings_backup_settings_hint">备份接收、通知和清理设置，不含服务器凭证和消息。导入后自动接收与自动清理暂停，请检查后开启。</string>
     <string name="settings_backup_export_failed_connection">导出失败，请检查接收服务连接</string>
     <string name="settings_backup_export">导出设置</string>
@@ -458,7 +457,7 @@
     <string name="settings_cleanup_count">%1$d 条</string>
     <string name="settings_storage_database">数据库占用</string>
     <string name="settings_storage_receipts">待回传</string>
-    <string name="settings_storage_receipts_hint">待回传：消息已保存在本机，接收结果尚待向服务器确认。</string>
+    <string name="storage_temporary_logs_title">临时日志</string>
     <string name="storage_wal_clear">清理临时日志</string>
     <string name="settings_cleanup_all_title">清理所有本地消息</string>
     <string name="settings_cleanup_eligible">可清理</string>
@@ -584,6 +583,6 @@
     <string name="connection_status_failed">连接失败</string>
     <string name="connection_status_unchecked">尚未检测</string>
     <string name="connection_status_waiting">等待即时连接</string>
-    <string name="connection_status_connected">已连接</string>
+    <string name="connection_status_connected">服务器已连接</string>
     <string name="storage_save_failed_title">清理设置保存失败</string>
 </resources>

@@ -65,6 +65,7 @@ fun SettingsPage(
     val busy = runtimeState.messageBusy
     val guideCompleted by rememberFirstUseGuideCompleted()
     val showGuideFirst = !guideCompleted || runtimeState.configuredEndpoint.isBlank()
+    var migrationHelpOpen by rememberSaveable { mutableStateOf(false) }
     val polling = runtimeState.pollingState
     var pendingReminderCount by
         androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Long?>(null) }
@@ -116,7 +117,7 @@ fun SettingsPage(
     }
     BeaconSettingsList(state = scroll, modifier = modifier, contentPadding = padding) {
         when (screen) {
-            SettingsScreen.HOME -> {
+            SettingsScreen.HOME, SettingsScreen.APPEARANCE -> {
                 if (showGuideFirst) item(key = "first-use-guide") {
                     SettingsGroup(stringResource(R.string.settings_guide_title)) {
                         SettingsRow(
@@ -131,7 +132,7 @@ fun SettingsPage(
                 item {
                     SettingsGroup(stringResource(R.string.settings_receive_section_title)) {
                         SettingsRow(
-                            stringResource(R.string.settings_connection_section_title),
+                            stringResource(R.string.ui_v2_server_config_title),
                             runtimeState.configuredEndpoint.ifBlank {
                                 stringResource(R.string.settings_first_setup_hint)
                             },
@@ -186,11 +187,16 @@ fun SettingsPage(
                 }
                 item {
                     SettingsGroup(stringResource(R.string.settings_interface_section_title)) {
-                        SettingsRow(
+                        BeaconDropdownPreference(
                             stringResource(R.string.appearance_style),
-                            if (uiStyle == BeaconUiStyle.MIUIX) "MIUIX" else "Material 3",
-                            BeaconIcons.Palette,
-                        ) { onNavigate(SettingsScreen.APPEARANCE) }
+                            listOf(
+                                stringResource(R.string.ui_v2_style_material3),
+                                stringResource(R.string.ui_v2_style_miuix),
+                            ),
+                            uiStyle.ordinal,
+                            icon = BeaconIcons.Palette,
+                            settingsRow = true,
+                        ) { onUiStyleChange(BeaconUiStyle.entries[it]) }
                         BeaconDropdownPreference(
                             stringResource(R.string.appearance_theme),
                             listOf(
@@ -287,9 +293,6 @@ fun SettingsPage(
                     }
                 }
             }
-            SettingsScreen.APPEARANCE -> {
-                item { AppearanceSettingsContent(uiStyle, themeMode, onUiStyleChange, onThemeModeChange) }
-            }
             SettingsScreen.QUIET_HOURS -> {
                 item { QuietHoursPanel(runtimeState, actions, quietHoursForm, scheduleOnly = true) }
             }
@@ -306,11 +309,6 @@ fun SettingsPage(
             }
             SettingsScreen.BACKUP -> {
                 item {
-                    io.github.beacon.app.ui.components.SettingsSection(stringResource(R.string.ui_v2_migration_title)) {
-                        io.github.beacon.app.ui.components.SettingsHint(stringResource(R.string.ui_v2_backup_migration))
-                    }
-                }
-                item {
                     SettingsBackupPanel(
                         actions,
                         busy || runtimeState.transportBusy || !runtimeState.runtimeConnected,
@@ -321,6 +319,15 @@ fun SettingsPage(
                         actions,
                         busy || runtimeState.transportBusy || !runtimeState.runtimeConnected,
                     )
+                }
+                item {
+                    SettingsGroup(stringResource(R.string.ui_v2_migration_title)) {
+                        SettingsRow(
+                            stringResource(R.string.ui_v2_migration_entry),
+                            stringResource(R.string.ui_v2_migration_entry_hint),
+                            BeaconIcons.Backup,
+                        ) { migrationHelpOpen = true }
+                    }
                 }
             }
             SettingsScreen.RECEPTION -> {
@@ -385,8 +392,6 @@ fun SettingsPage(
                     onOperationDetails,
                     busy,
                     context,
-                    onNavigate,
-                    onCheckUpdate,
                 )
             }
             SettingsScreen.ABOUT -> {
@@ -394,4 +399,27 @@ fun SettingsPage(
             }
         }
     }
+    if (migrationHelpOpen)
+        io.github.beacon.app.ui.components.BeaconAlertDialog(
+            onDismissRequest = { migrationHelpOpen = false },
+            title = {
+                io.github.beacon.app.ui.components.BeaconText(
+                    stringResource(R.string.ui_v2_migration_title)
+                )
+            },
+            text = {
+                io.github.beacon.app.ui.components.BeaconText(
+                    stringResource(R.string.ui_v2_backup_migration)
+                )
+            },
+            confirmButton = {
+                io.github.beacon.app.ui.components.BeaconButton(
+                    onClick = { migrationHelpOpen = false }
+                ) {
+                    io.github.beacon.app.ui.components.BeaconText(
+                        stringResource(R.string.ui_got_it_action)
+                    )
+                }
+            },
+        )
 }

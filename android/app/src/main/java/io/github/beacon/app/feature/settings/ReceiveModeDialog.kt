@@ -23,30 +23,23 @@ fun ReceiveModeDialog(
     selected: ReceiveMode,
     onSelect: (ReceiveMode) -> Unit,
     onDismiss: () -> Unit,
-    connectionStatus: String = "",
-    onConnectionSettings: (() -> Unit)? = null,
 ) {
     BeaconAlertDialog(
         onDismissRequest = onDismiss,
-        title = { BeaconText(stringResource(R.string.settings_reception_page_title)) },
+        title = { BeaconText(stringResource(R.string.ui_v2_receive_mode_dialog_title)) },
         text = {
             Column(
-                Modifier.verticalScroll(rememberScrollState()).selectableGroup(),
+                Modifier.selectableGroup().then(
+                    if (miuix()) Modifier else Modifier.verticalScroll(rememberScrollState())
+                ),
                 verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
             ) {
-                if (connectionStatus.isNotBlank()) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SettingsStatusSummary(connectionStatus, "", BeaconIcons.Cloud)
-                        onConnectionSettings?.let { action ->
-                            BeaconActionButton(
-                                stringResource(R.string.settings_connection_section_title),
-                                BeaconIcons.Server,
-                                Modifier.fillMaxWidth(),
-                                onClick = action,
-                            )
-                        }
-                    }
-                }
+                BeaconText(
+                    stringResource(R.string.ui_v2_receive_strategy),
+                    Modifier.padding(horizontal = 4.dp),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
                 listOf(ReceiveMode.REALTIME, ReceiveMode.POWER_SAVING, ReceiveMode.RULES).forEach { mode ->
                     Surface(
                         shape = RoundedCornerShape(16.dp),

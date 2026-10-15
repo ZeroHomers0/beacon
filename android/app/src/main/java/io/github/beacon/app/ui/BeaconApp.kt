@@ -60,7 +60,6 @@ import io.github.beacon.app.ui.components.BeaconSettingsTransition
 import io.github.beacon.app.ui.components.BeaconText
 import io.github.beacon.app.ui.components.BeaconTextButton
 import io.github.beacon.app.ui.components.BeaconUiMetrics
-import io.github.beacon.app.ui.components.connectionStatusLabel
 import io.github.beacon.app.ui.components.BeaconTopBar
 import io.github.beacon.app.ui.components.NotificationPermissionState
 import io.github.beacon.app.ui.components.ReceiveModeButton
@@ -253,12 +252,6 @@ fun BeaconApp(
                     ui.receiveModesOpen = false
                 },
                 onDismiss = { ui.receiveModesOpen = false },
-                connectionStatus = connectionStatusLabel(runtimeState),
-                onConnectionSettings = {
-                    ui.receiveModesOpen = false
-                    ui.page = 1
-                    ui.navigateSettings(SettingsScreen.CONNECTION)
-                },
             )
         val messageScroll = rememberLazyListState()
         androidx.lifecycle.compose.LifecycleEventEffect(

@@ -38,12 +38,12 @@ import io.github.beacon.app.ui.theme.LocalBeaconUiStyle
  */
 enum class SettingsScreen(val titleRes: Int) {
     HOME(R.string.ui_nav_settings_title),
-    CONNECTION(R.string.settings_connection_section_title),
+    CONNECTION(R.string.ui_v2_server_config_title),
     RECEPTION(R.string.settings_reception_page_title),
     NOTIFICATIONS(R.string.settings_notifications_section_title),
     NOTIFICATION_RULES(R.string.quiet_title),
     BACKGROUND(R.string.settings_background_permissions_title),
-    APPEARANCE(R.string.ui_v2_appearance_title),
+    APPEARANCE(R.string.ui_nav_settings_title), // Legacy saved route; content now resolves to HOME.
     DIAGNOSTICS(R.string.settings_advanced_section_title),
     ABOUT(R.string.settings_about_title),
     STORAGE(R.string.settings_storage_title),

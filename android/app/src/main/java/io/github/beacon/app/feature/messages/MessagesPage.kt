@@ -361,7 +361,7 @@ private fun MessagesContent(
                                     }) {
                                         BeaconText(stringResource(when {
                                             filtered -> R.string.msg_clear_filters_action
-                                            unconfigured -> R.string.settings_connection_section_title
+                                            unconfigured -> R.string.ui_v2_server_config_title
                                             else -> R.string.action_sync_now
                                         }))
                                     }

@@ -128,9 +128,9 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                 preview?.sampledAtMs?.let { formatMessageTime(it) } ?: "—",
             )
             SettingsHint(stringResource(R.string.storage_breakdown_note))
-            SettingsHint(stringResource(R.string.settings_storage_receipts_hint))
+        }
+        SettingsSection(stringResource(R.string.storage_temporary_logs_title)) {
             SettingsHint(stringResource(R.string.storage_size_note))
-
             BeaconActionButton(
                 stringResource(R.string.storage_wal_clear),
                 io.github.beacon.app.ui.icons.BeaconIcons.Storage,
