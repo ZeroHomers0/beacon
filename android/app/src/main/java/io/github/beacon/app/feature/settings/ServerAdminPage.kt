@@ -281,6 +281,7 @@ internal fun ServerAdminPage(
                             if (device.revoked)
                                 BeaconDangerButton(
                                     onClick = { deletingDevice = device },
+                                    modifier = Modifier.fillMaxWidth(),
                                     enabled = !state.busy,
                                 ) {
                                     BeaconText(stringResource(R.string.admin_delete_device))

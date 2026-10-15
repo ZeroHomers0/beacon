@@ -3,22 +3,20 @@ package io.github.beacon.app.ui.components
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 
-/** Compact two-column actions, with a single column for narrow windows or enlarged fonts. */
+/** Prefer two actions per row whenever their actual button contents fit. */
 @Composable
 fun BeaconCompactButtonGrid(labels: List<String>, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: (Int) -> Unit) {
-    val scale = LocalDensity.current.fontScale
-    BoxWithConstraints(modifier.fillMaxWidth()) {
-        val columns = if (maxWidth >= 280.dp * scale) 2 else 1
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            labels.indices.step(columns).forEach { start ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    for (index in start until minOf(start + columns, labels.size))
-                        BeaconOutlinedButton({ onClick(index) }, Modifier.weight(1f), enabled) { BeaconText(labels[index]) }
-                    repeat((start + columns - labels.size).coerceAtLeast(0)) { Spacer(Modifier.weight(1f)) }
-                }
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        labels.indices.step(2).forEach { first ->
+            if (first + 1 < labels.size) {
+                BeaconActionPair(
+                    { BeaconOutlinedButton({ onClick(first) }, enabled = enabled) { BeaconText(labels[first]) } },
+                    { BeaconOutlinedButton({ onClick(first + 1) }, enabled = enabled) { BeaconText(labels[first + 1]) } },
+                )
+            } else {
+                BeaconOutlinedButton({ onClick(first) }, Modifier.fillMaxWidth(), enabled) { BeaconText(labels[first]) }
             }
         }
     }

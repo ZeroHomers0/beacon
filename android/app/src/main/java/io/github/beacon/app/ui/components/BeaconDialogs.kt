@@ -11,6 +11,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
@@ -60,18 +63,38 @@ fun BeaconAlertDialog(
 
 @Composable
 fun BeaconActionPair(dismiss: @Composable () -> Unit, confirm: @Composable () -> Unit) {
-    val fontScale = androidx.compose.ui.platform.LocalDensity.current.fontScale
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
-        CompositionLocalProvider(LocalDialogAction provides true) {
-            if (maxWidth < 280.dp * fontScale) {
-                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    dismiss()
-                    confirm()
+    CompositionLocalProvider(LocalDialogAction provides true) {
+        Layout(
+            modifier = Modifier.fillMaxWidth(),
+            content = {
+                Box(propagateMinConstraints = true) { dismiss() }
+                Box(propagateMinConstraints = true) { confirm() }
+            },
+        ) { measurables, constraints ->
+            val gap = 12.dp.roundToPx()
+            val available = (constraints.maxWidth - gap).coerceAtLeast(0)
+            val natural = measurables.map { it.maxIntrinsicWidth(Constraints.Infinity) }
+            val horizontal = natural.sum().toLong() <= available.toLong()
+            val widths = if (horizontal) {
+                val half = available / 2
+                if (natural.max() <= half) listOf(half, available - half)
+                else {
+                    val extra = (available - natural.sum()) / 2
+                    listOf(natural[0] + extra, available - natural[0] - extra)
                 }
-            } else {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Box(Modifier.weight(1f), propagateMinConstraints = true) { dismiss() }
-                    Box(Modifier.weight(1f), propagateMinConstraints = true) { confirm() }
+            } else listOf(constraints.maxWidth, constraints.maxWidth)
+            val placeables = measurables.mapIndexed { index, measurable ->
+                measurable.measure(Constraints.fixedWidth(widths[index]))
+            }
+            val height = if (horizontal) placeables.maxOf { it.height }
+                else placeables.sumOf { it.height } + gap
+            layout(constraints.maxWidth, constraints.constrainHeight(height)) {
+                if (horizontal) {
+                    placeables[0].placeRelative(0, (height - placeables[0].height) / 2)
+                    placeables[1].placeRelative(widths[0] + gap, (height - placeables[1].height) / 2)
+                } else {
+                    placeables[0].placeRelative(0, 0)
+                    placeables[1].placeRelative(0, placeables[0].height + gap)
                 }
             }
         }
