@@ -68,7 +68,7 @@ fun BackgroundPermissionPanel() {
         owner.lifecycle.addObserver(observer)
         onDispose { owner.lifecycle.removeObserver(observer) }
     }
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap)) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SettingsGroupGap)) {
         SettingsSection(stringResource(R.string.background_autostart_title)) {
             BeaconText(
                 stringResource(R.string.background_manual_status),

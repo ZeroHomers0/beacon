@@ -154,6 +154,10 @@ internal fun ServerAdminPage(
                             )
                         },
                     )
+                }
+            }
+            item {
+                SettingsSection(stringResource(R.string.ui_v2_server_metrics)) {
                     SettingsMetricGrid(
                         listOf(
                             stringResource(R.string.admin_devices) to state.devices.count { !it.revoked }.toString(),
@@ -164,35 +168,18 @@ internal fun ServerAdminPage(
                     DiagnosticRow(stringResource(R.string.admin_database), android.text.format.Formatter.formatFileSize(context, state.databaseBytes))
                     if (state.protocol != 1) SettingsHint(stringResource(R.string.admin_protocol_unknown))
 
-                    BeaconActionPair(
-                        {
-                            BeaconOutlinedButton(
-                                onClick = {
-                                    model.logout()
-                                    token = ""
-                                }
-                            ) {
-                                BeaconText(stringResource(R.string.admin_logout))
-                            }
-                        },
-                        {
-                            BeaconOutlinedButton(onClick = model::refresh, enabled = !state.busy) {
-                                BeaconText(
-                                    stringResource(
-                                        if (state.busy) R.string.admin_loading
-                                        else R.string.admin_refresh
-                                    )
-                                )
-                            }
-                        },
+                    BeaconActionButton(
+                        stringResource(if (state.busy) R.string.admin_loading else R.string.admin_refresh),
+                        BeaconIcons.Sync, Modifier.fillMaxWidth(), !state.busy, model::refresh,
                     )
                 }
             }
             item {
                 SettingsSection(stringResource(R.string.admin_manage_section)) {
-                    Row(
+                    FlowRow(
                         Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         listOf(
                                 R.string.admin_devices,
@@ -205,14 +192,14 @@ internal fun ServerAdminPage(
                                     onClick = { tab = index },
                                     label = {
                                         Box(
-                                            Modifier.fillMaxWidth(),
+                                            Modifier.padding(horizontal = 4.dp),
                                             contentAlignment = androidx.compose.ui.Alignment.Center,
                                         ) {
-                                            BeaconText(stringResource(label), maxLines = 1)
+                                            BeaconText(stringResource(label))
                                         }
                                     },
                                     enabled = !state.busy,
-                                    modifier = Modifier.weight(1f),
+                                    modifier = Modifier.heightIn(min = BeaconUiMetrics.ControlMinHeight),
                                 )
                             }
                     }
@@ -278,6 +265,13 @@ internal fun ServerAdminPage(
                                     )
                                 },
                             )
+                            BeaconActionButton(
+                                stringResource(R.string.ui_v2_copy_device_id), BeaconIcons.Copy,
+                                Modifier.fillMaxWidth(), !state.busy,
+                            ) {
+                                if (copy(device.id, R.string.admin_device_id))
+                                    onFeedback(resources.getString(R.string.settings_copied_hint))
+                            }
                             if (device.revoked)
                                 BeaconDangerButton(
                                     onClick = { deletingDevice = device },
@@ -444,6 +438,10 @@ internal fun ServerAdminPage(
                 ) {
                     BeaconText(stringResource(R.string.admin_clear_messages))
                 }
+                BeaconOutlinedButton(
+                    onClick = { model.logout(); token = "" },
+                    modifier = Modifier.fillMaxWidth(), enabled = !state.busy,
+                ) { BeaconText(stringResource(R.string.admin_logout)) }
             }
         }
     }

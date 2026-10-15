@@ -65,16 +65,6 @@ internal fun LazyListScope.receptionSettingsItems(
     }
     item {
         SettingsSection(stringResource(R.string.settings_receive_status_title)) {
-            BeaconPreferenceToggle(
-                stringResource(R.string.settings_battery_saver_title),
-                "",
-                receptionForm.enabled,
-                !busy,
-            ) {
-                receptionForm.enabled = it
-                receptionForm.edited = true
-            }
-            SettingsHint(stringResource(R.string.settings_receive_switch_hint))
             if (polling.blocked.isNotBlank())
                 BeaconText(polling.blocked, color = MaterialTheme.colorScheme.error)
             DiagnosticRow(
@@ -90,30 +80,38 @@ internal fun LazyListScope.receptionSettingsItems(
                 stringResource(R.string.receive_latest_result_title),
                 polling.lastResult,
             )
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                BeaconActionButton(
-                    stringResource(R.string.action_sync_now),
-                    BeaconIcons.Sync,
-                    Modifier.weight(1f),
-                    !busy,
-                ) {
-                    actions.transport()
-                }
-                BeaconActionButton(
-                    stringResource(R.string.action_refresh_status),
-                    BeaconIcons.History,
-                    Modifier.weight(1f),
-                    !busy,
-                    {
+            io.github.beacon.app.ui.components.BeaconActionPair(
+                dismiss = {
+                    io.github.beacon.app.ui.components.BeaconOutlinedButton(
+                        modifier = Modifier.fillMaxWidth(), enabled = !busy,
+                        onClick = {
                         actions.refreshPolling { result ->
                             actions.receivePlan()
                             onOperationDetails(result)
                         }
-                    },
-                )
+                        },
+                    ) {
+                        BeaconText(stringResource(R.string.action_refresh_status))
+                    }
+                },
+                confirm = {
+                    BeaconButton(onClick = { actions.transport() }, modifier = Modifier.fillMaxWidth(), enabled = !busy) {
+                        BeaconText(stringResource(R.string.action_sync_now))
+                    }
+                },
+            )
+        }
+    }
+    item {
+        SettingsSection(stringResource(R.string.settings_auto_receive_title)) {
+            BeaconPreferenceToggle(
+                stringResource(R.string.settings_battery_saver_title),
+                stringResource(R.string.settings_receive_switch_hint),
+                receptionForm.enabled,
+                !busy,
+            ) {
+                receptionForm.enabled = it
+                receptionForm.edited = true
             }
         }
     }
@@ -172,7 +170,7 @@ internal fun LazyListScope.receptionSettingsItems(
             SettingsSection(
                 stringResource(
                     if (receivePlan.mode == ReceiveMode.RULES) R.string.receive_fallback_title
-                    else R.string.settings_auto_receive_title
+                    else R.string.ui_v2_power_conditions_title
                 )
             ) {
                 val interval = receptionForm.interval

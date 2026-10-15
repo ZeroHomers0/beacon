@@ -287,7 +287,7 @@ fun SettingsMetricGrid(metrics: List<Pair<String, String>>, modifier: Modifier =
                         Surface(
                             Modifier.weight(1f).fillMaxHeight(),
                             shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainerLow,
+                            color = androidx.compose.ui.graphics.Color.Transparent,
                         ) {
                             Column(
                                 Modifier.padding(if (resolvedColumns == 3) 8.dp else 12.dp),
@@ -304,7 +304,7 @@ fun SettingsMetricGrid(metrics: List<Pair<String, String>>, modifier: Modifier =
                                     value,
                                     modifier = Modifier.fillMaxWidth(),
                                     style = MaterialTheme.typography.titleMedium.copy(textAlign = TextAlign.Center),
-                                    color = MaterialTheme.colorScheme.primary,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                 )
                             }
                         }

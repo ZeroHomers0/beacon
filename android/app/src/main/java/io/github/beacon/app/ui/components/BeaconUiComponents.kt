@@ -16,10 +16,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -41,14 +43,14 @@ enum class SettingsScreen(val titleRes: Int) {
     NOTIFICATIONS(R.string.settings_notifications_section_title),
     NOTIFICATION_RULES(R.string.quiet_title),
     BACKGROUND(R.string.settings_background_permissions_title),
-    // Restore legacy saved state without exposing a second appearance page.
-    APPEARANCE(R.string.settings_appearance_section_desc),
+    APPEARANCE(R.string.ui_v2_appearance_title),
     DIAGNOSTICS(R.string.settings_advanced_section_title),
     ABOUT(R.string.settings_about_title),
     STORAGE(R.string.settings_storage_title),
     BACKUP(R.string.settings_backup_title),
     GUIDE(R.string.settings_guide_title),
     SERVER_ADMIN(R.string.admin_title),
+    QUIET_HOURS(R.string.quiet_schedule),
 }
 
 /**
@@ -112,7 +114,7 @@ fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.GroupTitleGap)) {
         BeaconText(
             title,
-            Modifier.padding(horizontal = BeaconUiMetrics.CardInset),
+            Modifier.padding(horizontal = BeaconUiMetrics.CardInset).semantics { heading() },
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -142,7 +144,7 @@ fun BeaconSettingsList(
         state = state,
         modifier = modifier.imePadding(),
         contentPadding = contentPadding,
-        verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
+        verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SettingsGroupGap),
         content = content,
     )
 }
@@ -159,20 +161,22 @@ fun SettingsRow(
     iconTint: Color,
     onClick: () -> Unit,
     badge: Boolean = false,
+    enabled: Boolean = true,
 ) {
     if (LocalBeaconUiStyle.current == BeaconUiStyle.MIUIX) {
         top.yukonga.miuix.kmp.extra.SuperArrow(
             title,
             summary = subtitle.takeIf { it.isNotBlank() },
             onClick = onClick,
+            enabled = enabled,
             startAction = {
                 BadgedIcon(icon, iconTint, badge, Modifier.padding(end = 8.dp))
             },
         )
     } else {
-        Surface(onClick = onClick, color = Color.Transparent) {
+        Surface(onClick = onClick, enabled = enabled, color = Color.Transparent) {
             Row(
-                Modifier.fillMaxWidth().padding(16.dp).heightIn(min = 48.dp),
+                Modifier.fillMaxWidth().alpha(if (enabled) 1f else .38f).padding(16.dp).heightIn(min = 48.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
@@ -191,6 +195,16 @@ fun SettingsRow(
         }
     }
 }
+
+/** File pickers and other actions use the same native list geometry as navigation. */
+@Composable
+fun SettingsActionRow(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+) = SettingsRow(title, subtitle, icon, MaterialTheme.colorScheme.onSurface, onClick, enabled = enabled)
 
 /**
  * The leading icon with an optional dot marking something new on this row.
@@ -258,8 +272,8 @@ fun MessageItem(
             ),
     ) {
         Column(
-            Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            Modifier.padding(BeaconUiMetrics.CardInset),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -367,8 +381,8 @@ internal fun MessageFilterTag(
     onClick: (() -> Unit)? = null,
 ) {
     Box(
-        modifier.heightIn(min = if (compact || onClick == null) 32.dp else BeaconUiMetrics.ControlMinHeight)
-            .widthIn(min = if (compact) 32.dp else if (onClick == null) 0.dp else BeaconUiMetrics.ControlMinHeight)
+        modifier.heightIn(min = if (onClick == null) 32.dp else BeaconUiMetrics.ControlMinHeight)
+            .widthIn(min = if (onClick == null) 0.dp else BeaconUiMetrics.ControlMinHeight)
             .semantics { if (compact) contentDescription = label }
             .clip(RoundedCornerShape(8.dp))
             .then(

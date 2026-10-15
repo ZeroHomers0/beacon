@@ -19,7 +19,7 @@ fun NotificationSoundPanel() {
     val resources = androidx.compose.ui.platform.LocalResources.current
     val context = LocalContext.current
     var hint by remember { mutableStateOf("") }
-    SettingsSection(stringResource(R.string.settings_sound_title)) {
+    SettingsGroup(stringResource(R.string.settings_sound_title)) {
 
         val channels = listOf(
             SoundChannel(
@@ -37,8 +37,10 @@ fun NotificationSoundPanel() {
                 resources.getString(R.string.channel_important_desc),
             ),
         )
-        BeaconCompactButtonGrid(channels.map { it.title }) { index ->
-            val (kind, _, importance, name, description) = channels[index]
+        channels.forEachIndexed { index, channel ->
+            val (kind, title, importance, name, description) = channel
+            if (index > 0) SettingsFieldDivider()
+            SettingsRow(title, "", io.github.beacon.app.ui.icons.BeaconIcons.Messages) {
             runCatching {
                 val manager = context.getSystemService(NotificationManager::class.java)
                 // Seed only missing channels; preserve the user's existing channel settings.
@@ -54,6 +56,7 @@ fun NotificationSoundPanel() {
                         .putExtra(Settings.EXTRA_CHANNEL_ID, kind.id)
                 )
             }.onFailure { hint = resources.getString(R.string.settings_sound_unavailable) }
+            }
         }
         if (hint.isNotEmpty()) BeaconText(hint)
     }

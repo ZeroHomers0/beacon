@@ -48,8 +48,9 @@ internal fun LazyListScope.notificationPermissionSettingsItems(
                     if (allowed) BeaconIcons.Check else BeaconIcons.Warning,
                     null,
                     tint =
-                        if (allowed) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.error,
+                        if (allowed) io.github.beacon.app.ui.theme.beaconSuccessColor()
+                        else if (notificationPermission == NotificationPermissionState.DENIED) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Column(Modifier.weight(1f)) {
                     BeaconText(

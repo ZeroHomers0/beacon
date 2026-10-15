@@ -14,9 +14,10 @@ import io.github.beacon.app.ui.icons.BeaconIcons
 import java.util.Locale
 
 @Composable
-internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions, form: QuietHoursFormState = remember { QuietHoursFormState() }) {
+internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions, form: QuietHoursFormState = remember { QuietHoursFormState() }, scheduleOnly: Boolean = false, onSchedule: (() -> Unit)? = null) {
     with(form) {
         LaunchedEffect(state.runtimeConnected, attempt) {
+            if (state.runtimeConnected && loaded && !failed) return@LaunchedEffect
             loaded = false
             saving = false
             failed = false
@@ -28,8 +29,8 @@ internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions, form:
         }
         val editable = loaded && !saving && state.runtimeConnected
         val labels = stringResource(R.string.quiet_weekdays).split(",")
-        Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap)) {
-            SettingsSection(stringResource(R.string.quiet_title)) {
+        Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SettingsGroupGap)) {
+            if (!scheduleOnly) SettingsSection(stringResource(R.string.quiet_title)) {
                 SettingsFieldGroup(
                     {
                         BeaconPreferenceToggle(
@@ -56,7 +57,15 @@ internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions, form:
                     },
                 )
             }
-            SettingsSection(stringResource(R.string.quiet_schedule)) {
+            if (!scheduleOnly && onSchedule != null) {
+                SettingsGroup(stringResource(R.string.quiet_schedule)) {
+                    SettingsActionRow(
+                        stringResource(R.string.quiet_schedule), "$start – $end",
+                        BeaconIcons.QuietHours, editable, onSchedule,
+                    )
+                }
+            }
+            if (scheduleOnly || onSchedule == null) SettingsSection(stringResource(R.string.quiet_schedule)) {
                 BeaconTimeRangePreference(
                     start, end,
                     stringResource(R.string.quiet_start),
@@ -66,6 +75,7 @@ internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions, form:
                     onEndChange = { end = it },
                 )
 
+                if ((first ?: 0) > (last ?: 0)) SettingsHint(stringResource(R.string.ui_v2_quiet_overnight))
                 ActionFlow {
                     labels.forEachIndexed { index, label ->
                         val bit = 1 shl index
@@ -83,6 +93,10 @@ internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions, form:
                         stringResource(R.string.quiet_invalid),
                         color = MaterialTheme.colorScheme.error,
                     )
+
+            }
+            SettingsSection(stringResource(R.string.ui_v2_quiet_effect)) {
+                SettingsHint(stringResource(R.string.ui_v2_quiet_scope))
                 if (failed) {
                     BeaconText(state.status.text, color = MaterialTheme.colorScheme.error)
                     BeaconActionButton(
@@ -91,11 +105,13 @@ internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions, form:
                         Modifier.fillMaxWidth(),
                         !saving && state.runtimeConnected,
                     ) {
+                        loaded = false
                         failed = false
                         attempt++
                     }
                 }
             }
+
         }
     }
 }

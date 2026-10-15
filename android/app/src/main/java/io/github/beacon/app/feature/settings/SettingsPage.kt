@@ -116,8 +116,7 @@ fun SettingsPage(
     }
     BeaconSettingsList(state = scroll, modifier = modifier, contentPadding = padding) {
         when (screen) {
-            SettingsScreen.HOME,
-            SettingsScreen.APPEARANCE -> {
+            SettingsScreen.HOME -> {
                 if (showGuideFirst) item(key = "first-use-guide") {
                     SettingsGroup(stringResource(R.string.settings_guide_title)) {
                         SettingsRow(
@@ -187,15 +186,11 @@ fun SettingsPage(
                 }
                 item {
                     SettingsGroup(stringResource(R.string.settings_interface_section_title)) {
-                        BeaconDropdownPreference(
+                        SettingsRow(
                             stringResource(R.string.appearance_style),
-                            listOf("Material 3", "MIUIX"),
-                            uiStyle.ordinal,
-                            icon = BeaconIcons.Palette,
-                            settingsRow = true,
-                        ) {
-                            onUiStyleChange(BeaconUiStyle.entries[it])
-                        }
+                            if (uiStyle == BeaconUiStyle.MIUIX) "MIUIX" else "Material 3",
+                            BeaconIcons.Palette,
+                        ) { onNavigate(SettingsScreen.APPEARANCE) }
                         BeaconDropdownPreference(
                             stringResource(R.string.appearance_theme),
                             listOf(
@@ -292,6 +287,12 @@ fun SettingsPage(
                     }
                 }
             }
+            SettingsScreen.APPEARANCE -> {
+                item { AppearanceSettingsContent(uiStyle, themeMode, onUiStyleChange, onThemeModeChange) }
+            }
+            SettingsScreen.QUIET_HOURS -> {
+                item { QuietHoursPanel(runtimeState, actions, quietHoursForm, scheduleOnly = true) }
+            }
             SettingsScreen.SERVER_ADMIN -> Unit
             SettingsScreen.GUIDE -> {
                 item {
@@ -304,6 +305,11 @@ fun SettingsPage(
                 }
             }
             SettingsScreen.BACKUP -> {
+                item {
+                    io.github.beacon.app.ui.components.SettingsSection(stringResource(R.string.ui_v2_migration_title)) {
+                        io.github.beacon.app.ui.components.SettingsHint(stringResource(R.string.ui_v2_backup_migration))
+                    }
+                }
                 item {
                     SettingsBackupPanel(
                         actions,
@@ -353,7 +359,10 @@ fun SettingsPage(
             }
             SettingsScreen.NOTIFICATION_RULES -> {
                 item { NotificationSettingsPanel(runtimeState, actions) }
-                item { QuietHoursPanel(runtimeState, actions, quietHoursForm) }
+                item {
+                    QuietHoursPanel(runtimeState, actions, quietHoursForm,
+                        onSchedule = { onNavigate(SettingsScreen.QUIET_HOURS) })
+                }
                 item { NotificationSoundPanel() }
             }
             SettingsScreen.NOTIFICATIONS -> {
@@ -376,6 +385,8 @@ fun SettingsPage(
                     onOperationDetails,
                     busy,
                     context,
+                    onNavigate,
+                    onCheckUpdate,
                 )
             }
             SettingsScreen.ABOUT -> {

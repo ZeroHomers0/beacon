@@ -1,6 +1,9 @@
 package io.github.beacon.app.feature.settings
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -8,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.ReceiveMode
@@ -26,7 +30,10 @@ fun ReceiveModeDialog(
         onDismissRequest = onDismiss,
         title = { BeaconText(stringResource(R.string.settings_reception_page_title)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap)) {
+            Column(
+                Modifier.verticalScroll(rememberScrollState()).selectableGroup(),
+                verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
+            ) {
                 if (connectionStatus.isNotBlank()) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         SettingsStatusSummary(connectionStatus, "", BeaconIcons.Cloud)
@@ -40,7 +47,7 @@ fun ReceiveModeDialog(
                         }
                     }
                 }
-                ReceiveMode.entries.forEach { mode ->
+                listOf(ReceiveMode.REALTIME, ReceiveMode.POWER_SAVING, ReceiveMode.RULES).forEach { mode ->
                     Surface(
                         shape = RoundedCornerShape(16.dp),
                         color =
@@ -49,7 +56,12 @@ fun ReceiveModeDialog(
                     ) {
                         Row(
                             Modifier.fillMaxWidth()
-                                .clickable() { onSelect(mode) }
+                                .heightIn(min = BeaconUiMetrics.ControlMinHeight)
+                                .selectable(
+                                    selected = mode == selected,
+                                    role = Role.RadioButton,
+                                    onClick = { onSelect(mode) },
+                                )
                                 .padding(14.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp),

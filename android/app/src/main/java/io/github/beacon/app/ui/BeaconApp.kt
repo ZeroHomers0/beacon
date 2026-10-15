@@ -776,7 +776,7 @@ fun BeaconApp(
                                                 ) {
                                                     actions.saveReception(form.pendingPlan(), form.applyTo(runtimeState.pollingState.config))
                                                 }
-                                            } else if (displayedDetail == null && barPage == 1 && displayedSettingsScreen == SettingsScreen.NOTIFICATION_RULES) {
+                                            } else if (displayedDetail == null && barPage == 1 && displayedSettingsScreen in setOf(SettingsScreen.NOTIFICATION_RULES, SettingsScreen.QUIET_HOURS)) {
                                                 BeaconActionIcon(
                                                     BeaconIcons.Save, stringResource(R.string.action_save),
                                                     runtimeState.runtimeConnected && !busy && ui.quietHoursForm.canSave,

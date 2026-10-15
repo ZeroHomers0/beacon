@@ -55,7 +55,7 @@ fun MessageActionsPanel(actions: List<MessageLinkAction>, legacyUrl: String = ""
                 ) {
                     Icon(BeaconIcons.OpenWeb, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    BeaconText(action.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    BeaconText(action.title, maxLines = 3, overflow = TextOverflow.Ellipsis)
                 }
                 BeaconText(
                     action.url,

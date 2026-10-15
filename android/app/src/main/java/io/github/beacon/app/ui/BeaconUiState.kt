@@ -73,8 +73,6 @@ class BeaconUiState(
 
     init {
         handle["page"] = (handle.get<Int>("page") ?: 0).coerceIn(0, 1)
-        if (handle.get<SettingsScreen>("settingsScreen") == SettingsScreen.APPEARANCE)
-            handle["settingsScreen"] = SettingsScreen.HOME
     }
 
     var page: Int by savedState(handle, "page", 0)
@@ -95,6 +93,7 @@ class BeaconUiState(
 
     fun navigateSettings(destination: SettingsScreen) {
         if (destination == settingsScreen) return
+        invalidateQuietHoursOnExit(destination)
         settingsNavigatingBack = destination == SettingsScreen.HOME
         settingsHistory =
             if (destination == SettingsScreen.HOME) arrayListOf()
@@ -104,6 +103,7 @@ class BeaconUiState(
 
     fun backSettings() {
         settingsNavigatingBack = true
+        invalidateQuietHoursOnExit(settingsBackTarget)
         settingsScreen = settingsBackTarget
         settingsHistory = ArrayList(settingsHistory.dropLast(1))
     }
@@ -111,10 +111,18 @@ class BeaconUiState(
     fun finishNavigation(index: Int) {
         if (page == 1 && index == 1 && settingsScreen != SettingsScreen.HOME) backSettings()
         else {
+            invalidateQuietHoursOnExit(SettingsScreen.HOME)
             page = index
             settingsHistory = arrayListOf()
             settingsScreen = SettingsScreen.HOME
         }
+    }
+
+    private fun invalidateQuietHoursOnExit(destination: SettingsScreen) {
+        val pages = setOf(SettingsScreen.NOTIFICATION_RULES, SettingsScreen.QUIET_HOURS)
+        // Preserve the shared draft only within this editor. Re-entering from elsewhere rereads
+        // the runtime, including policy changes made by importing a backup.
+        if (settingsScreen in pages && destination !in pages) quietHoursForm.loaded = false
     }
 
     var filtersOpen: Boolean by savedState(handle, "filtersOpen", false)

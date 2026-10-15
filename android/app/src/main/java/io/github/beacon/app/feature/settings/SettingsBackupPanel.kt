@@ -88,11 +88,12 @@ fun SettingsBackupPanel(actions: RuntimeActions, busy: Boolean) {
                     } finally { fileBusy = false }
                 }
         }
-    SettingsSection(stringResource(R.string.settings_backup_settings_title)) {
-        SettingsHint(stringResource(R.string.settings_backup_settings_hint))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            BeaconOutlinedButton(
-                modifier = Modifier.weight(1f),
+    SettingsGroup(stringResource(R.string.settings_backup_settings_title)) {
+        Column(Modifier.padding(BeaconUiMetrics.CardInset)) {
+            SettingsHint(stringResource(R.string.settings_backup_settings_hint))
+        }
+            SettingsActionRow(
+                stringResource(R.string.settings_backup_export), "", io.github.beacon.app.ui.icons.BeaconIcons.Backup,
                 enabled = !busy && !fileBusy,
                 onClick = {
                     actions.settingsBackup(
@@ -107,21 +108,17 @@ fun SettingsBackupPanel(actions: RuntimeActions, busy: Boolean) {
                         exportFile.launch("beacon-settings.json")
                     }
                 },
-            ) {
-                BeaconText(stringResource(R.string.settings_backup_export))
-            }
-            BeaconOutlinedButton(
-                modifier = Modifier.weight(1f),
+            )
+            SettingsFieldDivider()
+            SettingsActionRow(
+                stringResource(R.string.settings_backup_import), "", io.github.beacon.app.ui.icons.BeaconIcons.History,
                 enabled = !busy && !fileBusy,
                 onClick = {
                     importFile.launch(
                         arrayOf("application/json", "text/plain", "application/octet-stream")
                     )
                 },
-            ) {
-                BeaconText(stringResource(R.string.settings_backup_import))
-            }
-        }
+            )
         if (!importing && hint.isNotEmpty())
             OperationResultPanel(stringResource(R.string.settings_backup_title), hint)
     }

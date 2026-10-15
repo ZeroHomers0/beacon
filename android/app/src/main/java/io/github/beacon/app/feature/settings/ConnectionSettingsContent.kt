@@ -66,7 +66,8 @@ internal fun LazyListScope.connectionSettingsItems(
                     else -> BeaconIcons.Cloud
                 },
                 tint = if (runtimeState.serverReachable == false) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.primary,
+                    else if (runtimeState.serverReachable == true) io.github.beacon.app.ui.theme.beaconSuccessColor()
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
                 loading = runtimeState.serverChecking,
             )
             DiagnosticRow(

@@ -7,6 +7,7 @@ object BeaconUiMetrics {
     val PageInset = 16.dp
     val CardInset = 16.dp
     val SectionGap = 12.dp
+    val SettingsGroupGap = 20.dp
     val GroupTitleGap = 8.dp
     val FieldMinHeight = 56.dp
     val FieldVerticalInset = 12.dp

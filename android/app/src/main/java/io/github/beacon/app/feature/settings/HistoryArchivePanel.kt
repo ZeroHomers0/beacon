@@ -53,11 +53,12 @@ fun HistoryArchivePanel(actions: RuntimeActions, busy: Boolean) {
         }
     val open =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { run(it, true) }
-    SettingsSection(stringResource(R.string.settings_archive_title)) {
-        SettingsHint(stringResource(R.string.settings_archive_hint))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            BeaconOutlinedButton(
-                modifier = Modifier.weight(1f),
+    SettingsGroup(stringResource(R.string.settings_archive_title)) {
+        Column(Modifier.padding(BeaconUiMetrics.CardInset)) {
+            SettingsHint(stringResource(R.string.settings_archive_hint))
+        }
+            SettingsActionRow(
+                stringResource(R.string.settings_archive_export), "", io.github.beacon.app.ui.icons.BeaconIcons.Backup,
                 enabled = !busy,
                 onClick = {
                     operation = false
@@ -65,11 +66,10 @@ fun HistoryArchivePanel(actions: RuntimeActions, busy: Boolean) {
                     confirmPassword = ""
                     encrypted = true
                 },
-            ) {
-                BeaconText(stringResource(R.string.settings_archive_export))
-            }
-            BeaconOutlinedButton(
-                modifier = Modifier.weight(1f),
+            )
+            SettingsFieldDivider()
+            SettingsActionRow(
+                stringResource(R.string.settings_archive_import), "", io.github.beacon.app.ui.icons.BeaconIcons.History,
                 enabled = !busy,
                 onClick = {
                     operation = true
@@ -77,10 +77,7 @@ fun HistoryArchivePanel(actions: RuntimeActions, busy: Boolean) {
                     confirmPassword = ""
                     encrypted = true
                 },
-            ) {
-                BeaconText(stringResource(R.string.settings_archive_import))
-            }
-        }
+            )
         if (hint.isNotEmpty()) OperationResultPanel(stringResource(R.string.settings_archive_title), hint)
     }
     if (operation != null)

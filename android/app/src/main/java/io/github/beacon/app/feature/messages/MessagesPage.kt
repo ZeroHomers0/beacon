@@ -219,6 +219,9 @@ private fun MessagesContent(
                             BeaconSummaryPill(
                                 stringResource(R.string.msg_stat_total, runtimeState.messageTotal),
                                 BeaconIcons.Mail,
+                                highlighted = applied.readFilter == MessageReadFilter.ALL,
+                                enabled = !busy,
+                                onClick = { onApplyFilter(applied.search, MessageReadFilter.ALL) },
                             )
                             BeaconSummaryPill(
                                 stringResource(
@@ -226,7 +229,9 @@ private fun MessagesContent(
                                     runtimeState.messageUnread,
                                 ),
                                 BeaconIcons.Messages,
-                                highlighted = runtimeState.messageUnread > 0,
+                                highlighted = applied.readFilter == MessageReadFilter.UNREAD,
+                                enabled = !busy,
+                                onClick = { onApplyFilter(applied.search, MessageReadFilter.UNREAD) },
                             )
                         }
                         if (

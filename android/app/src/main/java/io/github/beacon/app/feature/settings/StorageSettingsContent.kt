@@ -64,7 +64,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
         confirmation = null
         if (state.runtimeConnected && settingsLoaded) actions.previewCleanup(policy)
     }
-    Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap)) {
+    Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SettingsGroupGap)) {
         // Without this the page rendered every control disabled with no explanation; a failed read
         // is now visible and recoverable instead of looking like a broken toggle.
         if (loadFailed && !custom) {
@@ -81,14 +81,13 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
             }
         }
         SettingsSection(stringResource(R.string.storage_usage_title)) {
+            SettingsHint(stringResource(R.string.settings_storage_database))
+            BeaconText(
+                preview?.databaseBytes?.let { android.text.format.Formatter.formatFileSize(context, it) } ?: "—",
+                style = MaterialTheme.typography.headlineLarge,
+            )
             SettingsMetricGrid(
                 listOf(
-                    Pair(
-                        resources.getString(R.string.settings_storage_database),
-                        preview?.databaseBytes?.let {
-                            android.text.format.Formatter.formatFileSize(context, it)
-                        } ?: "—",
-                    ),
                     Pair(
                         resources.getString(R.string.ui_nav_messages_title),
                         preview?.total?.let {
@@ -107,21 +106,23 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                             resources.getString(R.string.settings_cleanup_count, it)
                         } ?: "—",
                     ),
-                    Pair(
-                        stringResource(R.string.storage_waiting_reminders),
-                        preview?.pendingNotifications?.let {
-                            resources.getString(R.string.settings_cleanup_count, it)
-                        } ?: "—",
-                    ),
-                    Pair(
-                        stringResource(R.string.storage_wal),
-                        preview?.walBytes?.let {
-                            android.text.format.Formatter.formatFileSize(context, it)
-                        } ?: "—",
-                    ),
                 ),
                 columns = 3,
             )
+            SettingsFieldGroup(
+                {
+                    DiagnosticRow(stringResource(R.string.storage_waiting_reminders),
+                        preview?.pendingNotifications?.let { resources.getString(R.string.settings_cleanup_count, it) } ?: "—")
+                },
+                {
+                    DiagnosticRow(stringResource(R.string.storage_wal),
+                        preview?.walBytes?.let { android.text.format.Formatter.formatFileSize(context, it) } ?: "—")
+                },
+            )
+            BeaconActionButton(stringResource(R.string.action_refresh_status),
+                io.github.beacon.app.ui.icons.BeaconIcons.Sync, Modifier.fillMaxWidth(),
+                state.runtimeConnected && settingsLoaded && !state.messageBusy,
+            ) { actions.previewCleanup(policy) }
             DiagnosticRow(
                 stringResource(R.string.storage_sampled),
                 preview?.sampledAtMs?.let { formatMessageTime(it) } ?: "—",

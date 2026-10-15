@@ -184,10 +184,20 @@ fun MessageDetailScreen(
                             else R.string.msg_detail_expand_raw_action
                         ))
                     }
-                    SettingsHint(stringResource(R.string.msg_detail_reminder_hint))
-                    SettingsHint(stringResource(R.string.msg_detail_timezone_hint))
                     if (rawInfo) {
+                        SettingsHint(stringResource(R.string.msg_detail_reminder_hint))
+                        SettingsHint(stringResource(R.string.msg_detail_timezone_hint))
                         SettingsFieldGroup(
+                            {
+                                DiagnosticRow(stringResource(R.string.ui_v2_priority), message.priority.toString())
+                            },
+                            {
+                                DiagnosticRow(stringResource(R.string.ui_v2_read_state),
+                                    stringResource(if (message.isRead) R.string.msg_read_label else R.string.msg_unread_label))
+                            },
+                            {
+                                DiagnosticRow(stringResource(R.string.ui_v2_expiry), detailTime(message.expiresAtMs, missing))
+                            },
                             {
                                 DiagnosticRow(
                                     stringResource(R.string.msg_detail_reminder_state_label),

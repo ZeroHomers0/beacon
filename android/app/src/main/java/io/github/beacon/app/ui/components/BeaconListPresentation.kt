@@ -5,6 +5,7 @@ package io.github.beacon.app.ui.components
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -156,8 +157,14 @@ fun BeaconPullToRefresh(
 
 /** Small information pills and removable filters share the page's color and radius. */
 @Composable
-fun BeaconSummaryPill(label: String, icon: ImageVector, highlighted: Boolean = false) {
+fun BeaconSummaryPill(
+    label: String, icon: ImageVector, highlighted: Boolean = false,
+    enabled: Boolean = true, onClick: (() -> Unit)? = null,
+) {
     Surface(
+        modifier = if (onClick == null) Modifier else Modifier
+            .heightIn(min = BeaconUiMetrics.ControlMinHeight)
+            .clickable(enabled = enabled, role = androidx.compose.ui.semantics.Role.Button, onClick = onClick),
         shape = RoundedCornerShape(50),
         color =
             if (highlighted) MaterialTheme.colorScheme.secondaryContainer

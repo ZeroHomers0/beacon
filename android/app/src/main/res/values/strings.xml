@@ -67,12 +67,12 @@
     <string name="msg_unread_label">未读</string>
     <string name="msg_untitled_message">无标题消息</string>
     <string name="settings_about_title">关于 Beacon</string>
-    <string name="settings_advanced_section_desc">连接状态、接收记录与诊断报告</string>
+    <string name="settings_advanced_section_desc">高级连接、事件记录与诊断工具</string>
     <string name="settings_advanced_section_title">诊断与工具</string>
     <string name="settings_allow_notifications_action">允许通知</string>
     <string name="settings_app_tagline_hint">推送消息，集中管理</string>
     <string name="settings_appearance_section_desc">外观与交互</string>
-    <string name="settings_auto_receive_title">省电接收设置</string>
+    <string name="settings_auto_receive_title">自动接收</string>
     <string name="settings_battery_saver_title">启用自动接收</string>
     <string name="settings_connection_section_title">服务器配置</string>
     <string name="settings_first_setup_hint">使用服务器地址和一次性绑定码绑定设备</string>
@@ -89,7 +89,7 @@
     <string name="settings_process_read_hint">关闭通知仍会保存消息。标为已读不触发通知，已提交系统的通知不重复补发。</string>
     <string name="settings_receive_diagnostics_title">接收诊断</string>
     <string name="settings_receive_section_title">接收与通知</string>
-    <string name="settings_receive_status_title">自动接收</string>
+    <string name="settings_receive_status_title">运行状态</string>
     <string name="settings_reconnect_data_action">重新连接</string>
     <string name="settings_redact_section_title">诊断报告</string>
     <string name="settings_style_dark_label">深色</string>
@@ -165,11 +165,11 @@
     <string name="settings_version_label">版本 %1$s</string>
     <string name="receive_mode_realtime">即时接收</string>
     <string name="receive_mode_rules">规则接收</string>
-    <string name="receive_mode_power_description">按省电周期接收消息</string>
-    <string name="receive_mode_realtime_description">保持连接接收消息，断线后自动重连</string>
+    <string name="receive_mode_power_description">通过 HTTP 周期补收，允许接收延迟</string>
+    <string name="receive_mode_realtime_description">通过 WebSocket 长连接接收，断线后自动补收</string>
     <string name="receive_realtime_status_title">即时连接状态</string>
-    <string name="receive_mode_rules_description">按电量、时间、充电和 Wi-Fi 条件选择接收方式</string>
-    <string name="receive_mode_pending_hint">持续连接会增加耗电，断线后自动重连并补收消息。</string>
+    <string name="receive_mode_rules_description">根据电量、时间、充电和 Wi-Fi 条件切换</string>
+    <string name="receive_mode_pending_hint">即时接收需要后台运行权限，连接稳定性受电池管理和网络环境影响。</string>
     <string name="receive_mode_settings_long_press">长按打开接收模式设置</string>
     <string name="receive_rule_charging">充电时即时接收</string>
     <string name="receive_rule_wifi">Wi-Fi 时即时接收</string>
@@ -177,7 +177,7 @@
     <string name="settings_receive_switch_hint">关闭后停止自动接收，仍可立即同步。</string>
     <string name="receive_fallback_title">省电回退设置</string>
     <string name="settings_background_permissions_title">后台权限</string>
-    <string name="settings_background_permissions_desc">开启自启动，省电策略设为无限制</string>
+    <string name="settings_background_permissions_desc">自启动与电池管理</string>
     <string name="background_autostart_title">自启动</string>
     <string name="background_manual_status">需手动确认</string>
     <string name="background_autostart_hint">在系统设置中允许 Beacon 自启动。</string>
@@ -218,7 +218,7 @@
     <string name="storage_retention">历史保留</string>
     <string name="storage_max_messages">消息数量上限</string>
     <string name="storage_keep_unread">保留未读</string>
-    <string name="storage_usage_title">本地占用</string>
+    <string name="storage_usage_title">存储概况</string>
     <string name="storage_size_note">数据库统计不含独立日志文件；清理后空间可复用，文件大小不会立即缩小。</string>
     <string name="storage_preview_title">清理预览</string>
     <string name="storage_preview_refresh">刷新预览</string>
@@ -241,7 +241,6 @@
     <string name="push_examples_json_curl">复制 JSON curl 示例</string>
     <string name="push_examples_json_powershell">复制 JSON PowerShell 示例</string>
     <string name="message_share_failed">当前没有可用的分享应用</string>
-    <string name="connection_manage">本机配置管理</string>
     <string name="connection_clear">清除本机配置</string>
     <string name="connection_clear_confirm">确认清除</string>
     <string name="connection_clear_desc">暂停自动接收，清除本机地址、凭证和推送密钥，保留历史消息、待回传结果和通知规则。撤销服务端设备请使用“完整解绑”。</string>
@@ -363,7 +362,6 @@
     <string name="device_revoke_confirm">确认解绑</string>
     <string name="device_revoke_desc">撤销服务端当前设备，暂停接收并清除本机凭证，停止回传接收结果。历史消息和通知规则保留。无法恢复；再次使用需重新绑定并更新推送地址。结果未确认时保留配置供重试。</string>
     <string name="settings_backup_title">备份与迁移</string>
-    <string name="settings_refresh_done">运行状态已更新</string>
     <string name="settings_guide_title">首次使用向导</string>
     <string name="settings_guide_steps">配置与测试步骤</string>
     <string name="settings_guide_steps_hint">绑定服务器 → 通知权限 → 接收模式 → 真实推送验证</string>
@@ -385,8 +383,8 @@
     <string name="settings_archive_password_expired">密码至少 8 个字符，请重新选择文件并输入密码</string>
     <string name="settings_archive_title">消息导出与迁移</string>
     <string name="settings_archive_hint">导出全部本地消息和已读状态，可用密码加密。导入会合并历史并保留本机删除记录，不重新显示通知。新设备需重新绑定；文件最大 32 MiB。</string>
-    <string name="settings_archive_export">导出消息</string>
-    <string name="settings_archive_import">导入消息</string>
+    <string name="settings_archive_export">导出消息记录</string>
+    <string name="settings_archive_import">导入消息记录</string>
     <string name="settings_archive_import_title">导入消息文件</string>
     <string name="settings_archive_export_title">导出消息文件</string>
     <string name="settings_archive_encryption">密码加密</string>
@@ -417,8 +415,8 @@
     <string name="settings_backup_settings_title">设置备份</string>
     <string name="settings_backup_settings_hint">备份接收、通知和清理设置，不含服务器凭证和消息。导入后自动接收与自动清理暂停，请检查后开启。</string>
     <string name="settings_backup_export_failed_connection">导出失败，请检查接收服务连接</string>
-    <string name="settings_backup_export">导出文件</string>
-    <string name="settings_backup_import">导入备份</string>
+    <string name="settings_backup_export">导出设置</string>
+    <string name="settings_backup_import">导入设置</string>
     <string name="settings_backup_import_title">导入设置备份</string>
     <string name="settings_backup_import_hint">替换通用设置并暂停自动接收与自动清理，保留服务器配置、消息和接收确认记录。</string>
     <string name="settings_backup_validated">已读取并校验设置文件，确认后应用。</string>
@@ -426,7 +424,7 @@
     <string name="settings_backup_import_unconfirmed">导入未确认，请检查当前设置</string>
     <string name="settings_backup_import_done">已导入，自动接收与自动清理已暂停</string>
     <string name="settings_backup_import_apply">导入并暂停</string>
-    <string name="settings_backup_summary">接收设置与消息历史</string>
+    <string name="settings_backup_summary">设置与消息记录的导入导出</string>
     <string name="settings_clipboard_push_key">Beacon 推送密钥</string>
     <string name="settings_reminders_send">补发待通知</string>
     <string name="settings_reminders_pending">%1$d 条待通知。补发不重新下载消息，也不改变已读状态。</string>
@@ -473,7 +471,7 @@
     <string name="settings_cleanup_all_continue">继续</string>
     <string name="settings_cleanup_all_apply">确认清理全部</string>
     <string name="ui_filter_all_label">全部</string>
-    <string name="receive_heartbeat_title">即时连接</string>
+    <string name="receive_heartbeat_title">高级连接</string>
     <string name="receive_heartbeat_interval">心跳间隔</string>
     <string name="receive_heartbeat_seconds">%1$d 秒</string>
     <string name="receive_heartbeat_hint">默认 60 秒；间隔越长，发现断线越慢。</string>

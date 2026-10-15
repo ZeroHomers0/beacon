@@ -48,7 +48,7 @@ internal fun NotificationSettingsPanel(state: RuntimeState, actions: RuntimeActi
         listOf(1, 5, 15, 60).let {
             if (saved.freshMinutes in it) it else (it + saved.freshMinutes).sorted()
         }
-    Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap)) {
+    Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SettingsGroupGap)) {
         SettingsSection(stringResource(R.string.notification_age_title)) {
             SettingsFieldGroup(
                 {
