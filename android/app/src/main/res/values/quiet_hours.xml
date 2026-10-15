@@ -3,7 +3,7 @@
     <string name="quiet_title">通知规则</string>
     <string name="quiet_section_title">免打扰</string>
     <string name="quiet_enable">定时免打扰</string>
-    <string name="quiet_description">过时提醒、免打扰和锁屏隐私</string>
+    <string name="quiet_description">过时提醒、免打扰和隐私</string>
     <string name="quiet_behavior">时段内提醒方式</string>
     <string name="quiet_silent">静音通知</string>
     <string name="quiet_save_only">仅保存</string>

@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
-fun SettingsBackupPanel(actions: RuntimeActions, busy: Boolean) {
+fun SettingsBackupPanel(actions: RuntimeActions, busy: Boolean, grouped: Boolean = true) {
     val resources = androidx.compose.ui.platform.LocalResources.current
     val context = LocalContext.current
     var importing by remember { mutableStateOf(false) }
@@ -88,12 +88,11 @@ fun SettingsBackupPanel(actions: RuntimeActions, busy: Boolean) {
                     } finally { fileBusy = false }
                 }
         }
-    SettingsGroup(stringResource(R.string.settings_backup_settings_title)) {
-        Column(Modifier.padding(BeaconUiMetrics.CardInset)) {
-            SettingsHint(stringResource(R.string.settings_backup_settings_hint))
-        }
+    val content: @Composable () -> Unit = {
             SettingsActionRow(
-                stringResource(R.string.settings_backup_export), "", io.github.beacon.app.ui.icons.BeaconIcons.Backup,
+                stringResource(R.string.settings_backup_export),
+                stringResource(R.string.ui_v2_export_settings_hint),
+                io.github.beacon.app.ui.icons.BeaconIcons.Backup,
                 enabled = !busy && !fileBusy,
                 onClick = {
                     actions.settingsBackup(
@@ -111,7 +110,9 @@ fun SettingsBackupPanel(actions: RuntimeActions, busy: Boolean) {
             )
             SettingsFieldDivider()
             SettingsActionRow(
-                stringResource(R.string.settings_backup_import), "", io.github.beacon.app.ui.icons.BeaconIcons.History,
+                stringResource(R.string.settings_backup_import),
+                stringResource(R.string.ui_v2_import_settings_hint),
+                io.github.beacon.app.ui.icons.BeaconIcons.History,
                 enabled = !busy && !fileBusy,
                 onClick = {
                     importFile.launch(
@@ -122,6 +123,9 @@ fun SettingsBackupPanel(actions: RuntimeActions, busy: Boolean) {
         if (!importing && hint.isNotEmpty())
             OperationResultPanel(stringResource(R.string.settings_backup_title), hint)
     }
+    if (grouped)
+        SettingsGroup(stringResource(R.string.settings_backup_settings_title)) { content() }
+    else content()
     if (importing)
         BeaconAlertDialog(
             onDismissRequest = { if (!busy) importing = false },

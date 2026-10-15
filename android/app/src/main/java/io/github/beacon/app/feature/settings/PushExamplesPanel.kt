@@ -31,7 +31,6 @@ fun PushExamplesPanel(actions: RuntimeActions, enabled: Boolean, endpoint: Strin
                 Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),
                 verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
             ) {
-                SettingsHint(stringResource(R.string.push_examples_hint))
                 listOf(false to false, true to false, false to true, true to true).forEach {
                     (powershell, json) ->
                     BeaconActionButton(

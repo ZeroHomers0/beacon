@@ -24,10 +24,10 @@ import io.github.beacon.app.domain.model.BindingRequest
 import io.github.beacon.app.domain.model.RuntimeState
 import io.github.beacon.app.ipc.RuntimeActions
 import io.github.beacon.app.ui.components.BeaconActionButton
+import io.github.beacon.app.ui.components.BeaconCard
 import io.github.beacon.app.ui.components.BeaconButton
 import io.github.beacon.app.ui.components.BeaconText
 import io.github.beacon.app.ui.components.BeaconTextField
-import io.github.beacon.app.ui.components.DiagnosticRow
 import io.github.beacon.app.ui.components.SettingsStatusSummary
 import io.github.beacon.app.ui.components.SettingsHint
 import io.github.beacon.app.ui.components.SettingsSection
@@ -49,14 +49,19 @@ internal fun LazyListScope.connectionSettingsItems(
     onFeedback: (String) -> Unit,
 ) {
     item {
-        SettingsSection(stringResource(R.string.server_status_title)) {
-            val status = runtimeState.serverCheckResult.split(" · ")
-            val label = connectionStatusLabel(runtimeState)
-            val details = buildList {
-                if (status.first() != label && runtimeState.configuredEndpoint.isNotBlank())
-                    add(status.first())
-                addAll(status.drop(1))
-            }.joinToString("\n")
+        BeaconCard(Modifier.fillMaxWidth()) {
+            Column(
+                Modifier.fillMaxWidth().padding(io.github.beacon.app.ui.components.BeaconUiMetrics.CardInset),
+                verticalArrangement = Arrangement.spacedBy(io.github.beacon.app.ui.components.BeaconUiMetrics.SectionGap),
+            ) {
+                val label = if (runtimeState.serverReachable == true)
+                    resources.getString(R.string.connection_status_connected)
+                else connectionStatusLabel(runtimeState)
+                val details = when {
+                    runtimeState.serverReachable == true -> resources.getString(R.string.server_status_protocols)
+                    runtimeState.serverReachable == false -> runtimeState.serverCheckResult.substringAfter(" · ", runtimeState.serverCheckResult)
+                    else -> ""
+                }
             SettingsStatusSummary(
                 label,
                 details,
@@ -69,10 +74,13 @@ internal fun LazyListScope.connectionSettingsItems(
                     else if (runtimeState.serverReachable == true) io.github.beacon.app.ui.theme.beaconSuccessColor()
                     else MaterialTheme.colorScheme.onSurfaceVariant,
                 loading = runtimeState.serverChecking,
+                badgeLabel = if (runtimeState.serverReachable == true)
+                    resources.getString(R.string.ui_v2_normal_label) else null,
             )
-            DiagnosticRow(
-                stringResource(R.string.server_last_checked),
-                formatMessageTime(runtimeState.serverCheckedAtMs),
+                BeaconText(
+                    stringResource(R.string.server_last_checked) + " · " + formatMessageTime(runtimeState.serverCheckedAtMs),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             BeaconActionButton(
                 stringResource(
@@ -86,6 +94,7 @@ internal fun LazyListScope.connectionSettingsItems(
                     runtimeState.configuredEndpoint.isNotBlank(),
                 actions::checkServer,
             )
+            }
         }
     }
     item {

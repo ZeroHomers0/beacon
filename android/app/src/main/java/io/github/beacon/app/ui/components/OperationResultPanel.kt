@@ -6,15 +6,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -29,44 +23,45 @@ fun SettingsStatusSummary(
     icon: ImageVector = BeaconIcons.Diagnostics,
     tint: Color = MaterialTheme.colorScheme.primary,
     loading: Boolean = false,
+    badgeLabel: String? = null,
 ) {
-    val iconSize = 32.dp
-    val iconGap = 12.dp
-    val density = LocalDensity.current
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
-        // Keep only the settled height during a probe; reset for width or typography changes.
-        var settledHeight by remember(maxWidth, density.density, density.fontScale) { mutableIntStateOf(0) }
-        Column(
-            Modifier.fillMaxWidth()
-                .onSizeChanged { if (!loading) settledHeight = it.height }
-                .heightIn(min = if (loading) with(density) { settledHeight.toDp() }
-                    .coerceAtLeast(BeaconUiMetrics.FieldMinHeight) else BeaconUiMetrics.FieldMinHeight)
-                .padding(vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+    val iconSize = 48.dp
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = iconSize).padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier.size(iconSize)
+                .clip(RoundedCornerShape(14.dp))
+                .background(tint.copy(alpha = 0.10f)),
+            contentAlignment = Alignment.Center,
         ) {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(iconGap),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    Modifier.size(iconSize)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(tint.copy(alpha = 0.10f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(icon, null, Modifier.size(20.dp), tint = tint)
-                }
+            Icon(icon, null, Modifier.size(26.dp), tint = tint)
+        }
+        Column(
+            Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
                 BeaconText(
                     title,
-                    Modifier.weight(1f),
                     style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                 )
-            }
-            if (details.isNotBlank()) {
-                Box(Modifier.padding(start = iconSize + iconGap)) { SettingsHint(details) }
-            }
+            if (details.isNotBlank()) SettingsHint(details)
         }
+        if (badgeLabel != null)
+            androidx.compose.material3.Surface(
+                color = tint.copy(alpha = 0.12f),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
+            ) {
+                BeaconText(
+                    badgeLabel,
+                    Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = tint,
+                    maxLines = 1,
+                )
+            }
     }
 }
 

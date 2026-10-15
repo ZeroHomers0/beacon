@@ -12,7 +12,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
-import io.github.beacon.app.BuildConfig
 import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.BeaconThemeMode
 import io.github.beacon.app.domain.model.BeaconUiStyle
@@ -63,8 +62,6 @@ fun SettingsPage(
     val context = androidx.compose.ui.platform.LocalContext.current
     val focus = LocalFocusManager.current
     val busy = runtimeState.messageBusy
-    val guideCompleted by rememberFirstUseGuideCompleted()
-    val showGuideFirst = !guideCompleted || runtimeState.configuredEndpoint.isBlank()
     var migrationHelpOpen by rememberSaveable { mutableStateOf(false) }
     val polling = runtimeState.pollingState
     var pendingReminderCount by
@@ -118,24 +115,11 @@ fun SettingsPage(
     BeaconSettingsList(state = scroll, modifier = modifier, contentPadding = padding) {
         when (screen) {
             SettingsScreen.HOME, SettingsScreen.APPEARANCE -> {
-                if (showGuideFirst) item(key = "first-use-guide") {
-                    SettingsGroup(stringResource(R.string.settings_guide_title)) {
-                        SettingsRow(
-                            stringResource(R.string.settings_guide_steps),
-                            stringResource(R.string.settings_guide_steps_hint),
-                            BeaconIcons.Guide,
-                        ) {
-                            onNavigate(SettingsScreen.GUIDE)
-                        }
-                    }
-                }
                 item {
                     SettingsGroup(stringResource(R.string.settings_receive_section_title)) {
                         SettingsRow(
                             stringResource(R.string.ui_v2_server_config_title),
-                            runtimeState.configuredEndpoint.ifBlank {
-                                stringResource(R.string.settings_first_setup_hint)
-                            },
+                            stringResource(R.string.settings_first_setup_hint),
                             BeaconIcons.Server,
                         ) {
                             onNavigate(SettingsScreen.CONNECTION)
@@ -157,9 +141,7 @@ fun SettingsPage(
                             notificationHint?.let { stringResource(it) }
                                 ?: when (notificationPermission) {
                                     NotificationPermissionState.ALLOWED ->
-                                        stringResource(
-                                            R.string.app_system_notification_allowed_hint
-                                        )
+                                        stringResource(R.string.settings_notifications_allowed_label)
                                     NotificationPermissionState.DENIED ->
                                         stringResource(R.string.app_system_notification_denied_hint)
                                     NotificationPermissionState.UNKNOWN ->
@@ -216,50 +198,35 @@ fun SettingsPage(
                     SettingsGroup(stringResource(R.string.settings_misc_section_title)) {
                         SettingsRow(
                             stringResource(R.string.admin_title),
-                            stringResource(R.string.admin_entry_hint),
+                            "",
                             BeaconIcons.Server,
                         ) {
                             onNavigate(SettingsScreen.SERVER_ADMIN)
                         }
                         SettingsRow(
                             stringResource(R.string.settings_storage_title),
-                            stringResource(R.string.settings_storage_desc),
+                            "",
                             BeaconIcons.Storage,
                         ) {
                             onNavigate(SettingsScreen.STORAGE)
                         }
                         SettingsRow(
                             stringResource(R.string.settings_backup_title),
-                            resources.getString(R.string.settings_backup_summary),
+                            "",
                             BeaconIcons.Backup,
                         ) {
                             onNavigate(SettingsScreen.BACKUP)
                         }
                         SettingsRow(
                             stringResource(R.string.settings_advanced_section_title),
-                            stringResource(R.string.settings_advanced_section_desc),
+                            "",
                             BeaconIcons.Diagnostics,
                         ) {
                             onNavigate(SettingsScreen.DIAGNOSTICS)
                         }
                         SettingsRow(
                             title = stringResource(R.string.settings_update_title),
-                            subtitle =
-                                when {
-                                    updateState.checking ->
-                                        stringResource(R.string.settings_update_checking)
-                                    // The dot says "new build"; the subtitle says which one.
-                                    updateState.release != null ->
-                                        stringResource(
-                                            R.string.settings_update_available,
-                                            updateState.release?.version.orEmpty(),
-                                        )
-                                    else ->
-                                        stringResource(
-                                            R.string.settings_version_label,
-                                            BuildConfig.VERSION_NAME,
-                                        )
-                                },
+                            subtitle = "",
                             icon = BeaconIcons.Update,
                             iconTint = MaterialTheme.colorScheme.onSurface,
                             onClick = {
@@ -284,12 +251,11 @@ fun SettingsPage(
                         ) {
                             onNavigate(SettingsScreen.ABOUT)
                         }
-                        if (!showGuideFirst)
-                            SettingsRow(
-                                stringResource(R.string.settings_guide_title),
-                                stringResource(R.string.settings_guide_steps_hint),
-                                BeaconIcons.Guide,
-                            ) { onNavigate(SettingsScreen.GUIDE) }
+                        SettingsRow(
+                            stringResource(R.string.settings_guide_title),
+                            "",
+                            BeaconIcons.Guide,
+                        ) { onNavigate(SettingsScreen.GUIDE) }
                     }
                 }
             }
@@ -309,16 +275,12 @@ fun SettingsPage(
             }
             SettingsScreen.BACKUP -> {
                 item {
-                    SettingsBackupPanel(
-                        actions,
-                        busy || runtimeState.transportBusy || !runtimeState.runtimeConnected,
-                    )
-                }
-                item {
-                    HistoryArchivePanel(
-                        actions,
-                        busy || runtimeState.transportBusy || !runtimeState.runtimeConnected,
-                    )
+                    SettingsGroup(stringResource(R.string.settings_backup_settings_title)) {
+                        val backupBusy = busy || runtimeState.transportBusy || !runtimeState.runtimeConnected
+                        SettingsBackupPanel(actions, backupBusy, grouped = false)
+                        io.github.beacon.app.ui.components.SettingsFieldDivider()
+                        HistoryArchivePanel(actions, backupBusy, grouped = false)
+                    }
                 }
                 item {
                     SettingsGroup(stringResource(R.string.ui_v2_migration_title)) {

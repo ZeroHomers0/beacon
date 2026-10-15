@@ -6,10 +6,9 @@
     <string name="ui_v2_receive_mode_dialog_title">选择接收模式</string>
     <string name="ui_v2_receive_strategy">接收策略</string>
     <string name="ui_v2_examples_formats">curl / PowerShell / JSON</string>
-    <string name="ui_v2_quiet_scope">免打扰只影响通知提醒，不停止消息接收。关闭后保留时间和重复日期设置。</string>
+    <string name="ui_v2_quiet_scope_short">只影响通知提醒，不停止消息接收</string>
     <string name="ui_v2_quiet_effect">免打扰期间</string>
     <string name="ui_v2_quiet_section">免打扰</string>
-    <string name="ui_v2_quiet_overnight">此时段跨越午夜，结束时间为次日。</string>
     <string name="ui_v2_developer_tools">开发者工具</string>
     <string name="ui_v2_docs">使用与部署文档</string>
     <string name="ui_v2_licenses">开源许可</string>
@@ -25,6 +24,10 @@
     <string name="ui_v2_migration_title">设备迁移</string>
     <string name="ui_v2_migration_entry">迁移到新设备</string>
     <string name="ui_v2_migration_entry_hint">查看现有迁移流程与说明</string>
+    <string name="ui_v2_export_settings_hint">保存当前配置</string>
+    <string name="ui_v2_import_settings_hint">从备份文件恢复</string>
+    <string name="ui_v2_export_history_hint">保存本地历史消息</string>
+    <string name="ui_v2_import_history_hint">从备份恢复历史</string>
     <string name="ui_v2_expand_examples">展开 API 示例</string>
     <string name="ui_v2_collapse_examples">收起 API 示例</string>
     <string name="ui_v2_power_conditions_title">省电接收条件</string>

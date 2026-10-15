@@ -56,26 +56,22 @@ internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions, form:
                         }
                     },
                 )
-            }
-            if (!scheduleOnly && onSchedule != null) {
-                SettingsGroup(stringResource(R.string.quiet_schedule)) {
+                if (onSchedule != null)
                     SettingsActionRow(
                         stringResource(R.string.quiet_schedule), "$start – $end",
                         BeaconIcons.QuietHours, editable, onSchedule,
                     )
-                }
             }
-            if (scheduleOnly || onSchedule == null) SettingsSection(stringResource(R.string.quiet_schedule)) {
+            val scheduleContent: @Composable ColumnScope.() -> Unit = {
                 BeaconTimeRangePreference(
-                    start, end,
+                    start,
+                    end,
                     stringResource(R.string.quiet_start),
                     stringResource(R.string.quiet_end),
                     enabled = editable,
                     onStartChange = { start = it },
                     onEndChange = { end = it },
                 )
-
-                if ((first ?: 0) > (last ?: 0)) SettingsHint(stringResource(R.string.ui_v2_quiet_overnight))
                 ActionFlow {
                     labels.forEachIndexed { index, label ->
                         val bit = 1 shl index
@@ -87,28 +83,51 @@ internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions, form:
                         )
                     }
                 }
-
                 if (loaded && !valid)
                     BeaconText(
                         stringResource(R.string.quiet_invalid),
                         color = MaterialTheme.colorScheme.error,
                     )
-
             }
-            SettingsSection(stringResource(R.string.ui_v2_quiet_effect)) {
-                SettingsHint(stringResource(R.string.ui_v2_quiet_scope))
-                if (failed) {
-                    BeaconText(state.status.text, color = MaterialTheme.colorScheme.error)
-                    BeaconActionButton(
-                        stringResource(R.string.action_retry),
-                        BeaconIcons.History,
-                        Modifier.fillMaxWidth(),
-                        !saving && state.runtimeConnected,
-                    ) {
-                        loaded = false
-                        failed = false
-                        attempt++
+            if (scheduleOnly || onSchedule == null) {
+                if (scheduleOnly)
+                    BeaconCard(Modifier.fillMaxWidth()) {
+                        Column(
+                            Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),
+                            verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
+                            content = scheduleContent,
+                        )
                     }
+                else SettingsSection(stringResource(R.string.quiet_schedule), scheduleContent)
+            }
+            if (scheduleOnly)
+                BeaconCard(Modifier.fillMaxWidth()) {
+                    Column(
+                        Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),
+                        verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
+                    ) {
+                        BeaconText(stringResource(R.string.ui_v2_quiet_effect), style = MaterialTheme.typography.bodyLarge)
+                        BeaconText(
+                            stringResource(
+                                if (draft.behavior == QuietHoursBehavior.SILENT)
+                                    R.string.quiet_silent else R.string.quiet_save_only
+                            ),
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        SettingsHint(stringResource(R.string.ui_v2_quiet_scope_short))
+                    }
+                }
+            if (failed) {
+                BeaconText(state.status.text, color = MaterialTheme.colorScheme.error)
+                BeaconActionButton(
+                    stringResource(R.string.action_retry),
+                    BeaconIcons.History,
+                    Modifier.fillMaxWidth(),
+                    !saving && state.runtimeConnected,
+                ) {
+                    loaded = false
+                    failed = false
+                    attempt++
                 }
             }
 

@@ -176,10 +176,10 @@ internal fun ServerAdminPage(
             }
             item {
                 SettingsSection(stringResource(R.string.admin_manage_section)) {
-                    FlowRow(
+                    Row(
                         Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
                     ) {
                         listOf(
                                 R.string.admin_devices,
@@ -199,7 +199,7 @@ internal fun ServerAdminPage(
                                         }
                                     },
                                     enabled = !state.busy,
-                                    modifier = Modifier.heightIn(min = BeaconUiMetrics.ControlMinHeight),
+                                    modifier = Modifier.weight(1f).heightIn(min = BeaconUiMetrics.ControlMinHeight),
                                 )
                             }
                     }

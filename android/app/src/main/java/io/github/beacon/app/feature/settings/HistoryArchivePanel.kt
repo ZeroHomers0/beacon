@@ -13,7 +13,7 @@ import io.github.beacon.app.ipc.RuntimeActions
 import io.github.beacon.app.ui.components.*
 
 @Composable
-fun HistoryArchivePanel(actions: RuntimeActions, busy: Boolean) {
+fun HistoryArchivePanel(actions: RuntimeActions, busy: Boolean, grouped: Boolean = true) {
     val resources = androidx.compose.ui.platform.LocalResources.current
     var operation by remember { mutableStateOf<Boolean?>(null) }
     var encrypted by remember { mutableStateOf(true) }
@@ -53,12 +53,11 @@ fun HistoryArchivePanel(actions: RuntimeActions, busy: Boolean) {
         }
     val open =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { run(it, true) }
-    SettingsGroup(stringResource(R.string.settings_archive_title)) {
-        Column(Modifier.padding(BeaconUiMetrics.CardInset)) {
-            SettingsHint(stringResource(R.string.settings_archive_hint))
-        }
+    val content: @Composable () -> Unit = {
             SettingsActionRow(
-                stringResource(R.string.settings_archive_export), "", io.github.beacon.app.ui.icons.BeaconIcons.Backup,
+                stringResource(R.string.settings_archive_export),
+                stringResource(R.string.ui_v2_export_history_hint),
+                io.github.beacon.app.ui.icons.BeaconIcons.Backup,
                 enabled = !busy,
                 onClick = {
                     operation = false
@@ -69,7 +68,9 @@ fun HistoryArchivePanel(actions: RuntimeActions, busy: Boolean) {
             )
             SettingsFieldDivider()
             SettingsActionRow(
-                stringResource(R.string.settings_archive_import), "", io.github.beacon.app.ui.icons.BeaconIcons.History,
+                stringResource(R.string.settings_archive_import),
+                stringResource(R.string.ui_v2_import_history_hint),
+                io.github.beacon.app.ui.icons.BeaconIcons.History,
                 enabled = !busy,
                 onClick = {
                     operation = true
@@ -80,6 +81,9 @@ fun HistoryArchivePanel(actions: RuntimeActions, busy: Boolean) {
             )
         if (hint.isNotEmpty()) OperationResultPanel(stringResource(R.string.settings_archive_title), hint)
     }
+    if (grouped)
+        SettingsGroup(stringResource(R.string.settings_archive_title)) { content() }
+    else content()
     if (operation != null)
         BeaconAlertDialog(
             onDismissRequest = {
