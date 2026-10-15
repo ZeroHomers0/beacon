@@ -31,7 +31,7 @@ interface RuntimeEventText {
     fun export(events: List<RuntimeEvent>): String = buildString {
         appendLine(title)
         events.takeLast(RuntimeEvent.MAX_EVENTS).forEach {
-            appendLine("${java.time.Instant.ofEpochMilli(it.atMs)} · ${label(it)}")
+            appendLine("${io.github.beacon.app.domain.policy.DisplayTime.format(it.atMs, java.time.ZoneOffset.UTC)} · ${label(it)}")
         }
         append(disclaimer)
     }

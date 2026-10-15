@@ -18,7 +18,6 @@ fun ClearConnectionPanel(state: RuntimeState, actions: RuntimeActions, form: Con
     var confirm by remember { mutableStateOf(false) }
     var revoke by remember { mutableStateOf(false) }
     UiSection(stringResource(R.string.connection_manage)) {
-        SettingsHint(stringResource(R.string.device_revoke_hint))
         BeaconDangerButton(
             onClick = { revoke = true },
             modifier = Modifier.fillMaxWidth(),
@@ -29,7 +28,7 @@ fun ClearConnectionPanel(state: RuntimeState, actions: RuntimeActions, form: Con
         ) {
             BeaconText(stringResource(R.string.device_revoke))
         }
-        SettingsHint(stringResource(R.string.connection_clear_desc))
+
         BeaconActionButton(
             stringResource(R.string.connection_clear),
             BeaconIcons.Delete,

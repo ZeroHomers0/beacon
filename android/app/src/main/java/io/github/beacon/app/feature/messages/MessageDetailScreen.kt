@@ -19,9 +19,7 @@ import io.github.beacon.app.domain.model.IncomingMessage
 import io.github.beacon.app.domain.model.MessageKey
 import io.github.beacon.app.ui.components.*
 import io.github.beacon.app.ui.icons.BeaconIcons
-import java.time.Instant
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 internal fun detailTime(
     time: Long,
@@ -30,9 +28,7 @@ internal fun detailTime(
 ): String =
     if (time <= 0) missing
     else
-        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
-            .withZone(zone)
-            .format(Instant.ofEpochMilli(time))
+        io.github.beacon.app.domain.policy.DisplayTime.format(time, zone)
 
 @Composable
 fun MessageDetailScreen(

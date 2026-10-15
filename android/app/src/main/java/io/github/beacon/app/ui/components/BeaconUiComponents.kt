@@ -359,10 +359,10 @@ fun MessageItem(
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
             )
-            Row(
+            FlowRow(
                 Modifier.fillMaxWidth().padding(top = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 BeaconText(
                     formatMessageTime(message.createdAtMs),

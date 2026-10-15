@@ -76,7 +76,7 @@ interface SupportReportText {
 
 object SupportReport {
     private fun time(value: Long, missing: String) =
-        if (value <= 0) missing else java.time.Instant.ofEpochMilli(value).toString()
+        if (value <= 0) missing else io.github.beacon.app.domain.policy.DisplayTime.format(value, java.time.ZoneOffset.UTC)
 
     fun render(value: SupportSnapshot, nowMs: Long, text: SupportReportText): String = buildString {
         appendLine(text.title)

@@ -155,7 +155,7 @@ internal fun ServerAdminPage(
                     )
                     DiagnosticRow(stringResource(R.string.admin_database), android.text.format.Formatter.formatFileSize(context, state.databaseBytes))
                     if (state.protocol != 1) SettingsHint(stringResource(R.string.admin_protocol_unknown))
-                    SettingsHint(stringResource(R.string.admin_clear_messages_hint))
+
                     BeaconDangerButton(
                         onClick = { clearStage = 1 },
                         modifier = Modifier.fillMaxWidth(),
@@ -404,7 +404,7 @@ internal fun ServerAdminPage(
                             ) {
                                 testPriority = PRIORITY_TIERS[it]
                             }
-                            SettingsHint(stringResource(R.string.admin_test_hint))
+
                             BeaconActionButton(
                                 stringResource(R.string.admin_send_test),
                                 BeaconIcons.Messages,

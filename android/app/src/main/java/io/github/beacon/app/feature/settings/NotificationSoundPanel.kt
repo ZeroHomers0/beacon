@@ -20,7 +20,7 @@ fun NotificationSoundPanel() {
     val context = LocalContext.current
     var hint by remember { mutableStateOf("") }
     UiSection(stringResource(R.string.settings_sound_title)) {
-        SettingsHint(stringResource(R.string.settings_sound_hint))
+
         val channels = listOf(
             SoundChannel(
                 NotificationChannelKind.FRESH,

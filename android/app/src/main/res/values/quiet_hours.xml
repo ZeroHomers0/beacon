@@ -6,12 +6,9 @@
     <string name="quiet_behavior">时段内提醒方式</string>
     <string name="quiet_silent">静音通知</string>
     <string name="quiet_save_only">仅保存</string>
-    <string name="quiet_behavior_hint">静音通知仍显示；仅保存不显示通知，也不补发。系统通知权限和免打扰仍生效。</string>
     <string name="quiet_schedule">免打扰时段</string>
     <string name="quiet_start">开始时间</string>
     <string name="quiet_end">结束时间</string>
-    <string name="quiet_time_hint">24 小时制，支持跨夜，例如 22:00–08:00。</string>
     <string name="quiet_weekdays">周一,周二,周三,周四,周五,周六,周日</string>
-    <string name="quiet_day_hint">星期按开始当天计算，例如周五 22:00–08:00 包含周六凌晨。</string>
     <string name="quiet_invalid">请选择不同的有效时间，并至少选择一天</string>
 </resources>

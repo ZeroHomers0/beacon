@@ -127,7 +127,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
             SettingsHint(stringResource(R.string.storage_breakdown_note))
             SettingsHint(stringResource(R.string.settings_storage_receipts_hint))
             SettingsHint(stringResource(R.string.storage_size_note))
-            SettingsHint(stringResource(R.string.storage_wal_hint))
+
             BeaconActionButton(
                 stringResource(R.string.storage_wal_clear),
                 io.github.beacon.app.ui.icons.BeaconIcons.Storage,
@@ -147,7 +147,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
             }
             DiagnosticRow(
                 stringResource(R.string.storage_last_result_label),
-                settings.lastResult,
+                io.github.beacon.app.domain.policy.CleanupResultPresentation.compact(settings.lastResult),
             )
         }
         UiSection(stringResource(R.string.storage_rules_title)) {
@@ -180,13 +180,12 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
             }
             BeaconPreferenceToggle(
                 stringResource(R.string.storage_keep_unread),
-                stringResource(R.string.storage_keep_unread_desc),
+                "",
                 policy.keepUnread,
                 enabled = !state.messageBusy && settingsLoaded && !saving,
             ) {
                 save(settings.copy(policy = policy.copy(keepUnread = it)))
             }
-            SettingsHint(stringResource(R.string.storage_manual_note))
         }
         UiSection(stringResource(R.string.storage_preview_title)) {
             if (preview != null) {
@@ -201,28 +200,14 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                     ),
                     columns = 3,
                 )
-                BeaconText(
-                    stringResource(
-                        when (
-                            io.github.beacon.app.domain.model.StorageHealth.explanation(preview)
-                        ) {
-                            io.github.beacon.app.domain.model.CleanupExplanation.EMPTY ->
-                                R.string.storage_reason_empty
-                            io.github.beacon.app.domain.model.CleanupExplanation.WITHIN_RULES ->
-                                R.string.storage_reason_within
-                            io.github.beacon.app.domain.model.CleanupExplanation.PROTECTED ->
-                                R.string.storage_reason_protected
-                            io.github.beacon.app.domain.model.CleanupExplanation.READY ->
-                                R.string.storage_reason_ready
-                        }
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                )
+                val explanation = when (io.github.beacon.app.domain.model.StorageHealth.explanation(preview)) {
+                    io.github.beacon.app.domain.model.CleanupExplanation.EMPTY -> R.string.storage_reason_empty
+                    io.github.beacon.app.domain.model.CleanupExplanation.WITHIN_RULES -> R.string.storage_reason_within
+                    io.github.beacon.app.domain.model.CleanupExplanation.PROTECTED -> R.string.storage_reason_protected
+                    io.github.beacon.app.domain.model.CleanupExplanation.READY -> null
+                }
+                if (explanation != null) BeaconText(stringResource(explanation), style = MaterialTheme.typography.bodySmall)
             }
-            BeaconText(
-                stringResource(R.string.storage_batch_note),
-                style = MaterialTheme.typography.bodySmall,
-            )
             BeaconActionPair(
                 {
                     BeaconOutlinedButton(
@@ -243,7 +228,6 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
             )
         }
         UiSection(stringResource(R.string.settings_cleanup_all_title)) {
-            SettingsHint(resources.getString(R.string.settings_cleanup_all_hint))
             BeaconDangerButton(
                 onClick = { clearAllStage = 1 },
                 modifier = Modifier.fillMaxWidth(),

@@ -32,7 +32,7 @@ internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions, form:
             UiSection(stringResource(R.string.quiet_title)) {
                 BeaconPreferenceToggle(
                     stringResource(R.string.quiet_enable),
-                    stringResource(R.string.quiet_description),
+                    "",
                     draft.enabled,
                     enabled = editable,
                 ) {
@@ -49,7 +49,6 @@ internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions, form:
                 ) {
                     draft = draft.copy(behavior = QuietHoursBehavior.entries[it])
                 }
-                SettingsHint(stringResource(R.string.quiet_behavior_hint))
             }
             UiSection(stringResource(R.string.quiet_schedule)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -68,7 +67,7 @@ internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions, form:
                         enabled = editable,
                     )
                 }
-                SettingsHint(stringResource(R.string.quiet_time_hint))
+
                 ActionFlow {
                     labels.forEachIndexed { index, label ->
                         val bit = 1 shl index
@@ -80,7 +79,7 @@ internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions, form:
                         )
                     }
                 }
-                SettingsHint(stringResource(R.string.quiet_day_hint))
+
                 if (loaded && !valid)
                     BeaconText(
                         stringResource(R.string.quiet_invalid),
@@ -98,7 +97,6 @@ internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions, form:
                         attempt++
                     }
                 }
-
             }
         }
     }

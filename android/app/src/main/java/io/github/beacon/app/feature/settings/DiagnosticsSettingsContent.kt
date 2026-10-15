@@ -57,7 +57,6 @@ internal fun LazyListScope.diagnosticsSettingsItems(
                     }
                 },
             )
-            SettingsHint(stringResource(R.string.diag_runtime_hint))
         }
     }
     item {
@@ -77,7 +76,7 @@ internal fun LazyListScope.diagnosticsSettingsItems(
         SettingsGroup(stringResource(R.string.settings_redact_section_title)) {
             SettingsRow(
                 stringResource(R.string.settings_preview_report_action),
-                stringResource(R.string.settings_report_privacy_hint),
+                "",
                 BeaconIcons.Messages,
                 onPreviewReport,
             )

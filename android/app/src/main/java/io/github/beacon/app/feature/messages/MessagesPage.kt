@@ -103,7 +103,7 @@ private fun MessagesContent(
     calendar: Pair<java.time.ZoneId, java.time.LocalDate>,
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val (zone, today) = calendar
+    val zone = calendar.first
     val dates =
         remember(runtimeState.messages, zone) {
             runtimeState.messages.map { MessagePresentation.receivedDate(it, zone) }
@@ -370,8 +370,6 @@ private fun MessagesContent(
                         item(key = "date.${message.server.length}:${message.server}${message.id}") {
                             BeaconText(
                                 when (date) {
-                                    today -> stringResource(R.string.message_today)
-                                    today.minusDays(1) -> stringResource(R.string.message_yesterday)
                                     null -> stringResource(R.string.message_unknown_date)
                                     else -> date.toString()
                                 },

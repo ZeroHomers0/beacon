@@ -17,9 +17,7 @@ import io.github.beacon.app.domain.model.PollingState
 fun formatMessageTime(time: Long): String =
     if (time <= 0) stringResource(R.string.ui_unknown_label)
     else
-        java.text
-            .SimpleDateFormat("MM-dd HH:mm", java.util.Locale.getDefault())
-            .format(java.util.Date(time))
+        io.github.beacon.app.domain.policy.DisplayTime.format(time)
 
 @Composable
 fun receiveLabel(state: PollingState): String =

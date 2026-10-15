@@ -72,7 +72,7 @@ internal fun NotificationSettingsPanel(state: RuntimeState, actions: RuntimeActi
             ) {
                 save(saved.copy(outdatedReminder = OutdatedReminder.entries[it]))
             }
-            SettingsHint(stringResource(R.string.notification_age_hint))
+
         }
         UiSection(stringResource(R.string.notification_privacy_title)) {
             BeaconPreferenceToggle(

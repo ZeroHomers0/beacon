@@ -1,6 +1,8 @@
 package io.github.beacon.app.feature.settings
 
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -41,7 +43,7 @@ fun FirstUseGuidePanel(
     var testConfirmation by remember { mutableStateOf(false) }
     val busy = !state.runtimeConnected || state.transportBusy || state.messageBusy
     UiSection(stringResource(R.string.settings_guide_title)) {
-        DiagnosticRow(
+        GuideStep(
             resources.getString(R.string.settings_guide_server),
             if (state.configuredEndpoint.isBlank())
                 resources.getString(R.string.settings_guide_unbound)
@@ -53,7 +55,7 @@ fun FirstUseGuidePanel(
         ) {
             BeaconText(stringResource(R.string.settings_guide_configure))
         }
-        DiagnosticRow(
+        GuideStep(
             resources.getString(R.string.settings_guide_notifications),
             if (notificationsAllowed)
                 resources.getString(R.string.settings_guide_notifications_allowed)
@@ -65,14 +67,14 @@ fun FirstUseGuidePanel(
         ) {
             BeaconText(stringResource(R.string.settings_guide_check_notifications))
         }
-        SettingsHint(stringResource(R.string.settings_guide_receive_hint))
+        GuideStep(stringResource(R.string.settings_guide_receive_title), stringResource(R.string.settings_guide_receive_hint))
         BeaconOutlinedButton(
             onClick = { onNavigate(SettingsScreen.RECEPTION) },
             modifier = Modifier.fillMaxWidth(),
         ) {
             BeaconText(stringResource(R.string.settings_guide_receive_action))
         }
-        SettingsHint(stringResource(R.string.settings_guide_test_hint))
+        GuideStep(stringResource(R.string.settings_guide_test_title), stringResource(R.string.settings_guide_test_hint))
         BeaconButton(
             enabled = !busy && state.configuredEndpoint.isNotBlank(),
             onClick = { testConfirmation = true },
@@ -115,4 +117,12 @@ fun FirstUseGuidePanel(
                 BeaconCancelButton(onClick = { testConfirmation = false })
             },
         )
+}
+
+@Composable
+private fun GuideStep(title: String, description: String) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        BeaconText(title, style = MaterialTheme.typography.titleMedium)
+        BeaconText(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }

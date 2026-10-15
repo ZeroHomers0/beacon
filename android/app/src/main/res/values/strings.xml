@@ -1,8 +1,8 @@
 <resources>
     <string name="receive_adaptive_heartbeat">自适应心跳</string>
-    <string name="receive_adaptive_heartbeat_hint">按网络情况在 60～300 秒内调整并记忆间隔。旧版服务器使用固定间隔；间隔越长，发现断线越慢。</string>
+    <string name="receive_adaptive_heartbeat_hint">按网络调整至 60～300 秒；旧版服务器使用固定间隔。</string>
     <string name="receive_batch_ordinary">普通消息批量接收</string>
-    <string name="receive_batch_ordinary_hint">优先级 0～7 的消息随心跳批量到达，8～10 仍立即投递。自适应间隔约 1～5 分钟；积压、断线或系统休眠时可能更久。需要新版服务端。</string>
+    <string name="receive_batch_ordinary_hint">优先级 0～7 随心跳接收，8～10 即时投递；需新版服务器。</string>
     <string name="channel_important">重要消息</string>
     <string name="ui_power_saving_mode">省电接收</string>
     <string name="ui_current_receive_mode">当前模式</string>
@@ -92,7 +92,6 @@
     <string name="settings_receive_status_title">自动接收</string>
     <string name="settings_reconnect_data_action">重新连接</string>
     <string name="settings_redact_section_title">诊断报告</string>
-    <string name="settings_report_privacy_hint">报告不含地址、凭证、消息内容或设备标识，可预览后复制。</string>
     <string name="settings_style_dark_label">深色</string>
     <string name="settings_style_light_label">浅色</string>
     <string name="settings_style_system_label">跟随系统</string>
@@ -184,7 +183,7 @@
     <string name="settings_background_permissions_desc">开启自启动，省电策略设为无限制</string>
     <string name="background_autostart_title">自启动</string>
     <string name="background_manual_status">需手动确认</string>
-    <string name="background_autostart_hint">在系统设置中允许 Beacon 自启动。厂商权限需手动确认。</string>
+    <string name="background_autostart_hint">在系统设置中允许 Beacon 自启动。</string>
     <string name="background_open_app_settings">应用设置</string>
     <string name="background_restriction_title">省电策略无限制</string>
     <string name="background_system_restriction">系统后台限制</string>
@@ -194,18 +193,16 @@
     <string name="background_unknown">无法读取</string>
     <string name="background_exempt">已豁免</string>
     <string name="background_optimized">使用系统电池优化</string>
-    <string name="background_restriction_hint">将 Beacon 的省电策略设为“无限制”，并关闭电池优化。厂商额外限制需手动确认。</string>
+    <string name="background_restriction_hint">将 Beacon 的省电策略设为“无限制”，并关闭电池优化。</string>
     <string name="background_open_battery_settings">电池优化设置</string>
     <string name="background_settings_unavailable">无法打开此设置，请从系统设置中手动进入 Beacon 的应用信息。</string>
     <string name="diag_runtime_status">接收服务状态</string>
-    <string name="diag_runtime_hint">重新连接只恢复本机接收服务；刷新状态不接收新消息。</string>
     <string name="diag_runtime_connected">已连接</string>
     <string name="diag_runtime_disconnected">未连接</string>
     <string name="storage_last_result_label">上次自动清理结果</string>
     <string name="receive_latest_result_title">最近自动接收结果</string>
     <string name="server_status_title">服务器状态</string>
     <string name="server_last_checked">上次检测</string>
-    <string name="server_check_hint">检查已保存的服务器配置；修改后请先完成绑定。</string>
     <string name="server_checking">正在检测</string>
     <string name="server_check_action">检测服务器</string>
     <string name="server_warning_action">服务器未配置或连接异常，打开服务器配置</string>
@@ -224,18 +221,13 @@
     <string name="storage_retention">历史保留</string>
     <string name="storage_max_messages">消息数量上限</string>
     <string name="storage_keep_unread">保留未读</string>
-    <string name="storage_keep_unread_desc">待回传接收结果和待通知的消息始终保留</string>
-    <string name="storage_manual_note">规则同时用于手动与自动清理；待回传接收结果、待通知始终保留。自动清理默认关闭。</string>
     <string name="storage_usage_title">本地占用</string>
     <string name="storage_size_note">数据库统计不含独立日志文件；清理后空间可复用，文件大小不会立即缩小。</string>
     <string name="storage_preview_title">清理预览</string>
-    <string name="storage_batch_note">每次最多清理 100 条，预览 5 分钟内有效。清理更多消息需重新预览。</string>
     <string name="storage_preview_refresh">刷新预览</string>
     <string name="storage_clean_action">立即清理</string>
     <string name="storage_confirm_title">清理本地消息？</string>
     <string name="storage_confirm_message">最多删除 %1$d 条，无法恢复。执行前会再次检查保护条件；服务器消息、凭证和接收设置保留。</string>
-    <string name="message_today">今天</string>
-    <string name="message_yesterday">昨天</string>
     <string name="message_unknown_date">接收时间未知</string>
     <string name="message_links">正文链接</string>
     <string name="message_actions">消息操作</string>
@@ -281,7 +273,6 @@
     <string name="storage_reason_empty">当前没有可见消息，无需清理。</string>
     <string name="storage_reason_within">消息尚未超过保留天数或数量上限。已读不代表可以立即清理，需先满足清理规则。</string>
     <string name="storage_reason_protected">匹配消息均受保护：未读、待回传接收结果或待通知。</string>
-    <string name="storage_reason_ready">每次最多删除 100 条。腾出的空间供数据库复用，文件大小可能不变；继续清理需重新预览。</string>
     <string name="events_title">接收事件记录</string>
     <string name="events_clip_label">Beacon 接收事件记录</string>
     <string name="event_export_title">Beacon 接收事件记录 v1（UTC，按记录顺序）</string>
@@ -330,7 +321,6 @@
     <string name="event_failure_config">即时配置无效</string>
     <string name="event_failure_network">网络异常</string>
     <string name="event_failure_internal">连接处理异常</string>
-    <string name="events_note">保留最多100条关键事件，本页显示最近5条。不记录正文、地址、凭证或原始异常。</string>
     <string name="events_empty">暂无事件记录</string>
     <string name="events_not_loaded">尚未读取事件记录</string>
     <string name="events_loading">正在读取</string>
@@ -343,7 +333,7 @@
     <string name="events_confirm_clear">确认清空</string>
     <string name="events_clear_note">仅清空事件记录，无法恢复。不影响消息、配置或接收，新事件仍会记录。</string>
     <string name="realtime_retry">重新连接即时接收</string>
-    <string name="realtime_retry_note">按当前模式和规则重连，暂停状态不变。凭证失效需重新绑定，证书错误需修复后重试；已提交请求不代表已连接。</string>
+    <string name="realtime_retry_note">按当前模式重连，保持暂停状态；凭证失效需重新绑定。</string>
     <string name="realtime_diag_title">即时连接与恢复</string>
     <string name="realtime_diag_status_label">连接状态</string>
     <string name="realtime_diag_failure_label">最近失败类型</string>
@@ -371,10 +361,9 @@
     <string name="realtime_diag_recovery_awaiting_unlock">已收到开机事件，首次解锁后恢复</string>
     <string name="realtime_diag_recovery_crash_retry_waiting">意外退出，退避后自动恢复</string>
     <string name="realtime_diag_recovery_crash_suspended">意外退出过多，已暂停自动恢复</string>
-    <string name="realtime_diag_recovery_note">进程回收由系统按需恢复；强制停止后需手动打开应用。后台接收受系统调度与权限设置影响。</string>
+    <string name="realtime_diag_recovery_note">强制停止后需手动打开应用。</string>
     <string name="device_revoke">完整解绑当前设备</string>
     <string name="device_revoke_confirm">确认解绑</string>
-    <string name="device_revoke_hint">完整解绑会让当前设备的旧推送地址失效。仅清除本机配置不会撤销服务端设备。</string>
     <string name="device_revoke_desc">撤销服务端当前设备，暂停接收并清除本机凭证，停止回传接收结果。历史消息和通知规则保留。无法恢复；再次使用需重新绑定并更新推送地址。结果未确认时保留配置供重试。</string>
     <string name="settings_backup_title">备份与迁移</string>
     <string name="settings_refresh_done">运行状态已更新</string>
@@ -389,9 +378,11 @@
     <string name="settings_guide_notifications_allowed">已允许</string>
     <string name="settings_guide_notifications_denied">尚未允许</string>
     <string name="settings_guide_check_notifications">检查通知权限</string>
-    <string name="settings_guide_receive_hint">3. 选择接收模式并开启自动接收。出现后台延迟时，再检查后台权限。</string>
+    <string name="settings_guide_receive_title">3. 接收模式</string>
+    <string name="settings_guide_receive_hint">选择接收模式并开启自动接收。出现后台延迟时，再检查后台权限。</string>
     <string name="settings_guide_receive_action">设置接收模式</string>
-    <string name="settings_guide_test_hint">4. 发送测试消息，确认列表和通知正常，再锁屏验证后台接收。</string>
+    <string name="settings_guide_test_title">4. 推送验证</string>
+    <string name="settings_guide_test_hint">发送测试消息，确认列表和通知正常，再锁屏验证后台接收。</string>
     <string name="settings_guide_test_action">@string/settings_setup_test_send</string>
     <string name="settings_guide_done">完成向导</string>
     <string name="settings_archive_password_expired">密码至少 8 个字符，请重新选择文件并输入密码</string>
@@ -408,7 +399,6 @@
     <string name="settings_archive_password_hint">密码不会保存，遗失无法恢复。</string>
     <string name="settings_archive_choose">选择文件</string>
     <string name="settings_sound_title">自定义提示音</string>
-    <string name="settings_sound_hint">分别设置普通和重要消息的系统渠道提示音。未识别的音效沿用渠道设置，并遵守系统免打扰。</string>
     <string name="settings_sound_normal">普通消息提示音</string>
     <string name="settings_sound_important">重要消息提示音</string>
     <string name="settings_sound_unavailable">无法打开提示音设置，请在系统应用通知设置中选择对应渠道</string>
@@ -475,7 +465,7 @@
     <string name="settings_setup_test_send">发送测试消息</string>
     <string name="settings_cleanup_auto_title">自动清理</string>
     <string name="settings_cleanup_auto_toggle">自动清理本地消息</string>
-    <string name="settings_cleanup_auto_hint">成功接收后按下方规则清理，每次最多 100 条，删除后无法恢复。</string>
+    <string name="settings_cleanup_auto_hint">成功接收后按下方规则清理。</string>
     <string name="settings_cleanup_forever">永久</string>
     <string name="settings_cleanup_days">%1$d 天</string>
     <string name="settings_cleanup_count">%1$d 条</string>
@@ -483,9 +473,7 @@
     <string name="settings_storage_receipts">待回传</string>
     <string name="settings_storage_receipts_hint">待回传：消息已保存在本机，接收结果尚待向服务器确认。</string>
     <string name="storage_wal_clear">清理临时日志</string>
-    <string name="storage_wal_hint">将临时日志中的已提交数据写回数据库并回收日志空间，保留消息和接收记录。接收新消息后日志会再次产生。</string>
     <string name="settings_cleanup_all_title">清理所有本地消息</string>
-    <string name="settings_cleanup_all_hint">删除全部本地消息，无法恢复。服务器配置、接收确认和去重记录保留。</string>
     <string name="settings_cleanup_eligible">可清理</string>
     <string name="settings_cleanup_protected">受保护</string>
     <string name="settings_cleanup_planned">本次清理</string>
@@ -499,7 +487,7 @@
     <string name="receive_heartbeat_title">即时连接</string>
     <string name="receive_heartbeat_interval">心跳间隔</string>
     <string name="receive_heartbeat_seconds">%1$d 秒</string>
-    <string name="receive_heartbeat_hint">用于保持连接，默认 60 秒。间隔越长，发现断线越慢；修改后自动重连。</string>
+    <string name="receive_heartbeat_hint">默认 60 秒；间隔越长，发现断线越慢。</string>
     <string name="admin_title">服务器管理</string>
     <string name="admin_entry_hint">管理设备与应用，发送测试消息</string>
     <string name="admin_login_title">管理员登录</string>
@@ -538,7 +526,7 @@
     <string name="admin_priority_silent">%1$d · 静音通知</string>
     <string name="admin_priority_normal">%1$d · 普通通知</string>
     <string name="admin_priority_important">%1$d · 重要通知</string>
-    <string name="admin_application_hint">创建仅向所选设备发送消息的应用凭证，无接收或管理权限。凭证只显示一次，请妥善保存。</string>
+    <string name="admin_application_hint">创建仅向所选设备发送消息的应用凭证。凭证只显示一次，请妥善保存。</string>
     <string name="admin_no_applications">暂无发送应用。</string>
     <string name="admin_device">目标设备</string>
     <string name="admin_revoke_application">撤销发送凭证</string>
@@ -547,7 +535,6 @@
     <string name="admin_application_deleted">发送应用及其消息已删除</string>
     <string name="admin_test_title">推送标题</string>
     <string name="admin_test_body">推送正文</string>
-    <string name="admin_test_hint">向所选设备发送真实消息。服务端接收后，请在设备上确认消息和通知。</string>
     <string name="admin_send_test">@string/settings_setup_test_send</string>
     <string name="admin_expires">有效期至</string>
     <string name="admin_secret_hint">凭证只显示一次，关闭后无法再查看。请先复制保存；遗失后需撤销并重新创建。</string>
@@ -583,7 +570,6 @@
     <string name="admin_binding_started">已生成绑定码并提交当前手机绑定，请查看绑定结果。</string>
     <string name="admin_local_binding_result">当前手机绑定结果</string>
     <string name="admin_clear_messages">清理云端消息</string>
-    <string name="admin_clear_messages_hint">删除服务器上全部设备的消息及投递队列，无法恢复。手机本地消息保留。</string>
     <string name="admin_clear_messages_confirm">清理云端消息？</string>
     <string name="admin_clear_messages_final">最后确认</string>
     <string name="admin_clear_messages_warning">将删除服务器上所有设备的全部消息、回执和投递队列；无法恢复，手机上的本地消息不受影响。</string>

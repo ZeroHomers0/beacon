@@ -14,8 +14,8 @@ internal fun runReceiveCleanup(context: Context, store: RuntimeMessageStore) {
         val settings = preferences.settings()
         if (settings.automatic && maintenance.due(android.os.SystemClock.elapsedRealtime())) {
             val changed = store.automaticCleanup(settings.policy).changed
-            val time = java.text.DateFormat.getDateTimeInstance().format(java.util.Date())
-            preferences.record("$time · 已清理 $changed 条本地消息")
+            val time = io.github.beacon.app.domain.policy.DisplayTime.format(System.currentTimeMillis())
+            preferences.record("$time · 已清理 $changed 条")
             maintenance.completed(android.os.SystemClock.elapsedRealtime())
         }
     } catch (_: Exception) {

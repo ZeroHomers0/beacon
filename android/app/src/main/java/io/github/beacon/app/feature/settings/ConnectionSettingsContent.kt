@@ -81,11 +81,6 @@ internal fun LazyListScope.connectionSettingsItems(
                 stringResource(R.string.server_last_checked),
                 formatMessageTime(runtimeState.serverCheckedAtMs),
             )
-            BeaconText(
-                stringResource(R.string.server_check_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
             BeaconActionButton(
                 stringResource(
                     if (runtimeState.serverChecking) R.string.server_checking

@@ -67,9 +67,7 @@ internal fun LazyListScope.receptionSettingsItems(
         UiSection(stringResource(R.string.settings_receive_status_title)) {
             BeaconPreferenceToggle(
                 stringResource(R.string.settings_battery_saver_title),
-                receiveLabel(
-                    polling.copy(config = polling.config.copy(enabled = receptionForm.enabled))
-                ),
+                "",
                 receptionForm.enabled,
                 !busy,
             ) {

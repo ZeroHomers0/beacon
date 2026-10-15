@@ -58,7 +58,6 @@ internal fun RuntimeEventPanel(connected: Boolean, actions: RuntimeActions, comp
         if (connected) refresh()
     }
     UiSection(stringResource(R.string.events_title)) {
-        SettingsHint(stringResource(R.string.events_note))
         if (compact && feedback.isNotBlank()) SettingsHint(feedback)
         if (compact) {
             BeaconActionButton(
@@ -119,9 +118,11 @@ internal fun RuntimeEventPanel(connected: Boolean, actions: RuntimeActions, comp
         BeaconAlertDialog(
             onDismissRequest = { expanded = false },
             title = { BeaconText(stringResource(R.string.events_title)) },
-            dismissButton = {
-                BeaconOutlinedButton(onClick = { copyRecords() }) {
-                    BeaconText(stringResource(R.string.events_copy))
+            dismissButton = if (compact) null else {
+                {
+                    BeaconOutlinedButton(onClick = { copyRecords() }) {
+                        BeaconText(stringResource(R.string.events_copy))
+                    }
                 }
             },
             text = {
@@ -130,19 +131,21 @@ internal fun RuntimeEventPanel(connected: Boolean, actions: RuntimeActions, comp
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     if (events.isEmpty()) item { BeaconText(stringResource(if (loaded) R.string.events_empty else R.string.events_not_loaded)) }
-                    if (compact) item {
-                        BeaconActionButton(
-                            stringResource(R.string.events_clear),
-                            io.github.beacon.app.ui.icons.BeaconIcons.Delete,
-                            Modifier.fillMaxWidth(), connected && !busy,
-                        ) { expanded = false; confirmClear = true }
-                    }
                     if (feedback.isNotBlank()) item { SettingsHint(feedback) }
                     items(events.asReversed()) { EventRow(it, text) }
                 }
             },
             confirmButton = {
-                BeaconButton(onClick = { expanded = false }) {
+                if (compact) Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    BeaconActionPair(
+                        { BeaconOutlinedButton(onClick = { copyRecords() }, enabled = events.isNotEmpty()) { BeaconText(stringResource(R.string.events_copy)) } },
+                        { BeaconButton(onClick = { expanded = false }) { BeaconText(stringResource(R.string.action_close)) } },
+                    )
+                    BeaconOutlinedButton(
+                        onClick = { expanded = false; confirmClear = true },
+                        modifier = Modifier.fillMaxWidth(), enabled = connected && !busy,
+                    ) { BeaconText(stringResource(R.string.events_clear)) }
+                } else BeaconButton(onClick = { expanded = false }) {
                     BeaconText(stringResource(R.string.action_close))
                 }
             },

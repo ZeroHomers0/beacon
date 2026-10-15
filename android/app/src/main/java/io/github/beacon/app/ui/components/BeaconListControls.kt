@@ -155,13 +155,13 @@ fun BeaconPreferenceToggle(
     onCheckedChange: (Boolean) -> Unit,
 ) {
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 64.dp),
+        Modifier.fillMaxWidth().heightIn(min = if (summary.isBlank()) 48.dp else 64.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             BeaconText(title, style = MaterialTheme.typography.bodyLarge)
-            BeaconText(
+            if (summary.isNotBlank()) BeaconText(
                 summary,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
