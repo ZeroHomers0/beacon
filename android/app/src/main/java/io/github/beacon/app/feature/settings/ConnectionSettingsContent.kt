@@ -67,6 +67,7 @@ internal fun LazyListScope.connectionSettingsItems(
                 },
                 tint = if (runtimeState.serverReachable == false) MaterialTheme.colorScheme.error
                     else MaterialTheme.colorScheme.primary,
+                loading = runtimeState.serverChecking,
             )
             DiagnosticRow(
                 stringResource(R.string.server_last_checked),
