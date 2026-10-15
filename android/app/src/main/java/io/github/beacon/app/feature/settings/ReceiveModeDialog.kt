@@ -28,17 +28,19 @@ fun ReceiveModeDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap)) {
                 if (connectionStatus.isNotBlank()) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        BeaconText(connectionStatus, Modifier.weight(1f), style = MaterialTheme.typography.titleSmall)
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        SettingsStatusSummary(connectionStatus, "", BeaconIcons.Cloud)
                         onConnectionSettings?.let { action ->
-                            BeaconTextButton(onClick = action) {
-                                BeaconText(stringResource(R.string.settings_connection_section_title))
-                            }
+                            BeaconActionButton(
+                                stringResource(R.string.settings_connection_section_title),
+                                BeaconIcons.Server,
+                                Modifier.fillMaxWidth(),
+                                onClick = action,
+                            )
                         }
                     }
                 }
                 ReceiveMode.entries.forEach { mode ->
-                    val available = true
                     Surface(
                         shape = RoundedCornerShape(16.dp),
                         color =
@@ -47,7 +49,7 @@ fun ReceiveModeDialog(
                     ) {
                         Row(
                             Modifier.fillMaxWidth()
-                                .clickable(enabled = available) { onSelect(mode) }
+                                .clickable() { onSelect(mode) }
                                 .padding(14.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -56,9 +58,7 @@ fun ReceiveModeDialog(
                                 receiveModeIcon(mode),
                                 null,
                                 Modifier.size(24.dp),
-                                tint =
-                                    if (available) receiveModeColor(mode)
-                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                tint = receiveModeColor(mode),
                             )
                             Column(Modifier.weight(1f)) {
                                 BeaconText(

@@ -145,9 +145,9 @@ class RuntimeRepository : RuntimeActions {
         )
     }
 
-    override fun testDelivery(onComplete: (String) -> Unit) {
+    override fun testDelivery(onFailure: (String) -> Unit, onComplete: (String) -> Unit) {
         if (!ready() || state.value.messageBusy || state.value.transportBusy) {
-            onComplete("请等待当前操作完成")
+            onFailure("请等待当前操作完成")
             return
         }
         mutableState.update { it.copy(transportBusy = true) }
@@ -160,7 +160,7 @@ class RuntimeRepository : RuntimeActions {
             },
             {
                 mutableState.update { state -> state.copy(transportBusy = false) }
-                onComplete("测试未确认，请先同步并查看消息列表；发送请求不会自动重试")
+                onFailure("测试未确认，请先同步并查看消息列表；发送请求不会自动重试")
             },
         )
     }

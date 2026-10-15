@@ -46,6 +46,7 @@ internal fun LazyListScope.connectionSettingsItems(
     context: Context,
     focus: FocusManager,
     bindingFormatHint: String,
+    onFeedback: (String) -> Unit,
 ) {
     item {
         SettingsSection(stringResource(R.string.server_status_title)) {
@@ -179,20 +180,16 @@ internal fun LazyListScope.connectionSettingsItems(
                 Modifier.fillMaxWidth(),
                 !busy && runtimeState.configuredEndpoint.isNotBlank(),
             ) {
-                connectionForm.copiedPushKey = false
                 actions.copyPushKey { address ->
-                    connectionForm.copiedPushKey =
-                        copyToClipboard(
+                    val copied = copyToClipboard(
                             context,
                             resources.getString(R.string.settings_clipboard_push_key),
                             address,
                             sensitive = true,
                         )
+                    if (copied) onFeedback(resources.getString(R.string.settings_copied_hint))
                 }
             }
-            // Copying an opaque key gives no visible result, so the page confirms it in place.
-            if (connectionForm.copiedPushKey)
-                SettingsHint(stringResource(R.string.settings_copied_hint))
         }
     }
     item {
@@ -200,6 +197,7 @@ internal fun LazyListScope.connectionSettingsItems(
             actions,
             !busy && runtimeState.configuredEndpoint.isNotBlank(),
             runtimeState.configuredEndpoint,
+            onFeedback,
         )
     }
     item { ClearConnectionPanel(runtimeState, actions, connectionForm) }

@@ -103,43 +103,41 @@ private suspend fun stageAndInstall(
     onLaunched: () -> Unit,
     onFeedback: (String) -> Unit,
 ) {
-    // The system requires the user to allow installs from this app; ask before spending a download.
-    if (!context.packageManager.canRequestPackageInstalls()) {
-        val opened = openInstallPermission(context)
-        onFeedback(
-            context.getString(
-                if (opened) R.string.settings_update_install_permission
-                else R.string.settings_update_install_unavailable
+    if (!state.beginDownload()) return
+    try {
+        // The system requires the user to allow installs from this app; ask before spending a download.
+        if (!context.packageManager.canRequestPackageInstalls()) {
+            val opened = openInstallPermission(context)
+            onFeedback(
+                context.getString(
+                    if (opened) R.string.settings_update_install_permission
+                    else R.string.settings_update_install_unavailable
+                )
             )
-        )
-        return
-    }
-    val apk = stagedApk(context, release)
-    val ready =
-        apk.isStagedFor(release) ||
-            run {
-                state.beginDownload()
-                try {
-                    withContext(Dispatchers.IO) {
-                        clearStaged(context)
-                        ReleaseClient.download(release, apk)
-                    }
-                } finally {
-                    state.endDownload()
-                }
-            }
-    if (!ready) {
-        onFeedback(context.getString(R.string.settings_update_download_failed))
-        return
-    }
-    when (launchInstall(context, apk)) {
-        InstallLaunch.LAUNCHED -> onLaunched()
-        InstallLaunch.PERMISSION_REQUIRED -> {
-            openInstallPermission(context)
-            onFeedback(context.getString(R.string.settings_update_install_permission))
+            return
         }
-        InstallLaunch.UNAVAILABLE ->
-            onFeedback(context.getString(R.string.settings_update_install_unavailable))
+        val apk = stagedApk(context, release)
+        val ready =
+            apk.isStagedFor(release) ||
+                withContext(Dispatchers.IO) {
+                    clearStaged(context)
+                    ReleaseClient.download(release, apk)
+                }
+        if (!ready) {
+            onFeedback(context.getString(R.string.settings_update_download_failed))
+            return
+        }
+        when (launchInstall(context, apk)) {
+            InstallLaunch.LAUNCHED -> onLaunched()
+            InstallLaunch.PERMISSION_REQUIRED -> {
+                openInstallPermission(context)
+                onFeedback(context.getString(R.string.settings_update_install_permission))
+            }
+            InstallLaunch.UNAVAILABLE ->
+                onFeedback(context.getString(R.string.settings_update_install_unavailable))
+        }
+    } finally {
+        state.endDownload()
     }
 }
 

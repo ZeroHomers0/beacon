@@ -27,6 +27,7 @@ fun SettingsBackupPanel(actions: RuntimeActions, busy: Boolean) {
     var text by remember { mutableStateOf("") }
     var hint by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
+    var fileBusy by remember { mutableStateOf(false) }
     var exporting by rememberSaveable { mutableStateOf<String?>(null) }
     val exportFile =
         rememberLauncherForActivityResult(
@@ -36,49 +37,55 @@ fun SettingsBackupPanel(actions: RuntimeActions, busy: Boolean) {
             exporting = null
             if (uri != null && payload != null)
                 scope.launch {
-                    hint =
-                        withContext(Dispatchers.IO) {
-                            runCatching {
-                                    requireNotNull(
-                                            context.contentResolver.openOutputStream(uri, "wt")
-                                        )
-                                        .use {
-                                            it.write(payload.toByteArray(Charsets.UTF_8))
-                                        }
-                                }
-                                .fold(
-                                    { resources.getString(R.string.settings_backup_export_done) },
-                                    { resources.getString(R.string.settings_backup_export_failed) },
-                                )
-                        }
+                    fileBusy = true
+                    try {
+                        hint =
+                            withContext(Dispatchers.IO) {
+                                runCatching {
+                                        requireNotNull(
+                                                context.contentResolver.openOutputStream(uri, "wt")
+                                            )
+                                            .use {
+                                                it.write(payload.toByteArray(Charsets.UTF_8))
+                                            }
+                                    }
+                                    .fold(
+                                        { resources.getString(R.string.settings_backup_export_done) },
+                                        { resources.getString(R.string.settings_backup_export_failed) },
+                                    )
+                            }
+                    } finally { fileBusy = false }
                 }
         }
     val importFile =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             if (uri != null)
                 scope.launch {
-                    val result =
-                        withContext(Dispatchers.IO) {
-                            runCatching {
-                                val bytes =
-                                    requireNotNull(context.contentResolver.openInputStream(uri))
-                                        .use {
-                                            io.github.beacon.app.data.local.ArchiveCrypto
-                                                .readBounded(it, SettingsBackup.MAX_BYTES)
-                                        }
-                                require(bytes.size <= SettingsBackup.MAX_BYTES)
-                                bytes.toString(Charsets.UTF_8).also { SettingsBackup.validate(it) }
+                    fileBusy = true
+                    try {
+                        val result =
+                            withContext(Dispatchers.IO) {
+                                runCatching {
+                                    val bytes =
+                                        requireNotNull(context.contentResolver.openInputStream(uri))
+                                            .use {
+                                                io.github.beacon.app.data.local.ArchiveCrypto
+                                                    .readBounded(it, SettingsBackup.MAX_BYTES)
+                                            }
+                                    require(bytes.size <= SettingsBackup.MAX_BYTES)
+                                    bytes.toString(Charsets.UTF_8).also { SettingsBackup.validate(it) }
+                                }
                             }
-                        }
-                    result
-                        .onSuccess {
-                            text = it
-                            hint = ""
-                            importing = true
-                        }
-                        .onFailure {
-                            hint = resources.getString(R.string.settings_backup_invalid_file)
-                        }
+                        result
+                            .onSuccess {
+                                text = it
+                                hint = ""
+                                importing = true
+                            }
+                            .onFailure {
+                                hint = resources.getString(R.string.settings_backup_invalid_file)
+                            }
+                    } finally { fileBusy = false }
                 }
         }
     SettingsSection(stringResource(R.string.settings_backup_settings_title)) {
@@ -86,7 +93,7 @@ fun SettingsBackupPanel(actions: RuntimeActions, busy: Boolean) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             BeaconOutlinedButton(
                 modifier = Modifier.weight(1f),
-                enabled = !busy,
+                enabled = !busy && !fileBusy,
                 onClick = {
                     actions.settingsBackup(
                         onFailure = {
@@ -105,7 +112,7 @@ fun SettingsBackupPanel(actions: RuntimeActions, busy: Boolean) {
             }
             BeaconOutlinedButton(
                 modifier = Modifier.weight(1f),
-                enabled = !busy,
+                enabled = !busy && !fileBusy,
                 onClick = {
                     importFile.launch(
                         arrayOf("application/json", "text/plain", "application/octet-stream")
@@ -136,7 +143,7 @@ fun SettingsBackupPanel(actions: RuntimeActions, busy: Boolean) {
             },
             confirmButton = {
                 BeaconButton(
-                    enabled = !busy,
+                    enabled = !busy && !fileBusy,
                     onClick = {
                         if (runCatching { SettingsBackup.validate(text) }.isFailure)
                             hint = resources.getString(R.string.settings_backup_invalid_values)
@@ -161,7 +168,7 @@ fun SettingsBackupPanel(actions: RuntimeActions, busy: Boolean) {
             },
             dismissButton = {
                 BeaconCancelButton(
-                    enabled = !busy,
+                    enabled = !busy && !fileBusy,
                     onClick = {
                         importing = false
                         text = ""

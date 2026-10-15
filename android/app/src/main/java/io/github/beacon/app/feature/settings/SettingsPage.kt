@@ -47,7 +47,6 @@ fun SettingsPage(
     onNavigate: (SettingsScreen) -> Unit,
     receivePlan: ReceivePlan,
     receptionForm: ReceptionFormState,
-    onReceivePlanChange: (ReceivePlan) -> Unit,
     onShowReceiveModes: () -> Unit,
     onUiStyleChange: (BeaconUiStyle) -> Unit,
     onThemeModeChange: (BeaconThemeMode) -> Unit,
@@ -324,7 +323,6 @@ fun SettingsPage(
                     actions,
                     receivePlan,
                     receptionForm,
-                    onReceivePlanChange,
                     onShowReceiveModes,
                     onOperationDetails,
                     busy,
@@ -345,6 +343,7 @@ fun SettingsPage(
                     context,
                     focus,
                     bindingFormatHint,
+                    onFeedback,
                 )
             }
             SettingsScreen.BACKGROUND -> {

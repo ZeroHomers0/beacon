@@ -47,7 +47,6 @@ internal fun LazyListScope.receptionSettingsItems(
     actions: RuntimeActions,
     receivePlan: ReceivePlan,
     receptionForm: ReceptionFormState,
-    onReceivePlanChange: (ReceivePlan) -> Unit,
     onShowReceiveModes: () -> Unit,
     onOperationDetails: (String) -> Unit,
     busy: Boolean,

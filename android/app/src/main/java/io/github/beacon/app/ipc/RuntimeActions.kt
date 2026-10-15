@@ -32,7 +32,7 @@ interface RuntimeActions {
 
     fun barkEncryption(key: String, iv: String, onComplete: (String) -> Unit) {}
 
-    fun testDelivery(onComplete: (String) -> Unit) {}
+    fun testDelivery(onFailure: (String) -> Unit = {}, onComplete: (String) -> Unit) {}
 
     fun historyArchive(
         uri: String,

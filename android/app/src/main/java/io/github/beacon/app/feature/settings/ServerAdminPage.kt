@@ -57,7 +57,7 @@ internal fun ServerAdminPage(
     var clearStage by remember { mutableIntStateOf(0) }
     var deletingDevice by remember { mutableStateOf<AdminDevice?>(null) }
     var confirmTest by remember { mutableStateOf(false) }
-    var copied by remember { mutableStateOf(false) }
+    var copiedValue by remember { mutableStateOf<String?>(null) }
     var bindingSubmitted by rememberSaveable { mutableStateOf(false) }
     val currentBind by rememberUpdatedState(onUseBinding)
     val currentCanBind by rememberUpdatedState(canBindCurrent && defaultEndpoint.isBlank())
@@ -81,7 +81,7 @@ internal fun ServerAdminPage(
             confirmTest = false
         }
     }
-    LaunchedEffect(state.secret) { copied = false }
+    LaunchedEffect(state.secret) { copiedValue = null }
     // Administrator outcomes share the app-wide snackbar, so they are consumed once and cleared.
     val feedbackText = state.feedback?.let { stringResource(it) }
     LaunchedEffect(state.feedback) {
@@ -98,7 +98,7 @@ internal fun ServerAdminPage(
                 value,
                 sensitive = true,
             )
-        copied = accepted
+        copiedValue = if (accepted) value else null
         return accepted
     }
     BeaconSettingsList(
@@ -468,7 +468,6 @@ internal fun ServerAdminPage(
                             else R.string.admin_secret_hint
                         )
                     )
-                    if (copied) SettingsHint(stringResource(R.string.admin_copied))
                     if (secret.expiresAt > 0 && defaultEndpoint.isBlank())
                         BeaconOutlinedButton(
                             onClick = {
@@ -481,13 +480,13 @@ internal fun ServerAdminPage(
                         }
                     if (secret.example.isNotEmpty())
                         BeaconOutlinedButton(onClick = { copy(secret.example) }) {
-                            BeaconText(stringResource(R.string.admin_copy_example))
+                            BeaconText(stringResource(if (copiedValue == secret.example) R.string.admin_copied else R.string.admin_copy_example))
                         }
                 }
             },
             dismissButton = {
                 BeaconOutlinedButton(onClick = { copy(secret.value) }) {
-                    BeaconText(stringResource(R.string.admin_copy))
+                    BeaconText(stringResource(if (copiedValue == secret.value) R.string.admin_copied else R.string.admin_copy))
                 }
             },
             confirmButton = {

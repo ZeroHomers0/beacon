@@ -17,18 +17,16 @@ fun CustomCleanupDialog(
     busy: Boolean,
     onDismiss: () -> Unit,
     onSave: (CleanupPolicy) -> Unit,
+    operationError: String = "",
 ) {
     var days by remember(policy) { mutableStateOf(policy.days.toString()) }
     var limit by remember(policy) { mutableStateOf(policy.maxMessages.toString()) }
-    // Fields are pre-filled from the saved policy, so a range error can be attributed to the
-    // field that caused it as soon as the user edits it; only the empty case waits for a submit.
-    var attempted by remember { mutableStateOf(false) }
     val daysValue = days.toIntOrNull()
     val limitValue = limit.toIntOrNull()
-    val daysInvalid = (attempted || days.isNotEmpty()) && daysValue !in DAYS_RANGE
-    val limitInvalid = (attempted || limit.isNotEmpty()) && limitValue !in LIMIT_RANGE
+    val daysInvalid = daysValue !in DAYS_RANGE
+    val limitInvalid = limitValue !in LIMIT_RANGE
     BeaconAlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!busy) onDismiss() },
         title = { BeaconText(stringResource(R.string.storage_custom)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -39,6 +37,7 @@ fun CustomCleanupDialog(
                     labelText = stringResource(R.string.storage_custom_days),
                     label = { BeaconText(stringResource(R.string.storage_custom_days)) },
                     singleLine = true,
+                    enabled = !busy,
                     isError = daysInvalid,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 )
@@ -49,6 +48,7 @@ fun CustomCleanupDialog(
                     labelText = stringResource(R.string.storage_max_messages),
                     label = { BeaconText(stringResource(R.string.storage_max_messages)) },
                     singleLine = true,
+                    enabled = !busy,
                     isError = limitInvalid,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 )
@@ -57,13 +57,20 @@ fun CustomCleanupDialog(
                         stringResource(R.string.storage_custom_invalid),
                         color = androidx.compose.material3.MaterialTheme.colorScheme.error,
                     )
+                if (operationError.isNotBlank())
+                    SettingsStatusSummary(
+                        stringResource(R.string.storage_save_failed_title),
+                        operationError,
+                        io.github.beacon.app.ui.icons.BeaconIcons.Warning,
+                        androidx.compose.material3.MaterialTheme.colorScheme.error,
+                    )
             }
         },
         confirmButton = {
             BeaconButton(
-                enabled = !busy,
+                enabled = !busy && !daysInvalid && !limitInvalid &&
+                    (daysValue != policy.days || limitValue != policy.maxMessages),
                 onClick = {
-                    attempted = true
                     val value = runCatching {
                         policy
                             .copy(

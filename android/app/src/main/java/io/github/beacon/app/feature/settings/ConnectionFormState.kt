@@ -10,6 +10,4 @@ class ConnectionFormState {
     var connectionEdited by mutableStateOf(false)
     var connectionError by mutableStateOf("")
 
-    /** Transient confirmation that the push key reached the clipboard. */
-    var copiedPushKey by mutableStateOf(false)
 }

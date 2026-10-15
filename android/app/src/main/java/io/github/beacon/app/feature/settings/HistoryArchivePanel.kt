@@ -68,7 +68,7 @@ fun HistoryArchivePanel(actions: RuntimeActions, busy: Boolean) {
             ) {
                 BeaconText(stringResource(R.string.settings_archive_export))
             }
-            BeaconButton(
+            BeaconOutlinedButton(
                 modifier = Modifier.weight(1f),
                 enabled = !busy,
                 onClick = {
@@ -81,7 +81,7 @@ fun HistoryArchivePanel(actions: RuntimeActions, busy: Boolean) {
                 BeaconText(stringResource(R.string.settings_archive_import))
             }
         }
-        if (hint.isNotEmpty()) BeaconText(hint)
+        if (hint.isNotEmpty()) OperationResultPanel(stringResource(R.string.settings_archive_title), hint)
     }
     if (operation != null)
         BeaconAlertDialog(

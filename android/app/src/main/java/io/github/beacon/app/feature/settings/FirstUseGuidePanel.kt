@@ -41,6 +41,11 @@ fun FirstUseGuidePanel(
     var result by remember { mutableStateOf("") }
     var testSent by remember { mutableStateOf(false) }
     var testConfirmation by remember { mutableStateOf(false) }
+    val currentEndpoint by rememberUpdatedState(state.configuredEndpoint)
+    LaunchedEffect(state.configuredEndpoint) {
+        testSent = false
+        result = ""
+    }
     val busy = !state.runtimeConnected || state.transportBusy || state.messageBusy
     SettingsSection(stringResource(R.string.settings_guide_title)) {
         GuideStep(
@@ -85,7 +90,7 @@ fun FirstUseGuidePanel(
         if (result.isNotEmpty())
             OperationResultPanel(stringResource(R.string.settings_guide_test_action), result)
         BeaconOutlinedButton(
-            enabled = testSent && notificationsAllowed,
+            enabled = testSent && notificationsAllowed && !busy && state.configuredEndpoint.isNotBlank(),
             onClick = {
                 preferences.edit().putBoolean("completed", true).apply()
                 onNavigate(SettingsScreen.HOME)
@@ -104,9 +109,15 @@ fun FirstUseGuidePanel(
                 BeaconButton(
                     onClick = {
                         testConfirmation = false
-                        actions.testDelivery {
-                            result = it
-                            testSent = true
+                        val requestedEndpoint = currentEndpoint
+                        testSent = false
+                        actions.testDelivery(onFailure = {
+                            if (currentEndpoint == requestedEndpoint) result = it
+                        }) {
+                            if (currentEndpoint == requestedEndpoint) {
+                                result = it
+                                testSent = true
+                            }
                         }
                     }
                 ) {

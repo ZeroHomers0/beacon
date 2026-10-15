@@ -63,8 +63,10 @@ class UpdateCheckState {
         dialogOpen = false
     }
 
-    fun beginDownload() {
+    fun beginDownload(): Boolean {
+        if (downloading) return false
         downloading = true
+        return true
     }
 
     fun endDownload() {

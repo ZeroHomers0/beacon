@@ -2,10 +2,6 @@ package io.github.beacon.app.feature.settings
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -16,10 +12,9 @@ import io.github.beacon.app.ui.components.*
 import io.github.beacon.app.ui.icons.BeaconIcons
 
 @Composable
-fun PushExamplesPanel(actions: RuntimeActions, enabled: Boolean, endpoint: String) {
+fun PushExamplesPanel(actions: RuntimeActions, enabled: Boolean, endpoint: String, onFeedback: (String) -> Unit = {}) {
     val resources = androidx.compose.ui.platform.LocalResources.current
     val context = LocalContext.current
-    var copied by remember { mutableStateOf(false) }
     SettingsSection(stringResource(R.string.push_examples_title)) {
         SettingsHint(stringResource(R.string.push_examples_hint))
         listOf(false to false, true to false, false to true, true to true).forEach {
@@ -36,7 +31,6 @@ fun PushExamplesPanel(actions: RuntimeActions, enabled: Boolean, endpoint: Strin
                 Modifier.fillMaxWidth(),
                 enabled,
             ) {
-                copied = false
                 actions.copyPushKey { key ->
                     val address = endpoint.trimEnd('/') + "/" + key
                     val example = runCatching {
@@ -45,18 +39,16 @@ fun PushExamplesPanel(actions: RuntimeActions, enabled: Boolean, endpoint: Strin
                     }
                         .getOrNull()
                     if (example != null) {
-                        copied =
-                            copyToClipboard(
+                        val copied = copyToClipboard(
                                 context,
                                 resources.getString(R.string.settings_clipboard_push_example),
                                 example,
                                 sensitive = true,
                             )
+                        if (copied) onFeedback(resources.getString(R.string.settings_copied_hint))
                     }
                 }
             }
         }
-        // Copying leaves no other trace on screen, so the panel confirms it in place.
-        if (copied) SettingsHint(stringResource(R.string.settings_copied_hint))
     }
 }

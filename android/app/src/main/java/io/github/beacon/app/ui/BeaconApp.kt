@@ -931,7 +931,6 @@ fun BeaconApp(
                                                 onNavigate = { ui.navigateSettings(it) },
                                                 receivePlan = ui.receivePlan,
                                                 receptionForm = ui.receptionForm,
-                                                onReceivePlanChange = { actions.receivePlan(it) },
                                                 onShowReceiveModes = { ui.receiveModesOpen = true },
                                                 onUiStyleChange = {
                                                     ui.uiStyle = it

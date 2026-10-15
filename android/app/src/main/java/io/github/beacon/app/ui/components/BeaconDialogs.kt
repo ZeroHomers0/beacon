@@ -60,10 +60,20 @@ fun BeaconAlertDialog(
 
 @Composable
 fun BeaconActionPair(dismiss: @Composable () -> Unit, confirm: @Composable () -> Unit) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    val fontScale = androidx.compose.ui.platform.LocalDensity.current.fontScale
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
         CompositionLocalProvider(LocalDialogAction provides true) {
-            Box(Modifier.weight(1f), propagateMinConstraints = true) { dismiss() }
-            Box(Modifier.weight(1f), propagateMinConstraints = true) { confirm() }
+            if (maxWidth < 280.dp * fontScale) {
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    dismiss()
+                    confirm()
+                }
+            } else {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Box(Modifier.weight(1f), propagateMinConstraints = true) { dismiss() }
+                    Box(Modifier.weight(1f), propagateMinConstraints = true) { confirm() }
+                }
+            }
         }
     }
 }

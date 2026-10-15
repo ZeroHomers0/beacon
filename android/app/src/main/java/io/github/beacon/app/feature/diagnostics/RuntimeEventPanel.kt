@@ -22,6 +22,7 @@ internal fun RuntimeEventPanel(connected: Boolean, actions: RuntimeActions, comp
     var busy by remember { mutableStateOf(false) }
     var loaded by remember { mutableStateOf(false) }
     var feedback by remember { mutableStateOf("") }
+    var copied by remember { mutableStateOf(false) }
     var generation by remember { mutableIntStateOf(0) }
     var expanded by remember { mutableStateOf(false) }
     var confirmClear by remember { mutableStateOf(false) }
@@ -30,13 +31,14 @@ internal fun RuntimeEventPanel(connected: Boolean, actions: RuntimeActions, comp
     val copiedText = stringResource(R.string.events_copied)
     val clipLabel = stringResource(R.string.events_clip_label)
     fun copyRecords() {
-        copyToClipboard(context, clipLabel, text.export(events), sensitive = true)
-        feedback = copiedText
+        copied = copyToClipboard(context, clipLabel, text.export(events), sensitive = true)
+        if (!copied) feedback = failureText
     }
     fun refresh() {
         val capture = ++generation
         busy = true
         feedback = ""
+        copied = false
         actions.eventLog(
             onFailure = {
                 if (capture == generation) {
@@ -100,7 +102,7 @@ internal fun RuntimeEventPanel(connected: Boolean, actions: RuntimeActions, comp
                         },
                         enabled = !busy && events.isNotEmpty(),
                     ) {
-                        BeaconText(stringResource(R.string.events_copy))
+                        BeaconText(if (copied) copiedText else stringResource(R.string.events_copy))
                     }
                 },
                 confirm = {
@@ -121,7 +123,7 @@ internal fun RuntimeEventPanel(connected: Boolean, actions: RuntimeActions, comp
             dismissButton = if (compact) null else {
                 {
                     BeaconOutlinedButton(onClick = { copyRecords() }) {
-                        BeaconText(stringResource(R.string.events_copy))
+                        BeaconText(if (copied) copiedText else stringResource(R.string.events_copy))
                     }
                 }
             },
@@ -138,7 +140,7 @@ internal fun RuntimeEventPanel(connected: Boolean, actions: RuntimeActions, comp
             confirmButton = {
                 if (compact) Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     BeaconActionPair(
-                        { BeaconOutlinedButton(onClick = { copyRecords() }, enabled = events.isNotEmpty()) { BeaconText(stringResource(R.string.events_copy)) } },
+                        { BeaconOutlinedButton(onClick = { copyRecords() }, enabled = events.isNotEmpty()) { BeaconText(if (copied) copiedText else stringResource(R.string.events_copy)) } },
                         { BeaconButton(onClick = { expanded = false }) { BeaconText(stringResource(R.string.action_close)) } },
                     )
                     BeaconOutlinedButton(

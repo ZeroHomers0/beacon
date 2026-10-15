@@ -39,7 +39,8 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                 settingsLoaded = true
             }
     }
-    fun save(value: CleanupSettings) {
+    fun save(value: CleanupSettings, onSaved: () -> Unit = {}) {
+        if (saving || !settingsLoaded || !state.runtimeConnected || state.messageBusy) return
         saving = true
         loadFailed = false
         saveFailed = false
@@ -50,6 +51,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
         }) {
             settings = it
             saving = false
+            onSaved()
         }
     }
     var confirmation by remember { mutableStateOf<CleanupPreview?>(null) }
@@ -65,7 +67,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
     Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap)) {
         // Without this the page rendered every control disabled with no explanation; a failed read
         // is now visible and recoverable instead of looking like a broken toggle.
-        if (loadFailed) {
+        if (loadFailed && !custom) {
             SettingsSection(stringResource(if (saveFailed) R.string.storage_save_failed_title else R.string.storage_load_failed_title)) {
                 BeaconText(state.status.text, color = MaterialTheme.colorScheme.error)
                 BeaconActionButton(
@@ -291,12 +293,13 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
             },
         )
     if (custom)
-        CustomCleanupDialog(policy, state.messageBusy, { custom = false }) { value ->
-            actions.cleanupSettings(settings.copy(policy = value)) {
-                settings = it
-                custom = false
-            }
-        }
+        CustomCleanupDialog(
+            policy,
+            state.messageBusy || saving || !settingsLoaded || !state.runtimeConnected,
+            { custom = false },
+            onSave = { value -> save(settings.copy(policy = value)) { custom = false } },
+            operationError = if (saveFailed) state.status.text else "",
+        )
     confirmation?.let { snapshot ->
         BeaconConfirmDialog(
             title = stringResource(R.string.storage_confirm_title),
