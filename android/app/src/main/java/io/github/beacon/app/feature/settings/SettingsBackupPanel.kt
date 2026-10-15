@@ -81,7 +81,7 @@ fun SettingsBackupPanel(actions: RuntimeActions, busy: Boolean) {
                         }
                 }
         }
-    UiSection(stringResource(R.string.settings_backup_settings_title)) {
+    SettingsSection(stringResource(R.string.settings_backup_settings_title)) {
         SettingsHint(stringResource(R.string.settings_backup_settings_hint))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             BeaconOutlinedButton(
@@ -103,7 +103,7 @@ fun SettingsBackupPanel(actions: RuntimeActions, busy: Boolean) {
             ) {
                 BeaconText(stringResource(R.string.settings_backup_export))
             }
-            BeaconButton(
+            BeaconOutlinedButton(
                 modifier = Modifier.weight(1f),
                 enabled = !busy,
                 onClick = {

@@ -28,8 +28,9 @@ import io.github.beacon.app.ui.components.BeaconButton
 import io.github.beacon.app.ui.components.BeaconText
 import io.github.beacon.app.ui.components.BeaconTextField
 import io.github.beacon.app.ui.components.DiagnosticRow
+import io.github.beacon.app.ui.components.SettingsStatusSummary
 import io.github.beacon.app.ui.components.SettingsHint
-import io.github.beacon.app.ui.components.UiSection
+import io.github.beacon.app.ui.components.SettingsSection
 import io.github.beacon.app.ui.components.connectionStatusLabel
 import io.github.beacon.app.ui.components.formatMessageTime
 import io.github.beacon.app.ui.components.copyToClipboard
@@ -47,36 +48,25 @@ internal fun LazyListScope.connectionSettingsItems(
     bindingFormatHint: String,
 ) {
     item {
-        UiSection(stringResource(R.string.server_status_title)) {
-            Row(
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .heightIn(min = 80.dp)
-                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                        .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Icon(
-                    if (runtimeState.serverChecking) BeaconIcons.Sync
-                    else if (runtimeState.serverReachable == true) BeaconIcons.Cloud
-                    else if (runtimeState.serverReachable == false) BeaconIcons.Warning
-                    else BeaconIcons.Cloud,
-                    null,
-                    tint =
-                        if (runtimeState.serverReachable == false) MaterialTheme.colorScheme.error
-                        else MaterialTheme.colorScheme.primary,
-                )
-                val status = runtimeState.serverCheckResult.split(" · ")
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    val label = connectionStatusLabel(runtimeState)
-                    BeaconText(label, style = MaterialTheme.typography.titleMedium)
-                    if (status.first() != label && runtimeState.configuredEndpoint.isNotBlank())
-                        SettingsHint(status.first())
-                    status.drop(1).forEach { detail -> SettingsHint(detail) }
-                }
-            }
+        SettingsSection(stringResource(R.string.server_status_title)) {
+            val status = runtimeState.serverCheckResult.split(" · ")
+            val label = connectionStatusLabel(runtimeState)
+            val details = buildList {
+                if (status.first() != label && runtimeState.configuredEndpoint.isNotBlank())
+                    add(status.first())
+                addAll(status.drop(1))
+            }.joinToString("\n")
+            SettingsStatusSummary(
+                label,
+                details,
+                icon = when {
+                    runtimeState.serverChecking -> BeaconIcons.Sync
+                    runtimeState.serverReachable == false -> BeaconIcons.Warning
+                    else -> BeaconIcons.Cloud
+                },
+                tint = if (runtimeState.serverReachable == false) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.primary,
+            )
             DiagnosticRow(
                 stringResource(R.string.server_last_checked),
                 formatMessageTime(runtimeState.serverCheckedAtMs),
@@ -96,7 +86,7 @@ internal fun LazyListScope.connectionSettingsItems(
         }
     }
     item {
-        UiSection(stringResource(R.string.settings_connection_section_title)) {
+        SettingsSection(stringResource(R.string.settings_connection_section_title)) {
             BeaconTextField(
                 connectionForm.endpoint,
                 {

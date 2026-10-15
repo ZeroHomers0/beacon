@@ -57,7 +57,7 @@ internal fun RuntimeEventPanel(connected: Boolean, actions: RuntimeActions, comp
         busy = false
         if (connected) refresh()
     }
-    UiSection(stringResource(R.string.events_title)) {
+    SettingsSection(stringResource(R.string.events_title)) {
         if (compact && feedback.isNotBlank()) SettingsHint(feedback)
         if (compact) {
             BeaconActionButton(

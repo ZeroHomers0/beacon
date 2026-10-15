@@ -85,6 +85,18 @@ fun UiSection(title: String, content: @Composable ColumnScope.() -> Unit) {
     }
 }
 
+/** Settings use a common outside title and inset content, distinct from message sections. */
+@Composable
+fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
+    SettingsGroup(title) {
+        Column(
+            Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),
+            verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
+            content = content,
+        )
+    }
+}
+
 /** Secondary explanations share a readable, quiet treatment across both settings styles. */
 @Composable
 fun SettingsHint(text: String) {
@@ -97,7 +109,7 @@ fun SettingsHint(text: String) {
 
 @Composable
 fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.GroupTitleGap)) {
         BeaconText(
             title,
             Modifier.padding(horizontal = BeaconUiMetrics.CardInset),
@@ -130,7 +142,7 @@ fun BeaconSettingsList(
         state = state,
         modifier = modifier.imePadding(),
         contentPadding = contentPadding,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
         content = content,
     )
 }
@@ -166,7 +178,7 @@ fun SettingsRow(
             ) {
                 BadgedIcon(icon, iconTint, badge)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    BeaconText(title, style = MaterialTheme.typography.titleMedium)
+                    BeaconText(title, style = MaterialTheme.typography.bodyLarge)
                     if (subtitle.isNotBlank())
                         BeaconText(
                             subtitle,

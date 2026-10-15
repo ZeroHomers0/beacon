@@ -155,7 +155,7 @@ fun BeaconPreferenceToggle(
     onCheckedChange: (Boolean) -> Unit,
 ) {
     Row(
-        Modifier.fillMaxWidth().heightIn(min = if (summary.isBlank()) 56.dp else 64.dp),
+        Modifier.fillMaxWidth().heightIn(min = if (summary.isBlank()) BeaconUiMetrics.FieldMinHeight else 64.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -216,9 +216,9 @@ internal fun diagnosticRowFits(
  */
 @Composable
 fun DiagnosticRow(label: String, value: String) {
-    val labelStyle = MaterialTheme.typography.labelLarge
+    val labelStyle = MaterialTheme.typography.bodyLarge
     val valueStyle = MaterialTheme.typography.bodyMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
-    val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val labelColor = MaterialTheme.colorScheme.onSurface
     val measurer = rememberTextMeasurer()
     val gapPx = with(LocalDensity.current) { DIAGNOSTIC_ROW_GAP.roundToPx() }
     Surface(
@@ -227,7 +227,7 @@ fun DiagnosticRow(label: String, value: String) {
         color = androidx.compose.ui.graphics.Color.Transparent,
     ) {
         BoxWithConstraints(
-            Modifier.heightIn(min = 56.dp).padding(vertical = 12.dp),
+            Modifier.heightIn(min = BeaconUiMetrics.FieldMinHeight).padding(vertical = BeaconUiMetrics.FieldVerticalInset),
             contentAlignment = Alignment.CenterStart,
         ) {
             val labelWidth = measurer.measure(label, labelStyle, maxLines = 1).size.width

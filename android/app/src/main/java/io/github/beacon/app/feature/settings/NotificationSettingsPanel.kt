@@ -48,8 +48,8 @@ internal fun NotificationSettingsPanel(state: RuntimeState, actions: RuntimeActi
         listOf(1, 5, 15, 60).let {
             if (saved.freshMinutes in it) it else (it + saved.freshMinutes).sorted()
         }
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        UiSection(stringResource(R.string.notification_age_title)) {
+    Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap)) {
+        SettingsSection(stringResource(R.string.notification_age_title)) {
             SettingsFieldGroup(
                 {
                     BeaconDropdownPreference(
@@ -80,7 +80,7 @@ internal fun NotificationSettingsPanel(state: RuntimeState, actions: RuntimeActi
             )
 
         }
-        UiSection(stringResource(R.string.notification_privacy_title)) {
+        SettingsSection(stringResource(R.string.notification_privacy_title)) {
             BeaconPreferenceToggle(
                 stringResource(R.string.notification_lockscreen_preview),
                 stringResource(R.string.notification_lockscreen_hint),

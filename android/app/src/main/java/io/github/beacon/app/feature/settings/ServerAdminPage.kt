@@ -108,7 +108,7 @@ internal fun ServerAdminPage(
     ) {
         if (!state.loggedIn) {
             item {
-                UiSection(stringResource(R.string.admin_login_title)) {
+                SettingsSection(stringResource(R.string.admin_login_title)) {
                     SettingsHint(stringResource(R.string.admin_login_hint))
                     AdminField(
                         endpoint,
@@ -139,7 +139,7 @@ internal fun ServerAdminPage(
             }
         } else {
             item {
-                UiSection(stringResource(R.string.admin_overview)) {
+                SettingsSection(stringResource(R.string.admin_overview)) {
                     SettingsFieldGroup(
                         {
                             DiagnosticRow(stringResource(R.string.admin_endpoint), state.endpoint)
@@ -164,13 +164,6 @@ internal fun ServerAdminPage(
                     DiagnosticRow(stringResource(R.string.admin_database), android.text.format.Formatter.formatFileSize(context, state.databaseBytes))
                     if (state.protocol != 1) SettingsHint(stringResource(R.string.admin_protocol_unknown))
 
-                    BeaconDangerButton(
-                        onClick = { clearStage = 1 },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !state.busy,
-                    ) {
-                        BeaconText(stringResource(R.string.admin_clear_messages))
-                    }
                     BeaconActionPair(
                         {
                             BeaconOutlinedButton(
@@ -183,7 +176,7 @@ internal fun ServerAdminPage(
                             }
                         },
                         {
-                            BeaconButton(onClick = model::refresh, enabled = !state.busy) {
+                            BeaconOutlinedButton(onClick = model::refresh, enabled = !state.busy) {
                                 BeaconText(
                                     stringResource(
                                         if (state.busy) R.string.admin_loading
@@ -196,7 +189,7 @@ internal fun ServerAdminPage(
                 }
             }
             item {
-                UiSection(stringResource(R.string.admin_manage_section)) {
+                SettingsSection(stringResource(R.string.admin_manage_section)) {
                     Row(
                         Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -230,7 +223,7 @@ internal fun ServerAdminPage(
             when (tab) {
                 0 -> {
                     if (defaultEndpoint.isBlank() || bindingSubmitted) item {
-                        UiSection(stringResource(R.string.admin_this_phone)) {
+                        SettingsSection(stringResource(R.string.admin_this_phone)) {
                             if (defaultEndpoint.isBlank()) {
                                 BeaconActionButton(
                                     stringResource(R.string.admin_use_binding),
@@ -249,7 +242,7 @@ internal fun ServerAdminPage(
                         }
                     }
                     item {
-                        UiSection(stringResource(R.string.admin_create_binding)) {
+                        SettingsSection(stringResource(R.string.admin_create_binding)) {
                             AdminField(
                                 bindingName,
                                 { bindingName = it.take(40) },
@@ -270,7 +263,7 @@ internal fun ServerAdminPage(
                     if (state.devices.isEmpty())
                         item { SettingsHint(stringResource(R.string.admin_no_devices)) }
                     items(state.devices, key = { "device-${it.id}" }) { device ->
-                        UiSection(device.name) {
+                        SettingsSection(device.name) {
                             SettingsFieldGroup(
                                 {
                                     DiagnosticRow(stringResource(R.string.admin_device_id), device.id)
@@ -319,7 +312,7 @@ internal fun ServerAdminPage(
                 }
                 1 -> {
                     item {
-                        UiSection(stringResource(R.string.admin_create_application)) {
+                        SettingsSection(stringResource(R.string.admin_create_application)) {
                             DevicePicker(active, deviceId, { deviceId = it }, !state.busy)
                             AdminField(
                                 appName,
@@ -354,7 +347,7 @@ internal fun ServerAdminPage(
                     if (state.applications.isEmpty())
                         item { SettingsHint(stringResource(R.string.admin_no_applications)) }
                     items(state.applications, key = { "application-${it.id}" }) { app ->
-                        UiSection(app.name) {
+                        SettingsSection(app.name) {
                             SettingsFieldGroup(
                                 {
                                     DiagnosticRow(
@@ -400,7 +393,7 @@ internal fun ServerAdminPage(
                 }
                 2 ->
                     item {
-                        UiSection(stringResource(R.string.admin_test)) {
+                        SettingsSection(stringResource(R.string.admin_test)) {
                             DevicePicker(active, deviceId, { deviceId = it }, !state.busy)
                             AdminField(
                                 testTitle,
@@ -441,6 +434,17 @@ internal fun ServerAdminPage(
                         }
                     }
             }
+        if (state.loggedIn) item {
+            SettingsSection(stringResource(R.string.settings_danger_section_title)) {
+                BeaconDangerButton(
+                    onClick = { clearStage = 1 },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !state.busy,
+                ) {
+                    BeaconText(stringResource(R.string.admin_clear_messages))
+                }
+            }
+        }
     }
     state.secret?.let { secret ->
         BeaconAlertDialog(

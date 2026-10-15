@@ -30,7 +30,7 @@ import io.github.beacon.app.ui.components.OperationResultPanel
 import io.github.beacon.app.ui.components.SettingsGroup
 import io.github.beacon.app.ui.components.SettingsHint
 import io.github.beacon.app.ui.components.SettingsRow
-import io.github.beacon.app.ui.components.UiSection
+import io.github.beacon.app.ui.components.SettingsSection
 import io.github.beacon.app.ui.components.formatMessageTime
 import io.github.beacon.app.ui.components.receiveLabel
 import io.github.beacon.app.ui.components.receiveModeIcon
@@ -65,7 +65,7 @@ internal fun LazyListScope.receptionSettingsItems(
         }
     }
     item {
-        UiSection(stringResource(R.string.settings_receive_status_title)) {
+        SettingsSection(stringResource(R.string.settings_receive_status_title)) {
             BeaconPreferenceToggle(
                 stringResource(R.string.settings_battery_saver_title),
                 "",
@@ -123,7 +123,7 @@ internal fun LazyListScope.receptionSettingsItems(
     }
     if (receivePlan.mode != ReceiveMode.POWER_SAVING) {
         item {
-            UiSection(stringResource(R.string.receive_heartbeat_title)) {
+            SettingsSection(stringResource(R.string.receive_heartbeat_title)) {
                 SettingsFieldGroup(
                     {
                         BeaconPreferenceToggle(
@@ -170,7 +170,7 @@ internal fun LazyListScope.receptionSettingsItems(
     }
     if (receivePlan.mode != ReceiveMode.REALTIME) {
         item {
-            UiSection(
+            SettingsSection(
                 stringResource(
                     if (receivePlan.mode == ReceiveMode.RULES) R.string.receive_fallback_title
                     else R.string.settings_auto_receive_title

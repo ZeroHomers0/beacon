@@ -15,11 +15,11 @@ import io.github.beacon.app.ui.components.BeaconActionPair
 import io.github.beacon.app.ui.components.BeaconButton
 import io.github.beacon.app.ui.components.BeaconOutlinedButton
 import io.github.beacon.app.ui.components.BeaconText
-import io.github.beacon.app.ui.components.DiagnosticRow
+import io.github.beacon.app.ui.components.SettingsStatusSummary
 import io.github.beacon.app.ui.components.SettingsGroup
 import io.github.beacon.app.ui.components.SettingsHint
 import io.github.beacon.app.ui.components.SettingsRow
-import io.github.beacon.app.ui.components.UiSection
+import io.github.beacon.app.ui.components.SettingsSection
 import io.github.beacon.app.ui.icons.BeaconIcons
 
 internal fun LazyListScope.diagnosticsSettingsItems(
@@ -31,13 +31,15 @@ internal fun LazyListScope.diagnosticsSettingsItems(
     context: Context,
 ) {
     item {
-        UiSection(stringResource(R.string.settings_receive_diagnostics_title)) {
-            DiagnosticRow(
+        SettingsSection(stringResource(R.string.settings_receive_diagnostics_title)) {
+            SettingsStatusSummary(
                 stringResource(R.string.diag_runtime_status),
                 stringResource(
                     if (runtimeState.runtimeConnected) R.string.diag_runtime_connected
                     else R.string.diag_runtime_disconnected
                 ),
+                icon = if (runtimeState.runtimeConnected) BeaconIcons.Check else BeaconIcons.Warning,
+                tint = if (runtimeState.runtimeConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
             )
             BeaconActionPair(
                 dismiss = {
@@ -49,7 +51,7 @@ internal fun LazyListScope.diagnosticsSettingsItems(
                     }
                 },
                 confirm = {
-                    BeaconButton(
+                    BeaconOutlinedButton(
                         enabled = !busy && !runtimeState.runtimeConnected,
                         onClick = { actions.start(context) },
                     ) {

@@ -18,7 +18,7 @@ internal fun ReceiveRulesPanel(form: ReceptionFormState, busy: Boolean) {
     val plan = form.plan
     val start = form.scheduleStartText
     val end = form.scheduleEndText
-    UiSection(stringResource(R.string.settings_rules_conditions)) {
+    SettingsSection(stringResource(R.string.settings_rules_conditions)) {
         SettingsHint(resources.getString(R.string.settings_rules_priority_order))
         Column {
             BeaconPreferenceToggle(
@@ -59,28 +59,14 @@ internal fun ReceiveRulesPanel(form: ReceptionFormState, busy: Boolean) {
             }
             if (plan.scheduleEnabled) {
                 SettingsFieldDivider()
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    BeaconTimePreference(
-                        start,
-                        {
-                            form.scheduleStartText = it
-                            form.edited = true
-                        },
-                        stringResource(R.string.settings_rules_start),
-                        Modifier.weight(1f),
-                        enabled = !busy,
-                    )
-                    BeaconTimePreference(
-                        end,
-                        {
-                            form.scheduleEndText = it
-                            form.edited = true
-                        },
-                        stringResource(R.string.settings_rules_end),
-                        Modifier.weight(1f),
-                        enabled = !busy,
-                    )
-                }
+                BeaconTimeRangePreference(
+                    start, end,
+                    stringResource(R.string.settings_rules_start),
+                    stringResource(R.string.settings_rules_end),
+                    enabled = !busy,
+                    onStartChange = { form.scheduleStartText = it; form.edited = true },
+                    onEndChange = { form.scheduleEndText = it; form.edited = true },
+                )
                 if (!form.scheduleValid)
                     BeaconText(
                         stringResource(R.string.settings_rules_time_invalid),

@@ -19,7 +19,7 @@ fun NotificationSoundPanel() {
     val resources = androidx.compose.ui.platform.LocalResources.current
     val context = LocalContext.current
     var hint by remember { mutableStateOf("") }
-    UiSection(stringResource(R.string.settings_sound_title)) {
+    SettingsSection(stringResource(R.string.settings_sound_title)) {
 
         val channels = listOf(
             SoundChannel(

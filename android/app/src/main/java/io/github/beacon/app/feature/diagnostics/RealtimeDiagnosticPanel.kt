@@ -16,7 +16,7 @@ internal fun RealtimeDiagnosticPanel(
     actions: RuntimeActions,
 ) {
     val diagnostics = state.realtimeDiagnostics
-    UiSection(stringResource(R.string.realtime_diag_title)) {
+    SettingsSection(stringResource(R.string.realtime_diag_title)) {
         OperationResultPanel(
             stringResource(R.string.realtime_diag_status_label),
             state.realtimeStatus,

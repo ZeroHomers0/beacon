@@ -20,7 +20,7 @@ fun PushExamplesPanel(actions: RuntimeActions, enabled: Boolean, endpoint: Strin
     val resources = androidx.compose.ui.platform.LocalResources.current
     val context = LocalContext.current
     var copied by remember { mutableStateOf(false) }
-    UiSection(stringResource(R.string.push_examples_title)) {
+    SettingsSection(stringResource(R.string.push_examples_title)) {
         SettingsHint(stringResource(R.string.push_examples_hint))
         listOf(false to false, true to false, false to true, true to true).forEach {
             (powershell, json) ->

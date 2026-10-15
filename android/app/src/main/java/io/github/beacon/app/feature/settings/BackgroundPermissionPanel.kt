@@ -68,18 +68,18 @@ fun BackgroundPermissionPanel() {
         owner.lifecycle.addObserver(observer)
         onDispose { owner.lifecycle.removeObserver(observer) }
     }
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        UiSection(stringResource(R.string.background_autostart_title)) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap)) {
+        SettingsSection(stringResource(R.string.background_autostart_title)) {
             BeaconText(
                 stringResource(R.string.background_manual_status),
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.bodyLarge,
             )
             SettingsHint(stringResource(R.string.background_autostart_hint))
-            BeaconButton(onClick = { appDetails() }, modifier = Modifier.fillMaxWidth()) {
+            BeaconOutlinedButton(onClick = { appDetails() }, modifier = Modifier.fillMaxWidth()) {
                 BeaconText(stringResource(R.string.background_open_app_settings))
             }
         }
-        UiSection(stringResource(R.string.background_restriction_title)) {
+        SettingsSection(stringResource(R.string.background_restriction_title)) {
             SettingsFieldGroup(
                 {
                     DiagnosticRow(
@@ -107,7 +107,7 @@ fun BackgroundPermissionPanel() {
                 },
             )
             SettingsHint(stringResource(R.string.background_restriction_hint))
-            BeaconButton(
+            BeaconOutlinedButton(
                 modifier = Modifier.fillMaxWidth(),
                 onClick = {
                     openSettings(

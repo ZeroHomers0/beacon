@@ -42,7 +42,7 @@ fun FirstUseGuidePanel(
     var testSent by remember { mutableStateOf(false) }
     var testConfirmation by remember { mutableStateOf(false) }
     val busy = !state.runtimeConnected || state.transportBusy || state.messageBusy
-    UiSection(stringResource(R.string.settings_guide_title)) {
+    SettingsSection(stringResource(R.string.settings_guide_title)) {
         GuideStep(
             resources.getString(R.string.settings_guide_server),
             if (state.configuredEndpoint.isBlank())

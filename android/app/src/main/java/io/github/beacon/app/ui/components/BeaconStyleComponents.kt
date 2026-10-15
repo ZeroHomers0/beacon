@@ -179,9 +179,7 @@ fun BeaconOutlinedButton(
         if (miuix())
             top.yukonga.miuix.kmp.basic.Button(
                 onClick,
-                (if (LocalDialogAction.current) modifier.fillMaxWidth() else modifier).height(
-                    48.dp
-                ),
+                (if (LocalDialogAction.current) modifier.fillMaxWidth() else modifier).heightIn(min = BeaconUiMetrics.ControlMinHeight),
                 enabled,
                 minHeight = 48.dp,
                 insideMargin = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
@@ -191,8 +189,7 @@ fun BeaconOutlinedButton(
             androidx.compose.material3.FilledTonalButton(
                 onClick,
                 (if (LocalDialogAction.current) modifier.fillMaxWidth() else modifier).heightIn(
-                    min = 48.dp,
-                    max = 48.dp,
+                    min = BeaconUiMetrics.ControlMinHeight,
                 ),
                 enabled,
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),

@@ -17,7 +17,7 @@ import io.github.beacon.app.ui.icons.BeaconIcons
 fun ClearConnectionPanel(state: RuntimeState, actions: RuntimeActions, form: ConnectionFormState) {
     var confirm by remember { mutableStateOf(false) }
     var revoke by remember { mutableStateOf(false) }
-    UiSection(stringResource(R.string.connection_manage)) {
+    SettingsSection(stringResource(R.string.settings_danger_section_title)) {
         BeaconDangerButton(
             onClick = { revoke = true },
             modifier = Modifier.fillMaxWidth(),

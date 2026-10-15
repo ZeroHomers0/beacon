@@ -173,8 +173,8 @@ fun BeaconDropdownPreference(
                     ) {
                         expanded = true
                     }
-                    .heightIn(min = 56.dp)
-                    .padding(vertical = 12.dp),
+                    .heightIn(min = BeaconUiMetrics.FieldMinHeight)
+                    .padding(vertical = BeaconUiMetrics.FieldVerticalInset),
                 contentAlignment = androidx.compose.ui.Alignment.CenterStart,
             ) {
                 val value = items.getOrElse(selectedIndex) { "" }

@@ -28,8 +28,8 @@ internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions, form:
         }
         val editable = loaded && !saving && state.runtimeConnected
         val labels = stringResource(R.string.quiet_weekdays).split(",")
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            UiSection(stringResource(R.string.quiet_title)) {
+        Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap)) {
+            SettingsSection(stringResource(R.string.quiet_title)) {
                 SettingsFieldGroup(
                     {
                         BeaconPreferenceToggle(
@@ -56,23 +56,15 @@ internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions, form:
                     },
                 )
             }
-            UiSection(stringResource(R.string.quiet_schedule)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    BeaconTimePreference(
-                        start,
-                        { start = it },
-                        stringResource(R.string.quiet_start),
-                        Modifier.weight(1f),
-                        enabled = editable,
-                    )
-                    BeaconTimePreference(
-                        end,
-                        { end = it },
-                        stringResource(R.string.quiet_end),
-                        Modifier.weight(1f),
-                        enabled = editable,
-                    )
-                }
+            SettingsSection(stringResource(R.string.quiet_schedule)) {
+                BeaconTimeRangePreference(
+                    start, end,
+                    stringResource(R.string.quiet_start),
+                    stringResource(R.string.quiet_end),
+                    enabled = editable,
+                    onStartChange = { start = it },
+                    onEndChange = { end = it },
+                )
 
                 ActionFlow {
                     labels.forEachIndexed { index, label ->

@@ -27,6 +27,22 @@ import kotlin.math.abs
 import kotlinx.coroutines.launch
 
 @Composable
+fun BeaconTimeRangePreference(
+    start: String,
+    end: String,
+    startLabel: String,
+    endLabel: String,
+    enabled: Boolean = true,
+    onStartChange: (String) -> Unit,
+    onEndChange: (String) -> Unit,
+) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap)) {
+        BeaconTimePreference(start, onStartChange, startLabel, Modifier.weight(1f), enabled)
+        BeaconTimePreference(end, onEndChange, endLabel, Modifier.weight(1f), enabled)
+    }
+}
+
+@Composable
 fun BeaconTimePreference(
     value: String,
     onChange: (String) -> Unit,

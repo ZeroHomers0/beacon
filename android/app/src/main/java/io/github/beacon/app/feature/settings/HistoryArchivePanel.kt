@@ -53,7 +53,7 @@ fun HistoryArchivePanel(actions: RuntimeActions, busy: Boolean) {
         }
     val open =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { run(it, true) }
-    UiSection(stringResource(R.string.settings_archive_title)) {
+    SettingsSection(stringResource(R.string.settings_archive_title)) {
         SettingsHint(stringResource(R.string.settings_archive_hint))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             BeaconOutlinedButton(

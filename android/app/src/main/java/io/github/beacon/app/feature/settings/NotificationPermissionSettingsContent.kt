@@ -24,7 +24,7 @@ import io.github.beacon.app.ui.components.NotificationPermissionState
 import io.github.beacon.app.ui.components.SettingsGroup
 import io.github.beacon.app.ui.components.SettingsHint
 import io.github.beacon.app.ui.components.SettingsRow
-import io.github.beacon.app.ui.components.UiSection
+import io.github.beacon.app.ui.components.SettingsSection
 import io.github.beacon.app.ui.icons.BeaconIcons
 
 internal fun LazyListScope.notificationPermissionSettingsItems(
@@ -38,7 +38,7 @@ internal fun LazyListScope.notificationPermissionSettingsItems(
     context: Context,
 ) {
     item {
-        UiSection(stringResource(R.string.settings_notifications_section_title)) {
+        SettingsSection(stringResource(R.string.settings_notifications_section_title)) {
             val allowed = notificationPermission == NotificationPermissionState.ALLOWED
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -115,7 +115,7 @@ internal fun LazyListScope.notificationPermissionSettingsItems(
     item {
         // Resending is an action, not navigation, so it carries a button instead of the arrow the
         // row above uses to leave the app.
-        UiSection(stringResource(R.string.settings_reminders_send)) {
+        SettingsSection(stringResource(R.string.settings_reminders_send)) {
             SettingsHint(
                 (pendingReminderCount?.let {
                     if (it > 0) resources.getString(R.string.settings_reminders_pending, it)

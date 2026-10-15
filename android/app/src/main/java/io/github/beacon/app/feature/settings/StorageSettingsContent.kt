@@ -66,7 +66,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
         // Without this the page rendered every control disabled with no explanation; a failed read
         // is now visible and recoverable instead of looking like a broken toggle.
         if (loadFailed) {
-            UiSection(stringResource(if (saveFailed) R.string.storage_save_failed_title else R.string.storage_load_failed_title)) {
+            SettingsSection(stringResource(if (saveFailed) R.string.storage_save_failed_title else R.string.storage_load_failed_title)) {
                 BeaconText(state.status.text, color = MaterialTheme.colorScheme.error)
                 BeaconActionButton(
                     stringResource(R.string.action_retry),
@@ -78,7 +78,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                 }
             }
         }
-        UiSection(stringResource(R.string.storage_usage_title)) {
+        SettingsSection(stringResource(R.string.storage_usage_title)) {
             SettingsMetricGrid(
                 listOf(
                     Pair(
@@ -136,7 +136,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                 actions::checkpointStorage,
             )
         }
-        UiSection(stringResource(R.string.settings_cleanup_auto_title)) {
+        SettingsSection(stringResource(R.string.settings_cleanup_auto_title)) {
             SettingsFieldGroup(
                 {
                     BeaconPreferenceToggle(
@@ -156,7 +156,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                 },
             )
         }
-        UiSection(stringResource(R.string.storage_rules_title)) {
+        SettingsSection(stringResource(R.string.storage_rules_title)) {
             SettingsFieldGroup(
                 {
                     BeaconDropdownPreference(
@@ -201,7 +201,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                 custom = true
             }
         }
-        UiSection(stringResource(R.string.storage_preview_title)) {
+        SettingsSection(stringResource(R.string.storage_preview_title)) {
             if (preview != null) {
                 SettingsMetricGrid(
                     listOf(
@@ -241,7 +241,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                 },
             )
         }
-        UiSection(stringResource(R.string.settings_cleanup_all_title)) {
+        SettingsSection(stringResource(R.string.settings_danger_section_title)) {
             BeaconDangerButton(
                 onClick = { clearAllStage = 1 },
                 modifier = Modifier.fillMaxWidth(),
