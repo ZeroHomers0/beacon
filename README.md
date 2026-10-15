@@ -8,33 +8,17 @@ Beacon 是一个自托管的 Android 消息推送应用。手机安装 App，服
 
 本项目包含 Android 客户端、Go 服务端和 Workers 服务端。“三端”指这三个组件；使用时安装 Android App，再任选一种服务端即可。
 
-## 2. 我的优势与同类对比
+## 2. 主要功能
 
-### Beacon 的优势
+- **Android 自托管推送**：支持 WebSocket 即时接收、HTTP 定时补收，以及按电量、时间段、充电和 Wi-Fi 条件切换的规则接收。
+- **两种服务端可选**：Go 单文件 / Docker 适合服务器和 NAS；Cloudflare Workers 使用 Durable Objects SQLite 保存数据。
+- **Beacon 原生 API 与 Bark 兼容接口**：脚本可发送标题、副标题、Markdown 正文、优先级、分组和有效期；原生接口支持最多三个 HTTPS 操作按钮。
+- **离线补收与接收确认**：消息先保存到服务端，手机恢复连接后补收有效消息；推送请求支持幂等键，避免重试产生重复消息。
+- **手机内管理**：在 App 中绑定设备、管理应用令牌、发送测试消息、查看存储概况和清理数据。
+- **通知与消息管理**：支持免打扰时段、过时消息提醒策略、锁屏预览、消息搜索与分组筛选、历史导入导出及设置备份。
+- **MCP 接入**：本机 stdio 服务可供支持 MCP 的 AI 客户端发送任务通知，详见 [MCP 文档](mcp/README.md)。
 
-- **Android 上接入 Bark 推送生态**：提供 Bark 兼容接口，允许自定义服务器地址的脚本和第三方软件可以接入，消息由 Beacon Android App 接收，减少改写推送脚本的工作。
-- **两种服务端，按现有环境部署**：已有服务器或 NAS 可以用 Go 单文件 / Docker；也可以部署到 Cloudflare Workers，无需自行维护服务器进程。两种后端共用客户端协议与管理接口。
-- **接收方式可按使用场景调整**：支持 WebSocket 即时接收、HTTP 定时补收，以及按电量、时间段、充电和 Wi-Fi 条件切换的规则接收，方便在通知时效与后台耗电之间取舍。
-- **消息先保存，断线后可补收**：服务端先持久化消息，客户端恢复连接后补收尚未过期的消息，并确认接收；手机同时保存本地历史，便于回看。
-- **手机内完成日常管理**：在 App 中管理服务器、绑定设备、创建与撤销应用令牌、发送测试消息，无需切换到浏览器管理页面。管理、发送与接收使用不同凭据，脚本令牌可以单独撤销。
-
-### 与 Bark、Gotify 对比
-
-| 对比项 | Beacon | Bark | Gotify |
-| --- | --- | --- | --- |
-| 主要接收端 | Android App | iOS App | Android App、Web UI |
-| 即时投递方式 | 自建服务端到 App 的 WebSocket | Apple APNs；自建 Bark 服务端仍通过 APNs 投递 | 自建服务端到客户端的 WebSocket |
-| 服务端部署 | Go 单文件 / Docker，或 Cloudflare Workers | 可使用公共服务或自建 Bark 服务端 | 自建 Gotify 服务端，支持 Docker / 二进制部署 |
-| 推送接口 | Beacon 原生 API + 部分 Bark 兼容 API | Bark HTTP API | Gotify REST API |
-| 接收策略 | 即时、省电、规则接收；支持 HTTP 补收 | 由 iOS 系统推送通道投递 | WebSocket 实时接收 |
-| 管理方式 | Android App 内管理设备与应用令牌 | App 内配置推送服务与通知选项 | Web UI 管理用户、客户端与应用 |
-| 适合的场景 | Android 接收 Bark 兼容推送，或希望选择 Workers 部署及规则接收 | iPhone 通知，利用 iOS 通知分组、铃声、时效性通知等功能 | 需要 Web 管理、多用户管理或插件扩展的自托管消息服务 |
-
-Beacon 的侧重点是 **Android + Bark 兼容 + Workers 可选部署 + 灵活接收策略**。Bark 在 iOS 系统通知能力上更合适，Gotify 提供 Web UI、多用户管理和插件机制；这些能力不能由 Beacon 的兼容接口代替。Beacon 当前没有 iOS 客户端或浏览器管理首页，Bark 参数的兼容范围见第 6 节。
-
-WebSocket 即时接收需要允许 Android 后台运行，耗电与连接稳定性受设备和系统限制影响；省电接收可能延迟，接收确认也不等于用户已经阅读消息。
-
-对比依据：[Bark 官方项目说明](https://github.com/Finb/Bark)、[Gotify 官方项目说明](https://github.com/gotify/server)及[Gotify 文档](https://gotify.net/docs/)。
+即时接收需要允许 Android 后台运行，连接稳定性受系统和网络影响；定时补收可能延迟。服务端接收成功表示消息已保存，接收确认表示客户端已接收，均不代表用户已经阅读。
 
 ## 3. 技术架构
 
@@ -65,7 +49,7 @@ flowchart LR
 
 ### 4.1 Android 客户端
 
-1. 打开 [Releases](https://github.com/ZeroHomers0/beacon/releases)，下载通用包 `beacon-release.apk`。后续版本也提供 `beacon-release-arm64-v8a.apk`（64 位 ARM）和 `beacon-release-armeabi-v7a.apk`（32 位 ARM）；不确定设备架构时选择通用包。
+1. 打开 [Releases](https://github.com/ZeroHomers0/beacon/releases)，下载通用包 `beacon-release.apk`。同时提供 `beacon-release-arm64-v8a.apk`（64 位 ARM）和 `beacon-release-armeabi-v7a.apk`（32 位 ARM）；不确定设备架构时选择通用包。
 2. 在 Android 8.0 及以上设备安装，首次安装时按系统提示允许对应来源安装应用。
 3. 安装后按第 5 节绑定自己的服务端，并开启通知权限。
 
@@ -98,8 +82,6 @@ curl http://127.0.0.1:8088/healthz
 
 配置自己的 HTTPS 域名，例如 `https://push.example.com`，将反向代理上游指向 `http://127.0.0.1:8088`，并开启 WebSocket 转发（保留 `Upgrade` 和 `Connection` 请求头）。Compose 默认只监听宿主机回环地址；如果反向代理运行在其他容器或其他机器，需要相应调整网络与上游地址。
 
-更新时在同一目录运行 `docker compose pull` 和 `docker compose up -d`。升级前备份数据目录，保留原有数据挂载。
-
 #### 单文件部署
 
 从 [Releases](https://github.com/ZeroHomers0/beacon/releases) 下载符合服务器架构的 `beacon-server-linux-amd64` 或 `beacon-server-linux-arm64`。以 amd64 为例：
@@ -116,8 +98,6 @@ export BEACON_WEB_ADMIN_TOKEN="$(openssl rand -hex 32)"
 
 #### 可视化快速部署
 
-以下流程参考 [NodeWarden 中文 README 的可视化快速部署](https://github.com/shuaiplus/nodewarden/blob/main/README_ZH.md#可视化快速部署)，目录、命令和机密名称已按 Beacon 调整。
-
 1. 将 [Beacon 仓库](https://github.com/ZeroHomers0/beacon) Fork 到自己的 GitHub 账号。
 2. 打开 [Cloudflare 控制台](https://dash.cloudflare.com/)，进入 **Workers & Pages**，创建 Worker，选择通过 GitHub 仓库导入，授权并选中自己的 Fork。
 3. 设置根目录为 `workers`，Worker 名称与 `workers/wrangler.toml` 中的 `name` 保持一致，默认是 `beacon-server`。
@@ -127,7 +107,7 @@ export BEACON_WEB_ADMIN_TOKEN="$(openssl rand -hex 32)"
 
 `ADMIN_TOKEN` 必须是运行时机密，放在 Build variables 中无法供服务端使用。未配置或长度不足 32 字符时，服务端返回 `503 server_not_configured`。
 
-本项目通过 [wrangler.toml](workers/wrangler.toml) 创建 `BEACON` Durable Objects 绑定和 SQLite 类迁移，首次访问时自动初始化数据库，无需手工创建 D1、KV、R2 或上传 SQL。保留默认 `BEACON_INSTANCE=default`；绑定设备后修改它会指向另一个实例，原设备与消息不会自动迁移。
+本项目通过 [wrangler.toml](workers/wrangler.toml) 声明 `BEACON` Durable Objects 绑定和 SQLite 存储类，首次访问时自动初始化数据库，无需手工创建 D1、KV、R2 或上传 SQL。保留默认 `BEACON_INSTANCE=default`；修改它会指向另一个数据实例，因此绑定设备后应保持不变。
 
 如果默认 `workers.dev` 域名在你的网络中无法访问，可在 Worker 的域名设置中添加自定义域名。SQLite Durable Objects 可用于 Workers 免费计划，具体额度和收费以 [Cloudflare 官方说明](https://developers.cloudflare.com/durable-objects/platform/pricing/) 为准。
 
@@ -146,12 +126,6 @@ npx wrangler secret put ADMIN_TOKEN
 ```
 
 最后一步按提示输入自己生成的管理令牌。部署完成后用 `/healthz` 检查服务，并保存服务地址与管理令牌。
-
-更新可在 Fork 仓库中使用 **Sync fork → Update branch**，由 Cloudflare Git 集成重新部署；CLI 部署则拉取最新代码后，在 `workers/` 下运行 `npm ci`、`npm run check` 和 `npm run deploy`。更新后检查运行时 `ADMIN_TOKEN` 与原有实例配置。
-
-### 升级到 v1.1.0
-
-升级前备份服务端数据库或存储，建议先升级服务端，再安装新版 Android App。三端自动迁移数据库，已有设备凭据、消息和接收状态保持有效。旧脚本继续使用原有字段；使用 `group`、`ttl`、幂等键与应用来源显示时，需要新版服务端配合。手机历史备份增加来源、分组和有效期字段，新版客户端仍可导入旧备份。
 
 ## 5. 简单教程
 
@@ -173,22 +147,33 @@ curl -X POST 'https://push.example.com/api/v1/push' \
 
 将 `https://push.example.com` 替换为自己的服务地址，`YOUR_PUSH_KEY` 替换为设备推送密钥。App 的连接设置也提供可直接复制的推送示例。
 
-### 日常使用
+### 接收方式与省电设置
 
-- **即时接收**：保持 WebSocket 连接，断线后自动重试并补收，适合需要及时通知的场景。
-- **省电接收**：通过 HTTP 周期接收，执行时间受 Android 后台调度影响。
-- **规则接收**：按电量、时间段、充电或 Wi-Fi 条件切换接收方式。
-- **自适应心跳**：默认开启，新版服务端支持时从 60 秒开始验证，逐步延长至最多 300 秒。按服务器与网络特征在手机本地记忆已验证参数，重连先验证短间隔再复用；心跳超时回退，稳定后重新探索较长间隔。关闭后使用原有固定间隔。旧服务端自动使用固定心跳。
-- **普通消息批量接收**：默认关闭。开启后，优先级 0–7 的新消息等待下一次心跳集中投递，8–10 的重要通知仍立即投递；每批最多 100 条，积压较多时分批恢复。自适应模式正常连接下通常最多约五分钟，系统休眠和断线可能进一步延迟；手动同步与重连补收仍可立即拉取全部优先级消息。需要升级 Go 服务端或重新部署 Workers。
-- **应用令牌**：在「服务器管理」中为脚本创建独立应用推送令牌，设置默认优先级，需要时可单独撤销。应用管理里可复制该应用的推送地址，地址为服务地址加 `/api/v1/push`，令牌只在创建时显示一次、服务端只保存哈希，因此复制出的地址不含令牌，发送时需自行携带 `Authorization: Bearer <应用令牌>`。撤销后该应用可彻底删除，删除时同时移除它发送的消息与投递队列；同一设备上其他应用和推送密钥发出的消息不受影响。
+| 模式 | 行为 | 适用情况 |
+| --- | --- | --- |
+| 即时接收 | 保持 WebSocket 连接，断线重连后补收 | 需要及时接收通知 |
+| 省电接收 | 使用 HTTP 周期补收，执行时间由 Android 后台调度决定 | 可以接受延迟；也是初始默认模式 |
+| 规则接收 | 根据电量、时间段、充电或 Wi-Fi 条件切换 | 希望按使用环境调整接收方式 |
 
-即时模式会复用正常工作的 WebSocket，最近一小时内完整 HTTP 同步成功且没有待提交接收回执时，周期任务省略重复 HTTP 补收；到期后的下一次周期任务仍会进行完整补收。断线重连后的补收和手动同步不受这一省略规则影响。无网络时等待系统网络恢复事件，回执最多按一秒窗口合并提交，通知仍按原有短窗口展示；消息先持久化，再确认。服务器返回限流或故障时停止本轮继续请求，并在自动重试中遵守 `Retry-After`（最长一小时），待接收消息和回执保留。这些措施减少无效网络请求和后台工作，实际电量收益仍取决于设备、网络及消息频率。
+自适应心跳默认开启，从 60 秒开始验证，逐步延长至最多 300 秒；发生心跳超时后回退。关闭后使用所选固定间隔。反向代理应允许至少 450 秒的 WebSocket 空闲连接。
 
-前台界面通过应用内状态变化提示刷新接收状态和消息列表，突发变化按 250 毫秒窗口合并；保留 60 秒兜底检查，回到前台立即读取最新状态。稳定接收状态使用静态指示，避免持续旋转动画。
+「普通消息批量接收」默认关闭。开启后，优先级 0–7 的新消息等待下一次心跳集中投递，8–10 仍立即投递，每批最多 100 条。手动同步和重连补收可直接拉取消息；批量接收会增加普通消息的等待时间。
 
-未获得电池优化豁免的设备进入系统休眠时，客户端暂停长连接及重连，保留 WorkManager 的维护窗口补收；退出休眠后恢复连接并补收，WorkManager 不保证休眠期间即时送达。系统省电且熄屏时，新版服务端使用 300 秒控制心跳，亮屏恢复原有心跳策略；旧服务端保持原有固定心跳。HTTP 每页消息在一个 SQLite 事务中保存，Android 9 及以上启用 WAL 并显式使用 FULL 同步模式，提交后才确认接收。
+客户端会合并接收回执、减少正常连接下的重复 HTTP 补收，并在限流或服务故障时按 `Retry-After` 等待重试。未获电池优化豁免的设备进入系统休眠时会暂停长连接，退出休眠后恢复并补收；休眠期间的后台任务不保证即时执行。
 
-新版心跳接近发送时间时，会与回执或完整补收的网络活动合并，提前对齐的探测不用于证明更长空闲间隔可用。网络参数记忆最多保留 16 项、有效期七天，不申请额外位置权限，不上传或导出；不同网络可能具有相同网络特征，因此历史参数始终重新验证。新设置备份为版本 4，恢复旧备份保留固定心跳和即时普通消息的行为。原生 WebSocket Ping/Pong 与旧客户端保持兼容，新增控制报文仅在服务端声明 `reception_control: 1` 后使用。Go 服务端空闲超时为 450 秒，部署代理也应允许至少 450 秒空闲连接；更长心跳主要延长静默断线发现时间，不会延迟正常即时模式的消息。
+### 通知、历史与应用令牌
+
+- **通知设置**：按优先级选择通知渠道，可设置免打扰时段、过时消息静默或仅保存，以及锁屏内容预览。最终提醒效果受 Android 通知渠道与系统设置影响。
+- **消息详情**：支持 Markdown 渲染、查看原文、复制与分享；正文图片默认不下载，提供点击加载入口。HTTPS 操作按钮由用户点击后打开。
+- **搜索与筛选**：可按已读状态、分组或应用筛选，也可搜索标题、正文、分组、应用名称和 ID；支持 `group:CI`、`app:完整应用ID`。
+- **存储与备份**：手机本地历史支持清理、导入导出，设置可单独备份；服务端历史保留时间独立配置。
+- **应用令牌**：在「服务器管理」中为脚本创建独立令牌并设置默认优先级。令牌只在创建时显示一次，发送时使用 `Authorization: Bearer <应用令牌>`；复制的推送地址不含令牌。令牌可单独撤销；撤销后可删除应用及其消息和投递队列。
+
+### MCP 接入
+
+仓库的 `mcp/` 提供本机 stdio 服务，需要 Node.js 18 或以上。将 MCP 客户端的启动命令配置为 `node /绝对路径/beacon/mcp/beacon.mjs`，并传入 `BEACON_BASE_URL` 和 `BEACON_PUSH_KEY` 即可发送通知，无需单独部署网络服务。
+
+工具包括 `push_notification`（推送）、`beacon_status`（只读能力查询）和 `beacon_apps`（只读管理概况）；后两项分别需要额外的设备接收凭据与管理令牌。完整配置、参数与验证方式见 [MCP README](mcp/README.md)。
 
 ## 6. 支持的 API
 
@@ -219,9 +204,9 @@ curl -X POST 'https://push.example.com/api/v1/push' \
 
 成功返回 HTTP 200，响应包含消息的 `id`、`sequence`、`expires_at_ms` 等信息。使用应用令牌发送时还包含 `application_id` 与 `application_name`；它们由服务器生成，不能由发送方指定。
 
-正文可直接发送 Markdown，无需额外格式字段，原生 API 与 Bark 接口均适用。新版 Android 客户端在详情页渲染标题、加粗、斜体、列表、引用、链接和代码块，并提供「查看原文」切换；通知与消息列表显示去除排版标记的短摘要。复制、分享和搜索仍使用原始正文。Markdown 中前五个不同的有效 HTTPS 图片地址提供点击加载入口，默认不下载图片；网页链接点击后确认打开。HTML 只显示为文本，暂不支持表格、公式等扩展语法。正文上限仍为 65536 UTF-8 字节，无需升级服务端，旧版客户端继续显示原文。
+正文可直接发送 Markdown，无需额外格式字段，原生 API 与 Bark 接口均适用。Android 客户端在详情页渲染标题、加粗、斜体、列表、引用、链接和代码块，并提供「查看原文」切换；通知与消息列表显示去除排版标记的短摘要。复制、分享和搜索仍使用原始正文。Markdown 中前五个不同的有效 HTTPS 图片地址提供点击加载入口，默认不下载图片；网页链接点击后确认打开。HTML 只显示为文本，暂不支持表格、公式等扩展语法。正文上限为 65536 UTF-8 字节。
 
-#### 带操作按钮的消息（v1.1.3 起）
+#### 带操作按钮的消息
 
 每个操作必须包含 `title` 和 `url`，不接受其他字段。`title` 不能全为空白或包含控制字符，最多 64 UTF-8 字节；`url` 最多 2048 UTF-8 字节，必须为有效 HTTPS 地址，不能包含用户名或密码。`actions: null`、超过 3 个按钮或无效字段返回 `400 invalid_message`。
 
@@ -232,9 +217,9 @@ curl -X POST 'https://push.example.com/api/v1/push' \
   -d '{"title":"构建失败","body":"主分支构建失败，请查看日志","group":"CI","actions":[{"title":"查看日志","url":"https://ci.example.com/builds/123"},{"title":"打开项目","url":"https://git.example.com/team/project"}]}'
 ```
 
-新版 App 在消息详情展示按钮和目标地址，点击后交给系统浏览器或对应应用打开。收到消息不会自动打开链接，也不会代用户发起带鉴权的请求。按钮随历史消息和备份保存，HTTP 补收与即时接收均支持；幂等判断包含按钮标题、地址和排列顺序。
+App 在消息详情展示按钮和目标地址，点击后交给系统浏览器或对应应用打开。收到消息不会自动打开链接，也不会代用户发起带鉴权的请求。按钮随历史消息和备份保存，HTTP 补收与即时接收均支持；幂等判断包含按钮标题、地址和排列顺序。
 
-使用此功能需升级服务端与 Android App 至 v1.1.3。已有消息和旧备份继续兼容；旧版 App 会忽略新按钮字段。Bark 的 `url` 在新版详情页显示为“打开链接”按钮，Bark 接口暂不支持 `actions` 数组。
+Bark 的 `url` 在详情页显示为“打开链接”按钮，Bark 接口不支持 `actions` 数组。
 
 需要自动重试的脚本可添加 `Idempotency-Key` 请求头（1–128 个不含空格的可见 ASCII 字符）。同一发送凭据下，相同键与相同内容在首次成功后七天内返回原消息，不重复保存或创建投递任务；同键不同内容返回 `409 idempotency_conflict`。消息已确认、已过期或历史已清理时仍返回原结果，不重新投递。换用不同凭据、超过七天或不带幂等键时会创建新消息。每个业务事件使用一个新键，失败重试时保持键和内容一致。
 
@@ -347,13 +332,13 @@ curl -X POST 'https://push.example.com/api/admin/binding' \
   -d '{"name":"我的手机"}'
 ```
 
-Go 服务端需要设置 `BEACON_WEB_ADMIN_TOKEN` 才会启用管理接口；Workers 必须设置 `ADMIN_TOKEN` 才能正常提供服务。
+Go 服务端需要设置 `BEACON_WEB_ADMIN_TOKEN` 才会启用管理接口，要求为 64 位十六进制字符串，也可通过 `BEACON_WEB_ADMIN_TOKEN_FILE` 从文件读取；Workers 必须设置至少 32 字符的 `ADMIN_TOKEN` 才能正常提供服务。
 
-## 7. 疑问
+## 7. 常见问题
 
 ### 必须同时部署 Go 和 Workers 吗？
 
-任选一个即可。已有服务器或 NAS 可以使用 Go / Docker；希望托管在 Cloudflare 上可以使用 Workers。更换服务端需要在 App 中重新绑定，两种后端的数据不会自动同步或迁移。
+任选一个即可。已有服务器或 NAS 可以使用 Go / Docker；希望托管在 Cloudflare 上可以使用 Workers。更换服务端需要在 App 中重新绑定，两种后端的数据独立保存。
 
 ### 打开服务地址为什么没有网页？
 
@@ -382,10 +367,6 @@ Go 服务端需要设置 `BEACON_WEB_ADMIN_TOKEN` 才会启用管理接口；Wor
 ### 消息保存多久？
 
 未确认接收的消息投递窗口为 7 天，回执窗口为 30 天。已确认消息的服务端历史默认保留 1 天，可用 Go 的 `BEACON_HISTORY_RETENTION_DAYS` 或 Workers 的 `HISTORY_RETENTION_DAYS` 调整，实际范围为 1–30 天，`0` 按 1 天处理。手机本地消息由 App 的存储与清理设置管理。
-
-### 更新或重新部署后需要重新绑定吗？
-
-保留原数据库、Durable Objects 实例及凭据时，通常无需重新绑定。删除持久化数据、改动 `BEACON_INSTANCE` 或更换后端会影响原有绑定。重新部署代码不会自动清空 Workers 中的设备和消息。
 
 ### 可以使用 HTTP 地址吗？
 

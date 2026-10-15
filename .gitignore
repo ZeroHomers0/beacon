@@ -42,3 +42,7 @@ workers/test/
 workers/vitest.config.ts
 workers/tools/test.mjs
 workers/tools/protocol.mjs
+
+# MCP dependencies and local client-registration helper.
+/mcp/node_modules/
+/mcp/tools/register-ccswitch.mjs

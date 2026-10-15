@@ -1,0 +1,17 @@
+{
+  "name": "beacon-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local MCP server exposing the Beacon push API to MCP clients over stdio",
+  "bin": {
+    "beacon-mcp": "./beacon.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node beacon.mjs",
+    "test": "node tools/self-test.mjs && node tools/self-test.mjs headers"
+  }
+}
