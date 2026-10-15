@@ -174,7 +174,8 @@ fun BeaconDropdownPreference(
                         expanded = true
                     }
                     .heightIn(min = 56.dp)
-                    .padding(vertical = 12.dp)
+                    .padding(vertical = 12.dp),
+                contentAlignment = androidx.compose.ui.Alignment.CenterStart,
             ) {
                 val value = items.getOrElse(selectedIndex) { "" }
                 val titleWidth =

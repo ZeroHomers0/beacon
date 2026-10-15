@@ -448,12 +448,16 @@ internal fun ServerAdminPage(
             title = { BeaconText(stringResource(secret.label)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    DiagnosticRow(stringResource(secret.label), secret.value)
-                    if (secret.expiresAt > 0)
-                        DiagnosticRow(
-                            stringResource(R.string.admin_expires),
-                            formatMessageTime(secret.expiresAt),
-                        )
+                    Column {
+                        DiagnosticRow(stringResource(secret.label), secret.value)
+                        if (secret.expiresAt > 0) {
+                            SettingsFieldDivider()
+                            DiagnosticRow(
+                                stringResource(R.string.admin_expires),
+                                formatMessageTime(secret.expiresAt),
+                            )
+                        }
+                    }
                     SettingsHint(
                         stringResource(
                             if (secret.example.isEmpty()) R.string.admin_binding_hint

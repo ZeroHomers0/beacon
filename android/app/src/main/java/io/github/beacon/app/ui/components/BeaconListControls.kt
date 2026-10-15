@@ -155,7 +155,7 @@ fun BeaconPreferenceToggle(
     onCheckedChange: (Boolean) -> Unit,
 ) {
     Row(
-        Modifier.fillMaxWidth().heightIn(min = if (summary.isBlank()) 48.dp else 64.dp),
+        Modifier.fillMaxWidth().heightIn(min = if (summary.isBlank()) 56.dp else 64.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -226,7 +226,10 @@ fun DiagnosticRow(label: String, value: String) {
         shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
         color = androidx.compose.ui.graphics.Color.Transparent,
     ) {
-        BoxWithConstraints(Modifier.padding(vertical = 10.dp)) {
+        BoxWithConstraints(
+            Modifier.heightIn(min = 56.dp).padding(vertical = 12.dp),
+            contentAlignment = Alignment.CenterStart,
+        ) {
             val labelWidth = measurer.measure(label, labelStyle, maxLines = 1).size.width
             val valueWidth = measurer.measure(value, valueStyle, maxLines = 1).size.width
             val fits =

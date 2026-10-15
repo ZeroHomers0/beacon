@@ -181,6 +181,16 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                         save(settings.copy(policy = policy.copy(maxMessages = limits[it])))
                     }
                 },
+                {
+                    BeaconPreferenceToggle(
+                        stringResource(R.string.storage_keep_unread),
+                        "",
+                        policy.keepUnread,
+                        enabled = !state.messageBusy && settingsLoaded && !saving,
+                    ) {
+                        save(settings.copy(policy = policy.copy(keepUnread = it)))
+                    }
+                },
             )
             BeaconActionButton(
                 stringResource(R.string.storage_custom),
@@ -189,14 +199,6 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                 !state.messageBusy && settingsLoaded && !saving,
             ) {
                 custom = true
-            }
-            BeaconPreferenceToggle(
-                stringResource(R.string.storage_keep_unread),
-                "",
-                policy.keepUnread,
-                enabled = !state.messageBusy && settingsLoaded && !saving,
-            ) {
-                save(settings.copy(policy = policy.copy(keepUnread = it)))
             }
         }
         UiSection(stringResource(R.string.storage_preview_title)) {

@@ -151,18 +151,20 @@ internal fun LazyListScope.receptionSettingsItems(
                                 receptionForm.plan.copy(heartbeatSeconds = RealtimeHeartbeat.options[it])
                             receptionForm.edited = true
                         }
+                        SettingsHint(stringResource(R.string.receive_heartbeat_hint))
+                    },
+                    {
+                        BeaconPreferenceToggle(
+                            stringResource(R.string.receive_batch_ordinary),
+                            stringResource(R.string.receive_batch_ordinary_hint),
+                            receptionForm.plan.batchOrdinaryMessages,
+                            !busy && runtimeState.receivePlanLoaded,
+                        ) {
+                            receptionForm.plan = receptionForm.plan.copy(batchOrdinaryMessages = it)
+                            receptionForm.edited = true
+                        }
                     },
                 )
-                SettingsHint(stringResource(R.string.receive_heartbeat_hint))
-                BeaconPreferenceToggle(
-                    stringResource(R.string.receive_batch_ordinary),
-                    stringResource(R.string.receive_batch_ordinary_hint),
-                    receptionForm.plan.batchOrdinaryMessages,
-                    !busy && runtimeState.receivePlanLoaded,
-                ) {
-                    receptionForm.plan = receptionForm.plan.copy(batchOrdinaryMessages = it)
-                    receptionForm.edited = true
-                }
             }
         }
     }
@@ -178,33 +180,35 @@ internal fun LazyListScope.receptionSettingsItems(
                 val unmetered = receptionForm.unmetered
                 val charging = receptionForm.charging
                 val intervals = (listOf(15, 30, 60, 120) + interval).distinct().sorted()
-                BeaconDropdownPreference(
-                    stringResource(R.string.receive_interval),
-                    intervals.map {
-                        if (it < 60)
-                            stringResource(
-                                R.string.settings_interval_minutes_option,
-                                it,
-                            )
-                        else if (it % 60 == 0)
-                            stringResource(
-                                R.string.settings_interval_hours_option,
-                                it / 60,
-                            )
-                        else
-                            stringResource(
-                                R.string.settings_interval_minutes_option,
-                                it,
-                            )
-                    },
-                    intervals.indexOf(interval),
-                    !busy,
-                ) {
-                    receptionForm.interval = intervals[it]
-                    receptionForm.edited = true
-                }
                 Column {
                     SettingsFieldGroup(
+                        {
+                            BeaconDropdownPreference(
+                                stringResource(R.string.receive_interval),
+                                intervals.map {
+                                    if (it < 60)
+                                        stringResource(
+                                            R.string.settings_interval_minutes_option,
+                                            it,
+                                        )
+                                    else if (it % 60 == 0)
+                                        stringResource(
+                                            R.string.settings_interval_hours_option,
+                                            it / 60,
+                                        )
+                                    else
+                                        stringResource(
+                                            R.string.settings_interval_minutes_option,
+                                            it,
+                                        )
+                                },
+                                intervals.indexOf(interval),
+                                !busy,
+                            ) {
+                                receptionForm.interval = intervals[it]
+                                receptionForm.edited = true
+                            }
+                        },
                         {
                             BeaconPreferenceToggle(
                                 stringResource(R.string.receive_unmetered_title),
