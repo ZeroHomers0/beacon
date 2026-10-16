@@ -130,6 +130,11 @@ class MessageNotifications(
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(if (settings.lockscreenPreview) title(batch) else "Beacon")
                 .setContentText(if (settings.lockscreenPreview) summary else "有新消息，请打开应用查看")
+                .apply {
+                    if (settings.lockscreenPreview) {
+                        setStyle(notificationStyle(batch, expanded, message))
+                    }
+                }
                 .build()
         val notification =
             Notification.Builder(context, channel)
@@ -138,7 +143,7 @@ class MessageNotifications(
                     if (batch.count == 1) batch.title.ifBlank { "Beacon 新消息" } else "Beacon 消息摘要"
                 )
                 .setContentText(summary)
-                .setStyle(Notification.BigTextStyle().bigText(expanded))
+                .setStyle(notificationStyle(batch, expanded, message))
                 .setContentIntent(open)
                 .setAutoCancel(true)
                 .setOnlyAlertOnce(true)
@@ -189,6 +194,24 @@ class MessageNotifications(
             else notification
         manager.notify(batch.tag, ID, presented)
         return true
+    }
+
+    private fun notificationStyle(
+        batch: NotificationBatch,
+        text: String,
+        message: IncomingMessage?,
+    ): Notification.Style {
+        if (batch.count != 1) return Notification.BigTextStyle().bigText(text)
+        val timestamp = message?.receivedAtMs?.takeIf { it > 0 } ?: System.currentTimeMillis()
+        return if (Build.VERSION.SDK_INT >= 28) {
+            val self = android.app.Person.Builder().setName("Beacon").build()
+            val sender = android.app.Person.Builder().setName(title(batch)).build()
+            Notification.MessagingStyle(self)
+                .setGroupConversation(false)
+                .addMessage(Notification.MessagingStyle.Message(text, timestamp, sender))
+        } else {
+            Notification.MessagingStyle("Beacon").addMessage(text, timestamp, title(batch))
+        }
     }
 
     private fun title(batch: NotificationBatch): String =
