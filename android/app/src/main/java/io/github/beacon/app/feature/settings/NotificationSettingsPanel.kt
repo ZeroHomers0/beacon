@@ -5,7 +5,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.*
 import io.github.beacon.app.ipc.RuntimeActions
@@ -49,7 +48,7 @@ internal fun NotificationSettingsPanel(state: RuntimeState, actions: RuntimeActi
             if (saved.freshMinutes in it) it else (it + saved.freshMinutes).sorted()
         }
     Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SettingsGroupGap)) {
-        SettingsSection(stringResource(R.string.notification_age_title)) {
+        SettingsPreferences(stringResource(R.string.notification_age_title)) {
             SettingsFieldGroup(
                 {
                     BeaconDropdownPreference(
@@ -78,9 +77,8 @@ internal fun NotificationSettingsPanel(state: RuntimeState, actions: RuntimeActi
                     }
                 },
             )
-
         }
-        SettingsSection(stringResource(R.string.notification_privacy_title)) {
+        SettingsPreferences(stringResource(R.string.notification_privacy_title)) {
             BeaconPreferenceToggle(
                 stringResource(R.string.notification_lockscreen_preview),
                 stringResource(R.string.notification_lockscreen_hint),

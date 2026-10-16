@@ -37,7 +37,7 @@ internal fun QuietHoursPanel(
         val labels = stringResource(R.string.quiet_weekdays).split(",")
         Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SettingsGroupGap)) {
             if (!scheduleOnly)
-                SettingsSection(stringResource(R.string.ui_v2_quiet_section)) {
+                SettingsPreferences(stringResource(R.string.ui_v2_quiet_section)) {
                     SettingsFieldGroup(
                         {
                             BeaconPreferenceToggle(
@@ -72,8 +72,7 @@ internal fun QuietHoursPanel(
                         ) {
                             Row(
                                 Modifier.fillMaxWidth()
-                                    .heightIn(min = BeaconUiMetrics.ControlMinHeight)
-                                    .padding(vertical = BeaconUiMetrics.FieldVerticalInset),
+                                    .heightIn(min = BeaconUiMetrics.FieldMinHeight),
                                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                             ) {
@@ -121,37 +120,23 @@ internal fun QuietHoursPanel(
                     )
             }
             if (scheduleOnly || onSchedule == null) {
-                if (scheduleOnly)
-                    SettingsCard(Modifier.fillMaxWidth()) {
-                        Column(
-                            Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),
-                            verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
-                            content = scheduleContent,
-                        )
-                    }
-                else SettingsSection(stringResource(R.string.quiet_schedule), scheduleContent)
+                SettingsSection(
+                    stringResource(R.string.settings_time_range_heading),
+                    scheduleContent,
+                )
             }
-            if (scheduleOnly)
-                SettingsCard(Modifier.fillMaxWidth()) {
-                    Column(
-                        Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),
-                        verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
-                    ) {
-                        BeaconText(
-                            stringResource(R.string.ui_v2_quiet_effect),
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
-                        BeaconText(
-                            stringResource(
-                                if (draft.behavior == QuietHoursBehavior.SILENT)
-                                    R.string.quiet_silent
-                                else R.string.quiet_save_only
-                            ),
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                        SettingsHint(stringResource(R.string.ui_v2_quiet_scope_short))
-                    }
+            if (scheduleOnly) {
+                SettingsSection(stringResource(R.string.ui_v2_quiet_effect)) {
+                    BeaconText(
+                        stringResource(
+                            if (draft.behavior == QuietHoursBehavior.SILENT) R.string.quiet_silent
+                            else R.string.quiet_save_only
+                        ),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    SettingsHint(stringResource(R.string.ui_v2_quiet_scope_short))
                 }
+            }
             if (failed) {
                 BeaconText(state.status.text, color = MaterialTheme.colorScheme.error)
                 BeaconActionButton(

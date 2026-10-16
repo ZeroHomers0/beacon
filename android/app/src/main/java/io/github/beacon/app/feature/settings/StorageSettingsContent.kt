@@ -88,16 +88,11 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                 }
             }
         }
-        SettingsCard(Modifier.fillMaxWidth()) {
+        SettingsGroup(stringResource(R.string.storage_local_database)) {
             Column(
                 Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),
                 verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
             ) {
-                BeaconText(
-                    stringResource(R.string.storage_local_database),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
                 BeaconText(
                     preview?.databaseBytes?.let {
                         android.text.format.Formatter.formatFileSize(context, it)
@@ -146,21 +141,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                     )
-                    BeaconTextButton(
-                        onClick = { actions.previewCleanup(policy) },
-                        enabled = state.runtimeConnected && settingsLoaded && !state.messageBusy,
-                    ) {
-                        BeaconText(stringResource(R.string.storage_refresh))
-                    }
                 }
-                BeaconText(
-                    stringResource(
-                        R.string.storage_sampled_inline,
-                        preview?.sampledAtMs?.let { formatMessageTime(it) } ?: "—",
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
                 SettingsFieldDivider()
                 BeaconActionButton(
                     stringResource(R.string.storage_wal_clear),
@@ -174,7 +155,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                 )
             }
         }
-        SettingsSection(stringResource(R.string.settings_cleanup_auto_title)) {
+        SettingsPreferences(stringResource(R.string.settings_cleanup_auto_title)) {
             SettingsFieldGroup(
                 {
                     BeaconPreferenceToggle(
@@ -196,7 +177,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                 },
             )
         }
-        SettingsSection(stringResource(R.string.storage_rules_title)) {
+        SettingsPreferences(stringResource(R.string.storage_rules_title)) {
             SettingsFieldGroup(
                 {
                     BeaconDropdownPreference(

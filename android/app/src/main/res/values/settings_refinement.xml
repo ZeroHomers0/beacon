@@ -1,4 +1,11 @@
 <resources>
+    <string name="time_range_overnight">跨天时间段 · 次日 %1$s 结束</string>
+    <string name="time_range_same_day">当天时间段 · %1$s 结束</string>
+    <string name="settings_connection_status_heading">连接状态</string>
+    <string name="settings_permission_status_heading">授权状态</string>
+    <string name="settings_about_links_heading">相关链接</string>
+    <string name="settings_api_heading">开发者工具</string>
+    <string name="settings_time_range_heading">时段设置</string>
     <string name="admin_more_actions">更多操作</string>
     <string name="receive_success_count">新增 %1$d 条</string>
     <string name="push_example_curl">复制 curl 示例</string>

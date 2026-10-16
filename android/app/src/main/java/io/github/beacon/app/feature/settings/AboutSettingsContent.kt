@@ -107,7 +107,7 @@ private fun AboutLinks(
             onOperationDetails(resources.getString(R.string.settings_about_browser_blocked))
         }
     }
-    SettingsGroup("") {
+    SettingsGroup(stringResource(R.string.settings_about_links_heading)) {
         SettingsRow(stringResource(R.string.settings_about_project), "", BeaconIcons.Cloud) {
             open("https://github.com/ZeroHomers0/beacon")
         }

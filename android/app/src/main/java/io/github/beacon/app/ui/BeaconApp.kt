@@ -726,6 +726,11 @@ fun BeaconApp(
                                                     ui.navigateSettings(SettingsScreen.HOME)
                                                     navigate(1)
                                                 }
+                                            } else if (displayedDetail == null && barPage == 1 && displayedSettingsScreen == SettingsScreen.SERVER_ADMIN) {
+                                                BeaconActionIcon(
+                                                    BeaconIcons.Sync, stringResource(R.string.admin_refresh),
+                                                    adminState.loggedIn && !adminState.busy,
+                                                ) { adminModel.refresh() }
                                             } else if (displayedDetail == null && barPage == 1 && displayedSettingsScreen in setOf(SettingsScreen.SERVER_DEVICES, SettingsScreen.SERVER_APPLICATIONS)) {
                                                 BeaconActionIcon(
                                                     BeaconIcons.Add,

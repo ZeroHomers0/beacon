@@ -194,16 +194,6 @@ internal fun ServerAdminPage(
                     )
                     if (state.protocol != 1)
                         SettingsHint(stringResource(R.string.admin_protocol_unknown))
-
-                    BeaconActionButton(
-                        stringResource(
-                            if (state.busy) R.string.admin_loading else R.string.admin_refresh
-                        ),
-                        BeaconIcons.Sync,
-                        Modifier.fillMaxWidth(),
-                        !state.busy,
-                        model::refresh,
-                    )
                 }
             }
             item {
@@ -510,7 +500,10 @@ internal fun ServerAdminPage(
                             BeaconText(stringResource(R.string.admin_use_binding))
                         }
                     if (secret.example.isNotEmpty())
-                        BeaconOutlinedButton(onClick = { copy(secret.example) }) {
+                        BeaconOutlinedButton(
+                            onClick = { copy(secret.example) },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
                             BeaconText(
                                 stringResource(
                                     if (copiedValue == secret.example) R.string.admin_copied

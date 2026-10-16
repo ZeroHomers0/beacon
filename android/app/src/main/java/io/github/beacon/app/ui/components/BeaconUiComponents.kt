@@ -103,6 +103,16 @@ fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) 
 }
 
 @Composable
+fun SettingsPreferences(title: String, content: @Composable ColumnScope.() -> Unit) {
+    SettingsGroup(title) {
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = BeaconUiMetrics.CardInset, vertical = 4.dp),
+            content = content,
+        )
+    }
+}
+
+@Composable
 fun SettingsCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     BeaconCard(
         modifier.animateContentSize(),

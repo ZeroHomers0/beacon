@@ -1,30 +1,22 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package io.github.beacon.app.ui.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 import java.util.Locale
-import kotlin.math.abs
-import kotlinx.coroutines.launch
 
 @Composable
 fun BeaconTimeRangePreference(
@@ -36,9 +28,22 @@ fun BeaconTimeRangePreference(
     onStartChange: (String) -> Unit,
     onEndChange: (String) -> Unit,
 ) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap)) {
-        BeaconTimePreference(start, onStartChange, startLabel, Modifier.weight(1f), enabled)
-        BeaconTimePreference(end, onEndChange, endLabel, Modifier.weight(1f), enabled)
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            BeaconTimePreference(start, onStartChange, startLabel, Modifier.weight(1f), enabled)
+            BeaconTimePreference(end, onEndChange, endLabel, Modifier.weight(1f), enabled)
+        }
+        val startMinute = timeMinute(start)
+        val endMinute = timeMinute(end)
+        if (startMinute != null && endMinute != null && startMinute != endMinute) {
+            SettingsHint(
+                stringResource(
+                    if (startMinute > endMinute) R.string.time_range_overnight
+                    else R.string.time_range_same_day,
+                    end,
+                )
+            )
+        }
     }
 }
 
@@ -50,162 +55,84 @@ fun BeaconTimePreference(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    val rowHeight = with(LocalDensity.current) { MaterialTheme.typography.titleMedium.lineHeight.toDp() + 8.dp }.coerceAtLeast(32.dp)
+    var open by remember { mutableStateOf(false) }
     Surface(
+        onClick = { open = true },
+        enabled = enabled,
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
     ) {
-        Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(
+            Modifier.padding(14.dp).heightIn(min = 56.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
             BeaconText(
                 label,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            key(value) {
-                val parts = value.split(":")
-                val hours =
-                    rememberLazyListState(
-                        initialFirstVisibleItemIndex =
-                            (parts.getOrNull(0)?.toIntOrNull() ?: 0).coerceIn(0, 23)
+            BeaconText(value, style = MaterialTheme.typography.headlineSmall)
+        }
+    }
+    if (open) {
+        val minute = timeMinute(value) ?: 0
+        if (miuix()) {
+            val context = LocalContext.current
+            DisposableEffect(context, minute) {
+                val dialog =
+                    android.app.TimePickerDialog(
+                        context,
+                        { _, hour, selectedMinute ->
+                            onChange(String.format(Locale.ROOT, "%02d:%02d", hour, selectedMinute))
+                            open = false
+                        },
+                        minute / 60,
+                        minute % 60,
+                        true,
                     )
-                val minutes =
-                    rememberLazyListState(
-                        initialFirstVisibleItemIndex =
-                            (parts.getOrNull(1)?.toIntOrNull() ?: 0).coerceIn(0, 59)
-                    )
-                val latestChange by rememberUpdatedState(onChange)
-                LaunchedEffect(hours, minutes, enabled) {
-                    if (enabled)
-                        snapshotFlow {
-                            if (
-                                hours.isScrollInProgress ||
-                                    minutes.isScrollInProgress ||
-                                    hours.layoutInfo.visibleItemsInfo.isEmpty() ||
-                                    minutes.layoutInfo.visibleItemsInfo.isEmpty()
-                            )
-                                null
-                            else
-                                String.format(
-                                    Locale.ROOT,
-                                    "%02d:%02d",
-                                    wheelSelection(hours),
-                                    wheelSelection(minutes),
-                                )
-                        }
-                            .collect { selected ->
-                                if (selected != null && selected != value) latestChange(selected)
-                            }
-                }
-                Row(
-                    Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    TimeNumberWheel(
-                        hours,
-                        24,
-                        stringResource(R.string.time_picker_hour),
-                        "$label-hour-wheel",
-                        Modifier.weight(1f),
-                        enabled,
-                        rowHeight,
-                    )
+                dialog.setTitle(label)
+                dialog.setOnDismissListener { open = false }
+                dialog.show()
+                onDispose { dialog.dismiss() }
+            }
+        } else {
+            val picker = rememberTimePickerState(minute / 60, minute % 60, true)
+            BeaconAlertDialog(
+                onDismissRequest = { open = false },
+                title = { BeaconText(label) },
+                text = {
                     Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+                        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
                     ) {
-                        BeaconText(" ", style = MaterialTheme.typography.labelMedium)
-                        Box(Modifier.height(rowHeight * 3), contentAlignment = Alignment.Center) {
-                            BeaconText(":", style = MaterialTheme.typography.titleMedium)
+                        TimePicker(state = picker)
+                    }
+                },
+                confirmButton = {
+                    BeaconButton(
+                        onClick = {
+                            onChange(
+                                String.format(Locale.ROOT, "%02d:%02d", picker.hour, picker.minute)
+                            )
+                            open = false
                         }
-                    }
-                    TimeNumberWheel(
-                        minutes,
-                        60,
-                        stringResource(R.string.time_picker_minute),
-                        "$label-minute-wheel",
-                        Modifier.weight(1f),
-                        enabled,
-                        rowHeight,
-                    )
-                }
-            }
-        }
-    }
-}
-
-private fun wheelSelection(state: LazyListState): Int {
-    val layout = state.layoutInfo
-    val center = (layout.viewportStartOffset + layout.viewportEndOffset) / 2
-    return layout.visibleItemsInfo.minByOrNull { abs(it.offset + it.size / 2 - center) }?.index
-        ?: state.firstVisibleItemIndex
-}
-
-@Composable
-private fun TimeNumberWheel(
-    state: LazyListState,
-    count: Int,
-    label: String,
-    tag: String,
-    modifier: Modifier,
-    enabled: Boolean,
-    rowHeight: androidx.compose.ui.unit.Dp,
-) {
-    val scope = rememberCoroutineScope()
-    val selection by remember(state) { derivedStateOf { wheelSelection(state) } }
-    Column(
-        modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        BeaconText(
-            label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Box(Modifier.fillMaxWidth().height(rowHeight * 3), contentAlignment = Alignment.Center) {
-            Box(
-                Modifier.fillMaxWidth()
-                    .height(rowHeight)
-                    .background(
-                        MaterialTheme.colorScheme.primaryContainer,
-                        RoundedCornerShape(10.dp),
-                    )
-            )
-            LazyColumn(
-                state = state,
-                modifier = Modifier.fillMaxSize().testTag(tag),
-                contentPadding = PaddingValues(vertical = rowHeight),
-                flingBehavior = rememberSnapFlingBehavior(state),
-                userScrollEnabled = enabled,
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                items((0 until count).toList(), key = { it }) { number ->
-                    val text = String.format(Locale.ROOT, "%02d", number)
-                    Box(
-                        Modifier.fillMaxWidth()
-                            .height(rowHeight)
-                            .clickable(enabled = enabled) {
-                                scope.launch { state.animateScrollToItem(number) }
-                            }
-                            .semantics {
-                                selected = number == selection
-                                contentDescription = "$label $text"
-                            },
-                        contentAlignment = Alignment.Center,
                     ) {
-                        BeaconText(
-                            text,
-                            style = MaterialTheme.typography.titleMedium,
-                            color =
-                                if (number == selection)
-                                    MaterialTheme.colorScheme.onPrimaryContainer
-                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
-                        )
+                        BeaconText(stringResource(R.string.action_save))
                     }
-                }
-            }
+                },
+                dismissButton = {
+                    BeaconCancelButton(onClick = { open = false })
+                },
+            )
         }
     }
+}
+
+private fun timeMinute(value: String): Int? {
+    val parts = value.split(":")
+    if (parts.size != 2) return null
+    val hour = parts[0].toIntOrNull() ?: return null
+    val minute = parts[1].toIntOrNull() ?: return null
+    return if (hour in 0..23 && minute in 0..59) hour * 60 + minute else null
 }

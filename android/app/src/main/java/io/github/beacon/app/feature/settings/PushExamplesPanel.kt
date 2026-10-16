@@ -28,7 +28,7 @@ fun PushExamplesPanel(
     val resources = androidx.compose.ui.platform.LocalResources.current
     val context = LocalContext.current
     var expanded by rememberSaveable { mutableStateOf(false) }
-    SettingsGroup("") {
+    SettingsGroup(stringResource(R.string.settings_api_heading)) {
         SettingsRow(
             stringResource(R.string.push_examples_title),
             stringResource(R.string.ui_v2_examples_formats),

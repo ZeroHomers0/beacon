@@ -2,9 +2,7 @@ package io.github.beacon.app.feature.settings
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 import io.github.beacon.app.ui.components.*
 
@@ -60,12 +58,19 @@ internal fun ReceiveRulesPanel(form: ReceptionFormState, busy: Boolean) {
             if (plan.scheduleEnabled) {
                 SettingsFieldDivider()
                 BeaconTimeRangePreference(
-                    start, end,
+                    start,
+                    end,
                     stringResource(R.string.settings_rules_start),
                     stringResource(R.string.settings_rules_end),
                     enabled = !busy,
-                    onStartChange = { form.scheduleStartText = it; form.edited = true },
-                    onEndChange = { form.scheduleEndText = it; form.edited = true },
+                    onStartChange = {
+                        form.scheduleStartText = it
+                        form.edited = true
+                    },
+                    onEndChange = {
+                        form.scheduleEndText = it
+                        form.edited = true
+                    },
                 )
                 if (!form.scheduleValid)
                     BeaconText(
@@ -87,11 +92,6 @@ internal fun ReceiveRulesPanel(form: ReceptionFormState, busy: Boolean) {
                 }
             }
             SettingsFieldDivider()
-            BeaconText(
-                stringResource(R.string.settings_rules_other_times),
-                Modifier.padding(vertical = 12.dp),
-                style = androidx.compose.material3.MaterialTheme.typography.titleSmall,
-            )
             Column {
                 SettingsFieldGroup(
                     {
