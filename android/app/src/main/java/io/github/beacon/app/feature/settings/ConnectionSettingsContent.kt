@@ -91,6 +91,8 @@ internal fun LazyListScope.connectionSettingsItems(
                         formatMessageTime(runtimeState.serverCheckedAtMs),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 )
                 BeaconActionButton(
                     stringResource(

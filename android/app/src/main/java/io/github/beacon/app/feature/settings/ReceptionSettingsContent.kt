@@ -20,8 +20,6 @@ import io.github.beacon.app.ui.components.BeaconButton
 import io.github.beacon.app.ui.components.BeaconDropdownPreference
 import io.github.beacon.app.ui.components.BeaconPreferenceToggle
 import io.github.beacon.app.ui.components.BeaconText
-import io.github.beacon.app.ui.components.DiagnosticRow
-import io.github.beacon.app.ui.components.OperationResultPanel
 import io.github.beacon.app.ui.components.SettingsFieldGroup
 import io.github.beacon.app.ui.components.SettingsGroup
 import io.github.beacon.app.ui.components.SettingsRow
@@ -58,24 +56,33 @@ internal fun LazyListScope.receptionSettingsItems(
     }
     item {
         SettingsSection(stringResource(R.string.settings_receive_status_title)) {
-            if (polling.blocked.isNotBlank())
-                BeaconText(polling.blocked, color = MaterialTheme.colorScheme.error)
-            DiagnosticRow(
-                stringResource(R.string.settings_last_sync_success_desc) +
+            io.github.beacon.app.ui.components.SettingsStatusSummary(
+                stringResource(R.string.settings_last_sync_success_desc),
+                formatMessageTime(polling.lastSuccessMs) +
                     (polling.lastSuccessInserted?.let {
                         " · " + stringResource(R.string.receive_success_count, it)
                     } ?: ""),
-                formatMessageTime(polling.lastSuccessMs),
             )
-            if (receivePlan.mode != ReceiveMode.POWER_SAVING) {
-                io.github.beacon.app.ui.components.SettingsFieldDivider()
-                OperationResultPanel(
-                    stringResource(R.string.receive_realtime_status_title),
-                    runtimeState.realtimeStatus.removePrefix(
-                        stringResource(R.string.receive_mode_realtime)
-                    ),
-                )
-            }
+            io.github.beacon.app.ui.components.SettingsFieldDivider()
+            io.github.beacon.app.ui.components.SettingsStatusSummary(
+                stringResource(
+                    if (receivePlan.mode == ReceiveMode.POWER_SAVING)
+                        R.string.settings_auto_receive_title
+                    else R.string.receive_realtime_status_title
+                ),
+                when {
+                    polling.blocked.isNotBlank() -> polling.blocked
+                    receivePlan.mode == ReceiveMode.POWER_SAVING ->
+                        io.github.beacon.app.ui.components.receiveLabel(polling)
+                    else ->
+                        runtimeState.realtimeStatus.removePrefix(
+                            stringResource(R.string.receive_mode_realtime)
+                        )
+                },
+                tint =
+                    if (polling.blocked.isNotBlank()) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             io.github.beacon.app.ui.components.SettingsFieldDivider()
             io.github.beacon.app.ui.components.BeaconActionPair(
                 dismiss = {
@@ -120,7 +127,7 @@ internal fun LazyListScope.receptionSettingsItems(
     if (receivePlan.mode == ReceiveMode.RULES) {
         item { ReceiveRulesPanel(receptionForm, busy) }
     }
-    if (receivePlan.mode != ReceiveMode.POWER_SAVING) {
+    if (receivePlan.mode == ReceiveMode.REALTIME) {
         item {
             SettingsSection(stringResource(R.string.receive_heartbeat_title)) {
                 SettingsFieldGroup(
@@ -168,14 +175,9 @@ internal fun LazyListScope.receptionSettingsItems(
             }
         }
     }
-    if (receivePlan.mode != ReceiveMode.REALTIME) {
+    if (receivePlan.mode == ReceiveMode.POWER_SAVING) {
         item {
-            SettingsSection(
-                stringResource(
-                    if (receivePlan.mode == ReceiveMode.RULES) R.string.receive_fallback_title
-                    else R.string.ui_v2_power_conditions_title
-                )
-            ) {
+            SettingsSection(stringResource(R.string.ui_v2_power_conditions_title)) {
                 val interval = receptionForm.interval
                 val unmetered = receptionForm.unmetered
                 val charging = receptionForm.charging

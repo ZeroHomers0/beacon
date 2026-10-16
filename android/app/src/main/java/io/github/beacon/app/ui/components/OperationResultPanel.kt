@@ -1,18 +1,29 @@
 package io.github.beacon.app.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.github.beacon.app.R
 import io.github.beacon.app.ui.icons.BeaconIcons
 
 /** A status is separate from editable fields; every detail remains visible. */
@@ -25,8 +36,27 @@ fun SettingsStatusSummary(
     loading: Boolean = false,
 ) {
     val iconSize = 48.dp
+    var showingDetails by remember { mutableStateOf(false) }
+    var settledTitle by remember { mutableStateOf(title) }
+    var settledDetails by remember { mutableStateOf(details) }
+    androidx.compose.runtime.LaunchedEffect(title, details, loading) {
+        if (!loading) {
+            settledTitle = title
+            settledDetails = details
+        }
+    }
+    val displayedTitle = if (loading) settledTitle else title
+    val displayedDetails = if (loading) settledDetails else details
+    val detailsHeight =
+        with(LocalDensity.current) {
+            MaterialTheme.typography.bodySmall.lineHeight.toDp() * 2
+        }
     Row(
-        Modifier.fillMaxWidth().heightIn(min = iconSize).padding(vertical = 4.dp),
+        Modifier.fillMaxWidth()
+            .heightIn(min = iconSize)
+            .clip(RoundedCornerShape(14.dp))
+            .clickable(enabled = displayedDetails.isNotBlank()) { showingDetails = true }
+            .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -42,13 +72,40 @@ fun SettingsStatusSummary(
             Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
+            BeaconText(
+                displayedTitle,
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Box(Modifier.fillMaxWidth().height(detailsHeight)) {
                 BeaconText(
-                    title,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                    displayedDetails,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
-            if (details.isNotBlank()) SettingsHint(details)
+            }
         }
     }
+    if (showingDetails)
+        BeaconAlertDialog(
+            onDismissRequest = { showingDetails = false },
+            title = { BeaconText(displayedTitle) },
+            text = {
+                Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
+                    androidx.compose.foundation.text.selection.SelectionContainer {
+                        BeaconText(displayedDetails)
+                    }
+                }
+            },
+            confirmButton = {
+                BeaconButton(onClick = { showingDetails = false }) {
+                    BeaconText(stringResource(R.string.action_close))
+                }
+            },
+        )
 }
 
 /** Results remain complete, including multiline diagnostic and backup reports. */

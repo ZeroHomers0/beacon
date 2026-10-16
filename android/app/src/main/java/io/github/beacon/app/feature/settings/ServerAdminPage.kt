@@ -172,6 +172,15 @@ internal fun ServerAdminPage(
                                 ),
                             )
                         },
+                        {
+                            DiagnosticRow(
+                                stringResource(R.string.admin_database),
+                                android.text.format.Formatter.formatFileSize(
+                                    context,
+                                    state.databaseBytes,
+                                ),
+                            )
+                        },
                     )
                     SettingsFieldDivider()
                     SettingsMetricGrid(
@@ -183,36 +192,6 @@ internal fun ServerAdminPage(
                         ),
                         columns = 3,
                     )
-                    SettingsFieldDivider()
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        androidx.compose.material3.Icon(
-                            BeaconIcons.Storage,
-                            null,
-                            Modifier.size(20.dp),
-                            tint =
-                                androidx.compose.material3.MaterialTheme.colorScheme
-                                    .onSurfaceVariant,
-                        )
-                        BeaconText(
-                            stringResource(R.string.admin_database),
-                            Modifier.weight(1f),
-                            style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
-                            color =
-                                androidx.compose.material3.MaterialTheme.colorScheme
-                                    .onSurfaceVariant,
-                        )
-                        BeaconText(
-                            android.text.format.Formatter.formatFileSize(
-                                context,
-                                state.databaseBytes,
-                            ),
-                            style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
-                        )
-                    }
                     if (state.protocol != 1)
                         SettingsHint(stringResource(R.string.admin_protocol_unknown))
 

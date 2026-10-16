@@ -3,6 +3,7 @@
 package io.github.beacon.app.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
@@ -104,7 +105,7 @@ fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) 
 @Composable
 fun SettingsCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     BeaconCard(
-        modifier,
+        modifier.animateContentSize(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
         content = content,
     )
@@ -130,7 +131,7 @@ fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         BeaconCard(
-            Modifier.fillMaxWidth(),
+            Modifier.fillMaxWidth().animateContentSize(),
             colors =
                 CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLow
