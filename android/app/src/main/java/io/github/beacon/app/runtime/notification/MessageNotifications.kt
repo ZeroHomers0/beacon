@@ -91,6 +91,10 @@ class MessageNotifications(
         // alert twice because setOnlyAlertOnce is set below.
         val channel = if (!batch.alert) HISTORY else if (batch.priority >= 8) IMPORTANT else FRESH
         val summary = body(batch)
+        val expanded =
+            if (batch.count == 1)
+                MessageMarkdown.summary(batch.body, limit = 3000, preserveLineBreaks = true)
+            else summary
         // Registering a channel is a binder round-trip, and these three used to be recreated on
         // every
         // single post. Seeding them only while one is missing is equivalent after the first post
@@ -134,7 +138,7 @@ class MessageNotifications(
                     if (batch.count == 1) batch.title.ifBlank { "Beacon 新消息" } else "Beacon 消息摘要"
                 )
                 .setContentText(summary)
-                .setStyle(Notification.BigTextStyle().bigText(summary))
+                .setStyle(Notification.BigTextStyle().bigText(expanded))
                 .setContentIntent(open)
                 .setAutoCancel(true)
                 .setOnlyAlertOnce(true)
@@ -162,7 +166,7 @@ class MessageNotifications(
         // quiet-hours downgrade and the history channel included — is built without touching the
         // network, and [RemoteMessageImage] keeps the alert path to one cold fetch per URL.
         val metadata =
-            if (batch.alert)
+            if (batch.alert && expanded == summary)
                 message?.bark?.let { runCatching { org.json.JSONObject(it) }.getOrNull() }
             else null
         // Only the picture is fetched. The avatar's setLargeIcon cost a second cold handshake and a
@@ -191,7 +195,7 @@ class MessageNotifications(
         if (batch.count == 1) batch.title.ifBlank { "Beacon 新消息" } else "Beacon 消息摘要"
 
     private fun body(batch: NotificationBatch): String =
-        if (batch.count == 1) MessageMarkdown.summary(batch.body, 300)
+        if (batch.count == 1) MessageMarkdown.summary(batch.body)
         else "本轮保存 ${batch.count} 条消息，点击查看"
 
     /**

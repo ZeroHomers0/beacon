@@ -37,38 +37,54 @@ object MessageMarkdown {
             if (exiting) {
                 if (node is Paragraph || node is Heading || node is ListItem || node is BlockQuote)
                     append('\n')
-            } else when (node) {
-                is Text -> append(node.literal)
-                is Code -> append(node.literal)
-                is FencedCodeBlock -> append(node.literal).append('\n')
-                is IndentedCodeBlock -> append(node.literal).append('\n')
-                is HtmlInline -> append(node.literal)
-                is HtmlBlock -> append(node.literal).append('\n')
-                is SoftLineBreak, is HardLineBreak, is ThematicBreak -> append('\n')
-            }
+            } else
+                when (node) {
+                    is Text -> append(node.literal)
+                    is Code -> append(node.literal)
+                    is FencedCodeBlock -> append(node.literal).append('\n')
+                    is IndentedCodeBlock -> append(node.literal).append('\n')
+                    is HtmlInline -> append(node.literal)
+                    is HtmlBlock -> append(node.literal).append('\n')
+                    is SoftLineBreak,
+                    is HardLineBreak,
+                    is ThematicBreak -> append('\n')
+                }
         }
     }
 
     /** Bounded parsing for list/notification previews, including emoji-safe truncation. */
-    fun summary(body: String, limit: Int = 180): String {
+    fun summary(body: String, limit: Int = 180, preserveLineBreaks: Boolean = false): String {
         require(limit > 0)
         val input = body.take(4096).dropLastWhile { it.isHighSurrogate() }
-        val text = runCatching { plainText(parse(input)) }.getOrDefault(input)
-            .replace(whitespace, " ").trim().ifEmpty { input.trim() }
+        val plain = runCatching { plainText(parse(input)) }.getOrDefault(input)
+        val text =
+            (if (preserveLineBreaks)
+                    plain
+                        .replace("\r\n", "\n")
+                        .replace('\r', '\n')
+                        .lineSequence()
+                        .joinToString("\n") { it.trim() }
+                        .replace(Regex("\n{3,}"), "\n\n")
+                else plain.replace(whitespace, " "))
+                .trim()
+                .ifEmpty { input.trim() }
         val truncated = text.codePointCount(0, text.length) > limit || input.length < body.length
         val count = minOf(limit, text.codePointCount(0, text.length))
         return text.substring(0, text.offsetByCodePoints(0, count)) + if (truncated) "…" else ""
     }
 
-    fun webUrl(raw: String, httpsOnly: Boolean = false): String? =
-        raw.takeIf {
-            it.length <= 2048 && runCatching {
-                val uri = URI(it)
-                (uri.scheme.equals("https", true) ||
-                    (!httpsOnly && uri.scheme.equals("http", true))) &&
-                    !uri.host.isNullOrEmpty() && uri.rawUserInfo == null && uri.port in -1..65535
-            }.getOrDefault(false)
-        }
+    fun webUrl(raw: String, httpsOnly: Boolean = false): String? = raw.takeIf {
+        it.length <= 2048 &&
+            runCatching {
+                    val uri = URI(it)
+                    (uri.scheme.equals("https", true) ||
+                        (!httpsOnly && uri.scheme.equals("http", true))) &&
+                        !uri.host.isNullOrEmpty() &&
+                        uri.rawUserInfo == null &&
+                        uri.port in -1..65535
+                }
+                .getOrDefault(false)
+    }
 
     fun pictures(root: Node): List<Picture> {
         val result = linkedMapOf<String, Picture>()
@@ -95,11 +111,12 @@ object MessageMarkdown {
                     if (parent is Link || parent is Image) insideLinkOrImage = true
                     parent = parent.parent
                 }
-                if (node is Text && !insideLinkOrImage) webLinks.findAll(node.literal).forEach { match ->
-                    if (result.size < 10)
-                        webUrl(match.value.trimEnd('.', ',', '，', '。', '；', ';', '!', '！'))
-                            ?.let(result::add)
-                }
+                if (node is Text && !insideLinkOrImage)
+                    webLinks.findAll(node.literal).forEach { match ->
+                        if (result.size < 10)
+                            webUrl(match.value.trimEnd('.', ',', '，', '。', '；', ';', '!', '！'))
+                                ?.let(result::add)
+                    }
             }
         }
         return result.toList()
