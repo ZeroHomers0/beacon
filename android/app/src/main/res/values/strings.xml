@@ -389,11 +389,11 @@
     <string name="admin_logout">退出登录</string>
     <string name="admin_refresh">刷新状态</string>
     <string name="admin_applications">应用</string>
-    <string name="admin_test">测试</string>
+    <string name="admin_test">测试发送</string>
     <string name="admin_create_binding">创建绑定码</string>
     <string name="admin_device_name">设备名称</string>
     <string name="admin_binding_hint">绑定码 10 分钟内有效，仅可使用一次。在目标手机的服务器配置中填写地址和绑定码。</string>
-    <string name="admin_no_devices">暂无设备，先创建绑定码。</string>
+    <string name="admin_no_devices">暂无设备，点击右上角“＋”创建绑定码。</string>
     <string name="admin_device_id">设备 ID</string>
     <string name="admin_revoked">已撤销</string>
     <string name="admin_active">有效</string>
@@ -406,7 +406,7 @@
     <string name="admin_priority_normal">%1$d · 普通通知</string>
     <string name="admin_priority_important">%1$d · 重要通知</string>
     <string name="admin_application_hint">创建仅向所选设备发送消息的应用凭证。凭证只显示一次，请妥善保存。</string>
-    <string name="admin_no_applications">暂无发送应用。</string>
+    <string name="admin_no_applications">暂无应用，绑定设备后点击右上角“＋”创建。</string>
     <string name="admin_device">目标设备</string>
     <string name="admin_revoke_application">撤销发送凭证</string>
     <string name="admin_delete_application">删除发送应用</string>
@@ -528,4 +528,11 @@
     <string name="settings_realtime_config_failure">连接配置异常，请检查服务器设置</string>
     <string name="settings_realtime_tls_failure">安全连接失败，请检查服务器证书</string>
     <string name="settings_realtime_network_failure">连接异常，正在等待恢复</string>
+    <string name="admin_devices_title">设备管理</string>
+    <string name="admin_applications_title">应用管理</string>
+    <string name="admin_test_title_page">测试发送</string>
+    <string name="admin_list_summary">共 %1$d 个 · 已撤销 %2$d 个</string>
+    <string name="admin_unnamed_device">未命名设备</string>
+    <string name="admin_unnamed_application">未命名应用</string>
+    <string name="admin_application_device">所属设备：%1$s</string>
 </resources>

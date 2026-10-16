@@ -121,36 +121,11 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                             preview?.unread?.toString() ?: "—",
                         ),
                         Pair(
-                            resources.getString(R.string.settings_storage_receipts),
-                            preview?.pending?.toString() ?: "—",
+                            resources.getString(R.string.settings_pending_notifications_title),
+                            preview?.pendingNotifications?.toString() ?: "—",
                         ),
                     ),
                     columns = 3,
-                )
-                SettingsFieldDivider()
-                DiagnosticRow(
-                    stringResource(R.string.settings_pending_notifications_title),
-                    preview?.pendingNotifications?.let {
-                        resources.getString(R.string.settings_cleanup_count, it)
-                    } ?: "—",
-                )
-                SettingsFieldDivider()
-                DiagnosticRow(
-                    stringResource(R.string.settings_temporary_log_size),
-                    preview?.walBytes?.let {
-                        android.text.format.Formatter.formatFileSize(context, it)
-                    } ?: "—",
-                )
-                SettingsFieldDivider()
-                BeaconActionButton(
-                    stringResource(R.string.storage_wal_clear),
-                    io.github.beacon.app.ui.icons.BeaconIcons.Storage,
-                    Modifier.fillMaxWidth(),
-                    state.runtimeConnected &&
-                        !state.messageBusy &&
-                        preview != null &&
-                        preview.walBytes > 0,
-                    actions::checkpointStorage,
                 )
             }
         }
@@ -212,13 +187,15 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                     }
                 },
             )
-            BeaconActionButton(
-                stringResource(R.string.storage_custom),
-                io.github.beacon.app.ui.icons.BeaconIcons.Tune,
-                Modifier.fillMaxWidth(),
-                !state.messageBusy && settingsLoaded && !saving,
-            ) {
-                custom = true
+            SettingsPreferenceActions {
+                BeaconActionButton(
+                    stringResource(R.string.storage_custom),
+                    io.github.beacon.app.ui.icons.BeaconIcons.Tune,
+                    Modifier.fillMaxWidth(),
+                    !state.messageBusy && settingsLoaded && !saving,
+                ) {
+                    custom = true
+                }
             }
         }
         SettingsSection(stringResource(R.string.storage_preview_title)) {

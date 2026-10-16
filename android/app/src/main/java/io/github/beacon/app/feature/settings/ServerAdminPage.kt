@@ -96,7 +96,23 @@ internal fun ServerAdminPage(
     LaunchedEffect(defaultEndpoint) {
         if (bindingSubmitted && defaultEndpoint.isNotBlank()) model.refresh()
     }
-    val active = state.devices.filterNot { it.revoked }
+    val devices =
+        state.devices.sortedWith(
+            compareBy<AdminDevice>(
+                { it.revoked },
+                { it.name.lowercase(java.util.Locale.ROOT) },
+                { it.id },
+            )
+        )
+    val applications =
+        state.applications.sortedWith(
+            compareBy<AdminApplication>(
+                { it.revoked },
+                { it.name.lowercase(java.util.Locale.ROOT) },
+                { it.id },
+            )
+        )
+    val active = devices.filterNot { it.revoked }
     LaunchedEffect(state.loggedIn, state.devices) {
         if (active.none { it.id == deviceId }) deviceId = active.firstOrNull()?.id.orEmpty()
         if (!state.loggedIn) {
@@ -201,15 +217,6 @@ internal fun ServerAdminPage(
                                 ),
                             )
                         },
-                        {
-                            DiagnosticRow(
-                                stringResource(R.string.admin_database),
-                                android.text.format.Formatter.formatFileSize(
-                                    context,
-                                    state.databaseBytes,
-                                ),
-                            )
-                        },
                     )
                     SettingsFieldDivider()
                     SettingsMetricGrid(
@@ -228,7 +235,7 @@ internal fun ServerAdminPage(
             item {
                 SettingsGroup(stringResource(R.string.admin_manage_section)) {
                     SettingsActionRow(
-                        stringResource(R.string.admin_devices),
+                        stringResource(R.string.admin_devices_title),
                         "",
                         BeaconIcons.Server,
                         !state.busy,
@@ -237,7 +244,7 @@ internal fun ServerAdminPage(
                     }
                     SettingsFieldDivider()
                     SettingsActionRow(
-                        stringResource(R.string.admin_applications),
+                        stringResource(R.string.admin_applications_title),
                         "",
                         BeaconIcons.CredentialUpdate,
                         !state.busy,
@@ -246,7 +253,7 @@ internal fun ServerAdminPage(
                     }
                     SettingsFieldDivider()
                     SettingsActionRow(
-                        stringResource(R.string.admin_test),
+                        stringResource(R.string.admin_test_title_page),
                         "",
                         BeaconIcons.Messages,
                         !state.busy,
@@ -283,11 +290,25 @@ internal fun ServerAdminPage(
                             }
                         }
 
-                    if (state.devices.isEmpty())
-                        item { SettingsHint(stringResource(R.string.admin_no_devices)) }
-                    items(state.devices, key = { "device-${it.id}" }) { device ->
+                    item {
+                        if (devices.isEmpty())
+                            BeaconEmptyState(
+                                BeaconIcons.Server,
+                                stringResource(R.string.admin_devices_title),
+                                stringResource(R.string.admin_no_devices),
+                            )
+                        else
+                            SettingsHint(
+                                stringResource(
+                                    R.string.admin_list_summary,
+                                    devices.size,
+                                    devices.count { it.revoked },
+                                )
+                            )
+                    }
+                    items(devices, key = { "device-${it.id}" }) { device ->
                         AdminListCard(
-                            device.name,
+                            device.name.ifBlank { stringResource(R.string.admin_unnamed_device) },
                             device.id,
                             stringResource(
                                 if (device.revoked) R.string.admin_revoked
@@ -310,7 +331,7 @@ internal fun ServerAdminPage(
                                     add(R.string.admin_delete_device to { deletingDevice = device })
                                 else {
                                     add(
-                                        R.string.admin_test to
+                                        R.string.admin_test_title_page to
                                             {
                                                 deviceId = device.id
                                                 model.selectTestDevice(device.id)
@@ -325,12 +346,32 @@ internal fun ServerAdminPage(
                 }
                 1 -> {
 
-                    if (state.applications.isEmpty())
-                        item { SettingsHint(stringResource(R.string.admin_no_applications)) }
-                    items(state.applications, key = { "application-${it.id}" }) { app ->
+                    item {
+                        if (applications.isEmpty())
+                            BeaconEmptyState(
+                                BeaconIcons.CredentialUpdate,
+                                stringResource(R.string.admin_applications_title),
+                                stringResource(R.string.admin_no_applications),
+                            )
+                        else
+                            SettingsHint(
+                                stringResource(
+                                    R.string.admin_list_summary,
+                                    applications.size,
+                                    applications.count { it.revoked },
+                                )
+                            )
+                    }
+                    items(applications, key = { "application-${it.id}" }) { app ->
                         AdminListCard(
-                            app.name,
-                            state.devices.find { it.id == app.deviceId }?.name ?: app.deviceId,
+                            app.name.ifBlank { stringResource(R.string.admin_unnamed_application) },
+                            stringResource(
+                                R.string.admin_application_device,
+                                state.devices
+                                    .find { it.id == app.deviceId }
+                                    ?.name
+                                    ?.takeIf { it.isNotBlank() } ?: app.deviceId,
+                            ),
                             stringResource(priorityLabel(app.priority), app.priority) +
                                 " · " +
                                 stringResource(
@@ -355,7 +396,7 @@ internal fun ServerAdminPage(
                 }
                 2 ->
                     item {
-                        SettingsSection(stringResource(R.string.admin_test)) {
+                        SettingsSection(stringResource(R.string.admin_test_title_page)) {
                             DevicePicker(active, deviceId, { deviceId = it }, !state.busy)
                             AdminField(
                                 testTitle,
@@ -678,17 +719,33 @@ private fun AdminListCard(
     var menuOpen by remember { mutableStateOf(false) }
     SettingsCard(Modifier.fillMaxWidth()) {
         Row(
-            Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),
+            Modifier.fillMaxWidth()
+                .padding(
+                    horizontal = BeaconUiMetrics.CardInset,
+                    vertical = BeaconUiMetrics.FieldVerticalInset,
+                ),
             verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 BeaconText(
                     title,
                     style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
+                    maxLines = 2,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 )
-                SettingsHint(subtitle)
-                SettingsHint(status)
+                BeaconText(
+                    subtitle,
+                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                )
+                BeaconText(
+                    status,
+                    style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             Box {
                 BeaconIconButton(onClick = { menuOpen = true }, enabled = enabled) {

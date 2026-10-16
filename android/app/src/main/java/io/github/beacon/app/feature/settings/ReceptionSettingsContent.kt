@@ -130,7 +130,7 @@ internal fun LazyListScope.receptionSettingsItems(
                 if (polling.lastSuccessMs > 0) formatMessageTime(polling.lastSuccessMs)
                 else stringResource(R.string.settings_sync_never),
             )
-            Column(Modifier.padding(vertical = 12.dp)) {
+            io.github.beacon.app.ui.components.SettingsPreferenceActions {
                 io.github.beacon.app.ui.components.BeaconActionPair(
                     dismiss = {
                         io.github.beacon.app.ui.components.BeaconOutlinedButton(

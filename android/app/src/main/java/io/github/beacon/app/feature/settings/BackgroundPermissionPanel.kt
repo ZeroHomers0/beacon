@@ -12,7 +12,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -127,13 +126,15 @@ fun BackgroundPermissionPanel() {
                 },
             )
 
-            BeaconOutlinedButton(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-                onClick = {
-                    openSettings(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-                },
-            ) {
-                BeaconText(stringResource(R.string.background_open_battery_settings))
+            SettingsPreferenceActions {
+                BeaconOutlinedButton(
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        openSettings(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                    },
+                ) {
+                    BeaconText(stringResource(R.string.background_open_battery_settings))
+                }
             }
         }
         BeaconOutlinedButton(onClick = { help = true }, modifier = Modifier.fillMaxWidth()) {

@@ -49,9 +49,9 @@ enum class SettingsScreen(val titleRes: Int) {
     BACKUP(R.string.settings_backup_title),
     GUIDE(R.string.settings_guide_title),
     SERVER_ADMIN(R.string.admin_title),
-    SERVER_DEVICES(R.string.admin_devices),
-    SERVER_APPLICATIONS(R.string.admin_applications),
-    SERVER_TEST(R.string.admin_test),
+    SERVER_DEVICES(R.string.admin_devices_title),
+    SERVER_APPLICATIONS(R.string.admin_applications_title),
+    SERVER_TEST(R.string.admin_test_title_page),
     QUIET_HOURS(R.string.quiet_schedule),
 }
 
@@ -109,10 +109,26 @@ fun SettingsPreferences(title: String, content: @Composable ColumnScope.() -> Un
     SettingsGroup(title) {
         Column(
             Modifier.fillMaxWidth()
-                .padding(horizontal = BeaconUiMetrics.CardInset, vertical = 4.dp),
+                .padding(
+                    horizontal = BeaconUiMetrics.CardInset,
+                    vertical = BeaconUiMetrics.PreferenceInset,
+                ),
             content = content,
         )
     }
+}
+
+@Composable
+fun SettingsPreferenceActions(content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        Modifier.fillMaxWidth()
+            .padding(
+                top = BeaconUiMetrics.SectionGap,
+                bottom = BeaconUiMetrics.CardInset - BeaconUiMetrics.PreferenceInset,
+            ),
+        verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
+        content = content,
+    )
 }
 
 @Composable
@@ -195,8 +211,16 @@ fun SettingsRow(
         Row(
             Modifier.fillMaxWidth()
                 .alpha(if (enabled) 1f else .38f)
-                .heightIn(min = BeaconUiMetrics.FieldMinHeight)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .heightIn(
+                    min =
+                        BeaconUiMetrics.NavigationMinHeight *
+                            androidx.compose.ui.platform.LocalDensity.current.fontScale
+                                .coerceAtLeast(1f)
+                )
+                .padding(
+                    horizontal = BeaconUiMetrics.CardInset,
+                    vertical = BeaconUiMetrics.FieldVerticalInset,
+                ),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
