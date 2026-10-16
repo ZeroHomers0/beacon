@@ -7,11 +7,15 @@ import io.github.beacon.app.domain.model.SyncOutcome
 import org.json.JSONObject
 
 /** Only the reception service serial executor reads or commits this preference file. */
-class PollingStateStore(context: Context) {
+class PollingStateStore(private val context: Context) {
     private val prefs = GeneralPreferences.open(context)
 
-    fun load(): PollingState =
-        prefs.getString("state", null)?.let(PollingWire::decode) ?: PollingState()
+    fun load(): PollingState {
+        val saved = prefs.getString("state", null)?.let(PollingWire::decode) ?: PollingState()
+        return saved.copy(
+            config = saved.config.copy(enabled = TransportSecretStore(context).isConfigured())
+        )
+    }
 
     fun save(state: PollingState) {
         state.config.validate()
@@ -52,7 +56,8 @@ object PollingWire {
             value.getLong("success"),
             value.getLong("revision"),
             outcome,
-            if (value.has("successInserted")) value.getInt("successInserted").coerceAtLeast(0) else null,
+            if (value.has("successInserted")) value.getInt("successInserted").coerceAtLeast(0)
+            else null,
         )
     }
 }

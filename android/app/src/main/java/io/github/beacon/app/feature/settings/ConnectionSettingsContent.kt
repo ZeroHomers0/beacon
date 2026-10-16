@@ -84,6 +84,8 @@ internal fun LazyListScope.connectionSettingsItems(
                             io.github.beacon.app.ui.theme.beaconSuccessColor()
                         else MaterialTheme.colorScheme.onSurfaceVariant,
                     loading = runtimeState.serverChecking,
+                    interactive = false,
+                    compact = true,
                 )
                 BeaconText(
                     stringResource(R.string.server_last_checked) +

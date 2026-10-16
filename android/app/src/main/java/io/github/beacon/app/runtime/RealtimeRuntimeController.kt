@@ -540,8 +540,8 @@ internal class RealtimeRuntimeController(
                                 status =
                                     when (value) {
                                         RealtimeClient.State.CONNECTING -> "即时接收连接中"
-                                        RealtimeClient.State.CONNECTED -> "即时接收已连接 · 断线后自动补收"
-                                        RealtimeClient.State.RETRYING -> "连接断开 · 正在自动重试，HTTP 补收保留"
+                                        RealtimeClient.State.CONNECTED -> "即时接收已连接，断线后自动补收"
+                                        RealtimeClient.State.RETRYING -> "连接断开，正在重试，自动补收保留"
                                         RealtimeClient.State.AUTH_FAILED -> "接收凭证失效，请重新绑定服务器"
                                         RealtimeClient.State.TLS_FAILED -> "TLS 校验失败，请检查服务器证书"
                                         RealtimeClient.State.CONFIG_FAILED -> "即时配置或订阅不受支持，请检查服务器"

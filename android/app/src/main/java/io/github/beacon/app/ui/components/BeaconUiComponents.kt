@@ -294,8 +294,8 @@ fun MessageItem(
             ),
     ) {
         Column(
-            Modifier.padding(BeaconUiMetrics.CardInset),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            Modifier.padding(horizontal = BeaconUiMetrics.CardInset, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -334,7 +334,7 @@ fun MessageItem(
                     )
                 if (!selectionMode)
                     Box {
-                        BeaconIconButton(enabled = !busy, onClick = { menu = true }) {
+                        BeaconIconButton(enabled = !busy, modifier = Modifier.size(32.dp), onClick = { menu = true }) {
                             Icon(BeaconIcons.More, stringResource(R.string.ui_message_more_action))
                         }
                         BeaconDropdownMenu(menu && !busy, { menu = false }) {

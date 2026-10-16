@@ -111,19 +111,6 @@ internal fun LazyListScope.receptionSettingsItems(
             }
         }
     }
-    item {
-        SettingsPreferences(stringResource(R.string.settings_auto_receive_title)) {
-            BeaconPreferenceToggle(
-                stringResource(R.string.settings_battery_saver_title),
-                stringResource(R.string.settings_receive_switch_hint),
-                receptionForm.enabled,
-                !busy,
-            ) {
-                receptionForm.enabled = it
-                receptionForm.edited = true
-            }
-        }
-    }
     if (receivePlan.mode == ReceiveMode.RULES) {
         item { ReceiveRulesPanel(receptionForm, busy) }
     }

@@ -34,6 +34,8 @@ fun SettingsStatusSummary(
     icon: ImageVector = BeaconIcons.Diagnostics,
     tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     loading: Boolean = false,
+    interactive: Boolean = true,
+    compact: Boolean = false,
 ) {
     val iconSize = 48.dp
     var showingDetails by remember { mutableStateOf(false) }
@@ -55,7 +57,13 @@ fun SettingsStatusSummary(
         Modifier.fillMaxWidth()
             .heightIn(min = iconSize)
             .clip(RoundedCornerShape(14.dp))
-            .clickable(enabled = displayedDetails.isNotBlank()) { showingDetails = true }
+            .then(
+                if (interactive)
+                    Modifier.clickable(enabled = displayedDetails.isNotBlank()) {
+                        showingDetails = true
+                    }
+                else Modifier
+            )
             .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -78,7 +86,11 @@ fun SettingsStatusSummary(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Box(Modifier.fillMaxWidth().height(detailsHeight)) {
+            Box(
+                if (compact) Modifier.fillMaxWidth()
+                else Modifier.fillMaxWidth().height(detailsHeight),
+                contentAlignment = Alignment.CenterStart,
+            ) {
                 BeaconText(
                     displayedDetails,
                     style = MaterialTheme.typography.bodySmall,
@@ -89,7 +101,7 @@ fun SettingsStatusSummary(
             }
         }
     }
-    if (showingDetails)
+    if (interactive && showingDetails)
         BeaconAlertDialog(
             onDismissRequest = { showingDetails = false },
             title = { BeaconText(displayedTitle) },

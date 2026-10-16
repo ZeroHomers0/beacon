@@ -164,15 +164,16 @@ class SettingsBackup(private val context: Context) {
     }
 
     /**
-     * Validation precedes the one commit. Import never turns on receiving or destructive cleanup.
+     * Validation precedes the one commit. Import keeps configured reception automatic and leaves
+     * destructive cleanup disabled.
      */
     fun restore(payload: String, current: PollingState): PollingState {
         val value = validate(payload)
-        val paused =
+        val restored =
             current.copy(
                 config =
                     PollingConfig(
-                        false,
+                        TransportSecretStore(context).isConfigured(),
                         value.getInt("interval"),
                         value.getBoolean("unmetered"),
                         value.getBoolean("charging"),
@@ -182,7 +183,7 @@ class SettingsBackup(private val context: Context) {
         val editor =
             GeneralPreferences.open(context)
                 .edit()
-                .putString("state", PollingWire.encode(paused))
+                .putString("state", PollingWire.encode(restored))
                 .putBoolean("automatic", false)
         value.keys().forEach { key ->
             val target =
@@ -207,6 +208,6 @@ class SettingsBackup(private val context: Context) {
                 }
         }
         check(editor.commit())
-        return paused
+        return restored
     }
 }

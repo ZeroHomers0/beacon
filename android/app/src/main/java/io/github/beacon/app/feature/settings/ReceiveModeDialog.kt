@@ -1,11 +1,11 @@
 package io.github.beacon.app.feature.settings
 
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -29,20 +29,16 @@ fun ReceiveModeDialog(
         title = { BeaconText(stringResource(R.string.ui_v2_receive_mode_dialog_title)) },
         text = {
             Column(
-                Modifier.selectableGroup().then(
-                    if (miuix()) Modifier else Modifier.verticalScroll(rememberScrollState())
-                ),
-                verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
+                Modifier.selectableGroup()
+                    .then(
+                        if (miuix()) Modifier else Modifier.verticalScroll(rememberScrollState())
+                    ),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                BeaconText(
-                    stringResource(R.string.ui_v2_receive_strategy),
-                    Modifier.padding(horizontal = 4.dp),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                listOf(ReceiveMode.REALTIME, ReceiveMode.POWER_SAVING, ReceiveMode.RULES).forEach { mode ->
+                listOf(ReceiveMode.REALTIME, ReceiveMode.POWER_SAVING, ReceiveMode.RULES).forEach {
+                    mode ->
                     Surface(
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(12.dp),
                         color =
                             if (mode == selected) MaterialTheme.colorScheme.secondaryContainer
                             else MaterialTheme.colorScheme.surfaceContainerLow,
@@ -55,14 +51,14 @@ fun ReceiveModeDialog(
                                     role = Role.RadioButton,
                                     onClick = { onSelect(mode) },
                                 )
-                                .padding(14.dp),
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
                             Icon(
                                 receiveModeIcon(mode),
                                 null,
-                                Modifier.size(24.dp),
+                                Modifier.size(20.dp),
                                 tint = receiveModeColor(mode),
                             )
                             Column(Modifier.weight(1f)) {

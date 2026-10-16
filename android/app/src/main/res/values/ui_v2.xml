@@ -16,7 +16,7 @@
     <string name="ui_v2_copy_device_id">复制完整设备 ID</string>
     <string name="ui_v2_priority">消息优先级</string>
     <string name="ui_v2_read_state">阅读状态</string>
-    <string name="ui_v2_expiry">有效期截止时间</string>
+    <string name="ui_v2_expiry">有效期至</string>
     <string name="ui_v2_export_settings_hint">保存当前配置</string>
     <string name="ui_v2_import_settings_hint">从备份文件恢复</string>
     <string name="ui_v2_export_history_hint">保存本地历史消息</string>

@@ -127,8 +127,8 @@
     <string name="settings_version_label">版本 %1$s</string>
     <string name="receive_mode_realtime">即时接收</string>
     <string name="receive_mode_rules">规则接收</string>
-    <string name="receive_mode_power_description">通过 HTTP 周期补收，允许接收延迟</string>
-    <string name="receive_mode_realtime_description">通过 WebSocket 长连接接收，断线后自动补收</string>
+    <string name="receive_mode_power_description">通过HTTP周期补收，允许接收延迟</string>
+    <string name="receive_mode_realtime_description">通过WebSocket长连接接收，断线后自动补收</string>
     <string name="receive_realtime_status_title">即时连接状态</string>
     <string name="receive_mode_rules_description">根据电量、时间、充电和 Wi-Fi 条件切换</string>
     <string name="receive_mode_pending_hint">即时接收需要后台运行权限，连接稳定性受电池管理和网络环境影响。</string>
@@ -317,11 +317,11 @@
     <string name="settings_backup_export">导出设置</string>
     <string name="settings_backup_import">导入设置</string>
     <string name="settings_backup_import_title">导入设置备份</string>
-    <string name="settings_backup_import_hint">替换通用设置并暂停自动接收与自动清理，保留服务器配置、消息和接收确认记录。</string>
+    <string name="settings_backup_import_hint">替换通用设置并关闭自动清理，保留服务器配置、消息和接收确认记录；已绑定设备自动接收。</string>
     <string name="settings_backup_validated">已读取并校验设置文件，确认后应用。</string>
     <string name="settings_backup_invalid_values">格式或设置值无效，请重新选择备份文件</string>
     <string name="settings_backup_import_unconfirmed">导入未确认，请检查当前设置</string>
-    <string name="settings_backup_import_done">已导入，自动接收与自动清理已暂停</string>
+    <string name="settings_backup_import_done">已导入设置，已绑定设备自动接收，自动清理已关闭</string>
     <string name="settings_backup_import_apply">导入并暂停</string>
     <string name="settings_clipboard_push_key">Beacon 推送密钥</string>
     <string name="settings_reminders_send">补发待通知</string>

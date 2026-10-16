@@ -21,7 +21,7 @@ internal fun MessageCardFooter(
     onFilterGroup: (() -> Unit)?,
 ) {
     Row(
-        Modifier.fillMaxWidth().padding(top = 4.dp),
+        Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

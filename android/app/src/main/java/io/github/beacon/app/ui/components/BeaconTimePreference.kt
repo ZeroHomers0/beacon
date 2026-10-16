@@ -66,13 +66,21 @@ fun BeaconTimePreference(
         Column(
             Modifier.padding(14.dp).heightIn(min = 56.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
         ) {
             BeaconText(
                 label,
+                Modifier.fillMaxWidth(),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
-            BeaconText(value, style = MaterialTheme.typography.headlineSmall)
+            BeaconText(
+                value,
+                Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.headlineSmall,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
         }
     }
     if (open) {

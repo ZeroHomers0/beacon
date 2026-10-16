@@ -75,7 +75,6 @@ import io.github.beacon.app.runtime.notification.MessageNotifications
 class RuntimeProbeService : Service() {
     companion object {
         const val START_RECEIVE = "io.github.beacon.START_RECEIVE"
-        const val PAUSE_RECEIVE = "io.github.beacon.PAUSE_RECEIVE"
 
         /** Set only by [CrashRecoveryAlarm]; it marks a retry so the budget is not reset. */
         const val RECOVERY_RETRY = "io.github.beacon.RECOVERY_RETRY"
@@ -119,17 +118,6 @@ class RuntimeProbeService : Service() {
         var reportOutcome = false
         var attempts = 0
         when (intent?.action) {
-            PAUSE_RECEIVE -> {
-                // A user stop is explicit: it clears the bounded budget and any pending retry, and
-                // no recovery path may undo it.
-                pauseRecoveryBudget()
-                generation.incrementAndGet()
-                worker.execute {
-                    saveState(pollingState.copy(config = pollingState.config.copy(enabled = false)))
-                    realtime.reconcile()
-                }
-                return START_NOT_STICKY
-            }
             START_RECEIVE -> {
                 // An explicit start from the client or a boot restore is a fresh budget: only the
                 // user's own action may lift a suspension.
@@ -224,11 +212,6 @@ class RuntimeProbeService : Service() {
         }
     }
 
-    /** Only an explicit user stop or an explicit start may clear the bounded budget. */
-    private fun pauseRecoveryBudget() {
-        CrashRecoveryAlarm.cancel(this)
-        runCatching { CrashRecoveryStore(this).save(CrashRecoveryPolicy.reset()) }
-    }
 
     private val realtime by realtimeDelegate
 
@@ -251,14 +234,6 @@ class RuntimeProbeService : Service() {
                 android.app.PendingIntent.FLAG_IMMUTABLE or
                     android.app.PendingIntent.FLAG_UPDATE_CURRENT,
             )
-        val pause =
-            android.app.PendingIntent.getService(
-                this,
-                1,
-                Intent(this, RuntimeProbeService::class.java).setAction(PAUSE_RECEIVE),
-                android.app.PendingIntent.FLAG_IMMUTABLE or
-                    android.app.PendingIntent.FLAG_UPDATE_CURRENT,
-            )
         val notice =
             android.app.Notification.Builder(this, FOREGROUND_CHANNEL)
                 .setSmallIcon(io.github.beacon.app.R.drawable.ic_notification)
@@ -267,7 +242,6 @@ class RuntimeProbeService : Service() {
                 .setContentIntent(open)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
-                .addAction(android.app.Notification.Action.Builder(null, "暂停接收", pause).build())
                 .build()
         if (android.os.Build.VERSION.SDK_INT >= 34)
             startForeground(
@@ -740,7 +714,7 @@ class RuntimeProbeService : Service() {
                                     pollingState.blocked.isNotBlank() &&
                                         pollingState.lastOutcome == SyncOutcome.TLS
                                 )
-                                    saveState(pollingState.copy(blocked = ""))
+                                    saveState(pollingState.copy(blocked = "", config = pollingState.config.copy(enabled = true)))
                                 recordEvent(RuntimeEventKind.RECONNECT_REQUESTED)
                                 realtime.reset()
                                 realtime.reconcile()
@@ -1158,7 +1132,7 @@ class RuntimeProbeService : Service() {
                                 saved = true
                                 generation.incrementAndGet()
                                 realtime.reset()
-                                saveState(pollingState.copy(blocked = ""))
+                                saveState(pollingState.copy(blocked = "", config = pollingState.config.copy(enabled = true)))
                                 recordEvent(RuntimeEventKind.CREDENTIALS_ROTATED)
                                 realtime.reconcile()
                                 SyncReport(SyncOutcome.OK, "新凭证已验证并加密保存；历史与接收开关保留，请更新发送脚本中的推送地址")
@@ -1210,7 +1184,7 @@ class RuntimeProbeService : Service() {
                                     recordEvent(RuntimeEventKind.CONNECTION_SAVED)
                                     generation.incrementAndGet()
                                     saveState(
-                                        pollingState.copy(blocked = "")
+                                        pollingState.copy(blocked = "", config = pollingState.config.copy(enabled = true))
                                     )
                                     realtime.reset()
                                     realtime.reconcile()
@@ -1477,6 +1451,7 @@ class RuntimeProbeService : Service() {
                                                 saveState(
                                                     pollingState.copy(
                                                         blocked = "",
+                                                        config = pollingState.config.copy(enabled = true),
                                                     )
                                                 )
                                                 realtime.reset()

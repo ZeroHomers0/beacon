@@ -40,13 +40,14 @@ fun BeaconText(
     style: TextStyle = androidx.compose.material3.LocalTextStyle.current,
     maxLines: Int = Int.MAX_VALUE,
     overflow: TextOverflow = TextOverflow.Clip,
+    textAlign: androidx.compose.ui.text.style.TextAlign? = null,
 ) {
     if (miuix())
         top.yukonga.miuix.kmp.basic.Text(
             text,
             modifier,
             color = color,
-            style = style,
+            style = if (textAlign == null) style else style.copy(textAlign = textAlign),
             maxLines = maxLines,
             overflow = overflow,
         )
@@ -55,7 +56,7 @@ fun BeaconText(
             text,
             modifier,
             color = color,
-            style = style,
+            style = if (textAlign == null) style else style.copy(textAlign = textAlign),
             maxLines = maxLines,
             overflow = overflow,
         )

@@ -9,8 +9,8 @@ import io.github.beacon.app.domain.model.ReceivePlan
  * automatic interval and the rule conditions all live here until the page's single save button
  * submits them.
  *
- * The mode selector writes through immediately. Switching modes resets the previous draft;
- * the toolbar save icon indicates modifications to the remaining configuration.
+ * The mode selector writes through immediately. Switching modes resets the previous draft; the
+ * toolbar save icon indicates modifications to the remaining configuration.
  */
 class ReceptionFormState {
     var plan by mutableStateOf(ReceivePlan())
@@ -19,7 +19,6 @@ class ReceptionFormState {
     var interval by mutableIntStateOf(15)
     var unmetered by mutableStateOf(false)
     var charging by mutableStateOf(false)
-    var enabled by mutableStateOf(false)
     var edited by mutableStateOf(false)
 
     /** The typed schedule times, or null while the text does not parse yet. */
@@ -46,7 +45,6 @@ class ReceptionFormState {
         interval = config.intervalMinutes
         unmetered = config.unmetered
         charging = config.charging
-        enabled = config.enabled
         edited = false
     }
 
@@ -61,7 +59,7 @@ class ReceptionFormState {
         interval != config.intervalMinutes ||
             unmetered != config.unmetered ||
             charging != config.charging ||
-            enabled != config.enabled
+            !config.enabled
 
     /**
      * True when anything on the page differs from what the runtime has saved. Both halves are
@@ -75,7 +73,7 @@ class ReceptionFormState {
             intervalMinutes = interval,
             unmetered = unmetered,
             charging = charging,
-            enabled = enabled,
+            enabled = true,
         )
 
     private companion object {
