@@ -180,7 +180,7 @@ jobs:
           request = urllib.request.Request(
               "https://push.gzautobot.top/api/v1/push",
               data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-              headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+              headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json", "User-Agent": "Beacon-CI/1.0"},
               method="POST",
           )
           try:
