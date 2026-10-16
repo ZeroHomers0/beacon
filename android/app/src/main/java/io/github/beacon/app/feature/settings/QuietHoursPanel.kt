@@ -23,7 +23,7 @@ internal fun QuietHoursPanel(
 ) {
     with(form) {
         LaunchedEffect(state.runtimeConnected, attempt) {
-            if (state.runtimeConnected && loaded && !failed) return@LaunchedEffect
+            if (!state.runtimeConnected || loaded) return@LaunchedEffect
             loaded = false
             saving = false
             failed = false
@@ -36,6 +36,8 @@ internal fun QuietHoursPanel(
         val editable = loaded && !saving && state.runtimeConnected
         val labels = stringResource(R.string.quiet_weekdays).split(",")
         Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SettingsGroupGap)) {
+            if (!loaded && !failed && state.runtimeConnected)
+                SettingsHint(stringResource(R.string.settings_data_loading))
             if (!scheduleOnly)
                 SettingsPreferences(stringResource(R.string.ui_v2_quiet_section)) {
                     SettingsFieldGroup(
@@ -88,10 +90,20 @@ internal fun QuietHoursPanel(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
                                 )
+                                androidx.compose.material3.Icon(
+                                    BeaconIcons.Arrow,
+                                    null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                         }
                     }
                 }
+            if (loaded && draft.enabled && !scheduleValid && !scheduleOnly)
+                BeaconText(
+                    stringResource(R.string.quiet_invalid),
+                    color = MaterialTheme.colorScheme.error,
+                )
             val scheduleContent: @Composable ColumnScope.() -> Unit = {
                 BeaconTimeRangePreference(
                     start,
@@ -145,9 +157,11 @@ internal fun QuietHoursPanel(
                     Modifier.fillMaxWidth(),
                     !saving && state.runtimeConnected,
                 ) {
-                    loaded = false
-                    failed = false
-                    attempt++
+                    if (loaded) save(actions)
+                    else {
+                        failed = false
+                        attempt++
+                    }
                 }
             }
         }

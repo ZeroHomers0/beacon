@@ -55,6 +55,21 @@ internal fun ServerAdminPage(
         }
     val creating by model.creating.collectAsStateWithLifecycle()
     LaunchedEffect(screen) { model.dismissCreation() }
+    androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+        if (model.state.value.loggedIn && !model.state.value.busy) model.refresh()
+    }
+    var loginHelp by remember { mutableStateOf(false) }
+    if (loginHelp)
+        BeaconAlertDialog(
+            onDismissRequest = { loginHelp = false },
+            title = { BeaconText(stringResource(R.string.admin_token)) },
+            text = { SettingsHint(stringResource(R.string.settings_admin_token_help)) },
+            confirmButton = {
+                BeaconButton(onClick = { loginHelp = false }) {
+                    BeaconText(stringResource(R.string.action_close))
+                }
+            },
+        )
     var bindingName by rememberSaveable { mutableStateOf("") }
     var appName by rememberSaveable { mutableStateOf("") }
     var deviceId by rememberSaveable { mutableStateOf(state.testDeviceId) }
@@ -126,6 +141,12 @@ internal fun ServerAdminPage(
             item {
                 SettingsSection(stringResource(R.string.admin_login_title)) {
                     SettingsHint(stringResource(R.string.admin_login_hint))
+                    BeaconOutlinedButton(
+                        onClick = { loginHelp = true },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        BeaconText(stringResource(R.string.settings_admin_token_location))
+                    }
                     AdminField(
                         endpoint,
                         { endpoint = it },
@@ -377,6 +398,11 @@ internal fun ServerAdminPage(
                     ) {
                         BeaconText(stringResource(R.string.admin_clear_messages))
                     }
+                }
+            }
+        if (state.loggedIn && tab == -1)
+            item {
+                SettingsSection(stringResource(R.string.settings_admin_session)) {
                     BeaconOutlinedButton(
                         onClick = {
                             model.logout()

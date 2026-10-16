@@ -5,12 +5,11 @@ import io.github.beacon.app.domain.model.PollingConfig
 import io.github.beacon.app.domain.model.ReceivePlan
 
 /**
- * The reception page keeps one unsaved draft: the heartbeat, the battery-saver switch, the
- * automatic interval and the rule conditions all live here until the page's single save button
- * submits them.
+ * The reception page keeps one unsaved draft: the heartbeat, the automatic interval and the rule
+ * conditions all live here until the page's single save button submits them.
  *
- * The mode selector writes through immediately. Switching modes resets the previous draft; the
- * toolbar save icon indicates modifications to the remaining configuration.
+ * The mode selector writes through after confirming any unsaved changes; the toolbar save icon
+ * indicates modifications to the remaining configuration.
  */
 class ReceptionFormState {
     var plan by mutableStateOf(ReceivePlan())

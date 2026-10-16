@@ -170,10 +170,11 @@ class RuntimeRepository : RuntimeActions {
         password: String,
         importing: Boolean,
         encrypted: Boolean,
+        onFailure: (String) -> Unit,
         onComplete: (String) -> Unit,
     ) {
         if (!ready() || state.value.messageBusy || state.value.transportBusy) {
-            onComplete("接收服务未就绪，请稍后重试")
+            onFailure("接收服务未就绪，请稍后重试")
             return
         }
         mutableState.update { it.copy(transportBusy = true) }
@@ -186,7 +187,7 @@ class RuntimeRepository : RuntimeActions {
             },
             {
                 mutableState.update { it.copy(transportBusy = false) }
-                onComplete(
+                onFailure(
                     if (importing) "导入失败或结果未确认：请检查密码、文件与当前消息；重复导入不会覆盖已有消息" else "导出失败，请检查文件权限与剩余空间"
                 )
             },
@@ -874,12 +875,18 @@ class RuntimeRepository : RuntimeActions {
         )
     }
 
-    override fun pendingReminders(onReady: (Long) -> Unit) {
-        if (!ready()) return
+    override fun pendingReminders(onFailure: () -> Unit, onReady: (Long) -> Unit) {
+        if (!ready()) {
+            onFailure()
+            return
+        }
         connection.execute(
             { RuntimeMessageClient(it).pendingReminderCount() },
             onReady,
-            { setStatus(OperationStatus.result("待通知数量读取失败，请重试")) },
+            {
+                setStatus(OperationStatus.result("待通知数量读取失败，请重试"))
+                onFailure()
+            },
         )
     }
 
@@ -890,13 +897,14 @@ class RuntimeRepository : RuntimeActions {
             { RuntimeMessageClient(it).checkpointStorage() },
             { complete ->
                 mutableState.update { it.copy(dataBusy = false) }
-                setStatus(OperationStatus.result(
-                    if (complete) "临时日志已清理，消息与接收记录保留"
-                    else "临时日志暂时被占用，请稍后重试",
-                ))
+                setStatus(
+                    OperationStatus.result(if (complete) "临时日志已清理，消息与接收记录保留" else "临时日志暂时被占用，请稍后重试")
+                )
                 state.value.cleanupPolicy?.let(::previewCleanup)
             },
-            { error -> failData("临时日志清理失败：${OperationFailure.describe(error, crossProcess = true)}") },
+            { error ->
+                failData("临时日志清理失败：${OperationFailure.describe(error, crossProcess = true)}")
+            },
         )
     }
 
@@ -908,15 +916,23 @@ class RuntimeRepository : RuntimeActions {
             { changed ->
                 mutableState.update {
                     it.copy(
-                        dataBusy = false, cleanupPreview = null,
+                        dataBusy = false,
+                        cleanupPreview = null,
                         selectedMessage = it.selectedMessage?.copy(isRead = true),
                         status = OperationStatus.result("已标为已读 $changed 条"),
                     )
                 }
                 val query = state.value.messageQuery
-                readMessages(search = query.search, serverId = query.serverId, readFilter = query.readFilter, showStatus = false)
+                readMessages(
+                    search = query.search,
+                    serverId = query.serverId,
+                    readFilter = query.readFilter,
+                    showStatus = false,
+                )
             },
-            { error -> failData("全部已读未完成，请刷新核对：${OperationFailure.describe(error, crossProcess = true)}") },
+            { error ->
+                failData("全部已读未完成，请刷新核对：${OperationFailure.describe(error, crossProcess = true)}")
+            },
         )
     }
 
@@ -1079,8 +1095,7 @@ class RuntimeRepository : RuntimeActions {
                 transportBusy = true,
                 status =
                     OperationStatus.pending(
-                        if (notifyOnly) "正在处理待通知"
-                        else if (settings == null) "正在同步" else "正在保存连接配置"
+                        if (notifyOnly) "正在处理待通知" else if (settings == null) "正在同步" else "正在保存连接配置"
                     ),
             )
         }
@@ -1204,9 +1219,13 @@ class RuntimeRepository : RuntimeActions {
             { result ->
                 mutableState.update {
                     it.copy(
-                        transportBusy = false, receivePlan = result.plan, receivePlanLoaded = true,
-                        pollingState = result.polling, realtimeStatus = result.status,
-                        realtimeRunning = result.running, realtimeDiagnostics = result.diagnostics,
+                        transportBusy = false,
+                        receivePlan = result.plan,
+                        receivePlanLoaded = true,
+                        pollingState = result.polling,
+                        realtimeStatus = result.status,
+                        realtimeRunning = result.running,
+                        realtimeDiagnostics = result.diagnostics,
                         recovery = result.recovery,
                     )
                 }
@@ -1214,7 +1233,9 @@ class RuntimeRepository : RuntimeActions {
                 receivePlan()
             },
             { error ->
-                failTransport("接收设置保存或调度失败：${OperationFailure.describe(error, crossProcess = true)}")
+                failTransport(
+                    "接收设置保存或调度失败：${OperationFailure.describe(error, crossProcess = true)}"
+                )
                 receivePlan()
             },
         )

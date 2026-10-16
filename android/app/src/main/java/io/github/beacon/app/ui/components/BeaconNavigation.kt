@@ -5,9 +5,9 @@
 
 package io.github.beacon.app.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.background
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarItem as MaterialNavigationItem
 import androidx.compose.runtime.*
@@ -160,9 +160,10 @@ fun BeaconDropdownPreference(
                 title,
                 items.getOrElse(selectedIndex) { "" },
                 icon ?: BeaconIcons.Settings,
-            ) {
-                if (enabled) expanded = true
-            }
+                iconTint = MaterialTheme.colorScheme.onSurface,
+                enabled = enabled,
+                onClick = { expanded = true },
+            )
         } else
             BoxWithConstraints(
                 Modifier.fillMaxWidth()

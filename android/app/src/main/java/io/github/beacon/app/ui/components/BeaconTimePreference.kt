@@ -126,7 +126,7 @@ fun BeaconTimePreference(
                             open = false
                         }
                     ) {
-                        BeaconText(stringResource(R.string.action_save))
+                        BeaconText(stringResource(R.string.settings_confirm))
                     }
                 },
                 dismissButton = {

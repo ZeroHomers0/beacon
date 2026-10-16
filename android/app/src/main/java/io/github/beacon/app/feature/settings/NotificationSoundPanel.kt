@@ -4,9 +4,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Intent
 import android.provider.Settings
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import io.github.beacon.app.R
@@ -20,42 +18,47 @@ fun NotificationSoundPanel() {
     val context = LocalContext.current
     var hint by remember { mutableStateOf("") }
     SettingsGroup(stringResource(R.string.settings_sound_title)) {
-
-        val channels = listOf(
-            SoundChannel(
-                NotificationChannelKind.FRESH,
-                resources.getString(R.string.settings_sound_normal),
-                NotificationManager.IMPORTANCE_DEFAULT,
-                resources.getString(R.string.channel_fresh),
-                resources.getString(R.string.channel_fresh_desc),
-            ),
-            SoundChannel(
-                NotificationChannelKind.IMPORTANT,
-                resources.getString(R.string.settings_sound_important),
-                NotificationManager.IMPORTANCE_HIGH,
-                resources.getString(R.string.channel_important),
-                resources.getString(R.string.channel_important_desc),
-            ),
-        )
+        val channels =
+            listOf(
+                SoundChannel(
+                    NotificationChannelKind.FRESH,
+                    resources.getString(R.string.settings_sound_normal),
+                    NotificationManager.IMPORTANCE_DEFAULT,
+                    resources.getString(R.string.channel_fresh),
+                    resources.getString(R.string.channel_fresh_desc),
+                ),
+                SoundChannel(
+                    NotificationChannelKind.IMPORTANT,
+                    resources.getString(R.string.settings_sound_important),
+                    NotificationManager.IMPORTANCE_HIGH,
+                    resources.getString(R.string.channel_important),
+                    resources.getString(R.string.channel_important_desc),
+                ),
+            )
         channels.forEachIndexed { index, channel ->
             val (kind, title, importance, name, description) = channel
             if (index > 0) SettingsFieldDivider()
-            SettingsRow(title, "", io.github.beacon.app.ui.icons.BeaconIcons.Messages) {
-            runCatching {
-                val manager = context.getSystemService(NotificationManager::class.java)
-                // Seed only missing channels; preserve the user's existing channel settings.
-                if (manager.getNotificationChannel(kind.id) == null)
-                    manager.createNotificationChannel(
-                        NotificationChannel(kind.id, name, importance).apply {
-                            this.description = description
-                        }
+            SettingsRow(
+                title,
+                stringResource(R.string.settings_sound_system),
+                io.github.beacon.app.ui.icons.BeaconIcons.Messages,
+            ) {
+                runCatching {
+                    val manager = context.getSystemService(NotificationManager::class.java)
+                    // Seed only missing channels; preserve the user's existing channel settings.
+                    if (manager.getNotificationChannel(kind.id) == null)
+                        manager.createNotificationChannel(
+                            NotificationChannel(kind.id, name, importance).apply {
+                                this.description = description
+                            }
+                        )
+                    context.startActivity(
+                        Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+                            .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                            .putExtra(Settings.EXTRA_CHANNEL_ID, kind.id)
                     )
-                context.startActivity(
-                    Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
-                        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                        .putExtra(Settings.EXTRA_CHANNEL_ID, kind.id)
-                )
-            }.onFailure { hint = resources.getString(R.string.settings_sound_unavailable) }
+                }
+                    .onFailure { hint = resources.getString(R.string.settings_sound_unavailable) }
             }
         }
         if (hint.isNotEmpty()) BeaconText(hint)

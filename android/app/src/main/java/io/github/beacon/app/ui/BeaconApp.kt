@@ -14,6 +14,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -31,7 +32,6 @@ import androidx.lifecycle.repeatOnLifecycle
 import io.github.beacon.app.BuildConfig
 import io.github.beacon.app.R
 import io.github.beacon.app.data.remote.ReleaseClient
-import io.github.beacon.app.domain.model.BeaconUiStyle
 import io.github.beacon.app.domain.model.MessageAction
 import io.github.beacon.app.domain.model.MessageKey
 import io.github.beacon.app.domain.model.MessageReadFilter
@@ -50,21 +50,22 @@ import io.github.beacon.app.ui.components.BeaconDropdownMenu
 import io.github.beacon.app.ui.components.BeaconDropdownMenuItem
 import io.github.beacon.app.ui.components.BeaconIconButton
 import io.github.beacon.app.ui.components.BeaconMessageTransition
+import io.github.beacon.app.ui.components.BeaconOutlinedButton
 import io.github.beacon.app.ui.components.BeaconPagerToolbar
 import io.github.beacon.app.ui.components.BeaconScaffold
 import io.github.beacon.app.ui.components.BeaconSelectableRow
 import io.github.beacon.app.ui.components.BeaconSettingsTransition
 import io.github.beacon.app.ui.components.BeaconText
 import io.github.beacon.app.ui.components.BeaconTextButton
-import io.github.beacon.app.ui.components.BeaconUiMetrics
 import io.github.beacon.app.ui.components.BeaconTopBar
+import io.github.beacon.app.ui.components.BeaconUiMetrics
 import io.github.beacon.app.ui.components.NotificationPermissionState
+import io.github.beacon.app.ui.components.PredictiveBackReset
 import io.github.beacon.app.ui.components.ReceiveModeButton
 import io.github.beacon.app.ui.components.SettingsScreen
 import io.github.beacon.app.ui.components.copyToClipboard
 import io.github.beacon.app.ui.components.rememberBeaconBarBehavior
 import io.github.beacon.app.ui.components.settingsGestureFraction
-import io.github.beacon.app.ui.components.PredictiveBackReset
 import io.github.beacon.app.ui.components.userOperationFeedback
 import io.github.beacon.app.ui.icons.BeaconIcons
 import io.github.beacon.app.ui.theme.BeaconTheme
@@ -90,10 +91,16 @@ fun BeaconApp(
 ) {
     val actions: RuntimeActions = viewModel
     val context = androidx.compose.ui.platform.LocalContext.current
-    val adminActivity = checkNotNull(androidx.activity.compose.LocalActivity.current as? androidx.activity.ComponentActivity)
-    val adminModel = remember(adminActivity) {
-        androidx.lifecycle.ViewModelProvider(adminActivity)[io.github.beacon.app.feature.settings.ServerAdminViewModel::class.java]
-    }
+    val adminActivity =
+        checkNotNull(
+            androidx.activity.compose.LocalActivity.current as? androidx.activity.ComponentActivity
+        )
+    val adminModel =
+        remember(adminActivity) {
+            androidx.lifecycle
+                .ViewModelProvider(adminActivity)[
+                    io.github.beacon.app.feature.settings.ServerAdminViewModel::class.java]
+        }
     val adminState by adminModel.state.collectAsStateWithLifecycle()
     val ui = viewModel.uiState
     val runtimeState by actions.state.collectAsStateWithLifecycle()
@@ -160,11 +167,12 @@ fun BeaconApp(
 
     BeaconTheme(ui.uiStyle, ui.themeMode) {
         val pager = rememberPagerState(initialPage = ui.page) { 2 }
-        val pageNavigationMotion = spring<Float>(
-            stiffness = 322.2f,
-            dampingRatio = 32.31f / (2f * kotlin.math.sqrt(322.2f)),
-            visibilityThreshold = 0.5f,
-        )
+        val pageNavigationMotion =
+            spring<Float>(
+                stiffness = 322.2f,
+                dampingRatio = 32.31f / (2f * kotlin.math.sqrt(322.2f)),
+                visibilityThreshold = 0.5f,
+            )
         LaunchedEffect(ui.page) {
             pager.animateScrollToPage(ui.page, animationSpec = pageNavigationMotion)
         }
@@ -242,13 +250,65 @@ fun BeaconApp(
             )
                 ui.receptionForm.reset(runtimeState.pollingState.config, runtimeState.receivePlan)
         }
+        SideEffect {
+            ui.shouldConfirmExit = { destination ->
+                val notificationPages =
+                    setOf(SettingsScreen.NOTIFICATION_RULES, SettingsScreen.QUIET_HOURS)
+                (ui.settingsScreen == SettingsScreen.RECEPTION &&
+                    destination != SettingsScreen.RECEPTION &&
+                    ui.receptionForm.edited &&
+                    ui.receptionForm.differsFrom(
+                        runtimeState.pollingState.config,
+                        runtimeState.receivePlan,
+                    )) ||
+                    (ui.settingsScreen in notificationPages &&
+                        destination !in notificationPages &&
+                        (ui.quietHoursForm.loaded && ui.quietHoursForm.changed ||
+                            ui.notificationForm.changed))
+            }
+            ui.discardDrafts = {
+                ui.receptionForm.reset(runtimeState.pollingState.config, runtimeState.receivePlan)
+                ui.quietHoursForm.reset(ui.quietHoursForm.saved)
+                ui.notificationForm.reset(ui.notificationForm.saved)
+            }
+        }
+        if (ui.pendingNavigation != null)
+            BeaconAlertDialog(
+                onDismissRequest = { ui.pendingNavigation = null },
+                title = { BeaconText(stringResource(R.string.settings_unsaved_title)) },
+                text = { BeaconText(stringResource(R.string.settings_unsaved_hint)) },
+                confirmButton = {
+                    BeaconButton(onClick = { ui.pendingNavigation = null }) {
+                        BeaconText(stringResource(R.string.settings_continue_editing))
+                    }
+                },
+                dismissButton = {
+                    BeaconOutlinedButton(onClick = ui::discardAndContinue) {
+                        BeaconText(stringResource(R.string.settings_discard_changes))
+                    }
+                },
+            )
         if (ui.receiveModesOpen)
             ReceiveModeDialog(
                 ui.receivePlan.mode,
                 onSelect = { mode ->
                     if (mode != ui.receivePlan.mode) {
-                        ui.receptionForm.reset(runtimeState.pollingState.config, runtimeState.receivePlan.copy(mode = mode))
-                        actions.receivePlan(ui.receivePlan.copy(mode = mode))
+                        val changeMode = {
+                            ui.receptionForm.reset(
+                                runtimeState.pollingState.config,
+                                runtimeState.receivePlan.copy(mode = mode),
+                            )
+                            actions.receivePlan(ui.receivePlan.copy(mode = mode))
+                        }
+                        if (
+                            ui.receptionForm.edited &&
+                                ui.receptionForm.differsFrom(
+                                    runtimeState.pollingState.config,
+                                    runtimeState.receivePlan,
+                                )
+                        )
+                            ui.pendingNavigation = changeMode
+                        else changeMode()
                     }
                     ui.receiveModesOpen = false
                 },
@@ -315,8 +375,7 @@ fun BeaconApp(
             detailBackReset.stop()
             detailMotion.animateTo(runtimeState.selectedMessage)
         }
-        val predictiveDetailBack =
-            runtimeState.selectedMessage != null && !runtimeState.messageBusy
+        val predictiveDetailBack = runtimeState.selectedMessage != null && !runtimeState.messageBusy
         PredictiveBackHandler(enabled = predictiveDetailBack) { events ->
             detailBackReset.stop()
             val original = runtimeState.selectedMessage
@@ -347,6 +406,8 @@ fun BeaconApp(
                     )
                 }
                 navigate(1)
+                if (ui.pendingNavigation != null)
+                    settingsBackReset.launch(uiScope, settingsMotion, original)
             } catch (_: kotlinx.coroutines.CancellationException) {
                 settingsBackReset.launch(uiScope, settingsMotion, original)
             }
@@ -461,9 +522,7 @@ fun BeaconApp(
         val windowInfo = LocalWindowInfo.current
         val windowHeightDp = with(LocalDensity.current) { windowInfo.containerSize.height.toDp() }
         val sharedTitleBar =
-            windowHeightDp > 0.dp &&
-                windowHeightDp < SHARED_TITLE_MAX_HEIGHT &&
-                !ui.selectionMode
+            windowHeightDp > 0.dp && windowHeightDp < SHARED_TITLE_MAX_HEIGHT && !ui.selectionMode
         // A short window folds the title into the search row; opening the IME preserves this
         // layout.
         val sharedTitleLabel = if (sharedTitleBar) stringResource(ui.pages[0]) else null
@@ -501,7 +560,11 @@ fun BeaconApp(
                                                 displayedSettingsScreen != SettingsScreen.HOME),
                                         barBehavior,
                                         navigationIcon = {
-                                            if (displayedDetail == null && barPage == 0 && ui.selectionMode)
+                                            if (
+                                                displayedDetail == null &&
+                                                    barPage == 0 &&
+                                                    ui.selectionMode
+                                            )
                                                 BeaconActionIcon(
                                                     BeaconIcons.Close,
                                                     stringResource(
@@ -549,7 +612,9 @@ fun BeaconApp(
                                                     )
                                                 }
                                             else if (barPage == 0) {
-                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
                                                     ReceiveModeButton(
                                                         polling.shouldSchedule &&
                                                             runtimeState.serverReachable == true &&
@@ -566,7 +631,8 @@ fun BeaconApp(
                                                                 if (
                                                                     runtimeState.configuredEndpoint
                                                                         .isBlank() ||
-                                                                        runtimeState.serverReachable ==
+                                                                        runtimeState
+                                                                            .serverReachable ==
                                                                             false
                                                                 )
                                                                     SettingsScreen.CONNECTION
@@ -579,18 +645,26 @@ fun BeaconApp(
                                                                     .isBlank() ||
                                                                     runtimeState.serverReachable ==
                                                                         false),
-                                                        checkingServer = runtimeState.serverChecking,
+                                                        checkingServer =
+                                                            runtimeState.serverChecking,
                                                         connected =
                                                             runtimeState.serverReachable == true &&
                                                                 (ui.receivePlan.mode !=
-                                                                    io.github.beacon.app.domain.model.ReceiveMode.REALTIME ||
+                                                                    io.github.beacon.app.domain
+                                                                        .model
+                                                                        .ReceiveMode
+                                                                        .REALTIME ||
                                                                     runtimeState.realtimeRunning),
                                                     )
                                                 }
                                             }
                                         },
                                         actions = {
-                                            if (displayedDetail == null && barPage == 0 && ui.selectionMode) {
+                                            if (
+                                                displayedDetail == null &&
+                                                    barPage == 0 &&
+                                                    ui.selectionMode
+                                            ) {
                                                 BeaconActionIcon(
                                                     BeaconIcons.DoneAll,
                                                     stringResource(R.string.ui_mark_read_action),
@@ -599,7 +673,9 @@ fun BeaconApp(
                                                     actions.manageMessages(
                                                         MessageAction.MARK_READ,
                                                         ui.selectedKeys,
-                                                        onComplete = { ui.selectedKeys = emptyList() },
+                                                        onComplete = {
+                                                            ui.selectedKeys = emptyList()
+                                                        },
                                                     )
                                                 }
                                                 BeaconActionIcon(
@@ -610,12 +686,16 @@ fun BeaconApp(
                                                     actions.manageMessages(
                                                         MessageAction.MARK_UNREAD,
                                                         ui.selectedKeys,
-                                                        onComplete = { ui.selectedKeys = emptyList() },
+                                                        onComplete = {
+                                                            ui.selectedKeys = emptyList()
+                                                        },
                                                     )
                                                 }
                                                 BeaconActionIcon(
                                                     BeaconIcons.Delete,
-                                                    stringResource(R.string.ui_delete_selected_action),
+                                                    stringResource(
+                                                        R.string.ui_delete_selected_action
+                                                    ),
                                                     !busy && ui.selectedKeys.isNotEmpty(),
                                                 ) {
                                                     ui.pendingDelete = ui.selectedKeys.toList()
@@ -628,13 +708,20 @@ fun BeaconApp(
                                                     visibleKeys.isNotEmpty() &&
                                                         ui.selectedKeys.containsAll(visibleKeys)
                                                 val maxSelectionWarning =
-                                                    stringResource(R.string.ui_max_selection_warning)
+                                                    stringResource(
+                                                        R.string.ui_max_selection_warning
+                                                    )
                                                 BeaconActionIcon(
                                                     if (allSelected) BeaconIcons.Close
                                                     else BeaconIcons.Check,
                                                     if (allSelected)
-                                                        stringResource(R.string.ui_deselect_page_action)
-                                                    else stringResource(R.string.ui_select_page_action),
+                                                        stringResource(
+                                                            R.string.ui_deselect_page_action
+                                                        )
+                                                    else
+                                                        stringResource(
+                                                            R.string.ui_select_page_action
+                                                        ),
                                                     !busy,
                                                 ) {
                                                     val merged =
@@ -650,9 +737,16 @@ fun BeaconApp(
                                             } else if (displayedDetail == null && barPage == 0) {
                                                 BeaconActionIcon(
                                                     BeaconIcons.ReadAll,
-                                                    stringResource(R.string.ui_mark_all_read_action),
-                                                    enabled = runtimeState.runtimeConnected && runtimeState.messagesLoaded && !busy,
-                                                ) { actions.markAllRead() }
+                                                    stringResource(
+                                                        R.string.ui_mark_all_read_action
+                                                    ),
+                                                    enabled =
+                                                        runtimeState.runtimeConnected &&
+                                                            runtimeState.messagesLoaded &&
+                                                            !busy,
+                                                ) {
+                                                    actions.markAllRead()
+                                                }
                                                 if (busy)
                                                     Box(
                                                         Modifier.size(48.dp),
@@ -684,13 +778,15 @@ fun BeaconApp(
                                                         ui.filtersOpen,
                                                         { ui.filtersOpen = false },
                                                     ) {
-                                                        MessageReadFilter.entries.forEach { filter ->
+                                                        MessageReadFilter.entries.forEach { filter
+                                                            ->
                                                             BeaconDropdownMenuItem(
                                                                 text = {
                                                                     BeaconSelectableRow(
                                                                         stringResource(
                                                                             when (filter) {
-                                                                                MessageReadFilter.ALL ->
+                                                                                MessageReadFilter
+                                                                                    .ALL ->
                                                                                     R.string
                                                                                         .ui_filter_all_label
                                                                                 MessageReadFilter
@@ -726,32 +822,102 @@ fun BeaconApp(
                                                     ui.navigateSettings(SettingsScreen.HOME)
                                                     navigate(1)
                                                 }
-                                            } else if (displayedDetail == null && barPage == 1 && displayedSettingsScreen == SettingsScreen.SERVER_ADMIN) {
+                                            } else if (
+                                                displayedDetail == null &&
+                                                    barPage == 1 &&
+                                                    displayedSettingsScreen ==
+                                                        SettingsScreen.SERVER_ADMIN
+                                            ) {
                                                 BeaconActionIcon(
-                                                    BeaconIcons.Sync, stringResource(R.string.admin_refresh),
+                                                    BeaconIcons.Sync,
+                                                    stringResource(R.string.admin_refresh),
                                                     adminState.loggedIn && !adminState.busy,
-                                                ) { adminModel.refresh() }
-                                            } else if (displayedDetail == null && barPage == 1 && displayedSettingsScreen in setOf(SettingsScreen.SERVER_DEVICES, SettingsScreen.SERVER_APPLICATIONS)) {
+                                                ) {
+                                                    adminModel.refresh()
+                                                }
+                                            } else if (
+                                                displayedDetail == null &&
+                                                    barPage == 1 &&
+                                                    displayedSettingsScreen in
+                                                        setOf(
+                                                            SettingsScreen.SERVER_DEVICES,
+                                                            SettingsScreen.SERVER_APPLICATIONS,
+                                                        )
+                                            ) {
+                                                BeaconActionIcon(
+                                                    BeaconIcons.Sync,
+                                                    stringResource(R.string.admin_refresh),
+                                                    adminState.loggedIn && !adminState.busy,
+                                                ) {
+                                                    adminModel.refresh()
+                                                }
                                                 BeaconActionIcon(
                                                     BeaconIcons.Add,
-                                                    stringResource(if (displayedSettingsScreen == SettingsScreen.SERVER_DEVICES)
-                                                        R.string.admin_create_binding else R.string.admin_create_application),
+                                                    stringResource(
+                                                        if (
+                                                            displayedSettingsScreen ==
+                                                                SettingsScreen.SERVER_DEVICES
+                                                        )
+                                                            R.string.admin_create_binding
+                                                        else R.string.admin_create_application
+                                                    ),
                                                     adminState.loggedIn && !adminState.busy,
-                                                ) { adminModel.showCreation() }
-                                            } else if (displayedDetail == null && barPage == 1 && displayedSettingsScreen == SettingsScreen.RECEPTION) {
+                                                ) {
+                                                    adminModel.showCreation()
+                                                }
+                                            } else if (
+                                                displayedDetail == null &&
+                                                    barPage == 1 &&
+                                                    displayedSettingsScreen ==
+                                                        SettingsScreen.RECEPTION
+                                            ) {
                                                 val form = ui.receptionForm
                                                 BeaconActionIcon(
-                                                    BeaconIcons.Save, stringResource(R.string.action_save),
-                                                    runtimeState.runtimeConnected && runtimeState.receivePlanLoaded && !busy &&
-                                                        form.edited && form.scheduleValid && form.differsFrom(runtimeState.pollingState.config, runtimeState.receivePlan),
+                                                    BeaconIcons.Save,
+                                                    stringResource(R.string.action_save),
+                                                    runtimeState.runtimeConnected &&
+                                                        runtimeState.receivePlanLoaded &&
+                                                        !busy &&
+                                                        form.edited &&
+                                                        form.scheduleValid &&
+                                                        form.differsFrom(
+                                                            runtimeState.pollingState.config,
+                                                            runtimeState.receivePlan,
+                                                        ),
                                                 ) {
-                                                    actions.saveReception(form.pendingPlan(), form.applyTo(runtimeState.pollingState.config))
+                                                    actions.saveReception(
+                                                        form.pendingPlan(),
+                                                        form.applyTo(
+                                                            runtimeState.pollingState.config
+                                                        ),
+                                                    )
                                                 }
-                                            } else if (displayedDetail == null && barPage == 1 && displayedSettingsScreen in setOf(SettingsScreen.NOTIFICATION_RULES, SettingsScreen.QUIET_HOURS)) {
+                                            } else if (
+                                                displayedDetail == null &&
+                                                    barPage == 1 &&
+                                                    displayedSettingsScreen in
+                                                        setOf(
+                                                            SettingsScreen.NOTIFICATION_RULES,
+                                                            SettingsScreen.QUIET_HOURS,
+                                                        )
+                                            ) {
                                                 BeaconActionIcon(
-                                                    BeaconIcons.Save, stringResource(R.string.action_save),
-                                                    runtimeState.runtimeConnected && !busy && ui.quietHoursForm.canSave,
-                                                ) { ui.quietHoursForm.save(actions) }
+                                                    BeaconIcons.Save,
+                                                    stringResource(R.string.action_save),
+                                                    runtimeState.runtimeConnected &&
+                                                        !busy &&
+                                                        ui.quietHoursForm.loaded &&
+                                                        ui.quietHoursForm.valid &&
+                                                        !ui.quietHoursForm.saving &&
+                                                        ui.notificationForm.loaded &&
+                                                        !ui.notificationForm.saving &&
+                                                        (ui.quietHoursForm.changed ||
+                                                            ui.notificationForm.changed),
+                                                ) {
+                                                    ui.notificationForm.save(actions) {
+                                                        ui.quietHoursForm.save(actions)
+                                                    }
+                                                }
                                             }
                                         },
                                     )
@@ -787,7 +953,9 @@ fun BeaconApp(
                     // Scaffold follows the animated header height; animating body size again
                     // would change the shared transition duration during a back gesture.
                     BeaconMessageTransition(
-                        detailTransition, Modifier.fillMaxSize(), animateSize = false,
+                        detailTransition,
+                        Modifier.fillMaxSize(),
+                        animateSize = false,
                     ) { detail ->
                         if (detail != null)
                             MessageDetailScreen(
@@ -805,7 +973,10 @@ fun BeaconApp(
                                 },
                                 busy = busy,
                                 onShare = {
-                                    io.github.beacon.app.feature.messages.shareMessage(context, detail)
+                                    io.github.beacon.app.feature.messages.shareMessage(
+                                        context,
+                                        detail,
+                                    )
                                 },
                                 onRemind = {
                                     actions.remindMessage(MessageKey(detail.server, detail.id))
@@ -888,7 +1059,9 @@ fun BeaconApp(
                                         ) { displayedSettingsScreen ->
                                             SettingsPage(
                                                 displayedSettingsScreen,
-                                                settingsScrollStates.getValue(displayedSettingsScreen),
+                                                settingsScrollStates.getValue(
+                                                    displayedSettingsScreen
+                                                ),
                                                 listModifier,
                                                 listPadding,
                                                 runtimeState,
@@ -926,6 +1099,7 @@ fun BeaconApp(
                                                 updateState = ui.updateState,
                                                 onCheckUpdate = checkUpdateNow,
                                                 quietHoursForm = ui.quietHoursForm,
+                                                notificationForm = ui.notificationForm,
                                             )
                                         }
                                 }

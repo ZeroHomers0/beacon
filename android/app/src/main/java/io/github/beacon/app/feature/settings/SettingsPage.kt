@@ -53,6 +53,8 @@ fun SettingsPage(
     onNotificationSettingsUnavailable: () -> Unit,
     updateState: UpdateCheckState,
     onCheckUpdate: () -> Unit,
+    notificationForm: NotificationFormState =
+        androidx.compose.runtime.remember { NotificationFormState() },
     quietHoursForm: QuietHoursFormState =
         androidx.compose.runtime.remember { QuietHoursFormState() },
 ) {
@@ -63,7 +65,12 @@ fun SettingsPage(
     val polling = runtimeState.pollingState
     var pendingReminderCount by
         androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Long?>(null) }
+    var reminderFailed by
+        androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var reminderAttempt by
+        androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(0) }
     androidx.compose.runtime.LaunchedEffect(
+        reminderAttempt,
         screen,
         runtimeState.runtimeConnected,
         runtimeState.messageBusy,
@@ -72,8 +79,30 @@ fun SettingsPage(
             screen == SettingsScreen.NOTIFICATIONS &&
                 runtimeState.runtimeConnected &&
                 !runtimeState.messageBusy
-        )
-            actions.pendingReminders { pendingReminderCount = it }
+        ) {
+            pendingReminderCount = null
+            reminderFailed = false
+            actions.pendingReminders(onFailure = { reminderFailed = true }) {
+                pendingReminderCount = it
+            }
+        } else if (!runtimeState.runtimeConnected) pendingReminderCount = null
+    }
+    androidx.compose.runtime.LaunchedEffect(
+        screen,
+        runtimeState.runtimeConnected,
+        notificationForm.attempt,
+    ) {
+        if (
+            screen in setOf(SettingsScreen.NOTIFICATION_RULES, SettingsScreen.QUIET_HOURS) &&
+                runtimeState.runtimeConnected &&
+                !notificationForm.loaded
+        ) {
+            notificationForm.failed = false
+            actions.notificationSettings(onFailure = { notificationForm.failed = true }) {
+                notificationForm.reset(it)
+                notificationForm.loaded = true
+            }
+        }
     }
     // Resolved here because its only use site is a non-composable callback.
     val bindingFormatHint = stringResource(R.string.binding_format_hint)
@@ -120,6 +149,38 @@ fun SettingsPage(
         return
     }
     BeaconSettingsList(state = scroll, modifier = modifier, contentPadding = padding) {
+        if (
+            !runtimeState.runtimeConnected &&
+                screen in
+                    setOf(
+                        SettingsScreen.CONNECTION,
+                        SettingsScreen.RECEPTION,
+                        SettingsScreen.NOTIFICATIONS,
+                        SettingsScreen.NOTIFICATION_RULES,
+                        SettingsScreen.QUIET_HOURS,
+                        SettingsScreen.STORAGE,
+                        SettingsScreen.BACKUP,
+                        SettingsScreen.GUIDE,
+                    )
+        ) {
+            item {
+                io.github.beacon.app.ui.components.SettingsSection(
+                    stringResource(R.string.settings_runtime_title)
+                ) {
+                    io.github.beacon.app.ui.components.SettingsHint(
+                        stringResource(R.string.settings_runtime_disconnected)
+                    )
+                    io.github.beacon.app.ui.components.BeaconOutlinedButton(
+                        onClick = { actions.start(context) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        io.github.beacon.app.ui.components.BeaconText(
+                            stringResource(R.string.action_retry)
+                        )
+                    }
+                }
+            }
+        }
         when (screen) {
             SettingsScreen.HOME,
             SettingsScreen.APPEARANCE -> {
@@ -132,6 +193,7 @@ fun SettingsPage(
                         ) {
                             onNavigate(SettingsScreen.CONNECTION)
                         }
+                        io.github.beacon.app.ui.components.SettingsFieldDivider()
                         SettingsRow(
                             stringResource(R.string.settings_reception_page_title),
                             stringResource(receiveModeTitle(receivePlan.mode)) +
@@ -144,6 +206,7 @@ fun SettingsPage(
                                 ),
                             onClick = { onNavigate(SettingsScreen.RECEPTION) },
                         )
+                        io.github.beacon.app.ui.components.SettingsFieldDivider()
                         SettingsRow(
                             stringResource(R.string.settings_notifications_section_title),
                             notificationHint?.let { stringResource(it) }
@@ -161,6 +224,7 @@ fun SettingsPage(
                         ) {
                             onNavigate(SettingsScreen.NOTIFICATIONS)
                         }
+                        io.github.beacon.app.ui.components.SettingsFieldDivider()
                         SettingsRow(
                             stringResource(R.string.quiet_title),
                             stringResource(R.string.quiet_description),
@@ -168,6 +232,7 @@ fun SettingsPage(
                         ) {
                             onNavigate(SettingsScreen.NOTIFICATION_RULES)
                         }
+                        io.github.beacon.app.ui.components.SettingsFieldDivider()
                         SettingsRow(
                             stringResource(R.string.settings_background_permissions_title),
                             stringResource(R.string.settings_background_permissions_desc),
@@ -191,6 +256,7 @@ fun SettingsPage(
                         ) {
                             onUiStyleChange(BeaconUiStyle.entries[it])
                         }
+                        io.github.beacon.app.ui.components.SettingsFieldDivider()
                         BeaconDropdownPreference(
                             stringResource(R.string.appearance_theme),
                             listOf(
@@ -215,6 +281,7 @@ fun SettingsPage(
                         ) {
                             onNavigate(SettingsScreen.SERVER_ADMIN)
                         }
+                        io.github.beacon.app.ui.components.SettingsFieldDivider()
                         SettingsRow(
                             stringResource(R.string.settings_storage_title),
                             "",
@@ -222,6 +289,7 @@ fun SettingsPage(
                         ) {
                             onNavigate(SettingsScreen.STORAGE)
                         }
+                        io.github.beacon.app.ui.components.SettingsFieldDivider()
                         SettingsRow(
                             stringResource(R.string.settings_backup_title),
                             "",
@@ -229,6 +297,7 @@ fun SettingsPage(
                         ) {
                             onNavigate(SettingsScreen.BACKUP)
                         }
+                        io.github.beacon.app.ui.components.SettingsFieldDivider()
                         SettingsRow(
                             title = stringResource(R.string.settings_update_title),
                             subtitle = "",
@@ -249,6 +318,7 @@ fun SettingsPage(
                             },
                             badge = updateState.hasUnreadUpdate,
                         )
+                        io.github.beacon.app.ui.components.SettingsFieldDivider()
                         SettingsRow(
                             stringResource(R.string.settings_about_title),
                             "",
@@ -256,6 +326,7 @@ fun SettingsPage(
                         ) {
                             onNavigate(SettingsScreen.ABOUT)
                         }
+                        io.github.beacon.app.ui.components.SettingsFieldDivider()
                         SettingsRow(
                             stringResource(R.string.settings_guide_title),
                             "",
@@ -268,6 +339,28 @@ fun SettingsPage(
             }
             SettingsScreen.QUIET_HOURS -> {
                 item { QuietHoursPanel(runtimeState, actions, quietHoursForm, scheduleOnly = true) }
+                if (notificationForm.failed)
+                    item {
+                        io.github.beacon.app.ui.components.SettingsSection(
+                            stringResource(R.string.notification_age_title)
+                        ) {
+                            io.github.beacon.app.ui.components.SettingsHint(
+                                stringResource(R.string.settings_data_failed)
+                            )
+                            io.github.beacon.app.ui.components.BeaconOutlinedButton(
+                                onClick = {
+                                    if (notificationForm.loaded) notificationForm.save(actions)
+                                    else notificationForm.attempt++
+                                },
+                                enabled = runtimeState.runtimeConnected,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                io.github.beacon.app.ui.components.BeaconText(
+                                    stringResource(R.string.action_retry)
+                                )
+                            }
+                        }
+                    }
             }
             SettingsScreen.SERVER_ADMIN,
             SettingsScreen.SERVER_DEVICES,
@@ -329,7 +422,7 @@ fun SettingsPage(
                 }
             }
             SettingsScreen.NOTIFICATION_RULES -> {
-                item { NotificationSettingsPanel(runtimeState, actions) }
+                item { NotificationSettingsPanel(runtimeState, actions, notificationForm) }
                 item {
                     QuietHoursPanel(
                         runtimeState,
@@ -350,6 +443,9 @@ fun SettingsPage(
                     onNotificationSettingsUnavailable,
                     busy,
                     context,
+                    runtimeState.runtimeConnected,
+                    reminderFailed,
+                    onRetry = { reminderAttempt++ },
                 )
             }
             SettingsScreen.ABOUT -> {

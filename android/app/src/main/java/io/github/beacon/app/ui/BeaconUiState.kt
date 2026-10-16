@@ -38,6 +38,22 @@ class BeaconUiState(
 
     val connectionForm = ConnectionFormState()
     val receptionForm = io.github.beacon.app.feature.settings.ReceptionFormState()
+    val notificationForm = io.github.beacon.app.feature.settings.NotificationFormState()
+    var pendingNavigation by mutableStateOf<(() -> Unit)?>(null)
+    var shouldConfirmExit: (SettingsScreen) -> Boolean = { false }
+    var discardDrafts: () -> Unit = {}
+
+    fun requestNavigation(destination: SettingsScreen, action: () -> Unit) {
+        if (shouldConfirmExit(destination)) pendingNavigation = action else action()
+    }
+
+    fun discardAndContinue() {
+        val action = pendingNavigation
+        pendingNavigation = null
+        discardDrafts()
+        action?.invoke()
+    }
+
     val quietHoursForm = io.github.beacon.app.feature.settings.QuietHoursFormState()
     val updateState = io.github.beacon.app.feature.settings.UpdateCheckState()
 
@@ -93,36 +109,44 @@ class BeaconUiState(
 
     fun navigateSettings(destination: SettingsScreen) {
         if (destination == settingsScreen) return
-        invalidateQuietHoursOnExit(destination)
-        settingsNavigatingBack = destination == SettingsScreen.HOME
-        settingsHistory =
-            if (destination == SettingsScreen.HOME) arrayListOf()
-            else ArrayList(settingsHistory + settingsScreen)
-        settingsScreen = destination
+        requestNavigation(destination) {
+            invalidateQuietHoursOnExit(destination)
+            settingsNavigatingBack = destination == SettingsScreen.HOME
+            settingsHistory =
+                if (destination == SettingsScreen.HOME) arrayListOf()
+                else ArrayList(settingsHistory + settingsScreen)
+            settingsScreen = destination
+        }
     }
 
     fun backSettings() {
-        settingsNavigatingBack = true
-        invalidateQuietHoursOnExit(settingsBackTarget)
-        settingsScreen = settingsBackTarget
-        settingsHistory = ArrayList(settingsHistory.dropLast(1))
+        requestNavigation(settingsBackTarget) {
+            settingsNavigatingBack = true
+            invalidateQuietHoursOnExit(settingsBackTarget)
+            settingsScreen = settingsBackTarget
+            settingsHistory = ArrayList(settingsHistory.dropLast(1))
+        }
     }
 
     fun finishNavigation(index: Int) {
         if (page == 1 && index == 1 && settingsScreen != SettingsScreen.HOME) backSettings()
-        else {
-            invalidateQuietHoursOnExit(SettingsScreen.HOME)
-            page = index
-            settingsHistory = arrayListOf()
-            settingsScreen = SettingsScreen.HOME
-        }
+        else
+            requestNavigation(SettingsScreen.HOME) {
+                invalidateQuietHoursOnExit(SettingsScreen.HOME)
+                page = index
+                settingsHistory = arrayListOf()
+                settingsScreen = SettingsScreen.HOME
+            }
     }
 
     private fun invalidateQuietHoursOnExit(destination: SettingsScreen) {
         val pages = setOf(SettingsScreen.NOTIFICATION_RULES, SettingsScreen.QUIET_HOURS)
         // Preserve the shared draft only within this editor. Re-entering from elsewhere rereads
         // the runtime, including policy changes made by importing a backup.
-        if (settingsScreen in pages && destination !in pages) quietHoursForm.loaded = false
+        if (settingsScreen in pages && destination !in pages) {
+            quietHoursForm.loaded = false
+            notificationForm.loaded = false
+        }
     }
 
     var filtersOpen: Boolean by savedState(handle, "filtersOpen", false)

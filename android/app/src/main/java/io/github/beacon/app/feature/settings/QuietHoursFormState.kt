@@ -15,13 +15,31 @@ class QuietHoursFormState {
     var failed by mutableStateOf(false)
     var attempt by mutableIntStateOf(0)
 
-    val first: Int? get() = parseMinute(start)
-    val last: Int? get() = parseMinute(end)
-    val valid: Boolean get() = first != null && last != null && first != last && draft.weekdays != 0
-    val changed: Boolean get() = pending() != saved
-    val canSave: Boolean get() = loaded && !saving && valid && changed
+    val first: Int?
+        get() = parseMinute(start)
 
-    fun pending(): QuietHours = draft.copy(startMinute = first ?: draft.startMinute, endMinute = last ?: draft.endMinute)
+    val last: Int?
+        get() = parseMinute(end)
+
+    val scheduleValid: Boolean
+        get() = first != null && last != null && first != last && draft.weekdays != 0
+
+    val valid: Boolean
+        get() = !draft.enabled || scheduleValid
+
+    val changed: Boolean
+        get() = pending() != saved
+
+    val canSave: Boolean
+        get() = loaded && !saving && valid && changed
+
+    fun pending(): QuietHours =
+        if (!draft.enabled && !scheduleValid) saved.copy(enabled = false, behavior = draft.behavior)
+        else
+            draft.copy(
+                startMinute = first ?: draft.startMinute,
+                endMinute = last ?: draft.endMinute,
+            )
 
     fun reset(value: QuietHours) {
         saved = value
@@ -34,7 +52,13 @@ class QuietHoursFormState {
         if (!canSave) return
         saving = true
         failed = false
-        actions.quietHours(pending(), onFailure = { saving = false; failed = true }) {
+        actions.quietHours(
+            pending(),
+            onFailure = {
+                saving = false
+                failed = true
+            },
+        ) {
             reset(it)
             saving = false
         }

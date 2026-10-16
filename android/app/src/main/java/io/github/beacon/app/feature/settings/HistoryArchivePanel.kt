@@ -19,6 +19,7 @@ fun HistoryArchivePanel(actions: RuntimeActions, busy: Boolean, grouped: Boolean
     var encrypted by remember { mutableStateOf(true) }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
+    var failed by remember { mutableStateOf<Boolean?>(null) }
     var hint by remember { mutableStateOf("") }
     var filePassword by remember { mutableStateOf("") }
     var fileEncrypted by remember { mutableStateOf(true) }
@@ -30,10 +31,21 @@ fun HistoryArchivePanel(actions: RuntimeActions, busy: Boolean, grouped: Boolean
             val secret = filePassword
             filePassword = ""
             pendingUri = null
-            if (fileEncrypted && secret.length < 8)
+            if (fileEncrypted && secret.length < 8) {
+                failed = true
                 hint = resources.getString(R.string.settings_archive_password_expired)
-            else
-                actions.historyArchive(uri.toString(), secret, pendingImport, fileEncrypted) {
+            } else
+                actions.historyArchive(
+                    uri.toString(),
+                    secret,
+                    pendingImport,
+                    fileEncrypted,
+                    onFailure = {
+                        failed = true
+                        hint = it
+                    },
+                ) {
+                    failed = false
                     hint = it
                 }
         }
@@ -54,35 +66,35 @@ fun HistoryArchivePanel(actions: RuntimeActions, busy: Boolean, grouped: Boolean
     val open =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { run(it, true) }
     val content: @Composable () -> Unit = {
-            SettingsActionRow(
-                stringResource(R.string.settings_archive_export),
-                stringResource(R.string.ui_v2_export_history_hint),
-                io.github.beacon.app.ui.icons.BeaconIcons.Backup,
-                enabled = !busy,
-                onClick = {
-                    operation = false
-                    password = ""
-                    confirmPassword = ""
-                    encrypted = true
-                },
-            )
-            SettingsFieldDivider()
-            SettingsActionRow(
-                stringResource(R.string.settings_archive_import),
-                stringResource(R.string.ui_v2_import_history_hint),
-                io.github.beacon.app.ui.icons.BeaconIcons.History,
-                enabled = !busy,
-                onClick = {
-                    operation = true
-                    password = ""
-                    confirmPassword = ""
-                    encrypted = true
-                },
-            )
-        if (hint.isNotEmpty()) OperationResultPanel(stringResource(R.string.settings_archive_title), hint)
+        SettingsActionRow(
+            stringResource(R.string.settings_archive_export),
+            stringResource(R.string.ui_v2_export_history_hint),
+            io.github.beacon.app.ui.icons.BeaconIcons.Backup,
+            enabled = !busy,
+            onClick = {
+                operation = false
+                password = ""
+                confirmPassword = ""
+                encrypted = true
+            },
+        )
+        SettingsFieldDivider()
+        SettingsActionRow(
+            stringResource(R.string.settings_archive_import),
+            stringResource(R.string.ui_v2_import_history_hint),
+            io.github.beacon.app.ui.icons.BeaconIcons.History,
+            enabled = !busy,
+            onClick = {
+                operation = true
+                password = ""
+                confirmPassword = ""
+                encrypted = true
+            },
+        )
+        if (hint.isNotEmpty())
+            OperationResultPanel(stringResource(R.string.settings_archive_title), hint, failed)
     }
-    if (grouped)
-        SettingsGroup(stringResource(R.string.settings_archive_title)) { content() }
+    if (grouped) SettingsGroup(stringResource(R.string.settings_archive_title)) { content() }
     else content()
     if (operation != null)
         BeaconAlertDialog(
@@ -166,7 +178,12 @@ fun HistoryArchivePanel(actions: RuntimeActions, busy: Boolean, grouped: Boolean
                             )
                     },
                 ) {
-                    BeaconText(stringResource(R.string.settings_archive_choose))
+                    BeaconText(
+                        stringResource(
+                            if (operation == true) R.string.settings_archive_choose_import
+                            else R.string.settings_archive_choose_export
+                        )
+                    )
                 }
             },
             dismissButton = {

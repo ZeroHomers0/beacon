@@ -236,6 +236,18 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                     columns = 3,
                 )
             }
+            SettingsHint(
+                stringResource(
+                    when {
+                        !state.runtimeConnected -> R.string.settings_runtime_disconnected
+                        state.messageBusy || (!settingsLoaded && !loadFailed) ->
+                            R.string.settings_data_loading
+                        preview == null -> R.string.settings_preview_unavailable
+                        preview.planned <= 0 -> R.string.settings_preview_empty
+                        else -> R.string.settings_preview_ready
+                    }
+                )
+            )
             BeaconActionPair(
                 {
                     BeaconOutlinedButton(
@@ -248,7 +260,10 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                 {
                     BeaconButton(
                         onClick = { confirmation = preview },
-                        enabled = !state.messageBusy && (preview?.planned ?: 0) > 0,
+                        enabled =
+                            state.runtimeConnected &&
+                                !state.messageBusy &&
+                                (preview?.planned ?: 0) > 0,
                     ) {
                         BeaconText(stringResource(R.string.storage_clean_action))
                     }

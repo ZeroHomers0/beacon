@@ -37,6 +37,9 @@ internal fun LazyListScope.notificationPermissionSettingsItems(
     onNotificationSettingsUnavailable: () -> Unit,
     busy: Boolean,
     context: Context,
+    connected: Boolean,
+    loadFailed: Boolean,
+    onRetry: () -> Unit,
 ) {
     item {
         SettingsGroup(stringResource(R.string.settings_permission_status_heading)) {
@@ -123,18 +126,33 @@ internal fun LazyListScope.notificationPermissionSettingsItems(
     item {
         // Resending is an action, not navigation, so it carries a button instead of the arrow the
         // row above uses to leave the app.
-        SettingsSection(stringResource(R.string.settings_reminders_send)) {
+        SettingsSection(stringResource(R.string.settings_pending_notifications_title)) {
             SettingsHint(
                 (pendingReminderCount?.let {
                     if (it > 0) resources.getString(R.string.settings_reminders_pending, it)
                     else resources.getString(R.string.settings_reminders_empty)
-                } ?: resources.getString(R.string.settings_reminders_loading))
+                }
+                    ?: resources.getString(
+                        when {
+                            !connected -> R.string.settings_runtime_disconnected
+                            loadFailed -> R.string.settings_reminders_failed
+                            else -> R.string.settings_reminders_loading
+                        }
+                    ))
             )
+            if (loadFailed)
+                BeaconActionButton(
+                    stringResource(R.string.action_retry),
+                    BeaconIcons.Sync,
+                    Modifier.fillMaxWidth(),
+                    connected && !busy,
+                    onRetry,
+                )
             BeaconActionButton(
                 stringResource(R.string.settings_reminders_send),
                 BeaconIcons.DoneAll,
                 Modifier.fillMaxWidth(),
-                !busy && (pendingReminderCount ?: 0) > 0,
+                connected && !busy && (pendingReminderCount ?: 0) > 0,
             ) {
                 actions.transport(notifyOnly = true)
             }

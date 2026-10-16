@@ -100,6 +100,12 @@ fun SettingsStatusSummary(
                 )
             }
         }
+        if (interactive && displayedDetails.isNotBlank())
+            Icon(
+                BeaconIcons.Arrow,
+                stringResource(R.string.settings_view_details),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
     }
     if (interactive && showingDetails)
         BeaconAlertDialog(
@@ -122,6 +128,21 @@ fun SettingsStatusSummary(
 
 /** Results remain complete, including multiline diagnostic and backup reports. */
 @Composable
-fun OperationResultPanel(title: String, result: String) {
-    SettingsStatusSummary(title, result)
+fun OperationResultPanel(title: String, result: String, failed: Boolean? = null) {
+    SettingsStatusSummary(
+        title,
+        result,
+        icon =
+            when (failed) {
+                true -> BeaconIcons.Warning
+                false -> BeaconIcons.Check
+                null -> BeaconIcons.Info
+            },
+        tint =
+            when (failed) {
+                true -> MaterialTheme.colorScheme.error
+                false -> io.github.beacon.app.ui.theme.beaconSuccessColor()
+                null -> MaterialTheme.colorScheme.onSurfaceVariant
+            },
+    )
 }

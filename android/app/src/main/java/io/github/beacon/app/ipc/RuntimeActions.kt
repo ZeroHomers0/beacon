@@ -39,6 +39,7 @@ interface RuntimeActions {
         password: String,
         importing: Boolean,
         encrypted: Boolean,
+        onFailure: (String) -> Unit = {},
         onComplete: (String) -> Unit,
     ) {}
 
@@ -107,9 +108,12 @@ interface RuntimeActions {
 
     fun checkpointStorage() {}
 
-    fun saveReception(plan: io.github.beacon.app.domain.model.ReceivePlan, polling: PollingConfig) {}
+    fun saveReception(
+        plan: io.github.beacon.app.domain.model.ReceivePlan,
+        polling: PollingConfig,
+    ) {}
 
-    fun pendingReminders(onReady: (Long) -> Unit) {}
+    fun pendingReminders(onFailure: () -> Unit = {}, onReady: (Long) -> Unit) {}
 
     fun cleanupSettings(
         value: io.github.beacon.app.domain.model.CleanupSettings? = null,

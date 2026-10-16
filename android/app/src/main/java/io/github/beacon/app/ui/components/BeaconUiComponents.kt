@@ -2,8 +2,8 @@
 
 package io.github.beacon.app.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
@@ -16,8 +16,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -83,7 +83,10 @@ fun UiSection(title: String, content: @Composable ColumnScope.() -> Unit) {
         colors =
             CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
-        Column(Modifier.padding(BeaconUiMetrics.CardInset), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap)) {
+        Column(
+            Modifier.padding(BeaconUiMetrics.CardInset),
+            verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
+        ) {
             BeaconText(title, style = MaterialTheme.typography.titleMedium)
             content()
         }
@@ -106,7 +109,8 @@ fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) 
 fun SettingsPreferences(title: String, content: @Composable ColumnScope.() -> Unit) {
     SettingsGroup(title) {
         Column(
-            Modifier.fillMaxWidth().padding(horizontal = BeaconUiMetrics.CardInset, vertical = 4.dp),
+            Modifier.fillMaxWidth()
+                .padding(horizontal = BeaconUiMetrics.CardInset, vertical = 4.dp),
             content = content,
         )
     }
@@ -116,7 +120,8 @@ fun SettingsPreferences(title: String, content: @Composable ColumnScope.() -> Un
 fun SettingsCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     BeaconCard(
         modifier.animateContentSize(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        colors =
+            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
         content = content,
     )
 }
@@ -134,12 +139,13 @@ fun SettingsHint(text: String) {
 @Composable
 fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.GroupTitleGap)) {
-        if (title.isNotBlank()) BeaconText(
-            title,
-            Modifier.padding(horizontal = BeaconUiMetrics.CardInset).semantics { heading() },
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        if (title.isNotBlank())
+            BeaconText(
+                title,
+                Modifier.padding(horizontal = BeaconUiMetrics.CardInset).semantics { heading() },
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         BeaconCard(
             Modifier.fillMaxWidth().animateContentSize(),
             colors =
@@ -198,7 +204,10 @@ fun SettingsRow(
     } else {
         Surface(onClick = onClick, enabled = enabled, color = Color.Transparent) {
             Row(
-                Modifier.fillMaxWidth().alpha(if (enabled) 1f else .38f).padding(16.dp).heightIn(min = 48.dp),
+                Modifier.fillMaxWidth()
+                    .alpha(if (enabled) 1f else .38f)
+                    .heightIn(min = BeaconUiMetrics.FieldMinHeight)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
@@ -226,7 +235,15 @@ fun SettingsActionRow(
     icon: ImageVector,
     enabled: Boolean = true,
     onClick: () -> Unit,
-) = SettingsRow(title, subtitle, icon, MaterialTheme.colorScheme.onSurface, onClick, enabled = enabled)
+) =
+    SettingsRow(
+        title,
+        subtitle,
+        icon,
+        MaterialTheme.colorScheme.onSurface,
+        onClick,
+        enabled = enabled,
+    )
 
 /**
  * The leading icon with an optional dot marking something new on this row.
@@ -321,7 +338,6 @@ fun MessageItem(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
-
                 }
                 if (!message.isRead)
                     Box(
@@ -334,7 +350,11 @@ fun MessageItem(
                     )
                 if (!selectionMode)
                     Box {
-                        BeaconIconButton(enabled = !busy, modifier = Modifier.size(32.dp), onClick = { menu = true }) {
+                        BeaconIconButton(
+                            enabled = !busy,
+                            modifier = Modifier.size(32.dp),
+                            onClick = { menu = true },
+                        ) {
                             Icon(BeaconIcons.More, stringResource(R.string.ui_message_more_action))
                         }
                         BeaconDropdownMenu(menu && !busy, { menu = false }) {
@@ -387,7 +407,11 @@ fun MessageItem(
                 overflow = TextOverflow.Ellipsis,
             )
             MessageCardFooter(
-                message, busy, selectionMode, onFilterApplication, onFilterGroup,
+                message,
+                busy,
+                selectionMode,
+                onFilterApplication,
+                onFilterGroup,
             )
         }
     }
@@ -409,18 +433,22 @@ internal fun MessageFilterTag(
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .then(
                 if (onClick == null) Modifier
-                else Modifier.clickable(
-                    enabled = enabled,
-                    role = androidx.compose.ui.semantics.Role.Button,
-                    onClick = onClick,
-                )
+                else
+                    Modifier.clickable(
+                        enabled = enabled,
+                        role = androidx.compose.ui.semantics.Role.Button,
+                        onClick = onClick,
+                    )
             ),
         contentAlignment = Alignment.Center,
     ) {
         BeaconText(
             label,
             Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-            style = if (compact) MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 14.sp) else MaterialTheme.typography.labelSmall,
+            style =
+                if (compact)
+                    MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 14.sp)
+                else MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

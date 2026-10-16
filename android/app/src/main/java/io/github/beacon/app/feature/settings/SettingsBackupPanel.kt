@@ -25,6 +25,7 @@ fun SettingsBackupPanel(actions: RuntimeActions, busy: Boolean, grouped: Boolean
     val context = LocalContext.current
     var importing by remember { mutableStateOf(false) }
     var text by remember { mutableStateOf("") }
+    var failed by remember { mutableStateOf<Boolean?>(null) }
     var hint by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     var fileBusy by remember { mutableStateOf(false) }
@@ -50,11 +51,23 @@ fun SettingsBackupPanel(actions: RuntimeActions, busy: Boolean, grouped: Boolean
                                             }
                                     }
                                     .fold(
-                                        { resources.getString(R.string.settings_backup_export_done) },
-                                        { resources.getString(R.string.settings_backup_export_failed) },
+                                        {
+                                            failed = false
+                                            resources.getString(
+                                                R.string.settings_backup_export_done
+                                            )
+                                        },
+                                        {
+                                            failed = true
+                                            resources.getString(
+                                                R.string.settings_backup_export_failed
+                                            )
+                                        },
                                     )
                             }
-                    } finally { fileBusy = false }
+                    } finally {
+                        fileBusy = false
+                    }
                 }
         }
     val importFile =
@@ -73,7 +86,9 @@ fun SettingsBackupPanel(actions: RuntimeActions, busy: Boolean, grouped: Boolean
                                                     .readBounded(it, SettingsBackup.MAX_BYTES)
                                             }
                                     require(bytes.size <= SettingsBackup.MAX_BYTES)
-                                    bytes.toString(Charsets.UTF_8).also { SettingsBackup.validate(it) }
+                                    bytes.toString(Charsets.UTF_8).also {
+                                        SettingsBackup.validate(it)
+                                    }
                                 }
                             }
                         result
@@ -83,45 +98,47 @@ fun SettingsBackupPanel(actions: RuntimeActions, busy: Boolean, grouped: Boolean
                                 importing = true
                             }
                             .onFailure {
+                                failed = true
                                 hint = resources.getString(R.string.settings_backup_invalid_file)
                             }
-                    } finally { fileBusy = false }
+                    } finally {
+                        fileBusy = false
+                    }
                 }
         }
     val content: @Composable () -> Unit = {
-            SettingsActionRow(
-                stringResource(R.string.settings_backup_export),
-                stringResource(R.string.ui_v2_export_settings_hint),
-                io.github.beacon.app.ui.icons.BeaconIcons.Backup,
-                enabled = !busy && !fileBusy,
-                onClick = {
-                    actions.settingsBackup(
-                        onFailure = {
-                            hint =
-                                resources.getString(
-                                    R.string.settings_backup_export_failed_connection
-                                )
-                        }
-                    ) { payload ->
-                        exporting = payload
-                        exportFile.launch("beacon-settings.json")
+        SettingsActionRow(
+            stringResource(R.string.settings_backup_export),
+            stringResource(R.string.ui_v2_export_settings_hint),
+            io.github.beacon.app.ui.icons.BeaconIcons.Backup,
+            enabled = !busy && !fileBusy,
+            onClick = {
+                actions.settingsBackup(
+                    onFailure = {
+                        failed = true
+                        hint =
+                            resources.getString(R.string.settings_backup_export_failed_connection)
                     }
-                },
-            )
-            SettingsFieldDivider()
-            SettingsActionRow(
-                stringResource(R.string.settings_backup_import),
-                stringResource(R.string.ui_v2_import_settings_hint),
-                io.github.beacon.app.ui.icons.BeaconIcons.History,
-                enabled = !busy && !fileBusy,
-                onClick = {
-                    importFile.launch(
-                        arrayOf("application/json", "text/plain", "application/octet-stream")
-                    )
-                },
-            )
+                ) { payload ->
+                    exporting = payload
+                    exportFile.launch("beacon-settings.json")
+                }
+            },
+        )
+        SettingsFieldDivider()
+        SettingsActionRow(
+            stringResource(R.string.settings_backup_import),
+            stringResource(R.string.ui_v2_import_settings_hint),
+            io.github.beacon.app.ui.icons.BeaconIcons.History,
+            enabled = !busy && !fileBusy,
+            onClick = {
+                importFile.launch(
+                    arrayOf("application/json", "text/plain", "application/octet-stream")
+                )
+            },
+        )
         if (!importing && hint.isNotEmpty())
-            OperationResultPanel(stringResource(R.string.settings_backup_title), hint)
+            OperationResultPanel(stringResource(R.string.settings_backup_title), hint, failed)
     }
     if (grouped)
         SettingsGroup(stringResource(R.string.settings_backup_settings_title)) { content() }
@@ -146,18 +163,21 @@ fun SettingsBackupPanel(actions: RuntimeActions, busy: Boolean, grouped: Boolean
                 BeaconButton(
                     enabled = !busy && !fileBusy,
                     onClick = {
-                        if (runCatching { SettingsBackup.validate(text) }.isFailure)
+                        if (runCatching { SettingsBackup.validate(text) }.isFailure) {
+                            failed = true
                             hint = resources.getString(R.string.settings_backup_invalid_values)
-                        else
+                        } else
                             actions.settingsBackup(
                                 text,
                                 onFailure = {
+                                    failed = true
                                     hint =
                                         resources.getString(
                                             R.string.settings_backup_import_unconfirmed
                                         )
                                 },
                             ) {
+                                failed = false
                                 importing = false
                                 text = ""
                                 hint = resources.getString(R.string.settings_backup_import_done)

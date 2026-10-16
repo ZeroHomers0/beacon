@@ -16,14 +16,13 @@ import io.github.beacon.app.domain.model.PollingState
 @Composable
 fun formatMessageTime(time: Long): String =
     if (time <= 0) stringResource(R.string.ui_unknown_label)
-    else
-        io.github.beacon.app.domain.policy.DisplayTime.format(time)
+    else io.github.beacon.app.domain.policy.DisplayTime.format(time)
 
 @Composable
 fun receiveLabel(state: PollingState): String =
     when {
-        !state.config.enabled -> stringResource(R.string.ui_receive_paused_title)
         state.blocked.isNotBlank() -> stringResource(R.string.ui_receive_attention_title)
+        !state.config.enabled -> stringResource(R.string.settings_receive_unbound)
         else -> stringResource(R.string.ui_battery_saver_on_desc)
     }
 
@@ -36,12 +35,15 @@ fun userOperationFeedback(status: OperationStatus): String =
 
 @Composable
 fun connectionStatusLabel(state: io.github.beacon.app.domain.model.RuntimeState): String =
-    stringResource(when {
-        state.serverChecking -> R.string.connection_status_checking
-        state.configuredEndpoint.isBlank() -> R.string.connection_status_unconfigured
-        state.serverReachable == false -> R.string.connection_status_failed
-        state.serverReachable == null -> R.string.connection_status_unchecked
-        state.receivePlan.mode == io.github.beacon.app.domain.model.ReceiveMode.REALTIME &&
-            state.pollingState.config.enabled && !state.realtimeRunning -> R.string.connection_status_waiting
-        else -> R.string.connection_status_connected
-    })
+    stringResource(
+        when {
+            state.serverChecking -> R.string.connection_status_checking
+            state.configuredEndpoint.isBlank() -> R.string.connection_status_unconfigured
+            state.serverReachable == false -> R.string.connection_status_failed
+            state.serverReachable == null -> R.string.connection_status_unchecked
+            state.receivePlan.mode == io.github.beacon.app.domain.model.ReceiveMode.REALTIME &&
+                state.pollingState.config.enabled &&
+                !state.realtimeRunning -> R.string.connection_status_waiting
+            else -> R.string.connection_status_connected
+        }
+    )

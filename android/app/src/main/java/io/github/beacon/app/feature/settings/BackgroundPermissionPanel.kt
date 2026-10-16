@@ -26,6 +26,24 @@ fun BackgroundPermissionPanel() {
     val owner = LocalLifecycleOwner.current
     var restricted by remember { mutableStateOf<Boolean?>(null) }
     var exempt by remember { mutableStateOf<Boolean?>(null) }
+    var help by remember { mutableStateOf(false) }
+    if (help)
+        BeaconAlertDialog(
+            onDismissRequest = { help = false },
+            title = { BeaconText(stringResource(R.string.settings_background_permissions_title)) },
+            text = {
+                SettingsHint(
+                    stringResource(R.string.background_autostart_hint) +
+                        "\n\n" +
+                        stringResource(R.string.background_restriction_hint)
+                )
+            },
+            confirmButton = {
+                BeaconButton(onClick = { help = false }) {
+                    BeaconText(stringResource(R.string.action_close))
+                }
+            },
+        )
     var unavailable by remember { mutableStateOf(false) }
     fun refresh() {
         restricted =
@@ -68,18 +86,20 @@ fun BackgroundPermissionPanel() {
         owner.lifecycle.addObserver(observer)
         onDispose { owner.lifecycle.removeObserver(observer) }
     }
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SettingsGroupGap)) {
+    Column(
+        Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SettingsGroupGap),
+    ) {
         SettingsSection(stringResource(R.string.background_autostart_title)) {
             BeaconText(
                 stringResource(R.string.background_manual_status),
                 style = MaterialTheme.typography.bodyLarge,
             )
-            SettingsHint(stringResource(R.string.background_autostart_hint))
             BeaconOutlinedButton(onClick = { appDetails() }, modifier = Modifier.fillMaxWidth()) {
                 BeaconText(stringResource(R.string.background_open_app_settings))
             }
         }
-        SettingsSection(stringResource(R.string.background_restriction_title)) {
+        SettingsPreferences(stringResource(R.string.background_restriction_title)) {
             SettingsFieldGroup(
                 {
                     DiagnosticRow(
@@ -106,24 +126,23 @@ fun BackgroundPermissionPanel() {
                     )
                 },
             )
-            SettingsHint(stringResource(R.string.background_restriction_hint))
+
             BeaconOutlinedButton(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
                 onClick = {
-                    openSettings(
-                        Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-                    )
-                }
+                    openSettings(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                },
             ) {
                 BeaconText(stringResource(R.string.background_open_battery_settings))
             }
-
+        }
+        BeaconOutlinedButton(onClick = { help = true }, modifier = Modifier.fillMaxWidth()) {
+            BeaconText(stringResource(R.string.settings_background_help))
         }
         if (unavailable)
             BeaconText(
                 stringResource(R.string.background_settings_unavailable),
                 color = MaterialTheme.colorScheme.error,
             )
-
     }
 }

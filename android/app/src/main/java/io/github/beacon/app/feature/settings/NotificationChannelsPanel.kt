@@ -3,9 +3,12 @@ package io.github.beacon.app.feature.settings
 import android.app.NotificationManager
 import android.content.Intent
 import android.provider.Settings
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.NotificationChannelKind
 import io.github.beacon.app.ui.components.*
@@ -21,8 +24,9 @@ fun NotificationChannelsPanel() {
     }
     SettingsGroup(stringResource(R.string.notification_channels)) {
         if (!context.getSystemService(NotificationManager::class.java).areNotificationsEnabled())
-            BeaconText(stringResource(R.string.channel_app_permission_off))
-        NotificationChannelKind.entries.forEach { kind ->
+            BeaconText(stringResource(R.string.channel_app_permission_off), Modifier.padding(16.dp))
+        NotificationChannelKind.entries.forEachIndexed { index, kind ->
+            if (index > 0) SettingsFieldDivider()
             val channel =
                 remember(kind, revision) {
                     context
@@ -67,6 +71,11 @@ fun NotificationChannelsPanel() {
                 failed = runCatching { context.startActivity(intent) }.isFailure
             }
         }
-        if (failed) BeaconText(stringResource(R.string.notification_channel_failed))
+        if (failed)
+            BeaconText(
+                stringResource(R.string.notification_channel_failed),
+                Modifier.padding(16.dp),
+                color = androidx.compose.material3.MaterialTheme.colorScheme.error,
+            )
     }
 }

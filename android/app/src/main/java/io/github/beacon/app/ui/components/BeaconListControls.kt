@@ -13,8 +13,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
@@ -23,8 +23,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.BeaconUiStyle
@@ -139,7 +139,9 @@ fun BeaconActionIcon(
     BeaconIconButton(onClick = onClick, enabled = enabled) {
         BadgedBox(badge = { if (showBadge) Badge() }) {
             Icon(
-                icon, description, Modifier.size(24.dp),
+                icon,
+                description,
+                Modifier.size(24.dp),
                 tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 1f else 0.38f),
             )
         }
@@ -155,17 +157,20 @@ fun BeaconPreferenceToggle(
     onCheckedChange: (Boolean) -> Unit,
 ) {
     Row(
-        Modifier.fillMaxWidth().heightIn(min = if (summary.isBlank()) BeaconUiMetrics.FieldMinHeight else 64.dp),
+        Modifier.fillMaxWidth()
+            .heightIn(min = BeaconUiMetrics.FieldMinHeight)
+            .padding(vertical = if (summary.isBlank()) 0.dp else 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             BeaconText(title, style = MaterialTheme.typography.bodyLarge)
-            if (summary.isNotBlank()) BeaconText(
-                summary,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            if (summary.isNotBlank())
+                BeaconText(
+                    summary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
         }
         // The switch is a sibling of the label column, so it carries no text of its own and takes
         // the title as its accessible name.
@@ -217,7 +222,10 @@ internal fun diagnosticRowFits(
 @Composable
 fun DiagnosticRow(label: String, value: String) {
     val labelStyle = MaterialTheme.typography.bodyLarge
-    val valueStyle = MaterialTheme.typography.bodyMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+    val valueStyle =
+        MaterialTheme.typography.bodyMedium.copy(
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+        )
     val labelColor = MaterialTheme.colorScheme.onSurface
     val measurer = rememberTextMeasurer()
     val gapPx = with(LocalDensity.current) { DIAGNOSTIC_ROW_GAP.roundToPx() }
@@ -227,7 +235,8 @@ fun DiagnosticRow(label: String, value: String) {
         color = androidx.compose.ui.graphics.Color.Transparent,
     ) {
         BoxWithConstraints(
-            Modifier.heightIn(min = BeaconUiMetrics.FieldMinHeight).padding(vertical = BeaconUiMetrics.FieldVerticalInset),
+            Modifier.heightIn(min = BeaconUiMetrics.FieldMinHeight)
+                .padding(vertical = BeaconUiMetrics.FieldVerticalInset),
             contentAlignment = Alignment.CenterStart,
         ) {
             val labelWidth = measurer.measure(label, labelStyle, maxLines = 1).size.width
@@ -260,29 +269,41 @@ fun DiagnosticRow(label: String, value: String) {
 
 /** Compact numeric facts, preserving readable values at large font sizes. */
 @Composable
-fun SettingsMetricGrid(metrics: List<Pair<String, String>>, modifier: Modifier = Modifier, columns: Int? = null) {
+fun SettingsMetricGrid(
+    metrics: List<Pair<String, String>>,
+    modifier: Modifier = Modifier,
+    columns: Int? = null,
+) {
     require(columns == null || columns > 0)
     val density = LocalDensity.current
     val measurer = rememberTextMeasurer()
     val widest =
-        if (columns != null) 0 else metrics.maxOfOrNull { (label, value) ->
-            maxOf(
-                measurer
-                    .measure(label, MaterialTheme.typography.labelMedium, maxLines = 1)
-                    .size
-                    .width,
-                measurer
-                    .measure(value, MaterialTheme.typography.titleMedium, maxLines = 1)
-                    .size
-                    .width,
-            )
-        } ?: 0
+        if (columns != null) 0
+        else
+            metrics.maxOfOrNull { (label, value) ->
+                maxOf(
+                    measurer
+                        .measure(label, MaterialTheme.typography.labelMedium, maxLines = 1)
+                        .size
+                        .width,
+                    measurer
+                        .measure(value, MaterialTheme.typography.titleMedium, maxLines = 1)
+                        .size
+                        .width,
+                )
+            } ?: 0
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val cellWidth = widest + with(density) { 24.dp.roundToPx() }
-        val resolvedColumns = columns ?: if (cellWidth * 2 + with(density) { 8.dp.roundToPx() } <= constraints.maxWidth) 2 else 1
+        val resolvedColumns =
+            columns
+                ?: if (cellWidth * 2 + with(density) { 8.dp.roundToPx() } <= constraints.maxWidth) 2
+                else 1
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             metrics.chunked(resolvedColumns).forEach { pair ->
-                Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
                     pair.forEach { (label, value) ->
                         Surface(
                             Modifier.weight(1f).fillMaxHeight(),
@@ -297,13 +318,19 @@ fun SettingsMetricGrid(metrics: List<Pair<String, String>>, modifier: Modifier =
                                 BeaconText(
                                     label,
                                     modifier = Modifier.fillMaxWidth(),
-                                    style = MaterialTheme.typography.labelMedium.copy(textAlign = TextAlign.Center),
+                                    style =
+                                        MaterialTheme.typography.labelMedium.copy(
+                                            textAlign = TextAlign.Center
+                                        ),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 BeaconText(
                                     value,
                                     modifier = Modifier.fillMaxWidth(),
-                                    style = MaterialTheme.typography.titleMedium.copy(textAlign = TextAlign.Center),
+                                    style =
+                                        MaterialTheme.typography.titleMedium.copy(
+                                            textAlign = TextAlign.Center
+                                        ),
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
                             }
