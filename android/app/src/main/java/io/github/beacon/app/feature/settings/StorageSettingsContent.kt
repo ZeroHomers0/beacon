@@ -88,7 +88,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                 }
             }
         }
-        BeaconCard(Modifier.fillMaxWidth()) {
+        SettingsCard(Modifier.fillMaxWidth()) {
             Column(
                 Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),
                 verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),

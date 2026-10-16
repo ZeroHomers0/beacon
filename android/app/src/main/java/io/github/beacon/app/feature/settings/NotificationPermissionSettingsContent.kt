@@ -19,7 +19,7 @@ import io.github.beacon.app.R
 import io.github.beacon.app.ipc.RuntimeActions
 import io.github.beacon.app.ui.components.BeaconActionButton
 import io.github.beacon.app.ui.components.BeaconButton
-import io.github.beacon.app.ui.components.BeaconCard
+import io.github.beacon.app.ui.components.SettingsCard
 import io.github.beacon.app.ui.components.BeaconText
 import io.github.beacon.app.ui.components.BeaconUiMetrics
 import io.github.beacon.app.ui.components.NotificationPermissionState
@@ -40,7 +40,7 @@ internal fun LazyListScope.notificationPermissionSettingsItems(
     context: Context,
 ) {
     item {
-        BeaconCard(Modifier.fillMaxWidth()) {
+        SettingsCard(Modifier.fillMaxWidth()) {
             Column(
                 Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),
                 verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),

@@ -90,6 +90,11 @@ fun BeaconApp(
 ) {
     val actions: RuntimeActions = viewModel
     val context = androidx.compose.ui.platform.LocalContext.current
+    val adminActivity = checkNotNull(androidx.activity.compose.LocalActivity.current as? androidx.activity.ComponentActivity)
+    val adminModel = remember(adminActivity) {
+        androidx.lifecycle.ViewModelProvider(adminActivity)[io.github.beacon.app.feature.settings.ServerAdminViewModel::class.java]
+    }
+    val adminState by adminModel.state.collectAsStateWithLifecycle()
     val ui = viewModel.uiState
     val runtimeState by actions.state.collectAsStateWithLifecycle()
     LaunchedEffect(
@@ -721,6 +726,13 @@ fun BeaconApp(
                                                     ui.navigateSettings(SettingsScreen.HOME)
                                                     navigate(1)
                                                 }
+                                            } else if (displayedDetail == null && barPage == 1 && displayedSettingsScreen in setOf(SettingsScreen.SERVER_DEVICES, SettingsScreen.SERVER_APPLICATIONS)) {
+                                                BeaconActionIcon(
+                                                    BeaconIcons.Add,
+                                                    stringResource(if (displayedSettingsScreen == SettingsScreen.SERVER_DEVICES)
+                                                        R.string.admin_create_binding else R.string.admin_create_application),
+                                                    adminState.loggedIn && !adminState.busy,
+                                                ) { adminModel.showCreation() }
                                             } else if (displayedDetail == null && barPage == 1 && displayedSettingsScreen == SettingsScreen.RECEPTION) {
                                                 val form = ui.receptionForm
                                                 BeaconActionIcon(

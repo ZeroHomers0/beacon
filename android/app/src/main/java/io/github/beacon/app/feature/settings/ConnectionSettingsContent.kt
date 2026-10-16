@@ -22,7 +22,7 @@ import io.github.beacon.app.domain.model.RuntimeState
 import io.github.beacon.app.ipc.RuntimeActions
 import io.github.beacon.app.ui.components.BeaconActionButton
 import io.github.beacon.app.ui.components.BeaconButton
-import io.github.beacon.app.ui.components.BeaconCard
+import io.github.beacon.app.ui.components.SettingsCard
 import io.github.beacon.app.ui.components.BeaconText
 import io.github.beacon.app.ui.components.BeaconTextField
 import io.github.beacon.app.ui.components.SettingsSection
@@ -45,7 +45,7 @@ internal fun LazyListScope.connectionSettingsItems(
     onFeedback: (String) -> Unit,
 ) {
     item {
-        BeaconCard(Modifier.fillMaxWidth()) {
+        SettingsCard(Modifier.fillMaxWidth()) {
             Column(
                 Modifier.fillMaxWidth()
                     .padding(io.github.beacon.app.ui.components.BeaconUiMetrics.CardInset),

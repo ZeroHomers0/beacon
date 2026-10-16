@@ -1,8 +1,8 @@
 <resources>
     <string name="admin_more_actions">更多操作</string>
     <string name="receive_success_count">新增 %1$d 条</string>
-    <string name="push_example_shell">命令行</string>
-    <string name="push_example_format">请求格式</string>
-    <string name="push_example_path">URL 参数</string>
-    <string name="push_example_copy">复制示例</string>
+    <string name="push_example_curl">复制 curl 示例</string>
+    <string name="push_example_powershell">复制 PowerShell 示例</string>
+    <string name="push_example_json_curl">复制 JSON curl 示例</string>
+    <string name="push_example_json_powershell">复制 JSON PowerShell 示例</string>
 </resources>

@@ -101,6 +101,15 @@ fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) 
     }
 }
 
+@Composable
+fun SettingsCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    BeaconCard(
+        modifier,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        content = content,
+    )
+}
+
 /** Secondary explanations share a readable, quiet treatment across both settings styles. */
 @Composable
 fun SettingsHint(text: String) {
@@ -383,10 +392,10 @@ internal fun MessageFilterTag(
     onClick: (() -> Unit)? = null,
 ) {
     Box(
-        modifier.heightIn(min = if (onClick == null) 32.dp else BeaconUiMetrics.ControlMinHeight)
-            .widthIn(min = if (onClick == null) 0.dp else BeaconUiMetrics.ControlMinHeight)
+        modifier
             .semantics { if (compact) contentDescription = label }
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(6.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .then(
                 if (onClick == null) Modifier
                 else Modifier.clickable(
@@ -394,17 +403,12 @@ internal fun MessageFilterTag(
                     role = androidx.compose.ui.semantics.Role.Button,
                     onClick = onClick,
                 )
-            )
-            .padding(vertical = 4.dp),
+            ),
         contentAlignment = Alignment.Center,
     ) {
         BeaconText(
             label,
-            Modifier.background(
-                    MaterialTheme.colorScheme.surfaceContainerHigh,
-                    RoundedCornerShape(6.dp),
-                )
-                .padding(horizontal = 8.dp, vertical = 3.dp),
+            Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
             style = if (compact) MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 14.sp) else MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,

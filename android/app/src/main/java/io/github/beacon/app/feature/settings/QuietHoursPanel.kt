@@ -14,7 +14,13 @@ import io.github.beacon.app.ui.icons.BeaconIcons
 import java.util.Locale
 
 @Composable
-internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions, form: QuietHoursFormState = remember { QuietHoursFormState() }, scheduleOnly: Boolean = false, onSchedule: (() -> Unit)? = null) {
+internal fun QuietHoursPanel(
+    state: RuntimeState,
+    actions: RuntimeActions,
+    form: QuietHoursFormState = remember { QuietHoursFormState() },
+    scheduleOnly: Boolean = false,
+    onSchedule: (() -> Unit)? = null,
+) {
     with(form) {
         LaunchedEffect(state.runtimeConnected, attempt) {
             if (state.runtimeConnected && loaded && !failed) return@LaunchedEffect
@@ -30,38 +36,63 @@ internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions, form:
         val editable = loaded && !saving && state.runtimeConnected
         val labels = stringResource(R.string.quiet_weekdays).split(",")
         Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SettingsGroupGap)) {
-            if (!scheduleOnly) SettingsSection(stringResource(R.string.ui_v2_quiet_section)) {
-                SettingsFieldGroup(
-                    {
-                        BeaconPreferenceToggle(
-                            stringResource(R.string.quiet_enable),
-                            "",
-                            draft.enabled,
-                            enabled = editable,
-                        ) {
-                            draft = draft.copy(enabled = it)
-                        }
-                    },
-                    {
-                        BeaconDropdownPreference(
-                            stringResource(R.string.quiet_behavior),
-                            listOf(
-                                stringResource(R.string.quiet_silent),
-                                stringResource(R.string.quiet_save_only),
-                            ),
-                            draft.behavior.ordinal,
-                            enabled = editable,
-                        ) {
-                            draft = draft.copy(behavior = QuietHoursBehavior.entries[it])
-                        }
-                    },
-                )
-                if (onSchedule != null)
-                    SettingsActionRow(
-                        stringResource(R.string.quiet_schedule), "$start – $end",
-                        BeaconIcons.QuietHours, editable, onSchedule,
+            if (!scheduleOnly)
+                SettingsSection(stringResource(R.string.ui_v2_quiet_section)) {
+                    SettingsFieldGroup(
+                        {
+                            BeaconPreferenceToggle(
+                                stringResource(R.string.quiet_enable),
+                                "",
+                                draft.enabled,
+                                enabled = editable,
+                            ) {
+                                draft = draft.copy(enabled = it)
+                            }
+                        },
+                        {
+                            BeaconDropdownPreference(
+                                stringResource(R.string.quiet_behavior),
+                                listOf(
+                                    stringResource(R.string.quiet_silent),
+                                    stringResource(R.string.quiet_save_only),
+                                ),
+                                draft.behavior.ordinal,
+                                enabled = editable,
+                            ) {
+                                draft = draft.copy(behavior = QuietHoursBehavior.entries[it])
+                            }
+                        },
                     )
-            }
+                    if (onSchedule != null) {
+                        SettingsFieldDivider()
+                        androidx.compose.material3.Surface(
+                            onClick = onSchedule,
+                            enabled = editable,
+                            color = androidx.compose.ui.graphics.Color.Transparent,
+                        ) {
+                            Row(
+                                Modifier.fillMaxWidth()
+                                    .heightIn(min = BeaconUiMetrics.ControlMinHeight)
+                                    .padding(vertical = BeaconUiMetrics.FieldVerticalInset),
+                                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                BeaconText(
+                                    stringResource(R.string.quiet_schedule),
+                                    Modifier.weight(1f),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    maxLines = 1,
+                                )
+                                BeaconText(
+                                    "$start – $end",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                )
+                            }
+                        }
+                    }
+                }
             val scheduleContent: @Composable ColumnScope.() -> Unit = {
                 BeaconTimeRangePreference(
                     start,
@@ -91,7 +122,7 @@ internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions, form:
             }
             if (scheduleOnly || onSchedule == null) {
                 if (scheduleOnly)
-                    BeaconCard(Modifier.fillMaxWidth()) {
+                    SettingsCard(Modifier.fillMaxWidth()) {
                         Column(
                             Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),
                             verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
@@ -101,16 +132,20 @@ internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions, form:
                 else SettingsSection(stringResource(R.string.quiet_schedule), scheduleContent)
             }
             if (scheduleOnly)
-                BeaconCard(Modifier.fillMaxWidth()) {
+                SettingsCard(Modifier.fillMaxWidth()) {
                     Column(
                         Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),
                         verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
                     ) {
-                        BeaconText(stringResource(R.string.ui_v2_quiet_effect), style = MaterialTheme.typography.bodyLarge)
+                        BeaconText(
+                            stringResource(R.string.ui_v2_quiet_effect),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
                         BeaconText(
                             stringResource(
                                 if (draft.behavior == QuietHoursBehavior.SILENT)
-                                    R.string.quiet_silent else R.string.quiet_save_only
+                                    R.string.quiet_silent
+                                else R.string.quiet_save_only
                             ),
                             style = MaterialTheme.typography.titleMedium,
                         )
@@ -130,7 +165,6 @@ internal fun QuietHoursPanel(state: RuntimeState, actions: RuntimeActions, form:
                     attempt++
                 }
             }
-
         }
     }
 }

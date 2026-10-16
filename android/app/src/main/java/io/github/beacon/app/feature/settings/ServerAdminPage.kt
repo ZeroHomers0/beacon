@@ -3,11 +3,12 @@
 package io.github.beacon.app.feature.settings
 
 import androidx.activity.compose.LocalActivity
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
@@ -52,7 +53,8 @@ internal fun ServerAdminPage(
             SettingsScreen.SERVER_TEST -> 2
             else -> -1
         }
-    var creating by rememberSaveable(screen) { mutableStateOf(false) }
+    val creating by model.creating.collectAsStateWithLifecycle()
+    LaunchedEffect(screen) { model.dismissCreation() }
     var bindingName by rememberSaveable { mutableStateOf("") }
     var appName by rememberSaveable { mutableStateOf("") }
     var deviceId by rememberSaveable { mutableStateOf(state.testDeviceId) }
@@ -83,6 +85,7 @@ internal fun ServerAdminPage(
     LaunchedEffect(state.loggedIn, state.devices) {
         if (active.none { it.id == deviceId }) deviceId = active.firstOrNull()?.id.orEmpty()
         if (!state.loggedIn) {
+            model.dismissCreation()
             pendingDevice = null
             deletingDevice = null
             clearStage = 0
@@ -91,7 +94,10 @@ internal fun ServerAdminPage(
             confirmTest = false
         }
     }
-    LaunchedEffect(state.secret) { copiedValue = null }
+    LaunchedEffect(state.secret) {
+        copiedValue = null
+        if (state.secret != null) model.dismissCreation()
+    }
     // Administrator outcomes share the app-wide snackbar, so they are consumed once and cleared.
     val feedbackText = state.feedback?.let { stringResource(it) }
     LaunchedEffect(state.feedback) {
@@ -177,10 +183,36 @@ internal fun ServerAdminPage(
                         ),
                         columns = 3,
                     )
-                    DiagnosticRow(
-                        stringResource(R.string.admin_database),
-                        android.text.format.Formatter.formatFileSize(context, state.databaseBytes),
-                    )
+                    SettingsFieldDivider()
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        androidx.compose.material3.Icon(
+                            BeaconIcons.Storage,
+                            null,
+                            Modifier.size(20.dp),
+                            tint =
+                                androidx.compose.material3.MaterialTheme.colorScheme
+                                    .onSurfaceVariant,
+                        )
+                        BeaconText(
+                            stringResource(R.string.admin_database),
+                            Modifier.weight(1f),
+                            style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                            color =
+                                androidx.compose.material3.MaterialTheme.colorScheme
+                                    .onSurfaceVariant,
+                        )
+                        BeaconText(
+                            android.text.format.Formatter.formatFileSize(
+                                context,
+                                state.databaseBytes,
+                            ),
+                            style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                        )
+                    }
                     if (state.protocol != 1)
                         SettingsHint(stringResource(R.string.admin_protocol_unknown))
 
@@ -197,23 +229,22 @@ internal fun ServerAdminPage(
             }
             item {
                 SettingsGroup(stringResource(R.string.admin_manage_section)) {
-                    Row(Modifier.fillMaxWidth()) {
-                        AdminManagementEntry(
-                            stringResource(R.string.admin_devices),
-                            BeaconIcons.Server,
-                            Modifier.weight(1f),
-                            !state.busy,
-                        ) {
-                            onNavigate(SettingsScreen.SERVER_DEVICES)
-                        }
-                        AdminManagementEntry(
-                            stringResource(R.string.admin_applications),
-                            BeaconIcons.CredentialUpdate,
-                            Modifier.weight(1f),
-                            !state.busy,
-                        ) {
-                            onNavigate(SettingsScreen.SERVER_APPLICATIONS)
-                        }
+                    SettingsActionRow(
+                        stringResource(R.string.admin_devices),
+                        "",
+                        BeaconIcons.Server,
+                        !state.busy,
+                    ) {
+                        onNavigate(SettingsScreen.SERVER_DEVICES)
+                    }
+                    SettingsFieldDivider()
+                    SettingsActionRow(
+                        stringResource(R.string.admin_applications),
+                        "",
+                        BeaconIcons.CredentialUpdate,
+                        !state.busy,
+                    ) {
+                        onNavigate(SettingsScreen.SERVER_APPLICATIONS)
                     }
                     SettingsFieldDivider()
                     SettingsActionRow(
@@ -253,38 +284,7 @@ internal fun ServerAdminPage(
                                     )
                             }
                         }
-                    item {
-                        SettingsGroup("") {
-                            SettingsActionRow(
-                                stringResource(R.string.admin_create_binding),
-                                "",
-                                BeaconIcons.Guide,
-                                !state.busy,
-                            ) {
-                                creating = !creating
-                            }
-                        }
-                    }
-                    if (creating)
-                        item {
-                            SettingsSection("") {
-                                AdminField(
-                                    bindingName,
-                                    { bindingName = it.take(40) },
-                                    R.string.admin_device_name,
-                                    !state.busy,
-                                )
-                                SettingsHint(stringResource(R.string.admin_binding_hint))
-                                BeaconActionButton(
-                                    stringResource(R.string.admin_create_binding),
-                                    BeaconIcons.Guide,
-                                    Modifier.fillMaxWidth(),
-                                    !state.busy && bindingName.isNotBlank(),
-                                ) {
-                                    model.createBinding(bindingName)
-                                }
-                            }
-                        }
+
                     if (state.devices.isEmpty())
                         item { SettingsHint(stringResource(R.string.admin_no_devices)) }
                     items(state.devices, key = { "device-${it.id}" }) { device ->
@@ -326,52 +326,7 @@ internal fun ServerAdminPage(
                     }
                 }
                 1 -> {
-                    item {
-                        SettingsGroup("") {
-                            SettingsActionRow(
-                                stringResource(R.string.admin_create_application),
-                                "",
-                                BeaconIcons.CredentialUpdate,
-                                !state.busy,
-                            ) {
-                                creating = !creating
-                            }
-                        }
-                    }
-                    if (creating)
-                        item {
-                            SettingsSection("") {
-                                DevicePicker(active, deviceId, { deviceId = it }, !state.busy)
-                                AdminField(
-                                    appName,
-                                    { appName = it.take(40) },
-                                    R.string.admin_application_name,
-                                    !state.busy,
-                                )
-                                // Only the tiers the client distinguishes are offered; the server,
-                                // protocol and Bark entry still accept the full 0-10 range.
-                                BeaconDropdownPreference(
-                                    stringResource(R.string.admin_priority),
-                                    PRIORITY_TIERS.map { value ->
-                                        stringResource(priorityLabel(value), value)
-                                    },
-                                    PRIORITY_TIERS.indexOf(priority).coerceAtLeast(0),
-                                    enabled = !state.busy,
-                                    stacked = true,
-                                ) {
-                                    priority = PRIORITY_TIERS[it]
-                                }
-                                SettingsHint(stringResource(R.string.admin_application_hint))
-                                BeaconActionButton(
-                                    stringResource(R.string.admin_create_application),
-                                    BeaconIcons.CredentialUpdate,
-                                    Modifier.fillMaxWidth(),
-                                    !state.busy && deviceId.isNotBlank() && appName.isNotBlank(),
-                                ) {
-                                    model.createApplication(deviceId, appName, priority)
-                                }
-                            }
-                        }
+
                     if (state.applications.isEmpty())
                         item { SettingsHint(stringResource(R.string.admin_no_applications)) }
                     items(state.applications, key = { "application-${it.id}" }) { app ->
@@ -465,6 +420,83 @@ internal fun ServerAdminPage(
                     }
                 }
             }
+    }
+    if (creating && state.loggedIn && tab in 0..1 && state.secret == null) {
+        BeaconAlertDialog(
+            onDismissRequest = { if (!state.busy) model.dismissCreation() },
+            title = {
+                BeaconText(
+                    stringResource(
+                        if (tab == 0) R.string.admin_create_binding
+                        else R.string.admin_create_application
+                    )
+                )
+            },
+            text = {
+                Column(
+                    Modifier.fillMaxWidth()
+                        .heightIn(max = 420.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
+                ) {
+                    if (tab == 0) {
+
+                        AdminField(
+                            bindingName,
+                            { bindingName = it.take(40) },
+                            R.string.admin_device_name,
+                            !state.busy,
+                        )
+                        SettingsHint(stringResource(R.string.admin_binding_hint))
+                    } else {
+
+                        DevicePicker(active, deviceId, { deviceId = it }, !state.busy)
+                        AdminField(
+                            appName,
+                            { appName = it.take(40) },
+                            R.string.admin_application_name,
+                            !state.busy,
+                        )
+                        // Only the tiers the client distinguishes are offered; the server,
+                        // protocol and Bark entry still accept the full 0-10 range.
+                        BeaconDropdownPreference(
+                            stringResource(R.string.admin_priority),
+                            PRIORITY_TIERS.map { value ->
+                                stringResource(priorityLabel(value), value)
+                            },
+                            PRIORITY_TIERS.indexOf(priority).coerceAtLeast(0),
+                            enabled = !state.busy,
+                            stacked = true,
+                        ) {
+                            priority = PRIORITY_TIERS[it]
+                        }
+                        SettingsHint(stringResource(R.string.admin_application_hint))
+                    }
+                }
+            },
+            confirmButton = {
+                BeaconButton(
+                    enabled =
+                        !state.busy &&
+                            if (tab == 0) bindingName.isNotBlank()
+                            else deviceId.isNotBlank() && appName.isNotBlank(),
+                    onClick = {
+                        if (tab == 0) model.createBinding(bindingName)
+                        else model.createApplication(deviceId, appName, priority)
+                    },
+                ) {
+                    BeaconText(
+                        stringResource(
+                            if (tab == 0) R.string.admin_create_binding
+                            else R.string.admin_create_application
+                        )
+                    )
+                }
+            },
+            dismissButton = {
+                BeaconCancelButton(enabled = !state.busy, onClick = model::dismissCreation)
+            },
+        )
     }
     state.secret?.let { secret ->
         BeaconAlertDialog(
@@ -630,36 +662,6 @@ internal fun ServerAdminPage(
 }
 
 @Composable
-private fun AdminManagementEntry(
-    title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    modifier: Modifier,
-    enabled: Boolean,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier
-            .clickable(
-                enabled = enabled,
-                role = androidx.compose.ui.semantics.Role.Button,
-                onClick = onClick,
-            )
-            .padding(BeaconUiMetrics.CardInset)
-            .heightIn(min = BeaconUiMetrics.ControlMinHeight),
-        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        androidx.compose.material3.Icon(icon, null, Modifier.size(20.dp))
-        BeaconText(
-            title,
-            Modifier.weight(1f),
-            style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
-        )
-        androidx.compose.material3.Icon(BeaconIcons.Arrow, null, Modifier.size(16.dp))
-    }
-}
-
-@Composable
 private fun AdminListCard(
     title: String,
     subtitle: String,
@@ -668,7 +670,7 @@ private fun AdminListCard(
     actions: List<Pair<Int, () -> Unit>>,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
-    BeaconCard(Modifier.fillMaxWidth()) {
+    SettingsCard(Modifier.fillMaxWidth()) {
         Row(
             Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),
             verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,

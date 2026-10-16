@@ -56,6 +56,16 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
 
     private val mutable = MutableStateFlow(AdminUiState())
     val state = mutable.asStateFlow()
+    private val mutableCreating = MutableStateFlow(false)
+    val creating = mutableCreating.asStateFlow()
+
+    fun showCreation() {
+        if (mutable.value.loggedIn && !mutable.value.busy) mutableCreating.value = true
+    }
+
+    fun dismissCreation() {
+        mutableCreating.value = false
+    }
 
     fun selectTestDevice(id: String) {
         mutable.value = mutable.value.copy(testDeviceId = id)
@@ -95,6 +105,7 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
     }
 
     fun logout() {
+        dismissCreation()
         generation++
         job?.cancel()
         session = null
