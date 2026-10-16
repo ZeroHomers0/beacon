@@ -47,3 +47,12 @@ fun connectionStatusLabel(state: io.github.beacon.app.domain.model.RuntimeState)
             else -> R.string.connection_status_connected
         }
     )
+
+fun formatStorageSize(
+    context: android.content.Context,
+    bytes: Long,
+    short: Boolean = false,
+): String =
+    (if (short) android.text.format.Formatter.formatShortFileSize(context, bytes)
+        else android.text.format.Formatter.formatFileSize(context, bytes))
+        .replace("kB", "KB")

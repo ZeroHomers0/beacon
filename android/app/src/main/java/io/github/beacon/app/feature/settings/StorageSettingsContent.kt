@@ -106,7 +106,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
             ) {
                 BeaconText(
                     preview?.databaseBytes?.let {
-                        android.text.format.Formatter.formatFileSize(context, it)
+                        formatStorageSize(context, it)
                     } ?: "—",
                     style = MaterialTheme.typography.headlineLarge,
                 )

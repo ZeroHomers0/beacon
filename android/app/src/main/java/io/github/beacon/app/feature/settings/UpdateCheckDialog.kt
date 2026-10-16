@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
-import android.text.format.Formatter
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
@@ -62,7 +61,11 @@ internal fun UpdateCheckDialog(
                     BeaconText(
                         stringResource(
                             R.string.settings_update_size,
-                            Formatter.formatShortFileSize(context, release.sizeBytes),
+                            io.github.beacon.app.ui.components.formatStorageSize(
+                                context,
+                                release.sizeBytes,
+                                short = true,
+                            ),
                         ),
                         style = MaterialTheme.typography.bodyMedium,
                     )
@@ -105,7 +108,8 @@ private suspend fun stageAndInstall(
 ) {
     if (!state.beginDownload()) return
     try {
-        // The system requires the user to allow installs from this app; ask before spending a download.
+        // The system requires the user to allow installs from this app; ask before spending a
+        // download.
         if (!context.packageManager.canRequestPackageInstalls()) {
             val opened = openInstallPermission(context)
             onFeedback(
