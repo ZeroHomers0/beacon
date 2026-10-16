@@ -12,6 +12,9 @@ import android.net.Uri
 import android.os.Build
 import io.github.beacon.app.MainActivity
 import io.github.beacon.app.R
+import io.github.beacon.app.data.remote.MessageActionsCodec
+import io.github.beacon.app.domain.model.IncomingMessage
+import io.github.beacon.app.domain.model.MessageLinkAction
 import io.github.beacon.app.domain.model.NotificationSettings
 import io.github.beacon.app.domain.policy.MessageMarkdown
 import io.github.beacon.app.domain.receive.NotificationBatch
@@ -100,6 +103,14 @@ class MessageNotifications(
             registered = manager.getNotificationChannel(channel)
         }
         if (registered?.importance == NotificationManager.IMPORTANCE_NONE) return false
+        val message = batch.key?.let { runCatching { messageLookup(it) }.getOrNull() }
+        val noticeActions = buildList {
+            readAction(batch)?.let { add(it) }
+            batch.key
+                ?.takeIf { batch.body.isNotBlank() }
+                ?.let { add(copyAction(it, batch.tag, batch.body)) }
+            addAll(linkActions(message, 3 - size))
+        }
         val open =
             PendingIntent.getActivity(
                 context,
@@ -128,13 +139,7 @@ class MessageNotifications(
                 .setAutoCancel(true)
                 .setOnlyAlertOnce(true)
                 .apply {
-                    // The platform shows at most three actions and only while the notice is
-                    // expanded. A single message card therefore offers the two operations that need
-                    // no screen; a summary card holds no text to copy, so it clears the batch.
-                    readAction(batch)?.let { addAction(it) }
-                    batch.key
-                        ?.takeIf { batch.body.isNotBlank() }
-                        ?.let { addAction(copyAction(it, batch.tag, batch.body)) }
+                    noticeActions.forEach { addAction(it) }
                 }
                 .apply {
                     if (!batch.alert) {
@@ -158,10 +163,7 @@ class MessageNotifications(
         // network, and [RemoteMessageImage] keeps the alert path to one cold fetch per URL.
         val metadata =
             if (batch.alert)
-                batch.key
-                    ?.let { messageLookup(it) }
-                    ?.bark
-                    ?.let { runCatching { org.json.JSONObject(it) }.getOrNull() }
+                message?.bark?.let { runCatching { org.json.JSONObject(it) }.getOrNull() }
             else null
         // Only the picture is fetched. The avatar's setLargeIcon cost a second cold handshake and a
         // second decode for a 48 dp thumbnail, and the card is already identified by its small icon
@@ -223,8 +225,7 @@ class MessageNotifications(
                 intent.putExtra(NotificationReadReceiver.TAG, batch.tag),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
-        val label =
-            if (key != null) R.string.action_mark_read else R.string.action_mark_all_read
+        val label = if (key != null) R.string.action_mark_read else R.string.action_mark_all_read
         val builder = Notification.Action.Builder(null, context.getString(label), read)
         // A label alone does not tell the platform what an action means; the semantic does. Both
         // constants only exist from API 28 on.
@@ -255,6 +256,42 @@ class MessageNotifications(
             .build()
     }
 
+    private fun linkActions(message: IncomingMessage?, limit: Int): List<Notification.Action> {
+        if (message == null || limit <= 0) return emptyList()
+        val available = runCatching {
+            message.actions
+                .ifEmpty {
+                    val url = runCatching {
+                        org.json.JSONObject(message.bark).optString("url")
+                    }.getOrDefault("")
+                    if (url.isBlank()) emptyList()
+                    else
+                        listOf(
+                            MessageLinkAction(context.getString(R.string.message_action_open), url)
+                        )
+                }
+                .also(MessageActionsCodec::validate)
+        }
+            .getOrDefault(emptyList())
+        return available
+            .distinctBy { it.url }
+            .take(limit)
+            .map { action ->
+                val intent =
+                    Intent(Intent.ACTION_VIEW, Uri.parse(action.url).normalizeScheme())
+                        .addCategory(Intent.CATEGORY_BROWSABLE)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                val open =
+                    PendingIntent.getActivity(
+                        context,
+                        0,
+                        intent,
+                        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                    )
+                Notification.Action.Builder(null, action.title, open).build()
+            }
+    }
+
     private fun actionIntent(
         key: io.github.beacon.app.domain.model.MessageKey,
         tag: String,
@@ -270,7 +307,11 @@ class MessageNotifications(
      * the same message would reuse an earlier card's action extras.
      */
     private fun noticeData(tag: String): Uri =
-        Uri.Builder().scheme("beacon").authority("batch").appendQueryParameter("notice", tag).build()
+        Uri.Builder()
+            .scheme("beacon")
+            .authority("batch")
+            .appendQueryParameter("notice", tag)
+            .build()
 
     companion object {
         private val FRESH = io.github.beacon.app.domain.model.NotificationChannelKind.FRESH.id
@@ -293,7 +334,8 @@ class MessageNotifications(
                         PackageManager.PERMISSION_GRANTED
             )
                 return false
-            return context.getSystemService(NotificationManager::class.java)
+            return context
+                .getSystemService(NotificationManager::class.java)
                 .areNotificationsEnabled()
         }
     }
