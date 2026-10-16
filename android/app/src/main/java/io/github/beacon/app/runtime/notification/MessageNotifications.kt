@@ -109,7 +109,7 @@ class MessageNotifications(
             batch.key
                 ?.takeIf { batch.body.isNotBlank() }
                 ?.let { add(copyAction(it, batch.tag, batch.body)) }
-            addAll(linkActions(message, 3 - size))
+            addAll(linkActions(message, minOf(1, 3 - size)))
         }
         val open =
             PendingIntent.getActivity(
@@ -225,7 +225,7 @@ class MessageNotifications(
                 intent.putExtra(NotificationReadReceiver.TAG, batch.tag),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
-        val label = if (key != null) R.string.action_mark_read else R.string.action_mark_all_read
+        val label = R.string.notification_action_read
         val builder = Notification.Action.Builder(null, context.getString(label), read)
         // A label alone does not tell the platform what an action means; the semantic does. Both
         // constants only exist from API 28 on.
@@ -252,7 +252,11 @@ class MessageNotifications(
                 intent,
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
             )
-        return Notification.Action.Builder(null, context.getString(R.string.action_copy_body), copy)
+        return Notification.Action.Builder(
+                null,
+                context.getString(R.string.notification_action_body),
+                copy,
+            )
             .build()
     }
 
@@ -263,7 +267,8 @@ class MessageNotifications(
                 .ifEmpty {
                     val url = runCatching {
                         org.json.JSONObject(message.bark).optString("url")
-                    }.getOrDefault("")
+                    }
+                        .getOrDefault("")
                     if (url.isBlank()) emptyList()
                     else
                         listOf(
@@ -288,7 +293,7 @@ class MessageNotifications(
                         intent,
                         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
                     )
-                Notification.Action.Builder(null, action.title, open).build()
+                Notification.Action.Builder(null, action.displayTitle, open).build()
             }
     }
 

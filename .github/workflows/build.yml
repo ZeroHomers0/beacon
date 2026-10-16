@@ -170,7 +170,7 @@ jobs:
               "body": f"**arm64-v8a APK 已打包并上传**\n\n版本：{os.environ['GITHUB_REF_NAME']}\n提交：{commit}\n[下载构建产物]({artifact_url})",
               "priority": 5,
               "group": "CI 构建",
-              "actions": [{"title": "下载 APK", "url": artifact_url}],
+              "actions": [{"title": "下载应用", "url": artifact_url}],
           }
           class NoRedirect(urllib.request.HTTPRedirectHandler):
               def redirect_request(self, request, response, code, message, headers, new_url):

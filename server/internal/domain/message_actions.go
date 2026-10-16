@@ -30,11 +30,18 @@ func (a *MessageActions) UnmarshalJSON(data []byte) error {
 	if !ValidMessageActions(actions) {
 		return ErrInvalidMessage
 	}
+	for index := range actions {
+		title := []rune(strings.TrimSpace(actions[index].Title))
+		if len(title) > 4 {
+			title = title[:4]
+		}
+		actions[index].Title = string(title)
+	}
 	*a = actions
 	return nil
 }
 func ValidMessageActions(actions []MessageAction) bool {
-	if len(actions) > 3 {
+	if len(actions) > 1 {
 		return false
 	}
 	for _, action := range actions {

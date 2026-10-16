@@ -12,7 +12,7 @@ Beacon 是一个自托管的 Android 消息推送应用。手机安装 App，服
 
 - **Android 自托管推送**：支持 WebSocket 即时接收、HTTP 定时补收，以及按电量、时间段、充电和 Wi-Fi 条件切换的规则接收。
 - **两种服务端可选**：Go 单文件 / Docker 适合服务器和 NAS；Cloudflare Workers 使用 Durable Objects SQLite 保存数据。
-- **Beacon 原生 API 与 Bark 兼容接口**：脚本可发送标题、副标题、Markdown 正文、优先级、分组和有效期；原生接口支持最多三个 HTTPS 操作按钮。
+- **Beacon 原生 API 与 Bark 兼容接口**：脚本可发送标题、副标题、Markdown 正文、优先级、分组和有效期；原生接口支持最多一个 HTTPS 操作按钮。
 - **离线补收与接收确认**：消息先保存到服务端，手机恢复连接后补收有效消息；推送请求支持幂等键，避免重试产生重复消息。
 - **手机内管理**：在 App 中绑定设备、管理应用令牌、发送测试消息、查看存储概况和清理数据。
 - **通知与消息管理**：支持免打扰时段、过时消息提醒策略、锁屏预览、消息搜索与分组筛选、历史导入导出及设置备份。
@@ -196,7 +196,7 @@ curl -X POST 'https://push.example.com/api/v1/push' \
 | `title` | 可选，标题，最多 1024 UTF-8 字节 |
 | `subtitle` | 可选，副标题，最多 1024 UTF-8 字节 |
 | `priority` | 可选，0–10 的整数；设备推送密钥默认使用 5 |
-| `actions` | 可选，最多 3 个操作按钮，格式为 `[{"title":"查看日志","url":"https://example.com/logs"}]`；省略或空数组表示没有按钮 |
+| `actions` | 可选，最多 1 个操作按钮，格式为 `[{"title":"查看日志","url":"https://example.com/logs"}]`；省略或空数组表示没有按钮 |
 | `group` | 可选，消息分组，最多 128 UTF-8 字节 |
 | `ttl` | 可选，消息投递有效期，单位秒，0–604800 的整数；省略或 0 使用七天默认值 |
 
@@ -208,13 +208,13 @@ curl -X POST 'https://push.example.com/api/v1/push' \
 
 #### 带操作按钮的消息
 
-每个操作必须包含 `title` 和 `url`，不接受其他字段。`title` 不能全为空白或包含控制字符，最多 64 UTF-8 字节；`url` 最多 2048 UTF-8 字节，必须为有效 HTTPS 地址，不能包含用户名或密码。`actions: null`、超过 3 个按钮或无效字段返回 `400 invalid_message`。
+每个操作必须包含 `title` 和 `url`，不接受其他字段。`title` 不能全为空白或包含控制字符，输入最多 64 UTF-8 字节，展示文案最多四个字符，超出自动截断；`url` 最多 2048 UTF-8 字节，必须为有效 HTTPS 地址，不能包含用户名或密码。`actions: null`、超过 1 个按钮或无效字段返回 `400 invalid_message`。
 
 ```bash
 curl -X POST 'https://push.example.com/api/v1/push' \
   -H 'Authorization: Bearer YOUR_PUSH_KEY' \
   -H 'Content-Type: application/json' \
-  -d '{"title":"构建失败","body":"主分支构建失败，请查看日志","group":"CI","actions":[{"title":"查看日志","url":"https://ci.example.com/builds/123"},{"title":"打开项目","url":"https://git.example.com/team/project"}]}'
+  -d '{"title":"构建失败","body":"主分支构建失败，请查看日志","group":"CI","actions":[{"title":"查看日志","url":"https://ci.example.com/builds/123"}]}'
 ```
 
 App 在消息详情展示按钮和目标地址，点击后交给系统浏览器或对应应用打开。收到消息不会自动打开链接，也不会代用户发起带鉴权的请求。按钮随历史消息和备份保存，HTTP 补收与即时接收均支持；幂等判断包含按钮标题、地址和排列顺序。

@@ -154,7 +154,7 @@ func (a *API) capabilities(w http.ResponseWriter, r *http.Request) {
 		"transports":                  transports,
 		"push_apis":                   []string{"beacon", "bark_text"},
 		"message_fields":              []string{"title", "subtitle", "body", "priority", "group", "ttl", "application_id", "application_name", "expires_at_ms", "actions"},
-		"max_message_actions":         3,
+		"max_message_actions":         1,
 		"push_idempotency":            true,
 		"max_ttl_seconds":             604800,
 		"max_page_size":               domain.MaxPageSize,

@@ -47,7 +47,7 @@ export interface MessageAction {
 }
 export function validateMessageActions(value: unknown): MessageAction[] {
   if (value === undefined) return [];
-  if (!Array.isArray(value) || value.length > 3) reject(400, "invalid_message");
+  if (!Array.isArray(value) || value.length > 1) reject(400, "invalid_message");
   return value.map((item) => {
     if (
       !item ||
@@ -98,7 +98,7 @@ export function validateMessageActions(value: unknown): MessageAction[] {
     } catch {
       reject(400, "invalid_message");
     }
-    return { title, url };
+    return { title: Array.from(title.trim()).slice(0, 4).join(""), url };
   });
 }
 export interface Message {

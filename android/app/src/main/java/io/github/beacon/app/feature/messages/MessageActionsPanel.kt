@@ -32,7 +32,7 @@ fun MessageActionsPanel(actions: List<MessageLinkAction>, legacyUrl: String = ""
             }
             runCatching {
                     MessageActionsCodec.validate(supplied)
-                    supplied
+                    supplied.take(1)
                 }
                 .getOrDefault(emptyList())
         }
@@ -46,7 +46,10 @@ fun MessageActionsPanel(actions: List<MessageLinkAction>, legacyUrl: String = ""
                         failed =
                             runCatching {
                                 context.startActivity(
-                                    Intent(Intent.ACTION_VIEW, Uri.parse(action.url).normalizeScheme())
+                                    Intent(
+                                            Intent.ACTION_VIEW,
+                                            Uri.parse(action.url).normalizeScheme(),
+                                        )
                                         .addCategory(Intent.CATEGORY_BROWSABLE)
                                 )
                             }
@@ -55,7 +58,7 @@ fun MessageActionsPanel(actions: List<MessageLinkAction>, legacyUrl: String = ""
                 ) {
                     Icon(BeaconIcons.OpenWeb, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    BeaconText(action.title, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                    BeaconText(action.displayTitle, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 BeaconText(
                     action.url,

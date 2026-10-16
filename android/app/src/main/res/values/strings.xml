@@ -535,4 +535,6 @@
     <string name="admin_unnamed_device">未命名设备</string>
     <string name="admin_unnamed_application">未命名应用</string>
     <string name="admin_application_device">所属设备：%1$s</string>
+    <string name="notification_action_read">已读</string>
+    <string name="notification_action_body">正文</string>
 </resources>
