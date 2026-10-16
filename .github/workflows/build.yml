@@ -136,12 +136,61 @@ jobs:
           assert actual == expected, f"{apk.name}: expected {expected}, got {actual}"
           print(f"{apk.name}: verified {', '.join(sorted(actual))}")
           PY
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - id: android_artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: beacon-android-${{ matrix.abi }}-${{ github.sha }}
           path: dist/android/
           if-no-files-found: error
           retention-days: 30
+      - name: Notify Beacon when ARM64 APK is available
+        if: ${{ success() && matrix.abi == 'arm64-v8a' }}
+        continue-on-error: true
+        env:
+          BEACON_PUSH_TOKEN: ${{ secrets.BEACON_PUSH_TOKEN }}
+          BEACON_ARTIFACT_URL: ${{ steps.android_artifact.outputs.artifact-url }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import sys
+          import urllib.request
+
+          token = os.environ.get("BEACON_PUSH_TOKEN", "")
+          if not token:
+              print("Beacon notification skipped: secret is not configured.")
+              sys.exit(0)
+
+          run_url = f"{os.environ['GITHUB_SERVER_URL']}/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
+          artifact_url = os.environ.get("BEACON_ARTIFACT_URL") or run_url
+          commit = os.environ["GITHUB_SHA"][:7]
+          payload = {
+              "title": "Beacon ARM64 打包完成",
+              "body": f"**arm64-v8a APK 已打包并上传**\\n\\n版本：{os.environ['GITHUB_REF_NAME']}\\n提交：{commit}\\n[下载构建产物]({artifact_url})",
+              "priority": 5,
+              "group": "CI 构建",
+              "url": artifact_url,
+          }
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, request, response, code, message, headers, new_url):
+                  return None
+
+          opener = urllib.request.build_opener(NoRedirect())
+          request = urllib.request.Request(
+              "https://push.gzautobot.top/api/v1/push",
+              data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+              headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+              method="POST",
+          )
+          try:
+              with opener.open(request, timeout=15) as response:
+                  if not 200 <= response.status < 300:
+                      raise RuntimeError("Unexpected response status")
+              print("Beacon build notification queued.")
+          except Exception:
+              print("Beacon notification failed; build artifacts remain available.")
+              sys.exit(1)
+          PY
   image:
     needs: [server, android]
     runs-on: ubuntu-latest

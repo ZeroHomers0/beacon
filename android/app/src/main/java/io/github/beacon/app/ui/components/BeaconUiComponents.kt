@@ -219,13 +219,13 @@ fun SettingsRow(
                 )
                 .padding(
                     horizontal = BeaconUiMetrics.CardInset,
-                    vertical = BeaconUiMetrics.FieldVerticalInset,
+                    vertical = BeaconUiMetrics.NavigationVerticalInset,
                 ),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             BadgedIcon(icon, iconTint, badge)
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 BeaconText(title, style = MaterialTheme.typography.bodyLarge)
                 if (subtitle.isNotBlank())
                     BeaconText(
