@@ -800,10 +800,14 @@ class RuntimeRepository : RuntimeActions {
                     else -> {
                         mutableState.update { it.copy(selectedMessage = full) }
                         if (!full.isRead)
-                            manageMessages(
-                                MessageAction.MARK_READ,
-                                listOf(MessageKey(full.server, full.id)),
-                                true,
+                            manage(
+                                MessageMutation(
+                                    MessageAction.MARK_READ,
+                                    listOf(MessageKey(full.server, full.id)),
+                                ),
+                                preservePage = true,
+                                onComplete = null,
+                                showStatus = false,
                             )
                     }
                 }
@@ -981,6 +985,7 @@ class RuntimeRepository : RuntimeActions {
         request: MessageMutation,
         preservePage: Boolean,
         onComplete: (() -> Unit)?,
+        showStatus: Boolean = true,
     ) {
         if (state.value.messageBusy || !ready()) return
         mutableState.update {
@@ -1007,7 +1012,9 @@ class RuntimeRepository : RuntimeActions {
                     current.copy(
                         dataBusy = false,
                         selectedMessage = selectedMessage,
-                        status = OperationStatus.result(text),
+                        status =
+                            if (showStatus) OperationStatus.result(text)
+                            else OperationStatus.diagnostic(""),
                     )
                 }
                 onComplete?.invoke()
