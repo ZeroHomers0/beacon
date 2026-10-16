@@ -251,6 +251,9 @@ fun BeaconApp(
                 ui.receptionForm.reset(runtimeState.pollingState.config, runtimeState.receivePlan)
         }
         SideEffect {
+            ui.savingSettings =
+                ui.notificationForm.rulesSaving ||
+                    (ui.settingsScreen == SettingsScreen.RECEPTION && runtimeState.transportBusy)
             ui.shouldConfirmExit = { destination ->
                 val notificationPages =
                     setOf(SettingsScreen.NOTIFICATION_RULES, SettingsScreen.QUIET_HOURS)
@@ -274,16 +277,22 @@ fun BeaconApp(
         }
         if (ui.pendingNavigation != null)
             BeaconAlertDialog(
-                onDismissRequest = { ui.pendingNavigation = null },
+                onDismissRequest = { if (!ui.savingSettings) ui.pendingNavigation = null },
                 title = { BeaconText(stringResource(R.string.settings_unsaved_title)) },
                 text = { BeaconText(stringResource(R.string.settings_unsaved_hint)) },
                 confirmButton = {
-                    BeaconButton(onClick = { ui.pendingNavigation = null }) {
+                    BeaconButton(
+                        onClick = { ui.pendingNavigation = null },
+                        enabled = !ui.savingSettings,
+                    ) {
                         BeaconText(stringResource(R.string.settings_continue_editing))
                     }
                 },
                 dismissButton = {
-                    BeaconOutlinedButton(onClick = ui::discardAndContinue) {
+                    BeaconOutlinedButton(
+                        onClick = ui::discardAndContinue,
+                        enabled = !ui.savingSettings,
+                    ) {
                         BeaconText(stringResource(R.string.settings_discard_changes))
                     }
                 },
@@ -291,27 +300,34 @@ fun BeaconApp(
         if (ui.receiveModesOpen)
             ReceiveModeDialog(
                 ui.receivePlan.mode,
-                onSelect = { mode ->
-                    if (mode != ui.receivePlan.mode) {
-                        val changeMode = {
-                            ui.receptionForm.reset(
-                                runtimeState.pollingState.config,
-                                runtimeState.receivePlan.copy(mode = mode),
-                            )
-                            actions.receivePlan(ui.receivePlan.copy(mode = mode))
-                        }
+                onSelect = selectMode@{ mode ->
                         if (
-                            ui.receptionForm.edited &&
-                                ui.receptionForm.differsFrom(
-                                    runtimeState.pollingState.config,
-                                    runtimeState.receivePlan,
-                                )
+                            !runtimeState.receivePlanLoaded ||
+                                !runtimeState.runtimeConnected ||
+                                runtimeState.messageBusy ||
+                                ui.savingSettings
                         )
-                            ui.pendingNavigation = changeMode
-                        else changeMode()
-                    }
-                    ui.receiveModesOpen = false
-                },
+                            return@selectMode
+                        if (mode != ui.receivePlan.mode) {
+                            val changeMode = {
+                                ui.receptionForm.reset(
+                                    runtimeState.pollingState.config,
+                                    runtimeState.receivePlan.copy(mode = mode),
+                                )
+                                actions.receivePlan(ui.receivePlan.copy(mode = mode))
+                            }
+                            if (
+                                ui.receptionForm.edited &&
+                                    ui.receptionForm.differsFrom(
+                                        runtimeState.pollingState.config,
+                                        runtimeState.receivePlan,
+                                    )
+                            )
+                                ui.pendingNavigation = changeMode
+                            else changeMode()
+                        }
+                        ui.receiveModesOpen = false
+                    },
                 onDismiss = { ui.receiveModesOpen = false },
             )
         val messageScroll = rememberLazyListState()
@@ -406,7 +422,7 @@ fun BeaconApp(
                     )
                 }
                 navigate(1)
-                if (ui.pendingNavigation != null)
+                if (ui.pendingNavigation != null || ui.savingSettings)
                     settingsBackReset.launch(uiScope, settingsMotion, original)
             } catch (_: kotlinx.coroutines.CancellationException) {
                 settingsBackReset.launch(uiScope, settingsMotion, original)
@@ -624,7 +640,15 @@ fun BeaconApp(
                                                                     .REALTIME ||
                                                                 runtimeState.realtimeRunning),
                                                         ui.receivePlan.mode,
-                                                        onClick = { ui.receiveModesOpen = true },
+                                                        onClick = {
+                                                            if (
+                                                                runtimeState.runtimeConnected &&
+                                                                    runtimeState
+                                                                        .receivePlanLoaded &&
+                                                                    !busy
+                                                            )
+                                                                ui.receiveModesOpen = true
+                                                        },
                                                         onLongClick = {
                                                             ui.page = 1
                                                             ui.navigateSettings(
@@ -911,12 +935,14 @@ fun BeaconApp(
                                                         !ui.quietHoursForm.saving &&
                                                         ui.notificationForm.loaded &&
                                                         !ui.notificationForm.saving &&
+                                                        !ui.notificationForm.rulesSaving &&
                                                         (ui.quietHoursForm.changed ||
                                                             ui.notificationForm.changed),
                                                 ) {
-                                                    ui.notificationForm.save(actions) {
-                                                        ui.quietHoursForm.save(actions)
-                                                    }
+                                                    ui.notificationForm.saveRules(
+                                                        actions,
+                                                        ui.quietHoursForm,
+                                                    )
                                                 }
                                             }
                                         },
@@ -1075,7 +1101,14 @@ fun BeaconApp(
                                                 onNavigate = { ui.navigateSettings(it) },
                                                 receivePlan = ui.receivePlan,
                                                 receptionForm = ui.receptionForm,
-                                                onShowReceiveModes = { ui.receiveModesOpen = true },
+                                                onShowReceiveModes = {
+                                                    if (
+                                                        runtimeState.runtimeConnected &&
+                                                            runtimeState.receivePlanLoaded &&
+                                                            !busy
+                                                    )
+                                                        ui.receiveModesOpen = true
+                                                },
                                                 onUiStyleChange = {
                                                     ui.uiStyle = it
                                                 },

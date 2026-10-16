@@ -53,6 +53,7 @@ internal fun LazyListScope.receptionSettingsItems(
                 receiveModeIcon(receivePlan.mode),
                 iconTint = io.github.beacon.app.ui.components.receiveModeColor(receivePlan.mode),
                 onClick = onShowReceiveModes,
+                enabled = runtimeState.runtimeConnected && runtimeState.receivePlanLoaded && !busy,
             )
         }
     }
@@ -90,10 +91,33 @@ internal fun LazyListScope.receptionSettingsItems(
                     polling.blocked.isNotBlank() -> polling.blocked
                     !polling.config.enabled || receivePlan.mode == ReceiveMode.POWER_SAVING ->
                         io.github.beacon.app.ui.components.receiveLabel(polling)
-                    else ->
-                        runtimeState.realtimeStatus.removePrefix(
-                            stringResource(R.string.receive_mode_realtime)
+                    runtimeState.realtimeRunning ->
+                        stringResource(R.string.settings_realtime_connected)
+                    runtimeState.realtimeDiagnostics.failure !=
+                        io.github.beacon.app.domain.model.RealtimeFailure.NONE ->
+                        stringResource(
+                            when (runtimeState.realtimeDiagnostics.failure) {
+                                io.github.beacon.app.domain.model.RealtimeFailure.AUTH ->
+                                    R.string.settings_realtime_auth_failure
+                                io.github.beacon.app.domain.model.RealtimeFailure.CONFIG ->
+                                    R.string.settings_realtime_config_failure
+                                io.github.beacon.app.domain.model.RealtimeFailure
+                                    .CERTIFICATE_EXPIRED,
+                                io.github.beacon.app.domain.model.RealtimeFailure
+                                    .CERTIFICATE_NOT_YET_VALID,
+                                io.github.beacon.app.domain.model.RealtimeFailure
+                                    .CERTIFICATE_UNTRUSTED,
+                                io.github.beacon.app.domain.model.RealtimeFailure.HOSTNAME,
+                                io.github.beacon.app.domain.model.RealtimeFailure.TLS_INTERRUPTED ->
+                                    R.string.settings_realtime_tls_failure
+                                else -> R.string.settings_realtime_network_failure
+                            }
                         )
+                    else ->
+                        runtimeState.realtimeStatus
+                            .removePrefix(stringResource(R.string.receive_mode_realtime))
+                            .lineSequence()
+                            .first()
                 },
                 error = polling.blocked.isNotBlank(),
             )
@@ -103,7 +127,8 @@ internal fun LazyListScope.receptionSettingsItems(
                     (polling.lastSuccessInserted?.let {
                         " · " + stringResource(R.string.receive_success_count, it)
                     } ?: ""),
-                formatMessageTime(polling.lastSuccessMs),
+                if (polling.lastSuccessMs > 0) formatMessageTime(polling.lastSuccessMs)
+                else stringResource(R.string.settings_sync_never),
             )
             Column(Modifier.padding(vertical = 12.dp)) {
                 io.github.beacon.app.ui.components.BeaconActionPair(
@@ -159,10 +184,17 @@ private fun ReceptionStatusRow(title: String, details: String, error: Boolean = 
         verticalArrangement =
             Arrangement.spacedBy(4.dp, androidx.compose.ui.Alignment.CenterVertically),
     ) {
-        BeaconText(title, style = MaterialTheme.typography.bodyMedium)
+        BeaconText(
+            title,
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        )
         BeaconText(
             details,
             style = MaterialTheme.typography.bodySmall,
+            maxLines = 2,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             color =
                 if (error) MaterialTheme.colorScheme.error
                 else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -175,8 +207,9 @@ private fun ConnectionPreferences(
     runtimeState: RuntimeState,
     receptionForm: ReceptionFormState,
     busy: Boolean,
+    grouped: Boolean = true,
 ) {
-    SettingsPreferences(stringResource(R.string.receive_heartbeat_title)) {
+    ReceptionPreferences(stringResource(R.string.receive_heartbeat_title), grouped) {
         SettingsFieldGroup(
             {
                 BeaconPreferenceToggle(
@@ -197,6 +230,7 @@ private fun ConnectionPreferences(
                     },
                     RealtimeHeartbeat.options.indexOf(receptionForm.plan.heartbeatSeconds),
                     !busy &&
+                        runtimeState.runtimeConnected &&
                         runtimeState.receivePlanLoaded &&
                         !receptionForm.plan.adaptiveHeartbeat,
                 ) {
@@ -225,8 +259,9 @@ private fun PollingPreferences(
     runtimeState: RuntimeState,
     receptionForm: ReceptionFormState,
     busy: Boolean,
+    grouped: Boolean = true,
 ) {
-    SettingsPreferences(stringResource(R.string.ui_v2_power_conditions_title)) {
+    ReceptionPreferences(stringResource(R.string.ui_v2_power_conditions_title), grouped) {
         val interval = receptionForm.interval
         val unmetered = receptionForm.unmetered
         val charging = receptionForm.charging
@@ -293,21 +328,21 @@ private fun InheritedReceptionPreferences(
     receptionForm: ReceptionFormState,
     busy: Boolean,
 ) {
-    var connectionOpen by
-        androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
-    var pollingOpen by
-        androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var expanded by
+        androidx.compose.runtime.saveable.rememberSaveable {
+            androidx.compose.runtime.mutableStateOf<String?>(null)
+        }
     Column(
         verticalArrangement =
             Arrangement.spacedBy(
                 io.github.beacon.app.ui.components.BeaconUiMetrics.SettingsGroupGap
             )
     ) {
-        SettingsPreferences(stringResource(R.string.settings_inherited_receive_title)) {
-            io.github.beacon.app.ui.components.SettingsHint(
-                stringResource(R.string.settings_inherited_receive_hint)
-            )
-            io.github.beacon.app.ui.components.SettingsActionRow(
+        io.github.beacon.app.ui.components.SettingsHint(
+            stringResource(R.string.settings_inherited_receive_hint)
+        )
+        SettingsGroup(stringResource(R.string.settings_inherited_receive_title)) {
+            SettingsRow(
                 stringResource(R.string.receive_mode_realtime),
                 if (receptionForm.plan.adaptiveHeartbeat)
                     stringResource(R.string.receive_adaptive_heartbeat)
@@ -317,21 +352,48 @@ private fun InheritedReceptionPreferences(
                         receptionForm.plan.heartbeatSeconds,
                     ),
                 io.github.beacon.app.ui.icons.BeaconIcons.Realtime,
-                !busy && runtimeState.runtimeConnected && runtimeState.receivePlanLoaded,
-            ) {
-                connectionOpen = !connectionOpen
-            }
-            io.github.beacon.app.ui.components.SettingsFieldDivider()
-            io.github.beacon.app.ui.components.SettingsActionRow(
-                stringResource(receiveModeTitle(ReceiveMode.POWER_SAVING)),
-                stringResource(R.string.settings_interval_minutes_option, receptionForm.interval),
-                io.github.beacon.app.ui.components.receiveModeIcon(ReceiveMode.POWER_SAVING),
-                !busy && runtimeState.runtimeConnected && runtimeState.receivePlanLoaded,
-            ) {
-                pollingOpen = !pollingOpen
+                iconTint = MaterialTheme.colorScheme.onSurface,
+                onClick = { expanded = if (expanded == "connection") null else "connection" },
+                enabled = !busy && runtimeState.runtimeConnected && runtimeState.receivePlanLoaded,
+                expanded = expanded == "connection",
+            )
+            if (expanded == "connection") {
+                io.github.beacon.app.ui.components.SettingsFieldDivider()
+                ConnectionPreferences(runtimeState, receptionForm, busy, grouped = false)
             }
         }
-        if (connectionOpen) ConnectionPreferences(runtimeState, receptionForm, busy)
-        if (pollingOpen) PollingPreferences(runtimeState, receptionForm, busy)
+        SettingsGroup(stringResource(R.string.ui_v2_power_conditions_title)) {
+            SettingsRow(
+                stringResource(receiveModeTitle(ReceiveMode.POWER_SAVING)),
+                stringResource(R.string.settings_interval_minutes_option, receptionForm.interval),
+                receiveModeIcon(ReceiveMode.POWER_SAVING),
+                iconTint = MaterialTheme.colorScheme.onSurface,
+                onClick = { expanded = if (expanded == "polling") null else "polling" },
+                enabled = !busy && runtimeState.runtimeConnected && runtimeState.receivePlanLoaded,
+                expanded = expanded == "polling",
+            )
+            if (expanded == "polling") {
+                io.github.beacon.app.ui.components.SettingsFieldDivider()
+                PollingPreferences(runtimeState, receptionForm, busy, grouped = false)
+            }
+        }
     }
+}
+
+@androidx.compose.runtime.Composable
+private fun ReceptionPreferences(
+    title: String,
+    grouped: Boolean,
+    content: @androidx.compose.runtime.Composable ColumnScope.() -> Unit,
+) {
+    if (grouped) SettingsPreferences(title, content)
+    else
+        Column(
+            Modifier.fillMaxWidth()
+                .padding(
+                    horizontal = io.github.beacon.app.ui.components.BeaconUiMetrics.CardInset,
+                    vertical = 4.dp,
+                ),
+            content = content,
+        )
 }

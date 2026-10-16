@@ -182,6 +182,7 @@ internal fun LazyListScope.connectionSettingsItems(
                             request.validate(BuildConfig.DEBUG)
                             focus.clearFocus()
                             actions.bindDevice(request) {
+                                resetFirstUseGuideProgress(context)
                                 connectionForm.endpoint = request.endpoint
                                 connectionForm.bindingCode = ""
                                 connectionForm.connectionEdited = false

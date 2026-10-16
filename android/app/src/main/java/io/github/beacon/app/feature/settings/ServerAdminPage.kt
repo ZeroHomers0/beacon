@@ -137,6 +137,14 @@ internal fun ServerAdminPage(
         modifier = modifier.testTag("server-admin-list"),
         contentPadding = padding,
     ) {
+        state.refreshFailure?.let { failure ->
+            item {
+                BeaconText(
+                    stringResource(failure),
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.error,
+                )
+            }
+        }
         if (!state.loggedIn) {
             item {
                 SettingsSection(stringResource(R.string.admin_login_title)) {

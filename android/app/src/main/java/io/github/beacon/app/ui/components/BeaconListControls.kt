@@ -278,26 +278,25 @@ fun SettingsMetricGrid(
     val density = LocalDensity.current
     val measurer = rememberTextMeasurer()
     val widest =
-        if (columns != null) 0
-        else
-            metrics.maxOfOrNull { (label, value) ->
-                maxOf(
-                    measurer
-                        .measure(label, MaterialTheme.typography.labelMedium, maxLines = 1)
-                        .size
-                        .width,
-                    measurer
-                        .measure(value, MaterialTheme.typography.titleMedium, maxLines = 1)
-                        .size
-                        .width,
-                )
-            } ?: 0
+        metrics.maxOfOrNull { (label, value) ->
+            maxOf(
+                measurer
+                    .measure(label, MaterialTheme.typography.labelMedium, maxLines = 1)
+                    .size
+                    .width,
+                measurer
+                    .measure(value, MaterialTheme.typography.titleMedium, maxLines = 1)
+                    .size
+                    .width,
+            )
+        } ?: 0
     BoxWithConstraints(modifier.fillMaxWidth()) {
         val cellWidth = widest + with(density) { 24.dp.roundToPx() }
-        val resolvedColumns =
-            columns
-                ?: if (cellWidth * 2 + with(density) { 8.dp.roundToPx() } <= constraints.maxWidth) 2
-                else 1
+        val gapWidth = with(density) { 8.dp.roundToPx() }
+        val availableColumns =
+            ((constraints.maxWidth + gapWidth) / (cellWidth + gapWidth).coerceAtLeast(1))
+                .coerceAtLeast(1)
+        val resolvedColumns = minOf(columns ?: 2, availableColumns)
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             metrics.chunked(resolvedColumns).forEach { pair ->
                 Row(

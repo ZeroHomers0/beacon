@@ -1153,7 +1153,8 @@ class RuntimeRepository : RuntimeActions {
                 mutableState.update {
                     it.copy(
                         pollingState = state,
-                        status = if (text.isEmpty()) it.status else OperationStatus.result(text),
+                        status =
+                            if (text.isEmpty()) it.status else OperationStatus.diagnostic(text),
                     )
                 }
                 launchRealtime()

@@ -6,7 +6,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.CleanupPreview
 import io.github.beacon.app.domain.model.CleanupSettings
@@ -24,12 +23,13 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
     var loadFailed by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
     var saveFailed by remember { mutableStateOf(false) }
+    var pendingSave by remember { mutableStateOf<CleanupSettings?>(null) }
     var attempt by remember { mutableIntStateOf(0) }
     LaunchedEffect(state.runtimeConnected, attempt) {
         settingsLoaded = false
         loadFailed = false
         saving = false
-        saveFailed = false
+        if (pendingSave == null) saveFailed = false
         if (state.runtimeConnected)
             actions.cleanupSettings(
                 null,
@@ -37,10 +37,15 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
             ) {
                 settings = it
                 settingsLoaded = true
+                if (pendingSave != null) {
+                    loadFailed = true
+                    saveFailed = true
+                }
             }
     }
     fun save(value: CleanupSettings, onSaved: () -> Unit = {}) {
         if (saving || !settingsLoaded || !state.runtimeConnected || state.messageBusy) return
+        pendingSave = value
         saving = true
         loadFailed = false
         saveFailed = false
@@ -53,6 +58,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
             },
         ) {
             settings = it
+            pendingSave = null
             saving = false
             onSaved()
         }
@@ -79,12 +85,17 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
             ) {
                 BeaconText(state.status.text, color = MaterialTheme.colorScheme.error)
                 BeaconActionButton(
-                    stringResource(R.string.action_retry),
+                    stringResource(
+                        if (saveFailed && settingsLoaded) R.string.settings_retry_save
+                        else R.string.settings_reload
+                    ),
                     io.github.beacon.app.ui.icons.BeaconIcons.History,
                     Modifier.fillMaxWidth(),
                     !state.messageBusy && state.runtimeConnected,
                 ) {
-                    attempt++
+                    val pending = pendingSave
+                    if (saveFailed && settingsLoaded && pending != null) save(pending)
+                    else attempt++
                 }
             }
         }
@@ -117,31 +128,19 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                     columns = 3,
                 )
                 SettingsFieldDivider()
-                Row(
-                    Modifier.fillMaxWidth(),
-                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    val pendingNotifications =
-                        preview?.pendingNotifications?.let {
-                            resources.getString(R.string.settings_cleanup_count, it)
-                        } ?: "—"
-                    val walSize =
-                        preview?.walBytes?.let {
-                            android.text.format.Formatter.formatFileSize(context, it)
-                        } ?: "—"
-                    BeaconText(
-                        resources.getString(
-                            R.string.storage_pending_wal_summary,
-                            pendingNotifications,
-                            walSize,
-                        ),
-                        Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                    )
-                }
+                DiagnosticRow(
+                    stringResource(R.string.settings_pending_notifications_title),
+                    preview?.pendingNotifications?.let {
+                        resources.getString(R.string.settings_cleanup_count, it)
+                    } ?: "—",
+                )
+                SettingsFieldDivider()
+                DiagnosticRow(
+                    stringResource(R.string.settings_temporary_log_size),
+                    preview?.walBytes?.let {
+                        android.text.format.Formatter.formatFileSize(context, it)
+                    } ?: "—",
+                )
                 SettingsFieldDivider()
                 BeaconActionButton(
                     stringResource(R.string.storage_wal_clear),

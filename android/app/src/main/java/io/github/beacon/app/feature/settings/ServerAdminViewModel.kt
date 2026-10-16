@@ -37,6 +37,7 @@ data class AdminUiState(
     val loggedIn: Boolean = false,
     val busy: Boolean = false,
     val feedback: Int? = null,
+    val refreshFailure: Int? = null,
     val version: String = "—",
     val protocol: Int = 0,
     val serverId: String = "",
@@ -140,10 +141,17 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
         }
     }
 
-    fun refresh() =
-        authenticated(R.string.admin_refreshed) { client ->
-            parseOverview(client.overview()).copy(endpoint = client.endpoint, loggedIn = true)
+    fun refresh() {
+        if (mutable.value.secret != null || mutableCreating.value) return
+        authenticated(null) { client ->
+            parseOverview(client.overview())
+                .copy(
+                    endpoint = client.endpoint,
+                    loggedIn = true,
+                    testDeviceId = mutable.value.testDeviceId,
+                )
         }
+    }
 
     fun createBinding(name: String) =
         authenticated(R.string.admin_binding_created) { client ->
@@ -256,15 +264,15 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
         mutable.value = mutable.value.copy(secret = null)
     }
 
-    private fun authenticated(success: Int, work: (ServerAdministration) -> AdminUiState) {
+    private fun authenticated(success: Int?, work: (ServerAdministration) -> AdminUiState) {
         val client = session ?: return
         run(success) { work(client) }
     }
 
-    private fun run(success: Int, onSuccess: () -> Unit = {}, work: () -> AdminUiState) {
+    private fun run(success: Int?, onSuccess: () -> Unit = {}, work: () -> AdminUiState) {
         if (mutable.value.busy) return
         val captured = generation
-        mutable.value = mutable.value.copy(busy = true, feedback = null)
+        mutable.value = mutable.value.copy(busy = true, feedback = null, refreshFailure = null)
         job = viewModelScope.launch {
             try {
                 val result = withContext(Dispatchers.IO) { work() }
@@ -299,7 +307,15 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
                 if (!mutable.value.loggedIn || feedback == R.string.admin_unauthorized) {
                     session = null
                     mutable.value = AdminUiState(feedback = feedback)
-                } else mutable.value = mutable.value.copy(busy = false, feedback = feedback)
+                } else
+                    mutable.value =
+                        if (success == null)
+                            mutable.value.copy(
+                                busy = false,
+                                feedback = null,
+                                refreshFailure = feedback,
+                            )
+                        else mutable.value.copy(busy = false, feedback = feedback)
             }
         }
     }

@@ -5,7 +5,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.*
 import io.github.beacon.app.ipc.RuntimeActions
@@ -20,20 +19,34 @@ internal fun QuietHoursPanel(
     form: QuietHoursFormState = remember { QuietHoursFormState() },
     scheduleOnly: Boolean = false,
     onSchedule: (() -> Unit)? = null,
+    editorSaving: Boolean = false,
+    onRetrySave: (() -> Unit)? = null,
 ) {
     with(form) {
         LaunchedEffect(state.runtimeConnected, attempt) {
-            if (!state.runtimeConnected || loaded) return@LaunchedEffect
+            if (!state.runtimeConnected || loaded || loading) return@LaunchedEffect
             loaded = false
             saving = false
             failed = false
-            if (state.runtimeConnected)
-                actions.quietHours(null, onFailure = { failed = true }) {
+            loading = true
+            val generation = loadGeneration
+            actions.quietHours(
+                null,
+                onFailure = {
+                    if (generation == loadGeneration) {
+                        failed = true
+                        loading = false
+                    }
+                },
+            ) {
+                if (generation == loadGeneration) {
                     reset(it)
                     loaded = true
+                    loading = false
                 }
+            }
         }
-        val editable = loaded && !saving && state.runtimeConnected
+        val editable = loaded && !saving && !editorSaving && state.runtimeConnected
         val labels = stringResource(R.string.quiet_weekdays).split(",")
         Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SettingsGroupGap)) {
             if (!loaded && !failed && state.runtimeConnected)
@@ -72,36 +85,19 @@ internal fun QuietHoursPanel(
                             enabled = editable,
                             color = androidx.compose.ui.graphics.Color.Transparent,
                         ) {
-                            Row(
-                                Modifier.fillMaxWidth()
-                                    .heightIn(min = BeaconUiMetrics.FieldMinHeight),
-                                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            ) {
-                                BeaconText(
-                                    stringResource(R.string.quiet_schedule),
-                                    Modifier.weight(1f),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    maxLines = 1,
-                                )
-                                BeaconText(
-                                    "$start – $end",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                )
-                                androidx.compose.material3.Icon(
-                                    BeaconIcons.Arrow,
-                                    null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
+                            BeaconTimeSummary(
+                                stringResource(R.string.quiet_schedule),
+                                "$start – $end",
+                            )
                         }
                     }
                 }
-            if (loaded && draft.enabled && !scheduleValid && !scheduleOnly)
+            if (loaded && !scheduleValid && !scheduleOnly)
                 BeaconText(
-                    stringResource(R.string.quiet_invalid),
+                    stringResource(
+                        if (draft.enabled) R.string.quiet_invalid
+                        else R.string.settings_quiet_invalid_disabled
+                    ),
                     color = MaterialTheme.colorScheme.error,
                 )
             val scheduleContent: @Composable ColumnScope.() -> Unit = {
@@ -125,7 +121,7 @@ internal fun QuietHoursPanel(
                         )
                     }
                 }
-                if (loaded && !valid)
+                if (loaded && !scheduleValid)
                     BeaconText(
                         stringResource(R.string.quiet_invalid),
                         color = MaterialTheme.colorScheme.error,
@@ -155,10 +151,11 @@ internal fun QuietHoursPanel(
                     stringResource(R.string.action_retry),
                     BeaconIcons.History,
                     Modifier.fillMaxWidth(),
-                    !saving && state.runtimeConnected,
+                    !saving && !editorSaving && state.runtimeConnected,
                 ) {
-                    if (loaded) save(actions)
-                    else {
+                    if (loaded) {
+                        if (onRetrySave != null) onRetrySave() else save(actions)
+                    } else {
                         failed = false
                         attempt++
                     }

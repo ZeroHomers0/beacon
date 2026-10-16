@@ -95,14 +95,34 @@ fun SettingsPage(
         if (
             screen in setOf(SettingsScreen.NOTIFICATION_RULES, SettingsScreen.QUIET_HOURS) &&
                 runtimeState.runtimeConnected &&
-                !notificationForm.loaded
+                !notificationForm.loaded &&
+                !notificationForm.loading
         ) {
             notificationForm.failed = false
-            actions.notificationSettings(onFailure = { notificationForm.failed = true }) {
-                notificationForm.reset(it)
-                notificationForm.loaded = true
+            notificationForm.loading = true
+            val generation = notificationForm.loadGeneration
+            actions.notificationSettings(
+                onFailure = {
+                    if (generation == notificationForm.loadGeneration) {
+                        notificationForm.failed = true
+                        notificationForm.loading = false
+                    }
+                }
+            ) {
+                if (generation == notificationForm.loadGeneration) {
+                    notificationForm.reset(it)
+                    notificationForm.loaded = true
+                    notificationForm.loading = false
+                }
             }
         }
+    }
+    androidx.compose.runtime.LaunchedEffect(
+        runtimeState.configuredEndpoint,
+        runtimeState.connectionSummaryLoaded,
+    ) {
+        if (runtimeState.connectionSummaryLoaded)
+            syncFirstUseGuideBinding(context, runtimeState.configuredEndpoint)
     }
     // Resolved here because its only use site is a non-composable callback.
     val bindingFormatHint = stringResource(R.string.binding_format_hint)
@@ -133,6 +153,7 @@ fun SettingsPage(
                     actions.bindDevice(
                         io.github.beacon.app.domain.model.BindingRequest(endpoint, code, name)
                     ) {
+                        resetFirstUseGuideProgress(context)
                         connectionForm.endpoint = endpoint
                         connectionForm.bindingCode = ""
                         connectionForm.deviceName = name
@@ -178,6 +199,22 @@ fun SettingsPage(
                             stringResource(R.string.action_retry)
                         )
                     }
+                }
+            }
+        }
+        if (screen in setOf(SettingsScreen.NOTIFICATION_RULES, SettingsScreen.QUIET_HOURS)) {
+            if (notificationForm.rulesSaving)
+                item {
+                    io.github.beacon.app.ui.components.SettingsHint(
+                        stringResource(R.string.settings_saving)
+                    )
+                }
+            notificationForm.rulesFailure?.let { failure ->
+                item {
+                    io.github.beacon.app.ui.components.BeaconText(
+                        stringResource(failure),
+                        color = MaterialTheme.colorScheme.error,
+                    )
                 }
             }
         }
@@ -338,7 +375,16 @@ fun SettingsPage(
                 }
             }
             SettingsScreen.QUIET_HOURS -> {
-                item { QuietHoursPanel(runtimeState, actions, quietHoursForm, scheduleOnly = true) }
+                item {
+                    QuietHoursPanel(
+                        runtimeState,
+                        actions,
+                        quietHoursForm,
+                        scheduleOnly = true,
+                        editorSaving = notificationForm.rulesSaving,
+                        onRetrySave = { notificationForm.saveRules(actions, quietHoursForm) },
+                    )
+                }
                 if (notificationForm.failed)
                     item {
                         io.github.beacon.app.ui.components.SettingsSection(
@@ -349,7 +395,8 @@ fun SettingsPage(
                             )
                             io.github.beacon.app.ui.components.BeaconOutlinedButton(
                                 onClick = {
-                                    if (notificationForm.loaded) notificationForm.save(actions)
+                                    if (notificationForm.loaded)
+                                        notificationForm.saveRules(actions, quietHoursForm)
                                     else notificationForm.attempt++
                                 },
                                 enabled = runtimeState.runtimeConnected,
@@ -422,13 +469,22 @@ fun SettingsPage(
                 }
             }
             SettingsScreen.NOTIFICATION_RULES -> {
-                item { NotificationSettingsPanel(runtimeState, actions, notificationForm) }
+                item {
+                    NotificationSettingsPanel(
+                        runtimeState,
+                        actions,
+                        notificationForm,
+                        onRetrySave = { notificationForm.saveRules(actions, quietHoursForm) },
+                    )
+                }
                 item {
                     QuietHoursPanel(
                         runtimeState,
                         actions,
                         quietHoursForm,
                         onSchedule = { onNavigate(SettingsScreen.QUIET_HOURS) },
+                        editorSaving = notificationForm.rulesSaving,
+                        onRetrySave = { notificationForm.saveRules(actions, quietHoursForm) },
                     )
                 }
                 item { NotificationSoundPanel() }

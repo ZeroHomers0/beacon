@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -28,10 +29,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.beacon.app.R
-import io.github.beacon.app.domain.model.BeaconUiStyle
 import io.github.beacon.app.domain.model.IncomingMessage
 import io.github.beacon.app.ui.icons.BeaconIcons
-import io.github.beacon.app.ui.theme.LocalBeaconUiStyle
 
 /**
  * Page titles are resource ids: the enum itself is not composable, so callers resolve the title
@@ -190,39 +189,38 @@ fun SettingsRow(
     onClick: () -> Unit,
     badge: Boolean = false,
     enabled: Boolean = true,
+    expanded: Boolean? = null,
 ) {
-    if (LocalBeaconUiStyle.current == BeaconUiStyle.MIUIX) {
-        top.yukonga.miuix.kmp.extra.SuperArrow(
-            title,
-            summary = subtitle.takeIf { it.isNotBlank() },
-            onClick = onClick,
-            enabled = enabled,
-            startAction = {
-                BadgedIcon(icon, iconTint, badge, Modifier.padding(end = 8.dp))
-            },
-        )
-    } else {
-        Surface(onClick = onClick, enabled = enabled, color = Color.Transparent) {
-            Row(
-                Modifier.fillMaxWidth()
-                    .alpha(if (enabled) 1f else .38f)
-                    .heightIn(min = BeaconUiMetrics.FieldMinHeight)
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                BadgedIcon(icon, iconTint, badge)
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    BeaconText(title, style = MaterialTheme.typography.bodyLarge)
-                    if (subtitle.isNotBlank())
-                        BeaconText(
-                            subtitle,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                }
-                Icon(BeaconIcons.Arrow, null)
+    Surface(onClick = onClick, enabled = enabled, color = Color.Transparent) {
+        Row(
+            Modifier.fillMaxWidth()
+                .alpha(if (enabled) 1f else .38f)
+                .heightIn(min = BeaconUiMetrics.FieldMinHeight)
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            BadgedIcon(icon, iconTint, badge)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                BeaconText(title, style = MaterialTheme.typography.bodyLarge)
+                if (subtitle.isNotBlank())
+                    BeaconText(
+                        subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
             }
+            Icon(
+                BeaconIcons.Arrow,
+                if (expanded == null) null
+                else
+                    stringResource(
+                        if (expanded) R.string.settings_collapse else R.string.settings_expand
+                    ),
+                Modifier.then(
+                    if (expanded == null) Modifier else Modifier.rotate(if (expanded) 270f else 90f)
+                ),
+            )
         }
     }
 }

@@ -66,7 +66,7 @@
     <string name="settings_connection_section_title">连接配置</string>
     <string name="settings_first_setup_hint">服务器地址与设备绑定</string>
     <string name="settings_interface_section_title">界面</string>
-    <string name="settings_last_sync_success_desc">最近自动同步成功</string>
+    <string name="settings_last_sync_success_desc">最近成功同步</string>
     <string name="settings_misc_section_title">其他</string>
     <string name="settings_notification_channels_desc">管理通知渠道、声音与提醒方式</string>
     <string name="settings_notification_settings_title">通知设置</string>
@@ -512,4 +512,20 @@
     <string name="settings_data_failed">读取或保存失败，请重试。</string>
     <string name="settings_receive_loading_title">接收设置</string>
     <string name="settings_receive_retry_hint">设置尚未读取，请重试。</string>
+    <string name="settings_rules_partial_failure">通知设置已保存，免打扰保存失败；未保存的修改已保留。</string>
+    <string name="settings_quiet_save_failure">免打扰保存失败，修改已保留，请重试。</string>
+    <string name="settings_notification_save_failure">通知设置保存失败，免打扰未提交；修改已保留。</string>
+    <string name="settings_saving">正在保存，请稍候…</string>
+    <string name="settings_sync_never">尚无自动同步记录</string>
+    <string name="settings_expand">展开</string>
+    <string name="settings_collapse">收起</string>
+    <string name="settings_retry_save">重试保存</string>
+    <string name="settings_reload">重新加载</string>
+    <string name="settings_quiet_invalid_disabled">当前时段无效。保存停用状态时将保留上次有效时段；如需预设新时段，请先修正时间和星期。</string>
+    <string name="settings_temporary_log_size">临时日志</string>
+    <string name="settings_realtime_connected">已连接</string>
+    <string name="settings_realtime_auth_failure">连接认证失败，请检查设备凭证</string>
+    <string name="settings_realtime_config_failure">连接配置异常，请检查服务器设置</string>
+    <string name="settings_realtime_tls_failure">安全连接失败，请检查服务器证书</string>
+    <string name="settings_realtime_network_failure">连接异常，正在等待恢复</string>
 </resources>

@@ -144,3 +144,49 @@ private fun timeMinute(value: String): Int? {
     val minute = parts[1].toIntOrNull() ?: return null
     return if (hour in 0..23 && minute in 0..59) hour * 60 + minute else null
 }
+
+@Composable
+fun BeaconTimeSummary(label: String, value: String) {
+    val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val titleStyle = MaterialTheme.typography.bodyLarge
+    val valueStyle = MaterialTheme.typography.bodyMedium
+    BoxWithConstraints(
+        Modifier.fillMaxWidth()
+            .heightIn(min = BeaconUiMetrics.FieldMinHeight)
+            .padding(vertical = BeaconUiMetrics.FieldVerticalInset)
+    ) {
+        val fits =
+            measurer.measure(label, titleStyle, maxLines = 1).size.width +
+                measurer.measure(value, valueStyle, maxLines = 1).size.width +
+                with(density) { 48.dp.roundToPx() } <= constraints.maxWidth
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            if (fits) {
+                BeaconText(label, Modifier.weight(1f), style = titleStyle)
+                BeaconText(
+                    value,
+                    style = valueStyle,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    BeaconText(label, style = titleStyle)
+                    BeaconText(
+                        value,
+                        style = valueStyle,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            androidx.compose.material3.Icon(
+                io.github.beacon.app.ui.icons.BeaconIcons.Arrow,
+                null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}

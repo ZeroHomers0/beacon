@@ -40,17 +40,28 @@ fun FirstUseGuidePanel(
 ) {
     val resources = androidx.compose.ui.platform.LocalResources.current
     val preferences = LocalContext.current.getSharedPreferences("first_use_guide", 0)
-    var result by remember { mutableStateOf("") }
-    var testSent by remember { mutableStateOf(false) }
-    var received by remember { mutableStateOf(false) }
+    val endpoint = state.configuredEndpoint
+    val sameBinding = preferences.getString("progress_endpoint", "") == endpoint
+    var result by remember(endpoint) { mutableStateOf("") }
+    var testSent by
+        remember(endpoint) {
+            mutableStateOf(sameBinding && preferences.getBoolean("test_sent", false))
+        }
+    var received by
+        remember(endpoint) {
+            mutableStateOf(sameBinding && preferences.getBoolean("test_received", false))
+        }
     var testFailed by remember { mutableStateOf<Boolean?>(null) }
     var testConfirmation by remember { mutableStateOf(false) }
     val currentEndpoint by rememberUpdatedState(state.configuredEndpoint)
-    LaunchedEffect(state.configuredEndpoint) {
-        testSent = false
-        received = false
-        testFailed = null
-        result = ""
+    LaunchedEffect(endpoint, testSent, received) {
+        if (state.connectionSummaryLoaded)
+            preferences
+                .edit()
+                .putString("progress_endpoint", endpoint)
+                .putBoolean("test_sent", testSent)
+                .putBoolean("test_received", received)
+                .apply()
     }
     val busy = !state.runtimeConnected || state.transportBusy || state.messageBusy
     SettingsSection(stringResource(R.string.settings_guide_title)) {
@@ -106,13 +117,21 @@ fun FirstUseGuidePanel(
                 testFailed,
             )
         if (testSent)
-            BeaconPreferenceToggle(
-                stringResource(R.string.settings_guide_received),
-                "",
-                received,
-                !busy,
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = BeaconUiMetrics.FieldMinHeight),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
             ) {
-                received = it
+                BeaconCheckbox(
+                    received,
+                    { received = it },
+                    enabled = !busy,
+                    contentDescription = stringResource(R.string.settings_guide_received),
+                )
+                BeaconText(
+                    stringResource(R.string.settings_guide_received),
+                    Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
             }
         SettingsHint(
             stringResource(
@@ -189,4 +208,14 @@ private fun GuideStep(title: String, description: String) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
+}
+
+internal fun resetFirstUseGuideProgress(context: android.content.Context) {
+    context.getSharedPreferences("first_use_guide", 0).edit().clear().apply()
+}
+
+internal fun syncFirstUseGuideBinding(context: android.content.Context, endpoint: String) {
+    val preferences = context.getSharedPreferences("first_use_guide", 0)
+    if (preferences.getString("progress_endpoint", null) != endpoint)
+        preferences.edit().clear().putString("progress_endpoint", endpoint).apply()
 }

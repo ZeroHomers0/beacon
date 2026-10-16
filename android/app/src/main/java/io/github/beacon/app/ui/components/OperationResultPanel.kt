@@ -129,6 +129,22 @@ fun SettingsStatusSummary(
 /** Results remain complete, including multiline diagnostic and backup reports. */
 @Composable
 fun OperationResultPanel(title: String, result: String, failed: Boolean? = null) {
+    if (failed == false && result.length <= 100 && !result.contains('\n')) {
+        Row(
+            Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                BeaconIcons.Check,
+                null,
+                Modifier.size(20.dp),
+                tint = io.github.beacon.app.ui.theme.beaconSuccessColor(),
+            )
+            BeaconText(result, Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+        }
+        return
+    }
     SettingsStatusSummary(
         title,
         result,

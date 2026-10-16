@@ -39,15 +39,18 @@ class BeaconUiState(
     val connectionForm = ConnectionFormState()
     val receptionForm = io.github.beacon.app.feature.settings.ReceptionFormState()
     val notificationForm = io.github.beacon.app.feature.settings.NotificationFormState()
+    var savingSettings by mutableStateOf(false)
     var pendingNavigation by mutableStateOf<(() -> Unit)?>(null)
     var shouldConfirmExit: (SettingsScreen) -> Boolean = { false }
     var discardDrafts: () -> Unit = {}
 
     fun requestNavigation(destination: SettingsScreen, action: () -> Unit) {
+        if (savingSettings) return
         if (shouldConfirmExit(destination)) pendingNavigation = action else action()
     }
 
     fun discardAndContinue() {
+        if (savingSettings) return
         val action = pendingNavigation
         pendingNavigation = null
         discardDrafts()
@@ -144,8 +147,8 @@ class BeaconUiState(
         // Preserve the shared draft only within this editor. Re-entering from elsewhere rereads
         // the runtime, including policy changes made by importing a backup.
         if (settingsScreen in pages && destination !in pages) {
-            quietHoursForm.loaded = false
-            notificationForm.loaded = false
+            quietHoursForm.invalidate()
+            notificationForm.invalidate()
         }
     }
 

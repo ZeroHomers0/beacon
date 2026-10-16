@@ -11,6 +11,16 @@ class QuietHoursFormState {
     var start by mutableStateOf("22:00")
     var end by mutableStateOf("08:00")
     var loaded by mutableStateOf(false)
+    var loading by mutableStateOf(false)
+    var loadGeneration = 0
+
+    fun invalidate() {
+        loadGeneration++
+        loaded = false
+        loading = false
+        failed = false
+    }
+
     var saving by mutableStateOf(false)
     var failed by mutableStateOf(false)
     var attempt by mutableIntStateOf(0)
@@ -28,7 +38,10 @@ class QuietHoursFormState {
         get() = !draft.enabled || scheduleValid
 
     val changed: Boolean
-        get() = pending() != saved
+        get() =
+            draft != saved ||
+                start != formatMinute(saved.startMinute) ||
+                end != formatMinute(saved.endMinute)
 
     val canSave: Boolean
         get() = loaded && !saving && valid && changed

@@ -16,9 +16,10 @@ internal fun NotificationSettingsPanel(
     state: RuntimeState,
     actions: RuntimeActions,
     form: NotificationFormState,
+    onRetrySave: () -> Unit,
 ) {
     with(form) {
-        val enabled = loaded && !saving && state.runtimeConnected
+        val enabled = loaded && !saving && !rulesSaving && state.runtimeConnected
         val minutes =
             listOf(1, 5, 15, 60).let {
                 if (draft.freshMinutes in it) it else (it + draft.freshMinutes).sorted()
@@ -72,9 +73,9 @@ internal fun NotificationSettingsPanel(
                     stringResource(R.string.action_retry),
                     BeaconIcons.History,
                     Modifier.fillMaxWidth(),
-                    !saving && state.runtimeConnected,
+                    !saving && !rulesSaving && state.runtimeConnected,
                 ) {
-                    if (loaded) form.save(actions) else attempt++
+                    if (loaded) onRetrySave() else attempt++
                 }
             }
         }

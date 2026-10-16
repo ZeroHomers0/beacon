@@ -12,9 +12,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.constrainHeight
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 
@@ -73,25 +73,31 @@ fun BeaconActionPair(dismiss: @Composable () -> Unit, confirm: @Composable () ->
         ) { measurables, constraints ->
             val gap = 12.dp.roundToPx()
             val available = (constraints.maxWidth - gap).coerceAtLeast(0)
-            val natural = measurables.map { it.maxIntrinsicWidth(Constraints.Infinity) }
-            val horizontal = natural.sum().toLong() <= available.toLong()
-            val widths = if (horizontal) {
-                val half = available / 2
-                if (natural.max() <= half) listOf(half, available - half)
-                else {
-                    val extra = (available - natural.sum()) / 2
-                    listOf(natural[0] + extra, available - natural[0] - extra)
-                }
-            } else listOf(constraints.maxWidth, constraints.maxWidth)
+            val naturalWidths = measurables.map { it.maxIntrinsicWidth(Constraints.Infinity) }
+            val half = available / 2
+            val horizontal = naturalWidths.max() <= half
+            val widths =
+                if (horizontal) listOf(half, available - half)
+                else listOf(constraints.maxWidth, constraints.maxWidth)
+            val rowHeight =
+                if (horizontal)
+                    measurables
+                        .mapIndexed { index, measurable ->
+                            measurable.maxIntrinsicHeight(widths[index])
+                        }
+                        .max()
+                else 0
             val placeables = measurables.mapIndexed { index, measurable ->
-                measurable.measure(Constraints.fixedWidth(widths[index]))
+                measurable.measure(
+                    if (horizontal) Constraints.fixed(widths[index], rowHeight)
+                    else Constraints.fixedWidth(widths[index])
+                )
             }
-            val height = if (horizontal) placeables.maxOf { it.height }
-                else placeables.sumOf { it.height } + gap
+            val height = if (horizontal) rowHeight else placeables.sumOf { it.height } + gap
             layout(constraints.maxWidth, constraints.constrainHeight(height)) {
                 if (horizontal) {
-                    placeables[0].placeRelative(0, (height - placeables[0].height) / 2)
-                    placeables[1].placeRelative(widths[0] + gap, (height - placeables[1].height) / 2)
+                    placeables[0].placeRelative(0, 0)
+                    placeables[1].placeRelative(widths[0] + gap, 0)
                 } else {
                     placeables[0].placeRelative(0, 0)
                     placeables[1].placeRelative(0, placeables[0].height + gap)
@@ -103,8 +109,8 @@ fun BeaconActionPair(dismiss: @Composable () -> Unit, confirm: @Composable () ->
 
 /**
  * The confirmation dialog the whole app shares: a title, one line of explanation and a
- * cancel/confirm pair. The confirm label defaults to the title so the common case reads as
- * 「删除设备 / 删除设备」 instead of inventing a second wording.
+ * cancel/confirm pair. The confirm label defaults to the title so the common case reads as 「删除设备 /
+ * 删除设备」 instead of inventing a second wording.
  *
  * [danger] fills the confirm button with the error container and is reserved for actions that
  * cannot be undone. [enabled] and [dismissEnabled] stay separate because a dialog that keeps the
