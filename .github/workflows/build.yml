@@ -155,6 +155,7 @@ jobs:
           import os
           import sys
           import urllib.request
+          import urllib.error
 
           token = os.environ.get("BEACON_PUSH_TOKEN", "")
           if not token:
@@ -166,10 +167,10 @@ jobs:
           commit = os.environ["GITHUB_SHA"][:7]
           payload = {
               "title": "Beacon ARM64 打包完成",
-              "body": f"**arm64-v8a APK 已打包并上传**\\n\\n版本：{os.environ['GITHUB_REF_NAME']}\\n提交：{commit}\\n[下载构建产物]({artifact_url})",
+              "body": f"**arm64-v8a APK 已打包并上传**\n\n版本：{os.environ['GITHUB_REF_NAME']}\n提交：{commit}\n[下载构建产物]({artifact_url})",
               "priority": 5,
               "group": "CI 构建",
-              "url": artifact_url,
+              "actions": [{"title": "下载 APK", "url": artifact_url}],
           }
           class NoRedirect(urllib.request.HTTPRedirectHandler):
               def redirect_request(self, request, response, code, message, headers, new_url):
@@ -187,8 +188,13 @@ jobs:
                   if not 200 <= response.status < 300:
                       raise RuntimeError("Unexpected response status")
               print("Beacon build notification queued.")
+          except urllib.error.HTTPError as error:
+              print(f"::warning title=Beacon notification failed::Push API returned HTTP {error.code}; build artifacts remain available.")
+              with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as summary:
+                  summary.write(f"\\n### Beacon notification\\nFailed: HTTP {error.code}. The ARM64 APK is still available.\\n")
+              sys.exit(1)
           except Exception:
-              print("Beacon notification failed; build artifacts remain available.")
+              print("::warning title=Beacon notification failed::Network or response failure; build artifacts remain available.")
               sys.exit(1)
           PY
   image:
