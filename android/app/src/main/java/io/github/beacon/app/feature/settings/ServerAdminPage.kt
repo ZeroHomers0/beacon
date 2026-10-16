@@ -200,7 +200,7 @@ internal fun ServerAdminPage(
             }
         } else if (tab == -1) {
             item {
-                SettingsSection(stringResource(R.string.admin_overview)) {
+                SettingsPreferences(stringResource(R.string.admin_overview)) {
                     SettingsFieldGroup(
                         {
                             DiagnosticRow(stringResource(R.string.admin_endpoint), state.endpoint)
@@ -219,17 +219,23 @@ internal fun ServerAdminPage(
                         },
                     )
                     SettingsFieldDivider()
-                    SettingsMetricGrid(
-                        listOf(
-                            stringResource(R.string.admin_devices) to
-                                state.devices.count { !it.revoked }.toString(),
-                            stringResource(R.string.admin_messages) to state.messages.toString(),
-                            stringResource(R.string.admin_pending) to state.pending.toString(),
-                        ),
-                        columns = 3,
-                    )
-                    if (state.protocol != 1)
-                        SettingsHint(stringResource(R.string.admin_protocol_unknown))
+                    Column(
+                        Modifier.fillMaxWidth().padding(vertical = BeaconUiMetrics.SectionGap),
+                        verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
+                    ) {
+                        SettingsMetricGrid(
+                            listOf(
+                                stringResource(R.string.admin_devices) to
+                                    state.devices.count { !it.revoked }.toString(),
+                                stringResource(R.string.admin_messages) to
+                                    state.messages.toString(),
+                                stringResource(R.string.admin_pending) to state.pending.toString(),
+                            ),
+                            columns = 3,
+                        )
+                        if (state.protocol != 1)
+                            SettingsHint(stringResource(R.string.admin_protocol_unknown))
+                    }
                 }
             }
             item {

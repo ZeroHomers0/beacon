@@ -65,7 +65,8 @@ fun BeaconTimePreference(
     ) {
         Column(
             Modifier.padding(14.dp).heightIn(min = 56.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement =
+                Arrangement.spacedBy(6.dp, androidx.compose.ui.Alignment.CenterVertically),
             horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
         ) {
             BeaconText(
@@ -154,7 +155,8 @@ fun BeaconTimeSummary(label: String, value: String) {
     BoxWithConstraints(
         Modifier.fillMaxWidth()
             .heightIn(min = BeaconUiMetrics.FieldMinHeight)
-            .padding(vertical = BeaconUiMetrics.FieldVerticalInset)
+            .padding(vertical = BeaconUiMetrics.FieldVerticalInset),
+        contentAlignment = androidx.compose.ui.Alignment.CenterStart,
     ) {
         val fits =
             measurer.measure(label, titleStyle, maxLines = 1).size.width +
