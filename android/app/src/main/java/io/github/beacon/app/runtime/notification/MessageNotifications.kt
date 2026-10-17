@@ -128,20 +128,26 @@ class MessageNotifications(
         val public =
             Notification.Builder(context, channel)
                 .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle("Beacon")
-                .setContentText("有新消息，请打开应用查看")
+                .setContentTitle(context.getString(R.string.app_name))
+                .setContentText(context.getString(R.string.notification_public_body))
                 .build()
         val notification =
             Notification.Builder(context, channel)
                 .setSmallIcon(R.drawable.ic_notification)
                 .setContentTitle(
-                    if (batch.count == 1) batch.title.ifBlank { "Beacon 新消息" } else "Beacon 消息摘要"
+                    if (batch.count == 1) batch.title.ifBlank {
+                        context.getString(R.string.notification_single_title_fallback)
+                    } else context.getString(R.string.notification_summary_title)
                 )
                 .setContentText(summary)
                 .setStyle(Notification.BigTextStyle().bigText(expanded))
                 .setContentIntent(open)
                 .setAutoCancel(true)
                 .setOnlyAlertOnce(true)
+                // Every card joins one group per source. The platform then folds a burst into a
+                // single stack and writes its own summary, so no member has to enumerate
+                // activeNotifications — which would parcel every live notification on each post.
+                .setGroup(group(batch))
                 .apply {
                     noticeActions.forEach { addAction(it) }
                 }
@@ -188,7 +194,21 @@ class MessageNotifications(
 
     private fun body(batch: NotificationBatch): String =
         if (batch.count == 1) MessageMarkdown.summary(batch.body)
-        else "本轮保存 ${batch.count} 条消息，点击查看"
+        else context.getString(R.string.notification_batch_body, batch.count)
+
+    /**
+     * One group per source server, so a burst from one server stacks into a single row while
+     * another server's card still shows on its own.
+     *
+     * No group summary is posted: a summary has to say how many cards are still live, and that
+     * count can only be learned by enumerating activeNotifications on every post — the exact
+     * binder round-trip this class already avoids (see the channel lookup above). The platform
+     * still renders its own group row for the members.
+     */
+    private fun group(batch: NotificationBatch): String {
+        val server = batch.key?.server ?: batch.keys.firstOrNull()?.server
+        return if (server.isNullOrEmpty()) UNGROUPED else "beacon:$server"
+    }
 
     /**
      * The single-message read plus the whole-batch read, both handled by the same non-exported
@@ -320,6 +340,9 @@ class MessageNotifications(
             io.github.beacon.app.domain.model.NotificationChannelKind.IMPORTANT.id
         private val HISTORY = io.github.beacon.app.domain.model.NotificationChannelKind.HISTORY.id
         internal const val ID = 100
+
+        /** A batch with no key cannot name a source; such cards stay outside any group. */
+        private const val UNGROUPED = "beacon:ungrouped"
 
         /**
          * The verdict `post` would reach anyway, asked before a caller renders a whole batch. While
