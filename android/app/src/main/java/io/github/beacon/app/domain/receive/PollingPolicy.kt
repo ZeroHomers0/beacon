@@ -28,9 +28,9 @@ object PollingPolicy {
 
     fun blockingReason(outcome: SyncOutcome): String =
         when (outcome) {
-            SyncOutcome.AUTH -> "认证失败，请修复接收凭证"
-            SyncOutcome.TLS -> "证书校验失败，请检查证书链、域名和设备时间"
-            SyncOutcome.PROTOCOL -> "服务协议不兼容，请检查地址或版本"
+            SyncOutcome.AUTH -> "无法验证设备，请重新绑定服务器"
+            SyncOutcome.TLS -> "无法确认连接安全，请检查手机时间或联系管理员"
+            SyncOutcome.PROTOCOL -> "服务暂不兼容，请检查地址或更新版本"
             SyncOutcome.CONFIG -> "连接配置不可用，请重新保存配置"
             else -> ""
         }

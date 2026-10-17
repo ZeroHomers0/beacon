@@ -103,7 +103,7 @@ internal class RealtimeRuntimeController(
                                 savePolling(
                                     polling()
                                         .copy(
-                                            blocked = "接收凭证失效，请重新绑定服务器",
+                                            blocked = "设备验证失效，请重新绑定服务器",
                                             lastOutcome = SyncOutcome.AUTH,
                                         )
                                 )
@@ -452,7 +452,7 @@ internal class RealtimeRuntimeController(
             )
         ) {
             if (session != null) reset()
-            status = if (!online) "等待网络恢复 · HTTP 补收保留" else "规则未满足 · 使用省电接收"
+            status = if (!online) "等待网络恢复，定时接收保留" else "规则未满足 · 使用省电接收"
             recordTransition(
                 if (!online) RuntimeEventKind.WAIT_NETWORK else RuntimeEventKind.WAIT_RULES
             )
@@ -548,9 +548,9 @@ internal class RealtimeRuntimeController(
                                         RealtimeClient.State.CONNECTING -> "即时接收连接中"
                                         RealtimeClient.State.CONNECTED -> "即时接收已连接，断线后自动补收"
                                         RealtimeClient.State.RETRYING -> "连接断开，正在重试，自动补收保留"
-                                        RealtimeClient.State.AUTH_FAILED -> "接收凭证失效，请重新绑定服务器"
-                                        RealtimeClient.State.TLS_FAILED -> "TLS 校验失败，请检查服务器证书"
-                                        RealtimeClient.State.CONFIG_FAILED -> "即时配置或订阅不受支持，请检查服务器"
+                                        RealtimeClient.State.AUTH_FAILED -> "设备验证失效，请重新绑定服务器"
+                                        RealtimeClient.State.TLS_FAILED -> "无法确认连接安全，请检查手机时间或联系管理员"
+                                        RealtimeClient.State.CONFIG_FAILED -> "服务器不支持即时接收，请联系管理员"
                                         RealtimeClient.State.STOPPED -> "即时接收已停止"
                                     }
                                 if (value == RealtimeClient.State.AUTH_FAILED) {
@@ -605,7 +605,7 @@ internal class RealtimeRuntimeController(
                     polling()
                         .copy(blocked = SyncFailure.describe(error, outcome), lastOutcome = outcome)
                 )
-                status = "即时配置不可用：${SyncFailure.describe(error, outcome)}"
+                status = "即时连接失败：${SyncFailure.describe(error, outcome)}"
             } else {
                 failures = (failures + 1).coerceAtMost(100)
                 nextConfigRetry =
@@ -614,7 +614,7 @@ internal class RealtimeRuntimeController(
                             RealtimeReconnectPolicy.jitteredDelayMs(failures),
                             RetryAfterPolicy.from(error) ?: 0L,
                         )
-                status = "即时配置暂不可用 · 自动重试，HTTP 补收保留"
+                status = "即时连接暂不可用，正在重试，定时接收保留"
             }
             publishStatus()
         }

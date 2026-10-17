@@ -20,12 +20,12 @@ object OperationFailure {
             error is SyncCancelledException -> "操作已停止"
             error is java.util.concurrent.TimeoutException -> "操作超时，请重试"
             error is java.util.concurrent.ExecutionException -> "后台任务未完成，请重试"
-            error is IllegalStateException -> "运行状态或协议数据不符合预期"
-            error is IllegalArgumentException -> "参数不符合要求"
-            error is SecurityException -> "系统或跨进程权限不足"
-            error is java.io.IOException -> "网络或数据传输未完成，请重试"
+            error is IllegalStateException -> "服务状态异常，请重试"
+            error is IllegalArgumentException -> "输入有误，请检查后重试"
+            error is SecurityException -> "权限不足，请检查应用权限"
+            error is java.io.IOException -> "连接中断，请重试"
             error is UnsupportedOperationException -> "当前版本不支持该操作"
-            crossProcess -> "调用未收到响应，请重新连接"
-            else -> "发生未预期错误，请重试"
+            crossProcess -> "接收服务未响应，请重新打开应用"
+            else -> "操作未完成，请重试"
         }
 }
