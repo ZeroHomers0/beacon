@@ -104,6 +104,7 @@ func (a *API) Handler() http.Handler {
 	_ = router.SetTrustedProxies(nil)
 	// Registered first so it also sees requests that panic: it wraps the recovery middleware.
 	router.Use(metricsMiddleware(a.metrics))
+	router.Use(compressJSON())
 	router.Use(func(c *gin.Context) {
 		defer func() {
 			if recovered := recover(); recovered != nil {
@@ -118,9 +119,6 @@ func (a *API) Handler() http.Handler {
 		}()
 		c.Next()
 	})
-	// Registered after the recovery middleware so an error response written from a
-	// panic handler is compressed like any other.
-	router.Use(compressJSON())
 	router.Any("/healthz", gin.WrapF(HealthHandler))
 	v1 := router.Group("/api/v1")
 	v1.Any("/capabilities", gin.WrapF(a.capabilities))

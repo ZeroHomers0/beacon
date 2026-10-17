@@ -22,7 +22,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import io.github.beacon.app.ui.AppShortcuts
 import io.github.beacon.app.ui.BeaconApp
 import io.github.beacon.app.ui.BeaconViewModel
@@ -163,9 +162,6 @@ open class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Without a keep-on-screen condition the splash retires the moment the first frame is
-        // ready, which is exactly the window the old white host background used to occupy.
-        installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         // Republished on every cold start so a launcher that dropped them (or an app that was

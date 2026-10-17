@@ -17,8 +17,17 @@ internal class HeartbeatMemoryStore(context: Context) {
     }
         .getOrDefault(AdaptiveHeartbeatPolicy.MIN_SECONDS)
 
-    fun save(key: String, seconds: Int) {
-        if (load(key) == seconds) return
+    fun failure(key: String): Pair<Int, Long> = runCatching {
+        val record = JSONObject(preferences.getString(key, "{}")!!)
+        val until = record.optLong("retry_after")
+        val remaining = until - System.currentTimeMillis()
+        if (remaining in 1..AdaptiveHeartbeatPolicy.FAILURE_COOLDOWN_MS)
+            record.optInt("failed_seconds") to until
+        else 0 to 0L
+    }.getOrDefault(0 to 0L)
+
+    fun save(key: String, seconds: Int, failedSeconds: Int = 0, retryAfterMs: Long = 0) {
+        if (load(key) == seconds && failure(key) == (failedSeconds to retryAfterMs)) return
         val editor = preferences.edit()
         if (!preferences.contains(key) && preferences.all.size >= 16) {
             val oldest =
@@ -33,6 +42,8 @@ internal class HeartbeatMemoryStore(context: Context) {
                 key,
                 JSONObject()
                     .put("seconds", seconds)
+                    .put("failed_seconds", failedSeconds)
+                    .put("retry_after", retryAfterMs)
                     .put("at", System.currentTimeMillis())
                     .toString(),
             )

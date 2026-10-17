@@ -271,8 +271,6 @@ fun BeaconApp(
             ui = ui,
             runtimeState = runtimeState,
             actions = actions,
-            messageScroll = messageScroll,
-            uiScope = uiScope,
         )
         val focus = LocalFocusManager.current
         // Clearing focus needs the Compose owner, so wrap the state-holder helper.

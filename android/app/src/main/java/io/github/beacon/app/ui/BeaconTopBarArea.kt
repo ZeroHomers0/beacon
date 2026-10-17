@@ -395,10 +395,14 @@ internal fun BeaconTopBarArea(
                                     SettingsScreen.RECEPTION
                         ) {
                             val form = ui.receptionForm
-                            BeaconActionIcon(
-                                BeaconIcons.Save,
+                            io.github.beacon.app.ui.components.BeaconSaveAction(
                                 stringResource(R.string.action_save),
-                                runtimeState.runtimeConnected &&
+                                dirty = form.edited && form.differsFrom(
+                                    runtimeState.pollingState.config,
+                                    runtimeState.receivePlan,
+                                ),
+                                saving = busy,
+                                enabled = runtimeState.runtimeConnected &&
                                     runtimeState.receivePlanLoaded &&
                                     !busy &&
                                     form.edited &&
@@ -424,10 +428,12 @@ internal fun BeaconTopBarArea(
                                         SettingsScreen.QUIET_HOURS,
                                     )
                         ) {
-                            BeaconActionIcon(
-                                BeaconIcons.Save,
+                            io.github.beacon.app.ui.components.BeaconSaveAction(
                                 stringResource(R.string.action_save),
-                                runtimeState.runtimeConnected &&
+                                dirty = ui.quietHoursForm.changed || ui.notificationForm.changed,
+                                saving = busy || ui.quietHoursForm.saving ||
+                                    ui.notificationForm.saving || ui.notificationForm.rulesSaving,
+                                enabled = runtimeState.runtimeConnected &&
                                     !busy &&
                                     ui.quietHoursForm.loaded &&
                                     ui.quietHoursForm.valid &&

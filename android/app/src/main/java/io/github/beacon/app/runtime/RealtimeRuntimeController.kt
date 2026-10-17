@@ -485,7 +485,9 @@ internal class RealtimeRuntimeController(
                     .joinToString("") { "%02x".format(it.toInt() and 255) }
             val heartbeatPolicy =
                 if (plan.adaptiveHeartbeat && config.adaptiveHeartbeatSupported)
-                    AdaptiveHeartbeatPolicy(heartbeatMemory.load(memoryKey))
+                    heartbeatMemory.failure(memoryKey).let { (failedSeconds, retryAfterMs) ->
+                        AdaptiveHeartbeatPolicy(heartbeatMemory.load(memoryKey), failedSeconds, retryAfterMs)
+                    }
                 else null
             receiptNamespace =
                 io.github.beacon.app.data.remote.MessageIdentity.namespace(
@@ -504,7 +506,11 @@ internal class RealtimeRuntimeController(
                     batchOrdinaryMessages = plan.batchOrdinaryMessages,
                     onVerifiedHeartbeat = { seconds ->
                         runCatching {
-                            worker.execute { if (valid()) heartbeatMemory.save(memoryKey, seconds) }
+                            val failedSeconds = heartbeatPolicy?.failedSeconds ?: 0
+                            val retryAfterMs = heartbeatPolicy?.retryAfterMs ?: 0
+                            worker.execute {
+                                if (valid()) heartbeatMemory.save(memoryKey, seconds, failedSeconds, retryAfterMs)
+                            }
                         }
                     },
                     onHeartbeat = {

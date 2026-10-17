@@ -9,7 +9,43 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+
+	"beacon.local/server/internal/service"
 )
+
+func TestCompressedRecoveryResponseIsComplete(t *testing.T) {
+	for _, partial := range []bool{false, true} {
+		t.Run(map[bool]string{false: "before_write", true: "after_write"}[partial], func(t *testing.T) {
+			router := New(service.New(nil)).Handler().(*gin.Engine)
+			router.GET("/panic-test", func(c *gin.Context) {
+				if partial {
+					_, _ = c.Writer.Write([]byte("partial"))
+				}
+				panic("test panic")
+			})
+			request := httptest.NewRequest(http.MethodGet, "/panic-test", nil)
+			request.Header.Set("Accept-Encoding", "gzip")
+			recorder := httptest.NewRecorder()
+			router.ServeHTTP(recorder, request)
+			reader, err := gzip.NewReader(recorder.Body)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer reader.Close()
+			body, err := io.ReadAll(reader)
+			if err != nil {
+				t.Fatalf("incomplete gzip response: %v", err)
+			}
+			if partial {
+				if string(body) != "partial" {
+					t.Fatalf("unexpected partial response: %q", body)
+				}
+			} else if recorder.Code != http.StatusInternalServerError || !strings.Contains(string(body), "internal_error") {
+				t.Fatalf("unexpected recovery response: %d %s", recorder.Code, body)
+			}
+		})
+	}
+}
 
 func compressHarness(t *testing.T, handler gin.HandlerFunc) *gin.Engine {
 	t.Helper()

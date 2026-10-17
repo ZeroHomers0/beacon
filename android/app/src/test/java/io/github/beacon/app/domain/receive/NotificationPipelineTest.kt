@@ -7,6 +7,25 @@ class NotificationPipelineTest {
     private val now = 1_000_000L
 
     @Test
+    fun onlyMoreThanThreeMessagesProduceASummary() {
+        for (count in 1..5) {
+            val pending = (1..count).map { NotificationIntent(it.toLong(), now) }.toMutableList()
+            val store = object : NotificationIntentStore {
+                override fun pendingNotifications() = pending.toList()
+
+                override fun notificationsPosted(intents: List<NotificationIntent>) {
+                    pending.removeAll(intents.toSet())
+                }
+            }
+            val posted = mutableListOf<NotificationBatch>()
+            NotificationPipeline(store) { posted.add(it); true }.flush(now)
+            assertEquals(if (count <= 3) count else 1, posted.size)
+            assertEquals(if (count <= 3) 1 else count, posted.first().count)
+            assertTrue(pending.isEmpty())
+        }
+    }
+
+    @Test
     fun singleMessageIncludesContentButSummaryDoesNotLeakOneMessagesBody() {
         val first = NotificationIntent(1, now, "标题", "正文")
         val single = NotificationPolicy.batch(listOf(first), now)
@@ -113,7 +132,6 @@ class NotificationPipelineTest {
                 true
             }
         pipeline.flush(now)
-        // Below the three-message threshold each intent keeps its own system identity.
         assertEquals(2, posts)
         pipeline.flush(now)
         assertEquals(2, posts)

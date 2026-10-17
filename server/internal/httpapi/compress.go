@@ -49,8 +49,11 @@ func compressJSON() gin.HandlerFunc {
 		}
 		writer := &gzipResponseWriter{ResponseWriter: c.Writer}
 		c.Writer = writer
+		defer func() {
+			writer.finish()
+			c.Writer = writer.ResponseWriter
+		}()
 		c.Next()
-		writer.finish()
 	}
 }
 

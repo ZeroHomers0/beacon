@@ -99,7 +99,6 @@ dependencies {
     implementation(platform(libs.androidx.compose.bom))
     // MIUIX WindowDialog requires ComponentActivity's NavigationEventDispatcherOwner (1.12+).
     implementation(libs.androidx.activity.compose)
-    implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.work.runtime)
     implementation(libs.okhttp)
     implementation(libs.markwon.core)

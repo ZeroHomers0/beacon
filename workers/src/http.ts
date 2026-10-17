@@ -53,6 +53,7 @@ export async function negotiated(
   // A shared cache must not hand a gzip body to a client that never asked for one.
   headers.append("Vary", "Accept-Encoding");
   return new Response(compressed, {
+    encodeBody: "manual",
     status: response.status,
     statusText: response.statusText,
     headers,

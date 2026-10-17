@@ -97,7 +97,7 @@ class NotificationPipeline(
             store.notificationsPosted(intents)
             return "免打扰时段：${intents.size} 条消息仅保存，不显示通知"
         }
-        val groups = if (intents.size >= 3) listOf(intents) else intents.map { listOf(it) }
+        val groups = if (intents.size > 3) listOf(intents) else intents.map { listOf(it) }
         var postedCount = 0
         for (group in groups) {
             val originalBatch = NotificationPolicy.batch(group, nowMs, settings.freshWindowMs)
@@ -112,6 +112,6 @@ class NotificationPipeline(
         }
         if (postedCount == 0) return "消息已保存，无需显示通知"
         return if (quiet) "免打扰时段：已向系统提交静音通知"
-        else if (intents.size < 3) "已向系统提交 $postedCount 条消息通知" else "已向系统提交 $postedCount 条消息的摘要通知"
+        else if (intents.size <= 3) "已向系统提交 $postedCount 条消息通知" else "已向系统提交 $postedCount 条消息的摘要通知"
     }
 }

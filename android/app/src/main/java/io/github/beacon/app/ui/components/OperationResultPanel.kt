@@ -40,6 +40,11 @@ fun SettingsStatusSummary(
     selectableDetails: Boolean = false,
 ) {
     val iconSize = 48.dp
+    val displayedTint by androidx.compose.animation.animateColorAsState(
+        tint,
+        animationSpec = androidx.compose.animation.core.tween(180),
+        label = "connection-status-color",
+    )
     var showingDetails by remember { mutableStateOf(false) }
     var settledTitle by remember { mutableStateOf(title) }
     var settledDetails by remember { mutableStateOf(details) }
@@ -76,21 +81,28 @@ fun SettingsStatusSummary(
         Box(
             Modifier.size(iconSize)
                 .clip(RoundedCornerShape(14.dp))
-                .background(tint.copy(alpha = 0.10f)),
+                .background(displayedTint.copy(alpha = 0.10f)),
             contentAlignment = Alignment.Center,
         ) {
-            BeaconLoadingIcon(icon, loading, Modifier.size(26.dp), tint = tint)
+            BeaconLoadingIcon(icon, loading, Modifier.size(26.dp), tint = displayedTint)
         }
         Column(
             Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap2),
         ) {
-            BeaconText(
-                displayedTitle,
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            androidx.compose.animation.Crossfade(
+                targetState = displayedTitle,
+                modifier = Modifier.fillMaxWidth(),
+                animationSpec = androidx.compose.animation.core.tween(150),
+                label = "connection-status-title",
+            ) { label ->
+                BeaconText(
+                    label,
+                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             Box(
                 if (compact) Modifier.fillMaxWidth()
                 else Modifier.fillMaxWidth().height(detailsHeight),

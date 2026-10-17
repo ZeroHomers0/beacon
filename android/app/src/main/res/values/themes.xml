@@ -7,17 +7,4 @@
         <item name="android:windowActionModeOverlay">true</item>
     </style>
 
-    <!--
-      Launcher theme, held only until the first composed frame.
-
-      beacon_logo is an opaque square whose own background is the same blue as the launcher
-      background, so painting it on that exact colour leaves only the mark visible: no white
-      flash, no icon card, no visible edge. The window background of Theme.Beacon would otherwise
-      step in as a plain light surface for as long as the database and WorkManager take to open.
-    -->
-    <style name="Theme.Beacon.Splash" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/beacon_logo_background</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/beacon_logo</item>
-        <item name="postSplashScreenTheme">@style/Theme.Beacon</item>
-    </style>
 </resources>

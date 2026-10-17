@@ -1,4 +1,5 @@
 <resources>
+    <string name="settings_save_completed">已保存</string>
     <string name="settings_danger_section_title">危险操作</string>
     <string name="ui_mark_all_read_action">全部已读</string>
     <string name="receive_adaptive_heartbeat">自适应心跳</string>
@@ -324,17 +325,6 @@
     <string name="settings_about_project">项目地址</string>
     <string name="settings_about_browser_unavailable">未找到可以打开项目页面的浏览器</string>
     <string name="settings_about_browser_blocked">系统阻止了打开项目页面</string>
-    <string name="settings_share_unavailable">未找到可以分享的应用</string>
-    <string name="settings_share_blocked">系统阻止了本次分享</string>
-    <string name="settings_diagnostics_group">诊断</string>
-    <string name="settings_diagnostics_row">接收事件记录</string>
-    <string name="settings_diagnostics_summary">仅含事件类型、结果与时间，最多 100 条</string>
-    <string name="settings_diagnostics_reading">正在读取…</string>
-    <string name="settings_diagnostics_shared">已打开分享面板</string>
-    <string name="settings_diagnostics_unavailable">读取失败，接收服务可能未运行</string>
-    <string name="settings_diagnostics_empty">暂无记录</string>
-    <string name="settings_diagnostics_count">共 %1$d 条记录，可分享</string>
-    <string name="settings_diagnostics_export">导出并分享</string>
     <string name="settings_update_title">检查更新</string>
     <string name="settings_update_checking">正在检查更新…</string>
     <string name="settings_update_latest">已是最新版本</string>

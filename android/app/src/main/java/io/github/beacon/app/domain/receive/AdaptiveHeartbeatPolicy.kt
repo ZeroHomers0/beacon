@@ -1,64 +1,57 @@
 package io.github.beacon.app.domain.receive
 
-/**
- * Learns only from completed probes; HTTP/server failures never change the idle interval.
- *
- * The ceiling is 300 seconds because the server closes a stream after 450 idle seconds
- * (`streamIdleTimeout`), the client waits up to 15 seconds for an acknowledgement, and the
- * deployment guide asks reverse proxies for a 450-second read timeout. Anything longer would
- * trade a real disconnect for a small saving.
- */
-class AdaptiveHeartbeatPolicy(rememberedSeconds: Int = MIN_SECONDS) {
-    private val remembered = rememberedSeconds.coerceIn(MIN_SECONDS, MAX_SECONDS)
+class AdaptiveHeartbeatPolicy(
+    rememberedSeconds: Int = MIN_SECONDS,
+    failedSeconds: Int = 0,
+    retryAfterMs: Long = 0,
+    private val nowMs: () -> Long = System::currentTimeMillis,
+) {
+    private val remembered = STEPS.last { it <= rememberedSeconds.coerceIn(MIN_SECONDS, MAX_SECONDS) }
 
     var seconds = MIN_SECONDS
         private set
 
-    private var successes = 0
+    @Volatile var failedSeconds = failedSeconds.takeIf { it in STEPS } ?: 0
+        private set
+    @Volatile var retryAfterMs = retryAfterMs.takeIf { it > nowMs() && it - nowMs() <= FAILURE_COOLDOWN_MS } ?: 0
+        private set
 
-    /** Cleared once the remembered interval has been reached for this network. */
+    private var successes = 0
     private var warm = false
-    private var recovery = 0
     private var verifiedSeconds = MIN_SECONDS
 
-    /** Return a verified interval to persist, never the next untested probe interval. */
     fun acknowledged(): Int? {
         successes++
         if (successes < 3) return null
         val verified = seconds
         verifiedSeconds = verified
         successes = 0
-        if (!warm) {
-            // A network that already proved a longer interval skips straight to it.
-            warm = true
-            seconds = remembered
-        } else if (recovery > 0) {
-            recovery--
-        } else {
-            // Grow geometrically rather than one fixed step at a time. Three acknowledged probes
-            // are already the evidence needed to try a longer interval. Stepping by a fixed 30
-            // seconds instead took eight probes (~66 minutes) to walk 60 → 300 on a fresh install,
-            // all of it spent at the short, expensive end; doubling does it in three (~21 minutes)
-            // and every interval that is actually used has still been acknowledged first. The
-            // ceiling bounds the overshoot, and [timedOut] falls back to the last verified value.
-            seconds = (seconds * 2).coerceAtMost(MAX_SECONDS)
+        if (nowMs() >= retryAfterMs) {
+            failedSeconds = 0
+            retryAfterMs = 0
         }
+        val candidate = if (!warm) remembered else STEPS.firstOrNull { it > seconds } ?: MAX_SECONDS
+        warm = true
+        if (failedSeconds == 0 || candidate < failedSeconds) seconds = candidate
         return verified
     }
 
     fun timedOut(): Int {
-        seconds = minOf(verifiedSeconds, (seconds - STEP_SECONDS).coerceAtLeast(MIN_SECONDS))
+        failedSeconds = if (failedSeconds > 0 && nowMs() < retryAfterMs)
+            minOf(failedSeconds, seconds) else seconds
+        retryAfterMs = nowMs() + FAILURE_COOLDOWN_MS
+        seconds = minOf(verifiedSeconds, STEPS.lastOrNull { it < seconds } ?: MIN_SECONDS)
         successes = 0
         warm = true
-        recovery = 3
         return seconds
     }
 
     companion object {
         const val MIN_SECONDS = 60
         const val MAX_SECONDS = 300
-        const val STEP_SECONDS = 30
         const val ACK_TIMEOUT_SECONDS = 15L
         const val ALIGN_WINDOW_MS = 10_000L
+        const val FAILURE_COOLDOWN_MS = 30 * 60_000L
+        private val STEPS = listOf(60, 90, 120, 180, 240, 300)
     }
 }

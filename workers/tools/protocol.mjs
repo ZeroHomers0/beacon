@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { once } from "node:events";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
+import { get } from "node:http";
+import { gunzipSync } from "node:zlib";
 import { Miniflare, convertV4MiniflareOptions } from "miniflare";
 import WebSocket from "ws";
 
@@ -31,6 +33,44 @@ const mf = new Miniflare(
 let socket;
 try {
   const base = await mf.ready;
+  async function wireJSON(path, encoding) {
+    return new Promise((resolve, reject) => {
+      const request = get(new URL(path, base), {
+        headers: { "Accept-Encoding": encoding },
+      }, (response) => {
+        const chunks = [];
+        let size = 0;
+        response.on("data", (chunk) => {
+          size += chunk.length;
+          if (size > 1024 * 1024) {
+            response.destroy(new Error("response too large"));
+          } else chunks.push(chunk);
+        });
+        response.on("error", reject);
+        response.on("end", () => {
+          try {
+            const body = Buffer.concat(chunks);
+            assert.equal(response.headers["content-encoding"], encoding === "gzip" ? "gzip" : undefined);
+            const decoded = encoding === "gzip" ? gunzipSync(body) : body;
+            resolve({ status: response.statusCode, body: JSON.parse(decoded.toString("utf8")) });
+          } catch (error) {
+            reject(error);
+          }
+        });
+      });
+      request.on("error", reject);
+      request.setTimeout(5000, () => request.destroy(new Error("HTTP timeout")));
+    });
+  }
+  for (const encoding of ["gzip", "identity"]) {
+    const health = await wireJSON("/healthz", encoding);
+    assert.equal(health.status, 200);
+    assert.equal(health.body.status, "ok");
+    const unauthorized = await wireJSON("/api/admin/overview", encoding);
+    assert.equal(unauthorized.status, 401);
+    assert.equal(unauthorized.body.error, "unauthorized");
+  }
+  console.log("HTTP compression passed: one gzip layer, identity and error responses.");
   async function call(path, key, payload) {
     const response = await fetch(new URL(path, base), {
       method: payload ? "POST" : "GET",

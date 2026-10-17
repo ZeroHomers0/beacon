@@ -1,6 +1,5 @@
 package io.github.beacon.app.ui
 
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import io.github.beacon.app.R
@@ -15,8 +14,6 @@ import io.github.beacon.app.ui.components.BeaconOutlinedButton
 import io.github.beacon.app.ui.components.BeaconText
 import io.github.beacon.app.ui.components.BeaconTextButton
 import io.github.beacon.app.ui.components.BeaconUiMetrics
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 
 /**
  * The modal dialogs that can appear over any page.
@@ -30,8 +27,6 @@ internal fun BeaconDialogHost(
     ui: BeaconUiState,
     runtimeState: RuntimeState,
     actions: RuntimeActions,
-    messageScroll: LazyListState,
-    uiScope: CoroutineScope,
 ) {
     ui.operationDetails?.let { details ->
         BeaconAlertDialog(
@@ -124,7 +119,6 @@ internal fun BeaconDialogHost(
                     keys,
                     onComplete = {
                         ui.selectedKeys = emptyList()
-                        uiScope.launch { messageScroll.scrollToItem(0) }
                     },
                 )
             },

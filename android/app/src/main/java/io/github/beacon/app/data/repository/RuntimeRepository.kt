@@ -686,6 +686,7 @@ class RuntimeRepository : RuntimeActions {
         delete: IncomingMessage? = null,
         showStatus: Boolean = true,
         deliveryRevision: Long? = null,
+        retainWindow: Boolean = false,
     ) {
         if (state.value.messageBusy) return
         try {
@@ -703,11 +704,12 @@ class RuntimeRepository : RuntimeActions {
                 client.query(query)
             },
             { result ->
-                pageHistory = history
+                if (!retainWindow) pageHistory = history
                 mutableState.update {
                     it.copy(
                         messages =
-                            if (
+                            if (retainWindow) it.messages
+                            else if (
                                 index > it.messagePageIndex &&
                                     query.search == it.messageQuery.search &&
                                     query.readFilter == it.messageQuery.readFilter &&
@@ -721,9 +723,9 @@ class RuntimeRepository : RuntimeActions {
                             else result.page.items,
                         messageTotal = result.page.total,
                         messageUnread = result.page.unread,
-                        nextMessageCursor = result.page.nextBefore,
+                        nextMessageCursor = if (retainWindow) it.nextMessageCursor else result.page.nextBefore,
                         messageQuery = query.copy(before = Long.MAX_VALUE, anchor = null),
-                        messagePageIndex = index,
+                        messagePageIndex = if (retainWindow) it.messagePageIndex else index,
                         messagesLoaded = true,
                         deliveryRevision = deliveryRevision ?: it.deliveryRevision,
                         dataBusy = false,
@@ -988,12 +990,20 @@ class RuntimeRepository : RuntimeActions {
         showStatus: Boolean = true,
     ) {
         if (state.value.messageBusy || !ready()) return
+        val query = state.value.messageQuery
+        val affectedKeys = request.keys.toSet()
         mutableState.update {
             it.copy(dataBusy = true, status = OperationStatus.pending("正在处理消息管理操作"))
         }
         connection.execute(
-            { RuntimeMessageClient(it).mutate(request) },
-            { result ->
+            { binder ->
+                val client = RuntimeMessageClient(binder)
+                val result = client.mutate(request)
+                result to if (request.action == MessageAction.DELETE)
+                    runCatching { client.query(query).page }.getOrNull()
+                else null
+            },
+            { (result, refreshedPage) ->
                 mutableState.update { current ->
                     val selected = current.selectedMessage
                     val changedSelection =
@@ -1018,7 +1028,27 @@ class RuntimeRepository : RuntimeActions {
                     )
                 }
                 onComplete?.invoke()
-                if (preservePage && request.action != MessageAction.DELETE) {
+                if (request.action == MessageAction.DELETE) {
+                    mutableState.update { current ->
+                        io.github.beacon.app.domain.policy.MessageWindowPolicy.afterDeletion(
+                            current,
+                            affectedKeys,
+                            result.changed,
+                            refreshedPage?.total,
+                            refreshedPage?.unread,
+                        )
+                    }
+                    if (state.value.messages.isEmpty()) {
+                        if (state.value.nextMessageCursor != null) nextMessages()
+                        else if (state.value.messageTotal > 0)
+                            readMessages(
+                                search = query.search,
+                                serverId = query.serverId,
+                                readFilter = query.readFilter,
+                                showStatus = false,
+                            )
+                    }
+                } else if (preservePage) {
                     mutableState.update { current ->
                         val isRead = request.action == MessageAction.MARK_READ
                         val delta = if (isRead) -result.changed else result.changed
@@ -1131,6 +1161,7 @@ class RuntimeRepository : RuntimeActions {
                     requestServerCheck()
                     onConfigured?.invoke()
                 }
+                if (!notifyOnly && result.outcome == SyncOutcome.OK) launchRealtime()
                 if (settings == null && !notifyOnly) readMessages(showStatus = false)
             },
             { error ->
@@ -1317,6 +1348,7 @@ class RuntimeRepository : RuntimeActions {
                         0,
                         showStatus = false,
                         deliveryRevision = result.deliveryRevision,
+                        retainWindow = current.messagePageIndex > 0 && current.messages.isNotEmpty(),
                     )
                 }
                 if (refreshAgain) scheduleReceivePlanRefresh()

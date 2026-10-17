@@ -400,9 +400,6 @@ private fun MessagesContent(
                             message,
                             selectionMode,
                             key in selectedKeys,
-                            // A card fades and slides instead of vanishing when it is deleted or
-                            // re-sorted; the stable key above is what makes the move animatable.
-                            modifier = Modifier.animateItem(),
                             onSelect = { checked ->
                                 if (!checked) onSelectionChange(selectedKeys - key)
                                 else if (selectedKeys.size < 100) {
