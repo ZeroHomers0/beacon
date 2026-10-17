@@ -3,11 +3,8 @@ package io.github.beacon.app.data.remote
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import io.github.beacon.app.data.local.ArchiveCrypto
-import java.net.InetAddress
 import java.util.LinkedHashMap
 import java.util.concurrent.TimeUnit
-import okhttp3.ConnectionPool
-import okhttp3.OkHttpClient
 import okhttp3.Request
 
 /** Bounded HTTPS fetch; no redirects, private-network targets or unbounded bitmap allocations. */
@@ -16,35 +13,10 @@ object RemoteMessageImage {
     private const val MAX_CACHED_BYTES = 6 * 1024 * 1024
 
     private val client =
-        OkHttpClient.Builder()
-            .followRedirects(false)
-            .followSslRedirects(false)
+        HttpClientFactory.publicOnly(HttpClientFactory.coldPool)
             .connectTimeout(3, TimeUnit.SECONDS)
             .readTimeout(3, TimeUnit.SECONDS)
             .callTimeout(5, TimeUnit.SECONDS)
-            // Images arrive one at a time from a scrollable list, so every fetch is a cold
-            // connection anyway. The default five-minute keep-alive would hold an idle socket
-            // (and its reader) open long after the bitmap reached the screen.
-            .connectionPool(ConnectionPool(0, 1, TimeUnit.SECONDS))
-            .dns(
-                object : okhttp3.Dns {
-                    override fun lookup(hostname: String): List<InetAddress> =
-                        InetAddress.getAllByName(hostname).toList().also { addresses ->
-                            require(
-                                addresses.isNotEmpty() &&
-                                    addresses.all {
-                                        !it.isAnyLocalAddress &&
-                                            !it.isLoopbackAddress &&
-                                            !it.isLinkLocalAddress &&
-                                            !it.isSiteLocalAddress &&
-                                            !it.isMulticastAddress &&
-                                            !(it.address.size == 16 &&
-                                                (it.address[0].toInt() and 0xfe) == 0xfc)
-                                    }
-                            )
-                        }
-                }
-            )
             .build()
 
     /**

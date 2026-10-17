@@ -116,11 +116,10 @@ class ServerAdminClient(
 
     companion object {
         private const val MAX_RESPONSE_BYTES = 2L * 1024 * 1024
+        // Derived from the shared client so the admin console reuses the same connection pool
+        // and dispatcher; only the overall budget differs (a full device list can be slow).
         private val defaultHttp =
-            OkHttpClient.Builder()
-                .retryOnConnectionFailure(false)
-                .followRedirects(false)
-                .followSslRedirects(false)
+            HttpClientFactory.shared.newBuilder()
                 .callTimeout(20, TimeUnit.SECONDS)
                 .build()
     }

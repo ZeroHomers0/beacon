@@ -44,12 +44,12 @@ internal class WebSocketTransport(
             heartbeatSeconds: Int = RealtimeHeartbeat.DEFAULT_SECONDS
         ): OkHttpClient {
             RealtimeHeartbeat.validate(heartbeatSeconds)
-            return OkHttpClient.Builder()
+            // Derived from the shared client: same dispatcher, same pool, so a stream reconnect
+            // does not also churn a second set of reader threads. Only the socket budget differs —
+            // a stream is idle by design, so the read timeout must be disabled.
+            return HttpClientFactory.shared.newBuilder()
                 .connectTimeout(8, TimeUnit.SECONDS)
                 .readTimeout(0, TimeUnit.SECONDS)
-                .followRedirects(false)
-                .followSslRedirects(false)
-                .retryOnConnectionFailure(false)
                 // One heartbeat owner also detects blackholed connections without OS callbacks.
                 .pingInterval(heartbeatSeconds.toLong(), TimeUnit.SECONDS)
                 .build()
@@ -230,7 +230,9 @@ internal class WebSocketTransport(
             timer.shutdownNow()
         }
         socket?.cancel()
-        http.dispatcher.executorService.shutdown()
-        http.connectionPool.evictAll()
+        // The client is a newBuilder() clone of HttpClientFactory.shared, so its dispatcher and
+        // connection pool belong to every other module. Shutting either down here would break
+        // unrelated syncs (and permanently reject work: "executor rejected"). Cancelling the
+        // socket is the whole cleanup this instance owns.
     }
 }

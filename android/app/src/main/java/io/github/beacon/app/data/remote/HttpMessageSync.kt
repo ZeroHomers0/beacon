@@ -2,6 +2,7 @@ package io.github.beacon.app.data.remote
 
 import android.os.SystemClock
 import io.github.beacon.app.BuildConfig
+import io.github.beacon.app.domain.model.ProtocolContract
 import io.github.beacon.app.domain.model.TransportSettings
 import io.github.beacon.app.domain.receive.HttpRejectedException
 import io.github.beacon.app.domain.receive.HttpTransientException
@@ -13,9 +14,7 @@ import io.github.beacon.app.domain.receive.SyncStage
 import io.github.beacon.app.domain.receive.SyncStore
 import java.io.IOException
 import java.util.concurrent.TimeUnit
-import okhttp3.ConnectionPool
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
@@ -34,16 +33,7 @@ class HttpMessageSync(
     companion object {
         // Synchronous requests need no dispatcher thread. One short-lived idle connection also
         // serves burst receipts and polling pages, without retaining credentials in client state.
-        private val http =
-            OkHttpClient.Builder()
-                .connectionPool(ConnectionPool(1, 30, TimeUnit.SECONDS))
-                .connectTimeout(HttpSyncLimits.SOCKET_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
-                .readTimeout(HttpSyncLimits.SOCKET_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
-                .writeTimeout(HttpSyncLimits.SOCKET_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)
-                .followRedirects(false)
-                .followSslRedirects(false)
-                .retryOnConnectionFailure(false)
-                .build()
+        private val http = HttpClientFactory.shared
     }
 
     private val deadline = nowMs() + HttpSyncLimits.RUN_BUDGET_MS
@@ -132,8 +122,10 @@ class HttpMessageSync(
 
     private fun checkedIdentity(): JSONObject {
         val reply = request("/api/v1/capabilities")
+        val protocol = reply.opt("protocol")
         if (
-            reply.opt("protocol") != 1 ||
+            protocol !is Int ||
+                !ProtocolContract.httpSupported(protocol) ||
                 reply.opt("server_id") !is String ||
                 !reply.optString("server_id").matches(Regex("[0-9a-f]{64}")) ||
                 reply.opt("device_id") !is String ||
@@ -159,7 +151,8 @@ class HttpMessageSync(
         )
         val receivedAt = System.currentTimeMillis()
         val serverAt = identity.optLong("server_time_ms", 0)
-        check(identity.opt("protocol") == 1)
+        val protocol = identity.opt("protocol")
+        check(protocol is Int && ProtocolContract.httpSupported(protocol))
         val reply = request("/api/v1/realtime/config")
         return RealtimeConfigurationDecoder.decode(reply.toString(), settings.endpoint)
             .copy(
@@ -243,7 +236,11 @@ class HttpMessageSync(
         val capabilities = request("/api/v1/capabilities")
         val receivedTime = System.currentTimeMillis()
         val serverTime = capabilities.optLong("server_time_ms", 0)
-        check(capabilities.getInt("protocol") == 1)
+        val protocol = capabilities.opt("protocol")
+        check(protocol is Int && ProtocolContract.httpSupported(protocol))
+        // The server advertises its page ceiling; honour a smaller value and keep the
+        // conservative default when the field is absent or nonsensical.
+        val pageSize = ProtocolContract.pageSize(capabilities.optInt("max_page_size", 0))
         val server = capabilities.getString("server_id")
         val device = capabilities.getString("device_id")
         check(server.matches(Regex("[0-9a-f]{64}")) && device.matches(Regex("[0-9a-f]{64}")))
@@ -291,7 +288,7 @@ class HttpMessageSync(
             for (pageNumber in 0 until HttpSyncLimits.MAX_PAGES_PER_PATH) {
                 val page =
                     request(
-                        "/api/v1/messages?after=$cursor&limit=${HttpSyncLimits.PAGE_SIZE}" +
+                        "/api/v1/messages?after=$cursor&limit=$pageSize" +
                             if (pending) "&pending=1" else ""
                     )
                 val decoded =

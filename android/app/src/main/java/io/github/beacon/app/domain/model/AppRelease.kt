@@ -11,4 +11,9 @@ data class AppRelease(
     val notes: String,
     val downloadUrl: String,
     val sizeBytes: Long,
+    /**
+     * Lowercase hex SHA-256 the feed published for the downloaded asset, or "" when the feed
+     * carried none. The downloader refuses a body that does not match a declared digest.
+     */
+    val sha256: String = "",
 )

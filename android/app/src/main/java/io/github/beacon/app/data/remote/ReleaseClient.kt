@@ -6,10 +6,9 @@ import io.github.beacon.app.domain.policy.ReleaseVersionPolicy
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
-import java.net.InetAddress
 import java.net.URI
+import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
-import okhttp3.ConnectionPool
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
@@ -27,35 +26,12 @@ object ReleaseClient {
     const val MAX_APK_BYTES = 64L * 1024 * 1024
 
     private const val MAX_FEED_BYTES = 256 * 1024
+    private const val MAX_CHECKSUMS_BYTES = 16 * 1024
     private const val MAX_URL = 2048
     private const val COPY_BUFFER = 64 * 1024
 
     private fun hardened(): OkHttpClient.Builder =
-        OkHttpClient.Builder()
-            .followRedirects(false)
-            .followSslRedirects(false)
-            // One request per entry, so a cold connection is the normal case; the default
-            // five-minute keep-alive would hold an idle socket open instead.
-            .connectionPool(ConnectionPool(0, 1, TimeUnit.SECONDS))
-            .dns(
-                object : okhttp3.Dns {
-                    override fun lookup(hostname: String): List<InetAddress> =
-                        InetAddress.getAllByName(hostname).toList().also { addresses ->
-                            require(
-                                addresses.isNotEmpty() &&
-                                    addresses.all {
-                                        !it.isAnyLocalAddress &&
-                                            !it.isLoopbackAddress &&
-                                            !it.isLinkLocalAddress &&
-                                            !it.isSiteLocalAddress &&
-                                            !it.isMulticastAddress &&
-                                            !(it.address.size == 16 &&
-                                                (it.address[0].toInt() and 0xfe) == 0xfc)
-                                    }
-                            )
-                        }
-                }
-            )
+        HttpClientFactory.publicOnly(HttpClientFactory.coldPool)
 
     private val feed =
         hardened()
@@ -84,11 +60,24 @@ object ReleaseClient {
     fun latest(currentVersion: String): Result<AppRelease?> =
         runCatching {
             val body = fetch(feed, FEED_URL, MAX_FEED_BYTES).toString(Charsets.UTF_8)
-            val release = ReleaseFeed.parse(body)
-            release?.takeIf { ReleaseVersionPolicy.isNewer(it.version, currentVersion) }
+            val release = ReleaseFeed.parse(body, checksums(body)) ?: return@runCatching null
+            release.takeIf { ReleaseVersionPolicy.isNewer(it.version, currentVersion) }
         }
 
-    /** Streams the release APK to [destination]; a partial or non-archive file is removed. */
+    /**
+     * The release's `SHA256SUMS` asset, fetched best-effort. A missing sums file is not an error:
+     * the release is still offered, and [download] then falls back to the archive check alone.
+     */
+    private fun checksums(body: String): String? {
+        val url = ReleaseFeed.checksumsUrl(body) ?: return null
+        return runCatching {
+            val uri = URI(url)
+            require(uri.isAbsolute && uri.scheme == "https" && uri.userInfo == null)
+            fetch(feed, url, MAX_CHECKSUMS_BYTES).toString(Charsets.UTF_8)
+        }.getOrNull()
+    }
+
+    /** Streams the release APK to [destination]; a partial or mismatched file is removed. */
     fun download(release: AppRelease, destination: File): Boolean {
         val downloaded =
             runCatching {
@@ -96,6 +85,7 @@ object ReleaseClient {
                 val uri = URI(release.downloadUrl)
                 require(uri.isAbsolute && uri.scheme == "https" && uri.userInfo == null)
                 val request = Request.Builder().url(release.downloadUrl).build()
+                val digest = MessageDigest.getInstance("SHA-256")
                 assets.newCall(request).execute().use { response ->
                     require(response.code == 200)
                     val body = requireNotNull(response.body)
@@ -104,10 +94,14 @@ object ReleaseClient {
                     destination.parentFile?.mkdirs()
                     body.byteStream().use { input ->
                         destination.outputStream().use { output ->
-                            copyBounded(input, output, MAX_APK_BYTES)
+                            copyBounded(input, output, MAX_APK_BYTES, digest)
                         }
                     }
                 }
+                // A published digest is authoritative: the archive check alone accepts any ZIP.
+                // When the feed carried none the file is still required to be an APK.
+                val actual = digest.digest().toHex()
+                if (release.sha256.isNotEmpty()) require(actual == release.sha256)
                 isZipArchive(destination)
             }
                 .getOrDefault(false)
@@ -126,7 +120,12 @@ object ReleaseClient {
         }
     }
 
-    private fun copyBounded(input: InputStream, output: OutputStream, limit: Long) {
+    private fun copyBounded(
+        input: InputStream,
+        output: OutputStream,
+        limit: Long,
+        digest: MessageDigest? = null,
+    ) {
         val buffer = ByteArray(COPY_BUFFER)
         var written = 0L
         while (true) {
@@ -134,9 +133,20 @@ object ReleaseClient {
             if (count < 0) return
             written += count
             require(written <= limit)
+            digest?.update(buffer, 0, count)
             output.write(buffer, 0, count)
         }
     }
+
+    private fun ByteArray.toHex(): String =
+        buildString(size * 2) {
+            for (byte in this@toHex) {
+                append(HEX[(byte.toInt() shr 4) and 0xf])
+                append(HEX[byte.toInt() and 0xf])
+            }
+        }
+
+    private const val HEX = "0123456789abcdef"
 
     /** An APK is a ZIP archive; the install flow must never receive something else. */
     private fun isZipArchive(file: File): Boolean =
