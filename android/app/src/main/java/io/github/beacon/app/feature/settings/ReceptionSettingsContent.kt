@@ -121,7 +121,6 @@ internal fun LazyListScope.receptionSettingsItems(
                 },
                 error = polling.blocked.isNotBlank(),
             )
-            io.github.beacon.app.ui.components.SettingsFieldDivider()
             ReceptionStatusRow(
                 stringResource(R.string.settings_last_sync_success_desc) +
                     (polling.lastSuccessInserted?.let {
@@ -358,7 +357,6 @@ private fun InheritedReceptionPreferences(
                 expanded = expanded == "connection",
             )
             if (expanded == "connection") {
-                io.github.beacon.app.ui.components.SettingsFieldDivider()
                 ConnectionPreferences(runtimeState, receptionForm, busy, grouped = false)
             }
         }
@@ -373,7 +371,6 @@ private fun InheritedReceptionPreferences(
                 expanded = expanded == "polling",
             )
             if (expanded == "polling") {
-                io.github.beacon.app.ui.components.SettingsFieldDivider()
                 PollingPreferences(runtimeState, receptionForm, busy, grouped = false)
             }
         }

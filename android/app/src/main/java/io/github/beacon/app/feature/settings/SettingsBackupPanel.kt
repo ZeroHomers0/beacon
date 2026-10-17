@@ -125,7 +125,6 @@ fun SettingsBackupPanel(actions: RuntimeActions, busy: Boolean, grouped: Boolean
                 }
             },
         )
-        SettingsFieldDivider()
         SettingsActionRow(
             stringResource(R.string.settings_backup_import),
             stringResource(R.string.ui_v2_import_settings_hint),

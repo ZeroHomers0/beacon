@@ -230,7 +230,6 @@ fun SettingsPage(
                         ) {
                             onNavigate(SettingsScreen.CONNECTION)
                         }
-                        io.github.beacon.app.ui.components.SettingsFieldDivider()
                         SettingsRow(
                             stringResource(R.string.settings_reception_page_title),
                             stringResource(receiveModeTitle(receivePlan.mode)) +
@@ -243,7 +242,6 @@ fun SettingsPage(
                                 ),
                             onClick = { onNavigate(SettingsScreen.RECEPTION) },
                         )
-                        io.github.beacon.app.ui.components.SettingsFieldDivider()
                         SettingsRow(
                             stringResource(R.string.settings_notifications_section_title),
                             notificationHint?.let { stringResource(it) }
@@ -261,7 +259,6 @@ fun SettingsPage(
                         ) {
                             onNavigate(SettingsScreen.NOTIFICATIONS)
                         }
-                        io.github.beacon.app.ui.components.SettingsFieldDivider()
                         SettingsRow(
                             stringResource(R.string.quiet_title),
                             stringResource(R.string.quiet_description),
@@ -269,7 +266,6 @@ fun SettingsPage(
                         ) {
                             onNavigate(SettingsScreen.NOTIFICATION_RULES)
                         }
-                        io.github.beacon.app.ui.components.SettingsFieldDivider()
                         SettingsRow(
                             stringResource(R.string.settings_background_permissions_title),
                             stringResource(R.string.settings_background_permissions_desc),
@@ -293,7 +289,6 @@ fun SettingsPage(
                         ) {
                             onUiStyleChange(BeaconUiStyle.entries[it])
                         }
-                        io.github.beacon.app.ui.components.SettingsFieldDivider()
                         BeaconDropdownPreference(
                             stringResource(R.string.appearance_theme),
                             listOf(
@@ -318,7 +313,6 @@ fun SettingsPage(
                         ) {
                             onNavigate(SettingsScreen.SERVER_ADMIN)
                         }
-                        io.github.beacon.app.ui.components.SettingsFieldDivider()
                         SettingsRow(
                             stringResource(R.string.settings_storage_title),
                             "",
@@ -326,7 +320,6 @@ fun SettingsPage(
                         ) {
                             onNavigate(SettingsScreen.STORAGE)
                         }
-                        io.github.beacon.app.ui.components.SettingsFieldDivider()
                         SettingsRow(
                             stringResource(R.string.settings_backup_title),
                             "",
@@ -334,7 +327,6 @@ fun SettingsPage(
                         ) {
                             onNavigate(SettingsScreen.BACKUP)
                         }
-                        io.github.beacon.app.ui.components.SettingsFieldDivider()
                         SettingsRow(
                             title = stringResource(R.string.settings_update_title),
                             subtitle = "",
@@ -355,7 +347,6 @@ fun SettingsPage(
                             },
                             badge = updateState.hasUnreadUpdate,
                         )
-                        io.github.beacon.app.ui.components.SettingsFieldDivider()
                         SettingsRow(
                             stringResource(R.string.settings_about_title),
                             "",
@@ -363,7 +354,6 @@ fun SettingsPage(
                         ) {
                             onNavigate(SettingsScreen.ABOUT)
                         }
-                        io.github.beacon.app.ui.components.SettingsFieldDivider()
                         SettingsRow(
                             stringResource(R.string.settings_guide_title),
                             "",
@@ -429,7 +419,6 @@ fun SettingsPage(
                         val backupBusy =
                             busy || runtimeState.transportBusy || !runtimeState.runtimeConnected
                         SettingsBackupPanel(actions, backupBusy, grouped = false)
-                        io.github.beacon.app.ui.components.SettingsFieldDivider()
                         HistoryArchivePanel(actions, backupBusy, grouped = false)
                     }
                 }

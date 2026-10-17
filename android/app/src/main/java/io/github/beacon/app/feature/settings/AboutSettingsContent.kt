@@ -111,11 +111,9 @@ private fun AboutLinks(
         SettingsRow(stringResource(R.string.settings_about_project), "", BeaconIcons.Cloud) {
             open("https://github.com/ZeroHomers0/beacon")
         }
-        SettingsFieldDivider()
         SettingsRow(stringResource(R.string.ui_v2_docs), "", BeaconIcons.Guide) {
             open("https://github.com/ZeroHomers0/beacon/blob/main/README.md")
         }
-        SettingsFieldDivider()
         SettingsRow(stringResource(R.string.ui_v2_licenses), "", BeaconIcons.Info) {
             licenses = true
         }

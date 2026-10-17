@@ -29,7 +29,6 @@ internal fun ReceiveRulesPanel(form: ReceptionFormState, busy: Boolean) {
                 form.edited = true
             }
             if (plan.lowBatteryEnabled) {
-                SettingsFieldDivider()
                 val levels =
                     (listOf(10, 15, 20, 25, 30, 40, 50) + plan.lowBatteryPercent)
                         .distinct()
@@ -44,7 +43,6 @@ internal fun ReceiveRulesPanel(form: ReceptionFormState, busy: Boolean) {
                     form.edited = true
                 }
             }
-            SettingsFieldDivider()
 
             BeaconPreferenceToggle(
                 resources.getString(R.string.settings_rules_schedule),
@@ -56,7 +54,6 @@ internal fun ReceiveRulesPanel(form: ReceptionFormState, busy: Boolean) {
                 form.edited = true
             }
             if (plan.scheduleEnabled) {
-                SettingsFieldDivider()
                 BeaconTimeRangePreference(
                     start,
                     end,
@@ -77,7 +74,6 @@ internal fun ReceiveRulesPanel(form: ReceptionFormState, busy: Boolean) {
                         stringResource(R.string.settings_rules_time_invalid),
                         color = androidx.compose.material3.MaterialTheme.colorScheme.error,
                     )
-                SettingsFieldDivider()
                 BeaconDropdownPreference(
                     resources.getString(R.string.settings_rules_schedule_mode),
                     listOf(
@@ -91,7 +87,6 @@ internal fun ReceiveRulesPanel(form: ReceptionFormState, busy: Boolean) {
                     form.edited = true
                 }
             }
-            SettingsFieldDivider()
             Column {
                 SettingsFieldGroup(
                     {

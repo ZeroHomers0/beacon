@@ -144,7 +144,6 @@ fun MessageDetailScreen(
                         } == true
                     }
                     if (hasMedia) {
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         MessageMediaPanel(message.bark)
                     }
                     Row(

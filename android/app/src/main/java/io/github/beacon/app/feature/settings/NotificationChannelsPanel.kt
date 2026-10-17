@@ -25,8 +25,7 @@ fun NotificationChannelsPanel() {
     SettingsGroup(stringResource(R.string.notification_channels)) {
         if (!context.getSystemService(NotificationManager::class.java).areNotificationsEnabled())
             BeaconText(stringResource(R.string.channel_app_permission_off), Modifier.padding(16.dp))
-        NotificationChannelKind.entries.forEachIndexed { index, kind ->
-            if (index > 0) SettingsFieldDivider()
+        NotificationChannelKind.entries.forEach { kind ->
             val channel =
                 remember(kind, revision) {
                     context

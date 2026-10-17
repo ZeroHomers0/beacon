@@ -79,7 +79,6 @@ internal fun QuietHoursPanel(
                         },
                     )
                     if (onSchedule != null) {
-                        SettingsFieldDivider()
                         androidx.compose.material3.Surface(
                             onClick = onSchedule,
                             enabled = editable,

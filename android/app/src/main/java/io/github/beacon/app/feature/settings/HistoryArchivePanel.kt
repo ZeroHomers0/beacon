@@ -78,7 +78,6 @@ fun HistoryArchivePanel(actions: RuntimeActions, busy: Boolean, grouped: Boolean
                 encrypted = true
             },
         )
-        SettingsFieldDivider()
         SettingsActionRow(
             stringResource(R.string.settings_archive_import),
             stringResource(R.string.ui_v2_import_history_hint),

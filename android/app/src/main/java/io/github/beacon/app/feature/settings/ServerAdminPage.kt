@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -203,7 +204,26 @@ internal fun ServerAdminPage(
                 SettingsPreferences(stringResource(R.string.admin_overview)) {
                     SettingsFieldGroup(
                         {
-                            DiagnosticRow(stringResource(R.string.admin_endpoint), state.endpoint)
+                            Column(
+                                Modifier.fillMaxWidth()
+                                    .heightIn(min = BeaconUiMetrics.FieldMinHeight)
+                                    .padding(vertical = BeaconUiMetrics.FieldVerticalInset),
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                BeaconText(
+                                    stringResource(R.string.admin_endpoint),
+                                    style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
+                                )
+                                SelectionContainer {
+                                    BeaconText(
+                                        state.endpoint,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
                         },
                         {
                             DiagnosticRow(stringResource(R.string.admin_version), state.version)
@@ -218,7 +238,6 @@ internal fun ServerAdminPage(
                             )
                         },
                     )
-                    SettingsFieldDivider()
                     Column(
                         Modifier.fillMaxWidth().padding(vertical = BeaconUiMetrics.SectionGap),
                         verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
@@ -248,7 +267,6 @@ internal fun ServerAdminPage(
                     ) {
                         onNavigate(SettingsScreen.SERVER_DEVICES)
                     }
-                    SettingsFieldDivider()
                     SettingsActionRow(
                         stringResource(R.string.admin_applications_title),
                         "",
@@ -257,7 +275,6 @@ internal fun ServerAdminPage(
                     ) {
                         onNavigate(SettingsScreen.SERVER_APPLICATIONS)
                     }
-                    SettingsFieldDivider()
                     SettingsActionRow(
                         stringResource(R.string.admin_test_title_page),
                         "",
@@ -557,7 +574,6 @@ internal fun ServerAdminPage(
                     Column {
                         DiagnosticRow(stringResource(secret.label), secret.value)
                         if (secret.expiresAt > 0) {
-                            SettingsFieldDivider()
                             DiagnosticRow(
                                 stringResource(R.string.admin_expires),
                                 formatMessageTime(secret.expiresAt),

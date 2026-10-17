@@ -35,9 +35,8 @@ fun NotificationSoundPanel() {
                     resources.getString(R.string.channel_important_desc),
                 ),
             )
-        channels.forEachIndexed { index, channel ->
+        channels.forEach { channel ->
             val (kind, title, importance, name, description) = channel
-            if (index > 0) SettingsFieldDivider()
             SettingsRow(
                 title,
                 stringResource(R.string.settings_sound_system),
