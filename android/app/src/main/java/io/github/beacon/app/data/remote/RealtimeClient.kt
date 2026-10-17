@@ -85,7 +85,11 @@ internal constructor(
     private var current: RealtimeTransport? = null
     private var retry: ScheduledFuture<*>? = null
     @Volatile private var attempt = 0L
-    private var terminal = false
+    @Volatile private var terminal = false
+
+    val requiresRestart: Boolean
+        get() = terminal
+
     private var connectedAtMs: Long? = null
     private var connectedHeartbeatSeconds = 0
     @Volatile

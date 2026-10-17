@@ -222,6 +222,12 @@ internal class RealtimeRuntimeController(
 
     fun pollingChanged() = networkChanged()
 
+    fun verifiedManualSync() {
+        if (destroyed || session?.requiresRestart != true) return
+        reset()
+        reconcile()
+    }
+
     private fun networkChanged() {
         if (destroyed || !reconcileQueued.compareAndSet(false, true)) return
         runCatching {

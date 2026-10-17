@@ -404,6 +404,7 @@ class RuntimeProbeService : Service() {
                     "通知提交失败；提醒任务保留"
                 }
         if (outcome == SyncOutcome.OK && allowed()) {
+            if (!automatic) realtime.verifiedManualSync()
             // Maintenance failure must never turn a completed receive/confirmation into a failure.
             runReceiveCleanup(this, store)
         }
