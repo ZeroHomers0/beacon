@@ -3,6 +3,7 @@ package io.github.beacon.app.data.remote
 import io.github.beacon.app.BuildConfig
 import io.github.beacon.app.domain.model.BindingRequest
 import io.github.beacon.app.domain.model.BoundDevice
+import io.github.beacon.app.domain.model.ProtocolContract
 import io.github.beacon.app.domain.model.TransportSettings
 import java.net.HttpURLConnection
 import java.net.URL
@@ -56,7 +57,9 @@ class HttpDeviceBinding {
                 }
             return try {
                 val body = JSONObject(String(bytes, Charsets.UTF_8))
-                if (body.getInt("protocol") != 1) throw BindingResponseInvalid()
+                val protocol = body.opt("protocol")
+                if (protocol !is Int || !ProtocolContract.httpSupported(protocol))
+                    throw BindingResponseInvalid()
                 val device =
                     BoundDevice(
                         TransportSettings(request.endpoint, body.getString("receive_token")),

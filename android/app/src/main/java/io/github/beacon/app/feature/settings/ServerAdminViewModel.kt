@@ -6,6 +6,7 @@ import io.github.beacon.app.R
 import io.github.beacon.app.data.remote.AdminRequestException
 import io.github.beacon.app.data.remote.ServerAdminClient
 import io.github.beacon.app.data.remote.ServerAdministration
+import io.github.beacon.app.domain.model.ProtocolContract
 import java.util.concurrent.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -324,13 +325,13 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
     companion object {
         internal fun parseOverview(json: JSONObject): AdminUiState {
             // Older servers omitted these fields but expose the same administrative contract.
-            require(json.optInt("admin_protocol", 1) == 1)
+            require(ProtocolContract.adminSupported(json.optInt("admin_protocol", 1)))
             val devices = json.optJSONArray("devices")
             val applications = json.optJSONArray("applications")
             val storage = json.getJSONObject("storage")
             return AdminUiState(
                 version = json.optString("version", "—"),
-                protocol = json.optInt("protocol", 1),
+                protocol = json.optInt("protocol", ProtocolContract.MIN_HTTP),
                 serverId = json.getString("server_id"),
                 messages = storage.getLong("messages"),
                 pending = storage.getLong("pending"),

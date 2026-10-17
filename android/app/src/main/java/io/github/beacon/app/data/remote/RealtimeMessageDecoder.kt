@@ -2,6 +2,7 @@ package io.github.beacon.app.data.remote
 
 import io.github.beacon.app.domain.model.IncomingMessage
 import io.github.beacon.app.domain.model.MessageLimits
+import io.github.beacon.app.domain.model.ProtocolContract
 import java.nio.ByteBuffer
 import java.nio.charset.CodingErrorAction
 import org.json.JSONObject
@@ -24,7 +25,8 @@ class RealtimeMessageDecoder(
                 .decode(ByteBuffer.wrap(payload))
                 .toString()
         val envelope = JSONObject(text)
-        require(envelope.opt("protocol") == 1)
+        val protocol = envelope.opt("protocol")
+        require(protocol is Int && ProtocolContract.realtimeEnvelopeSupported(protocol))
         require(envelope.opt("server_id") == server)
         val row = envelope.getJSONObject("message")
         val id = row.opt("id")

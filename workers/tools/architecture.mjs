@@ -5,15 +5,17 @@ import { dirname, posix } from "node:path";
 // Explicit dependency policy: API depends on ports, storage never owns HTTP.
 const policy = {
   "domain.ts": [],
+  "protocol.ts": [],
   "ports.ts": ["domain.ts"],
   "http.ts": ["domain.ts"],
   "bark.ts": ["domain.ts", "http.ts"],
-  "api.ts": ["domain.ts", "ports.ts", "http.ts", "bark.ts"],
+  "api.ts": ["domain.ts", "protocol.ts", "ports.ts", "http.ts", "bark.ts"],
   "store/schema.ts": ["domain.ts"],
-  "store/identity.ts": ["domain.ts"],
+  "store/identity.ts": ["domain.ts", "protocol.ts"],
   "store/messages.ts": ["domain.ts", "ports.ts", "store/identity.ts"],
   "index.ts": [
     "domain.ts",
+    "protocol.ts",
     "ports.ts",
     "api.ts",
     "http.ts",
@@ -51,6 +53,15 @@ for (const [file, allowed] of Object.entries(policy)) {
   assert.ok(
     !/\b(?:setInterval|setTimeout)\s*\(/.test(source),
     `${file}: use durable event scheduling instead of timers`,
+  );
+  // Protocol numbers live only in protocol.ts. A literal here would drift from
+  // the Go server and the Android client the moment either side bumps.
+  assert.ok(
+    file === "protocol.ts" ||
+      !/\b(?:protocol|admin_protocol|delivery_retention_protocol)\s*:\s*\d/.test(
+        source,
+      ),
+    `${file}: import protocol constants from protocol.ts instead of a literal`,
   );
   graph.set(file, edges);
 }

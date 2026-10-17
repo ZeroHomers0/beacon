@@ -12,13 +12,22 @@ const ReceiptLifetime = 30 * 24 * time.Hour
 const ReceiptGrace = 30 * time.Minute
 
 const (
-	TokenLength              = 64
-	MaxTitleBytes            = 1024
-	MaxBodyBytes             = 65536
-	MaxPageSize              = 100
-	DefaultPageSize          = 25
-	MaxRequestBytes          = 512 * 1024
-	ProtocolVersion          = 1
+	TokenLength     = 64
+	MaxTitleBytes   = 1024
+	MaxBodyBytes    = 65536
+	MaxPageSize     = 100
+	DefaultPageSize = 25
+	MaxRequestBytes = 512 * 1024
+	// ProtocolVersion is the HTTP contract advertised by /healthz, /capabilities
+	// and /bind. The Android client accepts any version within its supported
+	// range, so a value bump degrades instead of breaking old installs.
+	ProtocolVersion = 1
+	// DeliveryRetentionProtocol gates the retention cutoff field; it changes only
+	// when the meaning of delivery_window_ms changes.
+	DeliveryRetentionProtocol = 1
+	// AdminProtocol gates /api/admin/overview; the Android admin screen refuses
+	// an unknown value rather than guessing at fields.
+	AdminProtocol            = 1
 	BindingCodeLength        = 32
 	MaxDeviceNameBytes       = 128
 	MaxRetentionBatchSize    = 100

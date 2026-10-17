@@ -12,6 +12,14 @@ import {
 } from "./domain";
 import { bark, presentation } from "./bark";
 import { bearer, body, ids, integer, json, method, text } from "./http";
+import {
+  ADMIN_PROTOCOL,
+  DELIVERY_RETENTION_PROTOCOL,
+  HTTP_PROTOCOL,
+  RECEPTION_CONTROL,
+  REALTIME_PROTOCOL,
+  STREAM_PATH,
+} from "./protocol";
 import type { Repository, Transport } from "./ports";
 export class API {
   constructor(
@@ -33,7 +41,11 @@ export class API {
     const path = url.pathname;
     if (path === "/healthz") {
       method(request, "GET");
-      return json({ status: "ok", version: VERSION, protocol: "1" });
+      return json({
+        status: "ok",
+        version: VERSION,
+        protocol: String(HTTP_PROTOCOL),
+      });
     }
     if (path.startsWith("/api/admin/"))
       return this.administration(request, path, url);
@@ -173,7 +185,7 @@ export class API {
       const now = Date.now();
       if (path.endsWith("/capabilities"))
         return json({
-          protocol: 1,
+          protocol: HTTP_PROTOCOL,
           server_id: this.store.serverID,
           device_id: device,
           server_time_ms: now,
@@ -197,9 +209,9 @@ export class API {
           binding: "one_time_code",
           self_revoke: true,
           delivery_window_ms: PENDING,
-          delivery_retention_protocol: 1,
+          delivery_retention_protocol: DELIVERY_RETENTION_PROTOCOL,
           receipt_status: true,
-          reception_control: 1,
+          reception_control: RECEPTION_CONTROL,
           receipt_window_ms: RECEIPT,
           expired_messages: this.store.expiredCount(device),
         });
@@ -207,10 +219,10 @@ export class API {
         if (url.search || request.url.endsWith("?"))
           reject(400, "invalid_query");
         return json({
-          protocol: 2,
+          protocol: REALTIME_PROTOCOL,
           server_id: this.store.serverID,
           device_id: device,
-          stream_path: "/api/v1/realtime/stream",
+          stream_path: STREAM_PATH,
         });
       }
       if (path.endsWith("/stream"))
@@ -341,8 +353,8 @@ export class API {
         transport: "websocket",
         server_id: this.store.serverID,
         version: VERSION,
-        protocol: 1,
-        admin_protocol: 1,
+        protocol: HTTP_PROTOCOL,
+        admin_protocol: ADMIN_PROTOCOL,
       });
     }
     const routes: Record<string, string[]> = {

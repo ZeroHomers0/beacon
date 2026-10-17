@@ -1,12 +1,14 @@
 package io.github.beacon.app.data.remote
 
+import io.github.beacon.app.domain.model.ProtocolContract
 import org.json.JSONObject
 
 object DeliveryRetentionDecoder {
     /** 10-minute margin covers the bounded timestamp normalization used by both transports. */
     fun cutoff(reply: JSONObject): Long? {
         if (!reply.has("delivery_retention_protocol")) return null
-        require(reply.opt("delivery_retention_protocol") == 1)
+        val contract = reply.opt("delivery_retention_protocol")
+        require(contract is Int && ProtocolContract.deliveryRetentionSupported(contract))
         fun number(key: String): Long {
             val value = reply.get(key)
             require(value is Int || value is Long)

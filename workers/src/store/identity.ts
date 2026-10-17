@@ -1,4 +1,5 @@
 import { Attachment, Row, Sender, name, reject, token } from "../domain";
+import { HTTP_PROTOCOL } from "../protocol";
 
 export class IdentityStore {
   constructor(protected storage: DurableObjectStorage) {}
@@ -112,7 +113,7 @@ export class IdentityStore {
         device_id: id,
         receive_token: receive,
         push_key: push,
-        protocol: 1,
+        protocol: HTTP_PROTOCOL,
       };
     });
   }

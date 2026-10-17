@@ -135,7 +135,7 @@ func (h *StreamHub) Handler(w http.ResponseWriter, r *http.Request) {
 				c.pending = page.HasMore
 				for _, item := range page.Messages {
 					var packet []byte
-					packet, err = json.Marshal(domain.RealtimeEnvelope{Protocol: 1, ServerID: h.app.ServerID(), Message: item})
+					packet, err = json.Marshal(domain.RealtimeEnvelope{Protocol: domain.RealtimeEnvelopeProtocol, ServerID: h.app.ServerID(), Message: item})
 					if err != nil {
 						break
 					}
@@ -177,7 +177,7 @@ func (h *StreamHub) Publish(ctx context.Context, serverID, deviceID string, mess
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	payload, err := json.Marshal(domain.RealtimeEnvelope{Protocol: 1, ServerID: serverID, Message: message})
+	payload, err := json.Marshal(domain.RealtimeEnvelope{Protocol: domain.RealtimeEnvelopeProtocol, ServerID: serverID, Message: message})
 	if err != nil {
 		return err
 	}
