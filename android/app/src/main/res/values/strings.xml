@@ -129,7 +129,7 @@
     <string name="receive_mode_rules">规则接收</string>
     <string name="receive_mode_power_description">通过HTTP周期补收，允许接收延迟</string>
     <string name="receive_mode_realtime_description">通过WebSocket长连接接收，断线后自动补收</string>
-    <string name="receive_realtime_status_title">即时连接状态</string>
+    <string name="receive_realtime_status_title">即时连接</string>
     <string name="receive_mode_rules_description">根据电量、时间、充电和 Wi-Fi 条件切换</string>
     <string name="receive_mode_pending_hint">即时接收需要后台运行权限，连接稳定性受电池管理和网络环境影响。</string>
     <string name="receive_mode_settings_long_press">长按打开接收模式设置</string>

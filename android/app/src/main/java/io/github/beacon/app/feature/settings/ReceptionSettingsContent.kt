@@ -213,7 +213,9 @@ private fun ReceptionStatusRow(title: String, details: String, error: Boolean = 
     ) {
         BeaconText(
             title,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyLarge.copy(
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
+            ),
             maxLines = 1,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
         )

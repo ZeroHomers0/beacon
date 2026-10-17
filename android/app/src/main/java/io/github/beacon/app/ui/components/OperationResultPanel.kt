@@ -36,6 +36,8 @@ fun SettingsStatusSummary(
     loading: Boolean = false,
     interactive: Boolean = true,
     compact: Boolean = false,
+    singleLineDetails: Boolean = false,
+    selectableDetails: Boolean = false,
 ) {
     val iconSize = 48.dp
     var showingDetails by remember { mutableStateOf(false) }
@@ -91,13 +93,18 @@ fun SettingsStatusSummary(
                 else Modifier.fillMaxWidth().height(detailsHeight),
                 contentAlignment = Alignment.CenterStart,
             ) {
-                BeaconText(
-                    displayedDetails,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                val content: @Composable () -> Unit = {
+                    BeaconText(
+                        displayedDetails,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = if (singleLineDetails) 1 else 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                if (selectableDetails)
+                    androidx.compose.foundation.text.selection.SelectionContainer { content() }
+                else content()
             }
         }
         if (interactive && displayedDetails.isNotBlank())

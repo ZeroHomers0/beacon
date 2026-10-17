@@ -8,7 +8,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -204,37 +203,35 @@ internal fun ServerAdminPage(
                 SettingsPreferences(stringResource(R.string.admin_overview)) {
                     SettingsFieldGroup(
                         {
-                            Column(
-                                Modifier.fillMaxWidth()
-                                    .heightIn(min = BeaconUiMetrics.FieldMinHeight)
-                                    .padding(vertical = BeaconUiMetrics.FieldVerticalInset),
-                                verticalArrangement = Arrangement.spacedBy(4.dp),
-                            ) {
-                                BeaconText(
-                                    stringResource(R.string.admin_endpoint),
-                                    style = androidx.compose.material3.MaterialTheme.typography.bodyLarge,
-                                )
-                                SelectionContainer {
-                                    BeaconText(
-                                        state.endpoint,
-                                        modifier = Modifier.fillMaxWidth(),
-                                        style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
-                                        maxLines = 1,
-                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                    )
-                                }
-                            }
+                            SettingsStatusSummary(
+                                stringResource(R.string.admin_endpoint),
+                                state.endpoint,
+                                icon = BeaconIcons.Server,
+                                interactive = false,
+                                compact = true,
+                                singleLineDetails = true,
+                                selectableDetails = true,
+                            )
                         },
                         {
-                            DiagnosticRow(stringResource(R.string.admin_version), state.version)
+                            SettingsStatusSummary(
+                                stringResource(R.string.admin_version),
+                                state.version,
+                                icon = BeaconIcons.Info,
+                                interactive = false,
+                                compact = true,
+                            )
                         },
                         {
-                            DiagnosticRow(
+                            SettingsStatusSummary(
                                 stringResource(R.string.admin_compatibility),
                                 stringResource(
                                     if (state.protocol == 1) R.string.admin_compatible_short
                                     else R.string.admin_protocol_unknown_short
                                 ),
+                                icon = BeaconIcons.Cloud,
+                                interactive = false,
+                                compact = true,
                             )
                         },
                     )

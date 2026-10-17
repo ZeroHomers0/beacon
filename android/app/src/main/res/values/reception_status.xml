@@ -1,5 +1,5 @@
 <resources>
-    <string name="reception_https_status">HTTPS 同步</string>
+    <string name="reception_https_status">消息同步</string>
     <string name="reception_paused">接收已暂停</string>
     <string name="reception_syncing">正在同步</string>
     <string name="reception_sync_retry">连接暂时中断，等待自动重试</string>
