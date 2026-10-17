@@ -4,8 +4,13 @@ import (
 	"beacon.local/server/internal/domain"
 	"database/sql"
 	"fmt"
+	"strconv"
 	"time"
 )
+
+// messageSchemaVersion is the PRAGMA user_version this binary produces and the highest
+// one it accepts. Every migration step below adds exactly one to it.
+const messageSchemaVersion = 11
 
 func migrateMessageSchema(db *sql.DB) error {
 	tx, err := db.Begin()
@@ -17,7 +22,7 @@ func migrateMessageSchema(db *sql.DB) error {
 	if err = tx.QueryRow("PRAGMA user_version").Scan(&version); err != nil {
 		return err
 	}
-	if version > 11 {
+	if version > messageSchemaVersion {
 		return fmt.Errorf("unsupported database schema")
 	}
 	rows, err := tx.Query("PRAGMA table_info(messages)")
@@ -202,7 +207,7 @@ func migrateMessageSchema(db *sql.DB) error {
 			}
 		}
 	}
-	if _, err = tx.Exec("PRAGMA user_version=11"); err != nil {
+	if _, err = tx.Exec("PRAGMA user_version=" + strconv.Itoa(messageSchemaVersion)); err != nil {
 		return err
 	}
 	return tx.Commit()
