@@ -180,6 +180,8 @@ internal fun BeaconTopBarArea(
                                                     false),
                                     checkingServer =
                                         runtimeState.serverChecking,
+                                    visible = ui.page == 0 && pager.currentPage == 0 &&
+                                        !pager.isScrollInProgress && displayedDetail == null,
                                     connected =
                                         runtimeState.serverReachable == true &&
                                             (ui.receivePlan.mode !=

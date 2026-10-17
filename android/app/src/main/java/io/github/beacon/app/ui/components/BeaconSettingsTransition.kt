@@ -20,6 +20,15 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 
+internal fun settingsPageDepth(screen: SettingsScreen): Int = when (screen) {
+    SettingsScreen.HOME -> 0
+    SettingsScreen.SERVER_DEVICES,
+    SettingsScreen.SERVER_APPLICATIONS,
+    SettingsScreen.SERVER_TEST,
+    SettingsScreen.QUIET_HOURS -> 2
+    else -> 1
+}
+
 /** KSU/MIUIX geometry: full-width child entry, quarter-width parent parallax, reversed on back. */
 @Composable
 fun BeaconSettingsTransition(
@@ -32,7 +41,9 @@ fun BeaconSettingsTransition(
     transition.AnimatedContent(
         modifier = (if (animateSize) Modifier.fillMaxWidth() else Modifier.fillMaxSize()).clipToBounds(),
         transitionSpec = {
-            val entering = targetState != SettingsScreen.HOME && !navigatingBack
+            val entering = if (settingsPageDepth(targetState) == settingsPageDepth(initialState))
+                !navigatingBack
+                else settingsPageDepth(targetState) > settingsPageDepth(initialState)
             val motion =
                 tween<androidx.compose.ui.unit.IntOffset>(
                     SETTINGS_NAVIGATION_DURATION_MS,
@@ -44,7 +55,7 @@ fun BeaconSettingsTransition(
                 } +
                     fadeIn(
                         tween(SETTINGS_NAVIGATION_DURATION_MS, easing = settingsNavigationEasing),
-                        initialAlpha = if (entering) 1f else .9f,
+                        initialAlpha = 1f,
                     )
             val exit =
                 slideOutHorizontally(motion) { width ->
@@ -52,10 +63,10 @@ fun BeaconSettingsTransition(
                 } +
                     fadeOut(
                         tween(SETTINGS_NAVIGATION_DURATION_MS, easing = settingsNavigationEasing),
-                        targetAlpha = if (entering) .9f else 1f,
+                        targetAlpha = 1f,
                     )
             (entry togetherWith exit)
-                .apply { targetContentZIndex = if (entering) 1f else -1f }
+                .apply { targetContentZIndex = settingsPageDepth(targetState).toFloat() }
                 .using(
                     if (animateSize) SizeTransform(clip = true) { _, _ ->
                         tween(SETTINGS_NAVIGATION_DURATION_MS, easing = settingsNavigationEasing)

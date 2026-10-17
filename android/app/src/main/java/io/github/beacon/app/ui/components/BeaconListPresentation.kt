@@ -14,7 +14,12 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
-import androidx.compose.animation.Crossfade
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -71,7 +76,23 @@ fun ReceiveModeButton(
     serverIssue: Boolean = false,
     checkingServer: Boolean = false,
     connected: Boolean = receiving,
+    visible: Boolean = true,
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var animationsEnabled by remember { mutableStateOf(android.animation.ValueAnimator.areAnimatorsEnabled()) }
+    DisposableEffect(context) {
+        val observer = object : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) {
+                animationsEnabled = android.animation.ValueAnimator.areAnimatorsEnabled()
+            }
+        }
+        context.contentResolver.registerContentObserver(
+            android.provider.Settings.Global.getUriFor(android.provider.Settings.Global.ANIMATOR_DURATION_SCALE),
+            false,
+            observer,
+        )
+        onDispose { context.contentResolver.unregisterContentObserver(observer) }
+    }
     val modeColor = receiveModeColor(mode)
     val accent by animateColorAsState(
         if (serverIssue) MaterialTheme.colorScheme.error
@@ -81,13 +102,27 @@ fun ReceiveModeButton(
     )
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed) .96f else 1f, tween(150), label = "receive-mode-press")
+    val scale by animateFloatAsState(if (pressed) .90f else 1f, tween(180), label = "receive-mode-press")
     var resumed by remember { mutableStateOf(false) }
     androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
         resumed = true
+        animationsEnabled = android.animation.ValueAnimator.areAnimatorsEnabled()
         onPauseOrDispose { resumed = false }
     }
-    val angle = if (checkingServer && resumed) {
+    val animateStatus = resumed && visible && animationsEnabled
+    val breathing = animateStatus && receiving && connected && !serverIssue && !checkingServer
+    val badgeAlpha = remember { Animatable(1f) }
+    LaunchedEffect(breathing) {
+        badgeAlpha.snapTo(1f)
+        if (breathing) {
+            while (true) {
+                kotlinx.coroutines.delay(6000)
+                badgeAlpha.animateTo(.55f, tween(700))
+                badgeAlpha.animateTo(1f, tween(700))
+            }
+        }
+    }
+    val angle = if (checkingServer && animateStatus) {
         val motion = rememberInfiniteTransition(label = "receive-mode-check")
         motion.animateFloat(
             0f, 360f, infiniteRepeatable(tween(1200, easing = LinearEasing)),
@@ -111,10 +146,9 @@ fun ReceiveModeButton(
         Modifier.padding(start = 8.dp)
             .size(48.dp)
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .clip(CircleShape)
             .combinedClickable(
                 interactionSource = interaction,
-                indication = androidx.compose.material3.ripple(),
+                indication = androidx.compose.material3.ripple(bounded = false, radius = 24.dp),
                 onClick = onClick,
                 onLongClick = onLongClick,
                 onLongClickLabel = stringResource(R.string.receive_mode_settings_long_press),
@@ -128,15 +162,22 @@ fun ReceiveModeButton(
             ),
             contentAlignment = Alignment.Center,
         ) {
-            Crossfade(mode, animationSpec = tween(200), label = "receive-mode-icon") { displayed ->
+            AnimatedContent(
+                mode,
+                transitionSpec = {
+                    (fadeIn(tween(240)) + scaleIn(tween(280), initialScale = .7f)) togetherWith
+                        (fadeOut(tween(140)) + scaleOut(tween(180), targetScale = 1.2f))
+                },
+                label = "receive-mode-icon",
+            ) { displayed ->
                 Icon(receiveModeIcon(displayed), description, Modifier.size(26.dp), tint = accent)
             }
         }
         if (checkingServer) {
             Canvas(Modifier.matchParentSize().padding(1.dp)) {
                 drawArc(
-                    modeColor, angle.value - 90f, 85f, false,
-                    style = Stroke(2.dp.toPx(), cap = StrokeCap.Round),
+                    modeColor, angle.value - 90f, 110f, false,
+                    style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round),
                 )
             }
         } else {
@@ -146,6 +187,7 @@ fun ReceiveModeButton(
             Box(
                 Modifier.align(Alignment.BottomEnd).padding(2.dp).size(14.dp)
                     .background(MaterialTheme.colorScheme.surface, CircleShape).padding(2.dp)
+                    .graphicsLayer { alpha = if (breathing) badgeAlpha.value else 1f }
                     .background(badgeColor, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
