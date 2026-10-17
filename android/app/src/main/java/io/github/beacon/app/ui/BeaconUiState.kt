@@ -166,6 +166,19 @@ class BeaconUiState(
 
     var operationDetails by mutableStateOf<String?>(null)
 
+    /**
+     * Last text handed to the runtime, kept here so the debounce can tell "already submitted" from
+     * "waiting for the reader" without racing the async [RuntimeState.messageQuery] echo.
+     *
+     * Both entry points (typing, and pressing enter) go through [applyFilter]; whoever gets there
+     * first wins and the other sees nothing pending. It starts at the restored search so a process
+     * death does not look like pending input and trigger a redundant read on every restore.
+     */
+    private var appliedSearch: String = search
+
+    /** True while the text box holds text the runtime has not been asked for yet. */
+    fun searchPending(): Boolean = search != appliedSearch
+
     fun applyFilter(
         actions: RuntimeActions,
         text: String,
@@ -176,6 +189,7 @@ class BeaconUiState(
         selectionHint = ""
         search = text
         readFilter = filter
+        appliedSearch = text
         actions.readMessages(search = text, readFilter = filter)
     }
 
