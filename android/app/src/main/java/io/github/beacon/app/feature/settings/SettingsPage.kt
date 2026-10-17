@@ -308,21 +308,21 @@ fun SettingsPage(
                     SettingsGroup(stringResource(R.string.settings_misc_section_title)) {
                         SettingsRow(
                             stringResource(R.string.admin_title),
-                            "",
+                            stringResource(R.string.settings_admin_menu_description),
                             BeaconIcons.Server,
                         ) {
                             onNavigate(SettingsScreen.SERVER_ADMIN)
                         }
                         SettingsRow(
                             stringResource(R.string.settings_storage_title),
-                            "",
+                            stringResource(R.string.settings_storage_menu_description),
                             BeaconIcons.Storage,
                         ) {
                             onNavigate(SettingsScreen.STORAGE)
                         }
                         SettingsRow(
                             stringResource(R.string.settings_backup_title),
-                            "",
+                            stringResource(R.string.settings_backup_menu_description),
                             BeaconIcons.Backup,
                         ) {
                             onNavigate(SettingsScreen.BACKUP)

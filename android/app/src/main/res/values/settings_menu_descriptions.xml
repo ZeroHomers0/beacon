@@ -1,0 +1,5 @@
+<resources>
+    <string name="settings_admin_menu_description">管理设备、应用与测试发送</string>
+    <string name="settings_storage_menu_description">查看消息占用，清理历史记录</string>
+    <string name="settings_backup_menu_description">备份与恢复设置和消息</string>
+</resources>
