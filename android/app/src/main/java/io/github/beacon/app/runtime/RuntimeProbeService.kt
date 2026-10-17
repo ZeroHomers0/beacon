@@ -349,11 +349,12 @@ class RuntimeProbeService : Service() {
             try {
                 TransportSecretStore(this).load()
             } catch (_: Exception) {
-                if (automatic)
+                if (allowed())
                     saveState(
                         pollingState.copy(
                             blocked = PollingPolicy.blockingReason(SyncOutcome.CONFIG),
                             lastAttemptMs = attemptedAtMs,
+                            lastOutcome = SyncOutcome.CONFIG,
                         )
                     )
                 recordEvent(eventKind, SyncOutcome.CONFIG)
@@ -381,7 +382,7 @@ class RuntimeProbeService : Service() {
             networkWork.completed(expectedGeneration, android.os.SystemClock.elapsedRealtime())
         // A failed or cancelled sync may have committed earlier pages. Refresh those too.
         realtime.messagesChanged()
-        if (automatic)
+        if (allowed())
             saveState(
                 pollingState.copy(
                     blocked = PollingPolicy.blockingReason(outcome),

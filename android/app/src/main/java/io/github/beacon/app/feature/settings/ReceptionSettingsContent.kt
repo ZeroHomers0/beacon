@@ -86,9 +86,9 @@ internal fun LazyListScope.receptionSettingsItems(
                         stringResource(R.string.settings_runtime_disconnected)
                     !runtimeState.receivePlanLoaded ->
                         stringResource(R.string.settings_data_loading)
+                    runtimeState.transportBusy -> stringResource(R.string.reception_syncing)
                     polling.blocked.isNotBlank() -> polling.blocked
                     !polling.config.enabled -> stringResource(R.string.reception_paused)
-                    runtimeState.transportBusy -> stringResource(R.string.reception_syncing)
                     polling.lastOutcome == io.github.beacon.app.domain.model.SyncOutcome.TRANSIENT ->
                         stringResource(R.string.reception_sync_retry)
                     polling.lastOutcome == io.github.beacon.app.domain.model.SyncOutcome.STORAGE ->
@@ -98,7 +98,8 @@ internal fun LazyListScope.receptionSettingsItems(
                     else -> stringResource(R.string.reception_sync_waiting)
                 },
                 error = polling.blocked.isNotBlank() && runtimeState.runtimeConnected &&
-                    runtimeState.configuredEndpoint.isNotBlank() && runtimeState.receivePlanLoaded,
+                    runtimeState.configuredEndpoint.isNotBlank() && runtimeState.receivePlanLoaded &&
+                    !runtimeState.transportBusy,
             )
             if (receivePlan.mode != ReceiveMode.POWER_SAVING && runtimeState.receivePlanLoaded)
                 ReceptionStatusRow(
