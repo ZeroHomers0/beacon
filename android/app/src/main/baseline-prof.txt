@@ -1,0 +1,31 @@
+# App-owned baseline profile for cold start.
+#
+# Class rules only (`L...;`), never method signatures: they name the startup path
+# without pinning individual signatures, so an internal refactor moves code without
+# invalidating the file, and a rename simply drops the stale rule. Anything heavy
+# that startup does not touch is deliberately absent — a bloated profile dilutes
+# the compile budget across code the user actually waits on.
+#
+# This adds to, and does not replace, the profiles AndroidX libraries already ship;
+# the build merges both (see the merged_art_profile output of assembleRelease).
+#
+# Covered path: Application -> MainActivity -> first composition -> the runtime
+# repository state the first frame reads.
+Lio/github/beacon/app/BeaconApplication;
+Lio/github/beacon/app/MainActivity;
+Lio/github/beacon/app/NotificationOpenActivity;
+Lio/github/beacon/app/ui/BeaconAppKt;
+Lio/github/beacon/app/ui/BeaconViewModel;
+Lio/github/beacon/app/ui/BeaconUiState;
+Lio/github/beacon/app/ui/BeaconContentAreaKt;
+Lio/github/beacon/app/ui/BeaconTopBarAreaKt;
+Lio/github/beacon/app/ui/BeaconBackHandlersKt;
+Lio/github/beacon/app/ui/BeaconDialogsKt;
+Lio/github/beacon/app/ui/theme/BeaconThemeKt;
+Lio/github/beacon/app/data/repository/RuntimeRepository;
+Lio/github/beacon/app/feature/messages/MessagesPageKt;
+Lio/github/beacon/app/feature/messages/MessageListStateKt;
+Lio/github/beacon/app/ui/components/BeaconUiComponentsKt;
+Lio/github/beacon/app/ui/components/BeaconStyleComponentsKt;
+Lio/github/beacon/app/data/local/UiStyleStore;
+Lio/github/beacon/app/domain/model/RuntimeState;
