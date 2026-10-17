@@ -53,7 +53,10 @@ func (a *API) registerAdmin(router *gin.Engine) {
 			apiError(c.Writer, 500, "storage_error")
 			return
 		}
-		writeJSON(c.Writer, 200, map[string]any{"devices": devices, "applications": applications, "storage": stats, "transport": "websocket", "server_id": a.service.ServerID(), "version": config.Version, "protocol": domain.ProtocolVersion, "admin_protocol": 1})
+		writeJSON(c.Writer, 200, map[string]any{"devices": devices, "applications": applications, "storage": stats, "transport": "websocket", "server_id": a.service.ServerID(), "version": config.Version, "protocol": domain.ProtocolVersion, "admin_protocol": domain.AdminProtocol})
+	})
+	admin.GET("/metrics", func(c *gin.Context) {
+		writeJSON(c.Writer, http.StatusOK, a.metrics.snapshot())
 	})
 	admin.POST("/binding", func(c *gin.Context) {
 		var body struct {

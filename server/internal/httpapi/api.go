@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"os"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -29,9 +31,12 @@ type API struct {
 	bindingLimit bindingLimiter
 	stream       *StreamHub
 	adminToken   string
+	metrics      *requestMetrics
 }
 
-func New(service *service.Service) *API { return &API{service: service} }
+func New(service *service.Service) *API {
+	return &API{service: service, metrics: newRequestMetrics()}
+}
 
 func (a *API) WithStream(stream *StreamHub) *API { a.stream = stream; return a }
 
@@ -97,9 +102,14 @@ func (a *API) Handler() http.Handler {
 	router.RedirectTrailingSlash = false
 	router.RedirectFixedPath = false
 	_ = router.SetTrustedProxies(nil)
+	// Registered first so it also sees requests that panic: it wraps the recovery middleware.
+	router.Use(metricsMiddleware(a.metrics))
 	router.Use(func(c *gin.Context) {
 		defer func() {
-			if recover() != nil {
+			if recovered := recover(); recovered != nil {
+				// Route templates identify the endpoint without echoing Bark paths,
+				// which carry credentials. The stack stays in the server log only.
+				log.Printf("panic recovered: route=%s recovered=%v\n%s", c.FullPath(), recovered, debug.Stack())
 				if !c.Writer.Written() {
 					apiError(c.Writer, http.StatusInternalServerError, "internal_error")
 				}
@@ -108,6 +118,9 @@ func (a *API) Handler() http.Handler {
 		}()
 		c.Next()
 	})
+	// Registered after the recovery middleware so an error response written from a
+	// panic handler is compressed like any other.
+	router.Use(compressJSON())
 	router.Any("/healthz", gin.WrapF(HealthHandler))
 	v1 := router.Group("/api/v1")
 	v1.Any("/capabilities", gin.WrapF(a.capabilities))
@@ -169,7 +182,7 @@ func (a *API) capabilities(w http.ResponseWriter, r *http.Request) {
 		"binding":                     "one_time_code",
 		"self_revoke":                 true,
 		"delivery_window_ms":          domain.PendingLifetime.Milliseconds(),
-		"delivery_retention_protocol": 1,
+		"delivery_retention_protocol": domain.DeliveryRetentionProtocol,
 		"receipt_status":              true,
 		"reception_control":           1,
 		"receipt_window_ms":           domain.ReceiptLifetime.Milliseconds(),
