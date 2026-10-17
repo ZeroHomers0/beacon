@@ -1,5 +1,7 @@
 package io.github.beacon.app.feature.settings
 
+import io.github.beacon.app.ui.components.BeaconUiMetrics
+
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -56,7 +58,7 @@ internal fun UpdateCheckDialog(
         onDismissRequest = onDismiss,
         title = { BeaconText(stringResource(R.string.settings_update_available, release.version)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
                 if (release.sizeBytes > 0) {
                     BeaconText(
                         stringResource(

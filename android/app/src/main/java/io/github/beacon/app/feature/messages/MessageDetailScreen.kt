@@ -2,6 +2,8 @@
 
 package io.github.beacon.app.feature.messages
 
+import io.github.beacon.app.ui.components.BeaconUiMetrics
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -50,7 +52,7 @@ fun MessageDetailScreen(
             modifier
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = BeaconUiMetrics.PageInset, vertical = BeaconUiMetrics.SectionGap),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
         ) {
             BeaconCard(
                 Modifier.fillMaxWidth(),
@@ -115,8 +117,8 @@ fun MessageDetailScreen(
                     }
                     if (message.group.isNotBlank() || message.applicationId.isNotBlank())
                         FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6),
+                            verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap4),
                         ) {
                             if (message.applicationId.isNotBlank())
                                 MessageFilterTag(
@@ -148,7 +150,7 @@ fun MessageDetailScreen(
                     }
                     Row(
                         Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         BeaconText(
@@ -220,7 +222,7 @@ fun MessageDetailScreen(
                             },
                         )
                         SelectionContainer {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
                                 BeaconText(
                                     stringResource(R.string.msg_detail_id_desc, message.id),
                                     style = MaterialTheme.typography.bodySmall,

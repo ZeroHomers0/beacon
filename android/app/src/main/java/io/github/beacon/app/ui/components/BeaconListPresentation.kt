@@ -174,7 +174,7 @@ fun BeaconSummaryPill(
         Row(
             Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6),
         ) {
             Icon(
                 icon,
@@ -212,7 +212,7 @@ fun BeaconOperationSnackbar(data: SnackbarData) {
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap10),
             ) {
                 Icon(
                     BeaconIcons.Info,

@@ -1,5 +1,7 @@
 package io.github.beacon.app.feature.settings
 
+import io.github.beacon.app.ui.components.BeaconUiMetrics
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -110,7 +112,7 @@ fun HistoryArchivePanel(actions: RuntimeActions, busy: Boolean, grouped: Boolean
                 )
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12)) {
                     BeaconPreferenceToggle(
                         resources.getString(R.string.settings_archive_encryption),
                         resources.getString(R.string.settings_archive_encryption_hint),

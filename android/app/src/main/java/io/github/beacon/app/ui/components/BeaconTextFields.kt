@@ -70,7 +70,7 @@ fun BeaconTextField(
     val fieldModifier =
         Modifier.bringIntoViewRequester(requester).onFocusChanged { focused = it.isFocused }
     if (miuix())
-        Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(modifier, verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6)) {
             label()
             // MIUIX draws the label above the field, so the field needs its own accessible name;
             // Material 3 puts the label inside the field and merges it into the same node.
@@ -122,7 +122,7 @@ fun BeaconSelectableRow(
     Row(
         Modifier.fillMaxWidth(),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
     ) {
         if (leading != null) leading()
         BeaconText(label, Modifier.weight(1f))

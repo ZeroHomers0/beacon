@@ -88,8 +88,8 @@ fun BeaconFilterChip(
     selected: Boolean,
     onClick: () -> Unit,
     label: @Composable () -> Unit,
-    enabled: Boolean = true,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     val buttonModifier = modifier.semantics { this.selected = selected }
     if (selected) BeaconButton(onClick, buttonModifier, enabled) { label() }

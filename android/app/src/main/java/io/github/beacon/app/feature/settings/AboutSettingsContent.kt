@@ -2,6 +2,8 @@
 
 package io.github.beacon.app.feature.settings
 
+import io.github.beacon.app.ui.components.BeaconUiMetrics
+
 import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.layout.*
@@ -27,7 +29,7 @@ internal fun LazyListScope.aboutSettingsItems(
         Column(
             Modifier.fillMaxWidth().padding(vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
         ) {
             androidx.compose.foundation.Image(
                 androidx.compose.ui.res.painterResource(R.drawable.beacon_logo_about),

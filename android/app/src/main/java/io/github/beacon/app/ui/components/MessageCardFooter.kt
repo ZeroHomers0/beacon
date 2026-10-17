@@ -22,10 +22,10 @@ internal fun MessageCardFooter(
 ) {
     Row(
         Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap2)) {
             BeaconText(
                 if (message.createdAtMs <= 0) stringResource(R.string.ui_unknown_label) else DisplayTime.clock(message.createdAtMs),
                 style = MaterialTheme.typography.labelSmall,

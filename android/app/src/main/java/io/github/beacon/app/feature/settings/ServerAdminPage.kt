@@ -2,6 +2,8 @@
 
 package io.github.beacon.app.feature.settings
 
+import io.github.beacon.app.ui.components.BeaconUiMetrics
+
 import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
@@ -13,7 +15,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -150,8 +151,9 @@ internal fun ServerAdminPage(
     }
     BeaconSettingsList(
         state = scroll,
-        modifier = modifier.testTag("server-admin-list"),
+        modifier = modifier,
         contentPadding = padding,
+        listTag = "server-admin-list",
     ) {
         state.refreshFailure?.let { failure ->
             item {
@@ -558,7 +560,7 @@ internal fun ServerAdminPage(
             onDismissRequest = model::dismissSecret,
             title = { BeaconText(stringResource(secret.label)) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12)) {
                     Column {
                         DiagnosticRow(stringResource(secret.label), secret.value)
                         if (secret.expiresAt > 0) {
@@ -735,9 +737,9 @@ private fun AdminListCard(
                     vertical = BeaconUiMetrics.FieldVerticalInset,
                 ),
             verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
         ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap4)) {
                 BeaconText(
                     title,
                     style = androidx.compose.material3.MaterialTheme.typography.titleMedium,

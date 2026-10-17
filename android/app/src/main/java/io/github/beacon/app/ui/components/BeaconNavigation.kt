@@ -202,7 +202,7 @@ fun BeaconDropdownPreference(
                 Row(
                     Modifier.fillMaxWidth(),
                     verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
                 ) {
                     if (icon != null)
                         androidx.compose.material3.Icon(
@@ -214,7 +214,7 @@ fun BeaconDropdownPreference(
                     if (useStacked) {
                         Column(
                             Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap4),
                         ) {
                             BeaconText(title, style = MaterialTheme.typography.bodyLarge)
                             BeaconText(

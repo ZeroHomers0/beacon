@@ -8,7 +8,7 @@ import androidx.compose.ui.unit.dp
 /** Prefer two actions per row whenever their actual button contents fit. */
 @Composable
 fun BeaconCompactButtonGrid(labels: List<String>, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: (Int) -> Unit) {
-    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
         labels.indices.step(2).forEach { first ->
             if (first + 1 < labels.size) {
                 BeaconActionPair(

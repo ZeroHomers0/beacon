@@ -1,5 +1,7 @@
 package io.github.beacon.app.feature.settings
 
+import io.github.beacon.app.ui.components.BeaconUiMetrics
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -46,7 +48,7 @@ fun PushExamplesPanel(
                     Modifier.fillMaxWidth()
                         .heightIn(max = 360.dp)
                         .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8),
                 ) {
                     listOf(false to false, true to false, false to true, true to true).forEach {
                         (powershell, json) ->

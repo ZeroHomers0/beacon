@@ -1,5 +1,7 @@
 package io.github.beacon.app.feature.messages
 
+import io.github.beacon.app.ui.components.BeaconUiMetrics
+
 import android.text.SpannableString
 import android.text.Spanned
 import android.util.TypedValue
@@ -85,7 +87,7 @@ internal fun MessageMarkdownBody(body: String) {
             }.getOrElse { RenderedBody(SpannableString(body), emptyList(), emptyList(), emptyList(), failed = true) }
         }
     }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
         if (rendered?.let { !it.failed && it.text.toString() != body } == true) BeaconTextButton(onClick = { raw = !raw }) {
             BeaconText(stringResource(if (raw) R.string.message_markdown_rendered else R.string.message_markdown_source))
         }

@@ -1,5 +1,7 @@
 package io.github.beacon.app.feature.settings
 
+import io.github.beacon.app.ui.components.BeaconUiMetrics
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -79,7 +81,7 @@ internal fun DeviceRevocationDialog(state: RuntimeState, dismiss: () -> Unit, su
                 Modifier.fillMaxWidth()
                     .heightIn(max = 360.dp)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
             ) {
                 SettingsHint(stringResource(R.string.device_revoke_desc))
                 if (attempted) BeaconText(state.status.text)

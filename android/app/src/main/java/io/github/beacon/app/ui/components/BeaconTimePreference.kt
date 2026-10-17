@@ -28,8 +28,8 @@ fun BeaconTimeRangePreference(
     onStartChange: (String) -> Unit,
     onEndChange: (String) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap10)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap10)) {
             BeaconTimePreference(start, onStartChange, startLabel, Modifier.weight(1f), enabled)
             BeaconTimePreference(end, onEndChange, endLabel, Modifier.weight(1f), enabled)
         }
@@ -66,7 +66,7 @@ fun BeaconTimePreference(
         Column(
             Modifier.padding(14.dp).heightIn(min = 56.dp),
             verticalArrangement =
-                Arrangement.spacedBy(6.dp, androidx.compose.ui.Alignment.CenterVertically),
+                Arrangement.spacedBy(BeaconUiMetrics.Gap6, androidx.compose.ui.Alignment.CenterVertically),
             horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
         ) {
             BeaconText(
@@ -165,7 +165,7 @@ fun BeaconTimeSummary(label: String, value: String) {
         Row(
             Modifier.fillMaxWidth(),
             verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
         ) {
             if (fits) {
                 BeaconText(label, Modifier.weight(1f), style = titleStyle)
@@ -175,7 +175,7 @@ fun BeaconTimeSummary(label: String, value: String) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap4)) {
                     BeaconText(label, style = titleStyle)
                     BeaconText(
                         value,

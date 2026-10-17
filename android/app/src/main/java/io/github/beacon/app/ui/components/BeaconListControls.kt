@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -30,6 +31,9 @@ import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.BeaconUiStyle
 import io.github.beacon.app.ui.icons.BeaconIcons
 import io.github.beacon.app.ui.theme.LocalBeaconUiStyle
+
+/** Finds the search field regardless of its hint text, which is user-facing copy. */
+const val SEARCH_BOX_TAG = "search-box"
 
 /** Persistent search surface; no extra card/title/submit button around a list query. */
 @Composable
@@ -54,7 +58,8 @@ fun BeaconSearchBox(
                 .fillMaxWidth()
                 .heightIn(min = 52.dp)
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
-                .semantics { contentDescription = hint },
+                .semantics { contentDescription = hint }
+                .testTag(SEARCH_BOX_TAG),
         decorationBox = { field ->
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Icon(
@@ -160,11 +165,11 @@ fun BeaconPreferenceToggle(
         Modifier.fillMaxWidth()
             .heightIn(min = BeaconUiMetrics.FieldMinHeight),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
     ) {
         Column(
             Modifier.weight(1f).padding(vertical = BeaconUiMetrics.FieldVerticalInset),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap4),
         ) {
             BeaconText(title, style = MaterialTheme.typography.bodyLarge)
             if (summary.isNotBlank())
@@ -261,7 +266,7 @@ fun DiagnosticRow(label: String, value: String) {
                     BeaconText(value, style = valueStyle)
                 }
             else
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap4)) {
                     BeaconText(label, style = labelStyle, color = labelColor)
                     BeaconText(value, style = valueStyle)
                 }
@@ -299,11 +304,11 @@ fun SettingsMetricGrid(
             ((constraints.maxWidth + gapWidth) / (cellWidth + gapWidth).coerceAtLeast(1))
                 .coerceAtLeast(1)
         val resolvedColumns = minOf(columns ?: 2, availableColumns)
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
             metrics.chunked(resolvedColumns).forEach { pair ->
                 Row(
                     Modifier.fillMaxWidth().height(IntrinsicSize.Min),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8),
                 ) {
                     pair.forEach { (label, value) ->
                         Surface(
@@ -355,7 +360,7 @@ fun BeaconEmptyState(
     Column(
         Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
     ) {
         if (loading) CircularProgressIndicator(Modifier.size(32.dp), strokeWidth = 2.dp)
         else

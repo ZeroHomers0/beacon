@@ -21,6 +21,7 @@ import io.github.beacon.app.ui.components.BeaconButton
 import io.github.beacon.app.ui.components.BeaconDropdownPreference
 import io.github.beacon.app.ui.components.BeaconPreferenceToggle
 import io.github.beacon.app.ui.components.BeaconText
+import io.github.beacon.app.ui.components.BeaconUiMetrics
 import io.github.beacon.app.ui.components.SettingsFieldGroup
 import io.github.beacon.app.ui.components.SettingsGroup
 import io.github.beacon.app.ui.components.SettingsPreferences
@@ -209,7 +210,7 @@ private fun ReceptionStatusRow(title: String, details: String, error: Boolean = 
     Column(
         Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(vertical = 8.dp),
         verticalArrangement =
-            Arrangement.spacedBy(4.dp, androidx.compose.ui.Alignment.CenterVertically),
+            Arrangement.spacedBy(BeaconUiMetrics.Gap4, androidx.compose.ui.Alignment.CenterVertically),
     ) {
         BeaconText(
             title,

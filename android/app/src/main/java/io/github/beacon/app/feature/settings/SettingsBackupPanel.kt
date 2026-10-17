@@ -1,5 +1,7 @@
 package io.github.beacon.app.feature.settings
 
+import io.github.beacon.app.ui.components.BeaconUiMetrics
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -151,7 +153,7 @@ fun SettingsBackupPanel(actions: RuntimeActions, busy: Boolean, grouped: Boolean
                     Modifier.fillMaxWidth()
                         .heightIn(max = 360.dp)
                         .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
                 ) {
                     SettingsHint(stringResource(R.string.settings_backup_import_hint))
                     BeaconText(stringResource(R.string.settings_backup_validated))

@@ -41,7 +41,7 @@ fun BeaconAlertDialog(
         top.yukonga.miuix.kmp.extra.WindowDialog(show, onDismissRequest = onDismissRequest) {
             Column(
                 Modifier.heightIn(max = 600.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap16),
             ) {
                 androidx.compose.material3.ProvideTextStyle(MaterialTheme.typography.titleLarge) {
                     title()

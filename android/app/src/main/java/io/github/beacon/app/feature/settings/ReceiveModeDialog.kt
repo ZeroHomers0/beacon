@@ -1,5 +1,7 @@
 package io.github.beacon.app.feature.settings
 
+import io.github.beacon.app.ui.components.BeaconUiMetrics
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -33,7 +35,7 @@ fun ReceiveModeDialog(
                     .then(
                         if (miuix()) Modifier else Modifier.verticalScroll(rememberScrollState())
                     ),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6),
             ) {
                 listOf(ReceiveMode.REALTIME, ReceiveMode.POWER_SAVING, ReceiveMode.RULES).forEach {
                     mode ->
@@ -53,7 +55,7 @@ fun ReceiveModeDialog(
                                 )
                                 .padding(horizontal = 12.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap10),
                         ) {
                             Icon(
                                 receiveModeIcon(mode),

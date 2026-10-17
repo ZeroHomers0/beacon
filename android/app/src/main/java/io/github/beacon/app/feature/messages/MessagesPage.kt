@@ -2,6 +2,8 @@
 
 package io.github.beacon.app.feature.messages
 
+import io.github.beacon.app.ui.components.BeaconUiMetrics
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -39,6 +42,12 @@ import io.github.beacon.app.ui.components.BeaconTitleSearchRow
 import io.github.beacon.app.ui.components.MessageItem
 import io.github.beacon.app.ui.icons.BeaconIcons
 import kotlinx.coroutines.delay
+
+/**
+ * Tag for the message list itself. Tests used to find it by the surrounding copy, which meant any
+ * wording change silently broke them; the tag is layout-independent.
+ */
+const val MESSAGE_LIST_TAG = "message-list"
 
 @Composable
 fun MessagesPage(
@@ -202,7 +211,8 @@ private fun MessagesContent(
         ) {
             LazyColumn(
                 state = scroll,
-                modifier = Modifier.fillMaxSize().then(scrollModifier),
+                modifier =
+                    Modifier.fillMaxSize().then(scrollModifier).testTag(MESSAGE_LIST_TAG),
                 contentPadding =
                     PaddingValues(
                         start = padding.calculateStartPadding(layoutDirection),
@@ -210,11 +220,11 @@ private fun MessagesContent(
                         top = 4.dp,
                         bottom = padding.calculateBottomPadding(),
                     ),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
             ) {
                 val applied = runtimeState.messageQuery
-                item(key = "count") {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                item(key = "count", contentType = "count") {
+                    Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6)) {
                         ActionFlow {
                             BeaconSummaryPill(
                                 stringResource(R.string.msg_stat_total, runtimeState.messageTotal),
@@ -308,11 +318,11 @@ private fun MessagesContent(
                     }
                 }
                 if (selectionHint.isNotBlank())
-                    item(key = "selection-hint") {
+                    item(key = "selection-hint", contentType = "hint") {
                         BeaconText(selectionHint, color = MaterialTheme.colorScheme.error)
                     }
                 if (runtimeState.messages.isEmpty())
-                    item(key = "empty") {
+                    item(key = "empty", contentType = "empty") {
                         when {
                             (awaitingMessages || busy) && showLoading ->
                                 BeaconEmptyState(
@@ -372,7 +382,7 @@ private fun MessagesContent(
                 runtimeState.messages.forEachIndexed { index, message ->
                     val date = dates[index]
                     if (index == 0 || date != dates[index - 1]) {
-                        item(key = "date.${message.server.length}:${message.server}${message.id}") {
+                        item(key = "date.${message.server.length}:${message.server}${message.id}", contentType = "date") {
                             BeaconText(
                                 when (date) {
                                     null -> stringResource(R.string.message_unknown_date)
@@ -384,12 +394,15 @@ private fun MessagesContent(
                             )
                         }
                     }
-                    item(key = MessageKey(message.server, message.id)) {
+                    item(key = MessageKey(message.server, message.id), contentType = "message") {
                         val key = MessageKey(message.server, message.id)
                         MessageItem(
                             message,
                             selectionMode,
                             key in selectedKeys,
+                            // A card fades and slides instead of vanishing when it is deleted or
+                            // re-sorted; the stable key above is what makes the move animatable.
+                            modifier = Modifier.animateItem(),
                             onSelect = { checked ->
                                 if (!checked) onSelectionChange(selectedKeys - key)
                                 else if (selectedKeys.size < 100) {
@@ -442,7 +455,7 @@ private fun MessagesContent(
                         )
                     }
                 }
-                item(key = "history-loading") {
+                item(key = "history-loading", contentType = "loading") {
                     Box(
                         Modifier.fillMaxWidth().padding(12.dp),
                         contentAlignment = Alignment.Center,

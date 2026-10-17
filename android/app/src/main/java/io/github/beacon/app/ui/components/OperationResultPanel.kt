@@ -61,13 +61,16 @@ fun SettingsStatusSummary(
             .clip(RoundedCornerShape(14.dp))
             .then(
                 if (interactive)
-                    Modifier.clickable(enabled = displayedDetails.isNotBlank()) {
+                    Modifier.clickable(
+                        enabled = displayedDetails.isNotBlank(),
+                        role = androidx.compose.ui.semantics.Role.Button,
+                    ) {
                         showingDetails = true
                     }
                 else Modifier
             )
             .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
@@ -80,7 +83,7 @@ fun SettingsStatusSummary(
         }
         Column(
             Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
+            verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap2),
         ) {
             BeaconText(
                 displayedTitle,
@@ -139,7 +142,7 @@ fun OperationResultPanel(title: String, result: String, failed: Boolean? = null)
     if (failed == false && result.length <= 100 && !result.contains('\n')) {
         Row(
             Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(

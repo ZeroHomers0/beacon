@@ -50,7 +50,7 @@ internal fun LazyListScope.notificationPermissionSettingsItems(
                 val allowed = notificationPermission == NotificationPermissionState.ALLOWED
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
                 ) {
                     Icon(
                         if (allowed) BeaconIcons.Check else BeaconIcons.Warning,

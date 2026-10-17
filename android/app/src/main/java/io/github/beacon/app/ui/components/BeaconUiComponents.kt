@@ -21,6 +21,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
@@ -68,8 +69,8 @@ enum class NotificationPermissionState {
 @Composable
 fun ActionFlow(content: @Composable FlowRowScope.() -> Unit) {
     FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8),
+        verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap4),
         content = content,
     )
 }
@@ -173,6 +174,13 @@ fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
 }
 
 /**
+ * Every settings page scrolls through [BeaconSettingsList], so one tag finds any of them. Tests
+ * scroll by tag and then assert on visible text, which keeps them from depending on a page's
+ * vertical layout.
+ */
+const val SETTINGS_LIST_TAG = "settings-list"
+
+/**
  * The scroll container every settings surface uses: item spacing and keyboard avoidance are fixed
  * here so no page can drift away from the others.
  */
@@ -181,11 +189,12 @@ fun BeaconSettingsList(
     state: LazyListState,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp),
+    listTag: String = SETTINGS_LIST_TAG,
     content: LazyListScope.() -> Unit,
 ) {
     LazyColumn(
         state = state,
-        modifier = modifier.imePadding(),
+        modifier = modifier.imePadding().testTag(listTag),
         contentPadding = contentPadding,
         verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SettingsGroupGap),
         content = content,
@@ -222,10 +231,10 @@ fun SettingsRow(
                     vertical = BeaconUiMetrics.NavigationVerticalInset,
                 ),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap16),
         ) {
             BadgedIcon(icon, iconTint, badge)
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap2)) {
                 BeaconText(title, style = MaterialTheme.typography.bodyLarge)
                 if (subtitle.isNotBlank())
                     BeaconText(
@@ -304,6 +313,7 @@ fun MessageItem(
     onOpen: () -> Unit,
     onToggleRead: () -> Unit,
     onLongPress: () -> Unit,
+    modifier: Modifier = Modifier,
     onShare: (() -> Unit)? = null,
     onRemind: (() -> Unit)? = null,
     onFilterGroup: (() -> Unit)? = null,
@@ -314,7 +324,8 @@ fun MessageItem(
     val longPressLabel = stringResource(R.string.ui_message_long_press)
     BeaconCard(
         modifier =
-            Modifier.fillMaxWidth()
+            modifier
+                .fillMaxWidth()
                 .clip(RoundedCornerShape(BeaconUiMetrics.CardRadius))
                 .combinedClickable(
                     enabled = !busy,
@@ -334,11 +345,11 @@ fun MessageItem(
     ) {
         Column(
             Modifier.padding(horizontal = BeaconUiMetrics.CardInset, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap4),
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6),
             ) {
                 if (selectionMode)
                     BeaconCheckbox(
@@ -349,7 +360,7 @@ fun MessageItem(
                     )
                 Column(
                     Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap2),
                 ) {
                     BeaconText(
                         message.title.ifBlank { stringResource(R.string.msg_untitled_message) },
