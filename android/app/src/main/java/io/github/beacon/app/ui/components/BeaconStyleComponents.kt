@@ -299,6 +299,25 @@ fun BeaconActionButton(
     }
 }
 
+@Composable
+fun BeaconCheckConnectionButton(
+    label: String,
+    loading: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    BeaconOutlinedButton(onClick, Modifier.fillMaxWidth(), enabled && !loading) {
+        BeaconLoadingIcon(
+            io.github.beacon.app.ui.icons.BeaconIcons.Sync,
+            loading,
+            Modifier.size(18.dp),
+            tint = androidx.compose.material3.LocalContentColor.current,
+        )
+        Spacer(Modifier.width(6.dp))
+        BeaconText(label, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
 /**
  * Irreversible confirmation. The filled error container is the only difference from [BeaconButton],
  * so it must stay reserved for actions that cannot be undone.

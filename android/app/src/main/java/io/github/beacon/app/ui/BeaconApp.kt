@@ -771,23 +771,13 @@ fun BeaconApp(
                                                 ) {
                                                     actions.markAllRead()
                                                 }
-                                                if (busy)
-                                                    Box(
-                                                        Modifier.size(48.dp),
-                                                        contentAlignment = Alignment.Center,
-                                                    ) {
-                                                        CircularProgressIndicator(
-                                                            Modifier.size(22.dp),
-                                                            strokeWidth = 2.dp,
-                                                        )
-                                                    }
-                                                else
-                                                    BeaconActionIcon(
-                                                        BeaconIcons.Sync,
-                                                        stringResource(R.string.action_sync_now),
-                                                    ) {
-                                                        actions.transport()
-                                                    }
+                                                io.github.beacon.app.ui.components.BeaconRefreshAction(
+                                                    stringResource(R.string.action_sync_now),
+                                                    runtimeState.runtimeConnected && !busy,
+                                                    runtimeState.transportBusy,
+                                                ) {
+                                                    actions.transport()
+                                                }
                                                 Box {
                                                     BeaconActionIcon(
                                                         BeaconIcons.Filter,

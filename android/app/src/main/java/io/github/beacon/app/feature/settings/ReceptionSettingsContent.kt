@@ -170,10 +170,11 @@ internal fun LazyListScope.receptionSettingsItems(
                             enabled = !busy && runtimeState.runtimeConnected,
                         ) {
                             if (runtimeState.transportBusy) {
-                                CircularProgressIndicator(
-                                    Modifier.size(16.dp),
-                                    color = LocalContentColor.current,
-                                    strokeWidth = 2.dp,
+                                io.github.beacon.app.ui.components.BeaconLoadingIcon(
+                                    io.github.beacon.app.ui.icons.BeaconIcons.Sync,
+                                    loading = true,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = LocalContentColor.current,
                                 )
                                 Spacer(Modifier.width(8.dp))
                             }

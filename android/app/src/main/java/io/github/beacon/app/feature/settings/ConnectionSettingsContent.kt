@@ -96,15 +96,13 @@ internal fun LazyListScope.connectionSettingsItems(
                     maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 )
-                BeaconActionButton(
+                io.github.beacon.app.ui.components.BeaconCheckConnectionButton(
                     stringResource(
                         if (runtimeState.serverChecking) R.string.server_checking
                         else R.string.server_check_action
                     ),
-                    BeaconIcons.Realtime,
-                    Modifier.fillMaxWidth(),
-                    !runtimeState.serverChecking &&
-                        runtimeState.runtimeConnected &&
+                    runtimeState.serverChecking,
+                    runtimeState.runtimeConnected &&
                         runtimeState.configuredEndpoint.isNotBlank(),
                     actions::checkServer,
                 )

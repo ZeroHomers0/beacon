@@ -28,7 +28,7 @@ fun BeaconLoadingIcon(
             val transition = rememberInfiniteTransition(label = "busy-icon")
             val angle by transition.animateFloat(
                 initialValue = 0f,
-                targetValue = 360f,
+                targetValue = -360f,
                 animationSpec = infiniteRepeatable(tween(1200, easing = LinearEasing), RepeatMode.Restart),
                 label = "busy-icon-rotation",
             )
