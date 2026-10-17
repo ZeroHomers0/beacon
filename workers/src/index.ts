@@ -1,7 +1,8 @@
 import { DurableObject } from "cloudflare:workers";
 import { API } from "./api";
 import { Attachment, MAINTENANCE, message, reject } from "./domain";
-import { error, json } from "./http";
+import { error, json, negotiated } from "./http";
+import { REALTIME_ENVELOPE_PROTOCOL } from "./protocol";
 import { MessageStore } from "./store/messages";
 import { migrate } from "./store/schema";
 import type { Transport } from "./ports";
@@ -45,9 +46,9 @@ export class BeaconInstance extends DurableObject<Env> implements Transport {
   }
   async fetch(request: Request): Promise<Response> {
     try {
-      return await this.api.handle(request);
+      return await negotiated(request, await this.api.handle(request));
     } catch (e) {
-      return error(e);
+      return await negotiated(request, error(e));
     }
   }
   async arm(): Promise<void> {
@@ -103,7 +104,7 @@ export class BeaconInstance extends DurableObject<Env> implements Transport {
     for (const task of this.store.due(now, device)) {
       let delivered = false;
       const payload = JSON.stringify({
-        protocol: 1,
+        protocol: REALTIME_ENVELOPE_PROTOCOL,
         server_id: this.store.serverID,
         message: message(task),
       });
@@ -194,7 +195,7 @@ export class BeaconInstance extends DurableObject<Env> implements Transport {
         for (const item of page.messages)
           ws.send(
             JSON.stringify({
-              protocol: 1,
+              protocol: REALTIME_ENVELOPE_PROTOCOL,
               server_id: this.store.serverID,
               message: item,
             }),

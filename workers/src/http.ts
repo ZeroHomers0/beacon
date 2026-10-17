@@ -20,6 +20,60 @@ export function error(error: unknown): Response {
     ? json({ error: error.code }, error.status, error.headers)
     : json({ error: "storage_error" }, 500);
 }
+
+// Gzip a JSON body when the caller asked for it.
+//
+// The Android client decompresses transparently through OkHttp, so this costs it
+// nothing and typically removes 70-80% of a message page. The runtime provides
+// CompressionStream, so no dependency is involved.
+//
+// A WebSocket handshake (status 101) carries a body that the runtime has already
+// claimed; compressing it would corrupt the upgrade, so that case and every
+// bodyless status are returned untouched.
+export async function negotiated(
+  request: Request,
+  response: Response,
+): Promise<Response> {
+  const encoding = response.headers.get("Content-Encoding");
+  if (
+    encoding ||
+    response.status === 101 ||
+    response.status < 200 ||
+    response.status === 204 ||
+    response.status === 304 ||
+    !response.body ||
+    !acceptsGzip(request.headers.get("Accept-Encoding"))
+  )
+    return response;
+  const compressed = response.body.pipeThrough(new CompressionStream("gzip"));
+  const headers = new Headers(response.headers);
+  headers.set("Content-Encoding", "gzip");
+  // The encoded length is no longer the length of what was sent.
+  headers.delete("Content-Length");
+  // A shared cache must not hand a gzip body to a client that never asked for one.
+  headers.append("Vary", "Accept-Encoding");
+  return new Response(compressed, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
+export function acceptsGzip(header: string | null): boolean {
+  if (!header) return false;
+  for (const part of header.split(",")) {
+    const [encoding, ...parameters] = part.split(";");
+    if (encoding.trim().toLowerCase() !== "gzip") continue;
+    for (const parameter of parameters) {
+      const [name, value] = parameter.split("=");
+      if (name?.trim().toLowerCase() !== "q") continue;
+      // `gzip;q=0` is an explicit refusal, not an acceptance.
+      if (Number(value) === 0) return false;
+    }
+    return true;
+  }
+  return false;
+}
 export function method(request: Request, expected: string): void {
   if (request.method !== expected)
     throw new Fault(405, "method_not_allowed", { Allow: expected });
