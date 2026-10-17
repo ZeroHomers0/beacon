@@ -40,7 +40,10 @@ internal fun ServerAdminPage(
 ) {
     val activity = checkNotNull(LocalActivity.current as? androidx.activity.ComponentActivity)
     val model = remember(activity) { ViewModelProvider(activity)[ServerAdminViewModel::class.java] }
-    LaunchedEffect(model) { model.restoreSession(activity) }
+    LaunchedEffect(model) {
+        model.restoreSession(activity)
+        model.loadOnEntry()
+    }
     val state by model.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val resources = androidx.compose.ui.platform.LocalResources.current
@@ -164,6 +167,22 @@ internal fun ServerAdminPage(
             item {
                 SettingsSection(stringResource(R.string.admin_title)) {
                     SettingsHint(stringResource(R.string.admin_loading))
+                }
+            }
+        } else if (state.restoreFailure != null) {
+            item {
+                SettingsSection(stringResource(R.string.admin_login_title)) {
+                    SettingsHint(stringResource(state.restoreFailure!!))
+                    BeaconOutlinedButton(
+                        onClick = {
+                            if (state.restoreFailure == R.string.admin_credentials_clear_failed) model.logout()
+                            else model.restoreSession(activity)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { BeaconText(stringResource(R.string.action_retry)) }
+                    BeaconTextButton(onClick = { model.logout() }) {
+                        BeaconText(stringResource(R.string.admin_clear_and_login))
+                    }
                 }
             }
         } else if (!state.loggedIn) {
@@ -307,7 +326,12 @@ internal fun ServerAdminPage(
                         }
 
                     item {
-                        if (devices.isEmpty())
+                        if (!state.overviewLoaded)
+                            SettingsHint(stringResource(
+                                if (state.busy) R.string.settings_data_loading
+                                else R.string.admin_overview_unavailable
+                            ))
+                        else if (devices.isEmpty())
                             BeaconEmptyState(
                                 BeaconIcons.Server,
                                 stringResource(R.string.admin_devices_title),
@@ -363,7 +387,12 @@ internal fun ServerAdminPage(
                 1 -> {
 
                     item {
-                        if (applications.isEmpty())
+                        if (!state.overviewLoaded)
+                            SettingsHint(stringResource(
+                                if (state.busy) R.string.settings_data_loading
+                                else R.string.admin_overview_unavailable
+                            ))
+                        else if (applications.isEmpty())
                             BeaconEmptyState(
                                 BeaconIcons.CredentialUpdate,
                                 stringResource(R.string.admin_applications_title),

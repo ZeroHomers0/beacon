@@ -146,7 +146,8 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                         stringResource(R.string.storage_last_result_label),
                         io.github.beacon.app.domain.policy.CleanupResultPresentation.compact(
                             settings.lastResult
-                        ),
+                        ).ifBlank { "—" },
+                        reserveValueLines = 2,
                     )
                 },
             )
@@ -199,26 +200,24 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
             }
         }
         SettingsSection(stringResource(R.string.storage_preview_title)) {
-            if (preview != null) {
-                SettingsMetricGrid(
-                    listOf(
-                        stringResource(R.string.settings_cleanup_eligible) to
-                            preview.eligible.toString(),
-                        stringResource(R.string.settings_cleanup_protected) to
-                            preview.protected.toString(),
-                        stringResource(R.string.settings_cleanup_planned) to
-                            preview.planned.toString(),
-                    ),
-                    columns = 3,
-                )
-            }
+            SettingsMetricGrid(
+                listOf(
+                    stringResource(R.string.settings_cleanup_eligible) to
+                        (preview?.eligible?.toString() ?: "—"),
+                    stringResource(R.string.settings_cleanup_protected) to
+                        (preview?.protected?.toString() ?: "—"),
+                    stringResource(R.string.settings_cleanup_planned) to
+                        (preview?.planned?.toString() ?: "—"),
+                ),
+                columns = 3,
+            )
             SettingsHint(
                 stringResource(
                     when {
                         !state.runtimeConnected -> R.string.settings_runtime_disconnected
                         state.messageBusy || (!settingsLoaded && !loadFailed) ->
                             R.string.settings_data_loading
-                        preview == null -> R.string.settings_preview_unavailable
+                        preview == null || !state.cleanupPreviewFresh -> R.string.settings_preview_unavailable
                         preview.planned <= 0 -> R.string.settings_preview_empty
                         else -> R.string.settings_preview_ready
                     }
@@ -239,6 +238,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                         enabled =
                             state.runtimeConnected &&
                                 !state.messageBusy &&
+                                state.cleanupPreviewFresh &&
                                 (preview?.planned ?: 0) > 0,
                     ) {
                         BeaconText(stringResource(R.string.storage_clean_action))
@@ -309,7 +309,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
             description = stringResource(R.string.storage_confirm_message, snapshot.planned),
             confirmText = stringResource(R.string.storage_clean_action),
             danger = false,
-            enabled = !state.messageBusy && settingsLoaded && !saving,
+            enabled = !state.messageBusy && settingsLoaded && !saving && state.cleanupPreviewFresh && preview?.token == snapshot.token,
             onDismiss = { confirmation = null },
             onConfirm = {
                 confirmation = null

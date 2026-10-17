@@ -117,15 +117,7 @@ fun MessageDetailScreen(
                     }
                     MessageMarkdownBody(message.body) { canToggle, raw, toggle ->
                     if (message.group.isNotBlank() || message.applicationId.isNotBlank() || canToggle)
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Row(
-                                Modifier.weight(1f),
-                                horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6),
-                            ) {
+                        MessageMetadataRow(hasAction = canToggle) {
                             if (message.applicationId.isNotBlank())
                                 MessageFilterTag(
                                     message.applicationName.ifBlank {
@@ -134,13 +126,10 @@ fun MessageDetailScreen(
                                             message.applicationId.take(8),
                                         )
                                     },
-                                    modifier = Modifier.weight(1f, fill = false),
                                 )
                             if (message.group.isNotBlank()) MessageFilterTag(
                                 message.group,
-                                modifier = Modifier.weight(1f, fill = false),
                             )
-                            }
                             if (canToggle) MessageFilterTag(
                                 stringResource(if (raw) R.string.message_markdown_rendered else R.string.message_markdown_source),
                                 outlined = true,

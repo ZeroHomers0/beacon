@@ -22,7 +22,6 @@ import io.github.beacon.app.ui.components.NotificationPermissionState
 import io.github.beacon.app.ui.components.SettingsGroup
 import io.github.beacon.app.ui.components.SettingsRow
 import io.github.beacon.app.ui.components.SettingsScreen
-import io.github.beacon.app.ui.components.receiveLabel
 import io.github.beacon.app.ui.components.receiveModeIcon
 import io.github.beacon.app.ui.components.receiveModeTitle
 import io.github.beacon.app.ui.icons.BeaconIcons
@@ -80,7 +79,6 @@ fun SettingsPage(
                 runtimeState.runtimeConnected &&
                 !runtimeState.messageBusy
         ) {
-            pendingReminderCount = null
             reminderFailed = false
             actions.pendingReminders(onFailure = { reminderFailed = true }) {
                 pendingReminderCount = it
@@ -232,9 +230,7 @@ fun SettingsPage(
                         }
                         SettingsRow(
                             stringResource(R.string.settings_reception_page_title),
-                            stringResource(receiveModeTitle(receivePlan.mode)) +
-                                " · " +
-                                receiveLabel(polling),
+                            stringResource(receiveModeTitle(receivePlan.mode)),
                             receiveModeIcon(receivePlan.mode),
                             iconTint =
                                 io.github.beacon.app.ui.components.receiveModeColor(

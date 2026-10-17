@@ -269,7 +269,7 @@
     <string name="settings_guide_notifications_denied">尚未允许</string>
     <string name="settings_guide_check_notifications">检查通知权限</string>
     <string name="settings_guide_receive_title">3. 接收模式</string>
-    <string name="settings_guide_receive_hint">选择接收模式并开启自动接收。出现后台延迟时，再检查后台权限。</string>
+    <string name="settings_guide_receive_hint">绑定后自动接收消息，可按需选择接收模式。出现后台延迟时，再检查后台权限。</string>
     <string name="settings_guide_receive_action">设置接收模式</string>
     <string name="settings_guide_test_title">4. 推送验证</string>
     <string name="settings_guide_test_hint">发送测试消息，确认列表和通知正常，再锁屏验证后台接收。</string>
@@ -367,6 +367,14 @@
     <string name="admin_token">管理员令牌</string>
     <string name="admin_login">登录管理</string>
     <string name="admin_loading">正在处理…</string>
+    <string name="admin_overview_unavailable">数据未能加载，请点击右上角刷新。</string>
+    <string name="reception_realtime_not_needed">省电模式无需即时连接</string>
+    <string name="time_picker_hour">小时</string>
+    <string name="time_picker_minute">分钟</string>
+    <string name="admin_restore_failed">无法读取已保存的登录信息，请重试或重新登录。</string>
+    <string name="admin_clear_and_login">清除并重新登录</string>
+    <string name="admin_credentials_save_failed">已登录，但登录信息未保存，下次可能需要重新登录。</string>
+    <string name="admin_credentials_clear_failed">登录信息未能清除，请重试退出登录。</string>
     <string name="admin_overview">服务器概况</string>
     <string name="admin_version">服务端版本</string>
     <string name="admin_compatibility">版本兼容</string>

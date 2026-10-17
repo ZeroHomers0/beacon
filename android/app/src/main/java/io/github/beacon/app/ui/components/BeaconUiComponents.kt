@@ -163,6 +163,8 @@ fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
                 Modifier.padding(horizontal = BeaconUiMetrics.CardInset).semantics { heading() },
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         BeaconCard(
             Modifier.fillMaxWidth().animateContentSize(),

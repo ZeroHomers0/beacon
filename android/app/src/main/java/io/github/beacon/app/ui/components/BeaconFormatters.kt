@@ -5,7 +5,6 @@ import androidx.compose.ui.res.stringResource
 import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.OperationKind
 import io.github.beacon.app.domain.model.OperationStatus
-import io.github.beacon.app.domain.model.PollingState
 
 /**
  * Display strings derived from state rather than stored in it.
@@ -17,14 +16,6 @@ import io.github.beacon.app.domain.model.PollingState
 fun formatMessageTime(time: Long): String =
     if (time <= 0) stringResource(R.string.ui_unknown_label)
     else io.github.beacon.app.domain.policy.DisplayTime.format(time)
-
-@Composable
-fun receiveLabel(state: PollingState): String =
-    when {
-        state.blocked.isNotBlank() -> stringResource(R.string.ui_receive_attention_title)
-        !state.config.enabled -> stringResource(R.string.settings_receive_unbound)
-        else -> stringResource(R.string.ui_battery_saver_on_desc)
-    }
 
 /** Connection remediation is fixed text; everything else shows the runtime's own message. */
 @Composable

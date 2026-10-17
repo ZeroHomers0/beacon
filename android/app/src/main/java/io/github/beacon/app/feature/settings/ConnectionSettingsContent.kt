@@ -85,7 +85,7 @@ internal fun LazyListScope.connectionSettingsItems(
                         else MaterialTheme.colorScheme.onSurfaceVariant,
                     loading = runtimeState.serverChecking,
                     interactive = false,
-                    compact = true,
+                    compact = false,
                 )
                 BeaconText(
                     stringResource(R.string.server_last_checked) +

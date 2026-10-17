@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
 
 data class AdminDevice(val id: String, val name: String, val revoked: Boolean)
@@ -35,6 +37,8 @@ data class AdminSecret(
 
 data class AdminUiState(
     val restoring: Boolean = false,
+    val restoreFailure: Int? = null,
+    val overviewLoaded: Boolean = false,
     val endpoint: String = "",
     val loggedIn: Boolean = false,
     val busy: Boolean = false,
@@ -79,10 +83,15 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
     private var generation = 0
 
     private var credentialStore: io.github.beacon.app.data.local.TransportSecretStore? = null
+    private val credentialMutex = Mutex()
+    private var restoreJob: Job? = null
+    private var managementRequested = false
+    private var overviewRequested = false
 
     fun restoreSession(context: android.content.Context) {
-        if (credentialStore != null) return
+        if (restoreJob?.isActive == true || (credentialStore != null && mutable.value.restoreFailure == null)) return
         val store =
+            credentialStore ?:
             io.github.beacon.app.data.local.TransportSecretStore(
                 context.applicationContext,
                 "admin_secret",
@@ -90,10 +99,16 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
             )
         credentialStore = store
         val restoreGeneration = generation
-        viewModelScope.launch {
-            val saved = withContext(Dispatchers.IO) { runCatching { store.load() }.getOrNull() }
+        mutable.value = mutable.value.copy(restoring = true, restoreFailure = null)
+        restoreJob = viewModelScope.launch {
+            val restored = withContext(Dispatchers.IO) {
+                credentialMutex.withLock {
+                    runCatching { if (store.isConfigured()) store.load() else null }
+                }
+            }
             if (generation != restoreGeneration || session != null || mutable.value.busy)
                 return@launch
+            val saved = restored.getOrNull()
             val client = saved?.let { runCatching { createClient(it.endpoint, it.token) }.getOrNull() }
             session = client
             mutable.value =
@@ -101,10 +116,25 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
                     restoring = false,
                     endpoint = client?.endpoint.orEmpty(),
                     loggedIn = client != null,
+                    restoreFailure = if (restored.isFailure || (saved != null && client == null))
+                        R.string.admin_restore_failed else null,
                 )
-            if (client != null) refresh()
+            if (client != null && managementRequested) loadOnEntry()
         }
     }
+
+    fun loadOnEntry() {
+        managementRequested = true
+        if (mutable.value.loggedIn && !mutable.value.overviewLoaded && !overviewRequested) {
+            overviewRequested = true
+            refresh()
+        }
+    }
+
+    private suspend fun persistCredentials(work: () -> Unit): Boolean =
+        withContext(Dispatchers.IO) {
+            credentialMutex.withLock { runCatching(work).isSuccess }
+        }
 
     /** The caller shows the outcome in the app-wide snackbar, so the message is consumed once. */
     fun dismissFeedback() {
@@ -115,9 +145,18 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
         dismissCreation()
         generation++
         job?.cancel()
+        restoreJob?.cancel()
         session = null
-        credentialStore?.clear()
-        mutable.value = AdminUiState(feedback = R.string.admin_logged_out)
+        overviewRequested = false
+        mutable.value = AdminUiState(busy = true)
+        val captured = generation
+        job = viewModelScope.launch {
+            val cleared = persistCredentials { credentialStore?.clear() }
+            if (captured == generation) mutable.value = AdminUiState(
+                feedback = if (cleared) R.string.admin_logged_out else R.string.admin_credentials_clear_failed,
+                restoreFailure = if (cleared) null else R.string.admin_credentials_clear_failed,
+            )
+        }
     }
 
     fun login(endpoint: String, token: String) {
@@ -133,12 +172,15 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
         run(
             R.string.admin_connected,
             onSuccess = {
-                credentialStore?.save(
-                    io.github.beacon.app.domain.model.TransportSettings(
-                        client.endpoint,
-                        token.trim(),
+                val saved = persistCredentials {
+                    credentialStore?.save(
+                        io.github.beacon.app.domain.model.TransportSettings(
+                            client.endpoint,
+                            token.trim(),
+                        )
                     )
-                )
+                }
+                if (!saved) mutable.value = mutable.value.copy(feedback = R.string.admin_credentials_save_failed)
             },
         ) {
             val overview = client.overview()
@@ -275,7 +317,7 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
         run(success) { work(client) }
     }
 
-    private fun run(success: Int?, onSuccess: () -> Unit = {}, work: () -> AdminUiState) {
+    private fun run(success: Int?, onSuccess: suspend () -> Unit = {}, work: () -> AdminUiState) {
         if (mutable.value.busy) return
         val captured = generation
         mutable.value = mutable.value.copy(busy = true, feedback = null, refreshFailure = null)
@@ -283,8 +325,9 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
             try {
                 val result = withContext(Dispatchers.IO) { work() }
                 if (captured == generation) {
-                    mutable.value = result.copy(busy = false, feedback = success)
+                    mutable.value = result.copy(busy = true, feedback = success)
                     onSuccess()
+                    if (captured == generation) mutable.value = mutable.value.copy(busy = false)
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
@@ -292,8 +335,13 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
                 if (captured != generation) return@launch
                 if (failure is AdminRequestException && failure.status in listOf(401, 403)) {
                     session = null
-                    credentialStore?.clear()
+                    val cleared = persistCredentials { credentialStore?.clear() }
+                    if (captured != generation) return@launch
                     mutable.value = AdminUiState(endpoint = mutable.value.endpoint)
+                    if (!cleared) {
+                        mutable.value = mutable.value.copy(restoreFailure = R.string.admin_credentials_clear_failed)
+                        return@launch
+                    }
                 }
                 val feedback =
                     when (failure) {
@@ -335,6 +383,7 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
             val applications = json.optJSONArray("applications")
             val storage = json.getJSONObject("storage")
             return AdminUiState(
+                overviewLoaded = true,
                 version = json.optString("version", "—"),
                 protocol = json.optInt("protocol", ProtocolContract.MIN_HTTP),
                 serverId = json.getString("server_id"),

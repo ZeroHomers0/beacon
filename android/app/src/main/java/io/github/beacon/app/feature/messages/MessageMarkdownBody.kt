@@ -90,7 +90,7 @@ internal fun MessageMarkdownBody(
             }.getOrElse { RenderedBody(SpannableString(body), emptyList(), emptyList(), emptyList(), failed = true) }
         }
     }
-    header(rendered?.let { !it.failed && it.text.toString() != body } == true, raw) { raw = !raw }
+    header(true, raw) { raw = !raw }
     Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
         if (raw || rendered?.failed == true || body.isBlank()) {
             if (rendered?.failed == true && !raw)
@@ -100,7 +100,9 @@ internal fun MessageMarkdownBody(
             }
         } else {
             val result = rendered
-            if (result == null) BeaconText(stringResource(R.string.message_markdown_loading))
+            if (result == null) SelectionContainer {
+                BeaconText(body, style = MaterialTheme.typography.bodyLarge)
+            }
             else {
                 val textColor = MaterialTheme.colorScheme.onSurface.toArgb()
                 val linkColor = MaterialTheme.colorScheme.primary.toArgb()

@@ -869,12 +869,12 @@ class RuntimeRepository : RuntimeActions {
     override fun previewCleanup(policy: CleanupPolicy) {
         if (state.value.messageBusy || !ready()) return
         policy.validate()
-        mutableState.update { it.copy(dataBusy = true, cleanupPreview = null) }
+        mutableState.update { it.copy(dataBusy = true, cleanupPreviewFresh = false) }
         connection.execute(
             { RuntimeMessageClient(it).previewCleanup(policy) },
             { preview ->
                 mutableState.update {
-                    it.copy(dataBusy = false, cleanupPreview = preview, cleanupPolicy = policy)
+                    it.copy(dataBusy = false, cleanupPreview = preview, cleanupPolicy = policy, cleanupPreviewFresh = true)
                 }
             },
             { error -> failData("清理预览失败：${OperationFailure.describe(error,crossProcess=true)}") },
@@ -964,6 +964,7 @@ class RuntimeRepository : RuntimeActions {
 
     override fun applyCleanup(token: String) {
         if (state.value.messageBusy || !ready()) return
+        if (!state.value.cleanupPreviewFresh || state.value.cleanupPreview?.token != token) return
         mutableState.update { it.copy(dataBusy = true, cleanupPreview = null) }
         connection.execute(
             { RuntimeMessageClient(it).applyCleanup(token) },

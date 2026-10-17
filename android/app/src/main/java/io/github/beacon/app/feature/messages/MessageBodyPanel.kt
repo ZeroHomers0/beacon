@@ -5,6 +5,8 @@ import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
@@ -71,6 +73,7 @@ fun MessageMediaPanel(metadata: String, description: String? = null) {
     val image = values?.optString("image").orEmpty()
     val icon = values?.optString("icon").orEmpty()
     var load by remember(metadata) { mutableStateOf(false) }
+    var requested by rememberSaveable(metadata) { mutableStateOf(false) }
     var bitmap by remember(metadata) { mutableStateOf<android.graphics.Bitmap?>(null) }
     var avatar by remember(metadata) { mutableStateOf<android.graphics.Bitmap?>(null) }
     var hint by remember(metadata) { mutableStateOf("") }
@@ -85,8 +88,10 @@ fun MessageMediaPanel(metadata: String, description: String? = null) {
         hint = ""
     }
     if (image.isNotEmpty() || icon.isNotEmpty()) {
-        if (!load)
-            BeaconOutlinedButton(onClick = { load = true }) {
+            BeaconOutlinedButton(
+                onClick = { requested = true; load = true },
+                enabled = !load,
+            ) {
                 BeaconText(
                     if (description == null) stringResource(R.string.msg_media_load)
                     else stringResource(R.string.message_markdown_load_image, description)
@@ -112,22 +117,36 @@ fun MessageMediaPanel(metadata: String, description: String? = null) {
                 bitmap = images.first
                 avatar = images.second
                 hint = if (bitmap == null && avatar == null) failedText else ""
+                load = false
             }
         }
-        avatar?.let {
-            Image(
-                it.asImageBitmap(),
-                stringResource(R.string.msg_media_icon_description),
-                Modifier.size(48.dp),
-            )
+        if (requested) androidx.compose.material3.Surface(
+            modifier = if (image.isNotEmpty()) Modifier.fillMaxWidth().aspectRatio(16f / 9f)
+                else Modifier.fillMaxWidth().height(64.dp),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+            color = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh,
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                bitmap?.let {
+                    Image(
+                        it.asImageBitmap(),
+                        description ?: stringResource(R.string.msg_media_image_description),
+                        Modifier.fillMaxSize(),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                    )
+                }
+                avatar?.let {
+                    Image(
+                        it.asImageBitmap(),
+                        stringResource(R.string.msg_media_icon_description),
+                        Modifier.align(Alignment.TopStart).padding(8.dp).size(48.dp),
+                    )
+                }
+                if (bitmap == null && avatar == null) BeaconText(
+                    hint.ifBlank { stringResource(R.string.msg_media_load) },
+                    Modifier.padding(BeaconUiMetrics.CardInset),
+                )
+            }
         }
-        bitmap?.let {
-            Image(
-                it.asImageBitmap(),
-                description ?: stringResource(R.string.msg_media_image_description),
-                Modifier.fillMaxWidth().heightIn(max = 320.dp),
-            )
-        }
-        if (hint.isNotEmpty()) BeaconText(hint)
     }
 }

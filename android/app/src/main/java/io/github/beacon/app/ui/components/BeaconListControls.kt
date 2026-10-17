@@ -227,7 +227,7 @@ internal fun diagnosticRowFits(
  * wraps. The one-line form right-aligns the value, keeping the pair symmetrical.
  */
 @Composable
-fun DiagnosticRow(label: String, value: String) {
+fun DiagnosticRow(label: String, value: String, reserveValueLines: Int = 0) {
     val labelStyle = MaterialTheme.typography.bodyLarge
     val valueStyle =
         MaterialTheme.typography.bodyMedium.copy(
@@ -249,7 +249,7 @@ fun DiagnosticRow(label: String, value: String) {
             val labelWidth = measurer.measure(label, labelStyle, maxLines = 1).size.width
             val valueWidth = measurer.measure(value, valueStyle, maxLines = 1).size.width
             val fits =
-                constraints.hasBoundedWidth &&
+                reserveValueLines == 0 && constraints.hasBoundedWidth &&
                     diagnosticRowFits(
                         labelWidth,
                         valueWidth,
@@ -268,7 +268,17 @@ fun DiagnosticRow(label: String, value: String) {
             else
                 Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap4)) {
                     BeaconText(label, style = labelStyle, color = labelColor)
-                    BeaconText(value, style = valueStyle)
+                    BeaconText(
+                        value,
+                        modifier = if (reserveValueLines > 0) Modifier.heightIn(
+                            min = with(LocalDensity.current) {
+                                (valueStyle.lineHeight * reserveValueLines).toDp()
+                            }
+                        ) else Modifier,
+                        style = valueStyle,
+                        maxLines = if (reserveValueLines > 0) reserveValueLines else Int.MAX_VALUE,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    )
                 }
         }
     }

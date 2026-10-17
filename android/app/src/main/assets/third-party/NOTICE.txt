@@ -11,7 +11,7 @@ Path data fixed at google/material-design-icons commit
 737e3324305806514d7909874fa1818ae1808232, licensed under the Apache
 License, Version 2.0; the full text is in Apache-2.0.txt in this directory.
 
-MIUIX (top.yukonga.miuix.kmp:miuix-android:0.8.5) / compose-miuix-ui
+MIUIX (top.yukonga.miuix.kmp:miuix-android:0.8.7) / compose-miuix-ui
 contributors, licensed under Apache-2.0.
 
 Markwon core 4.6.2 / Markwon contributors

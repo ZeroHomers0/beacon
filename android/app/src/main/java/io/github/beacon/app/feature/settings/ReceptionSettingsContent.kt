@@ -58,24 +58,6 @@ internal fun LazyListScope.receptionSettingsItems(
             )
         }
     }
-    if (runtimeState.runtimeConnected && !runtimeState.receivePlanLoaded)
-        item {
-            SettingsSection(stringResource(R.string.settings_receive_loading_title)) {
-                io.github.beacon.app.ui.components.SettingsHint(
-                    stringResource(
-                        if (busy) R.string.settings_data_loading
-                        else R.string.settings_receive_retry_hint
-                    )
-                )
-                io.github.beacon.app.ui.components.BeaconOutlinedButton(
-                    onClick = { actions.refreshPolling { actions.receivePlan() } },
-                    enabled = !busy,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    BeaconText(stringResource(R.string.action_retry))
-                }
-            }
-        }
     item {
         SettingsPreferences(stringResource(R.string.settings_receive_status_title)) {
             ReceptionStatusRow(
@@ -102,7 +84,6 @@ internal fun LazyListScope.receptionSettingsItems(
                     runtimeState.configuredEndpoint.isNotBlank() && runtimeState.receivePlanLoaded &&
                     !runtimeState.transportBusy,
             )
-            if (receivePlan.mode != ReceiveMode.POWER_SAVING && runtimeState.receivePlanLoaded)
                 ReceptionStatusRow(
                     stringResource(R.string.receive_realtime_status_title),
                     when {
@@ -110,6 +91,8 @@ internal fun LazyListScope.receptionSettingsItems(
                         stringResource(R.string.settings_receive_unbound)
                     !runtimeState.runtimeConnected ->
                         stringResource(R.string.settings_runtime_disconnected)
+                    !runtimeState.receivePlanLoaded -> stringResource(R.string.settings_data_loading)
+                    receivePlan.mode == ReceiveMode.POWER_SAVING -> stringResource(R.string.reception_realtime_not_needed)
                     polling.blocked.isNotBlank() -> stringResource(R.string.reception_sync_blocked)
                     !polling.config.enabled -> stringResource(R.string.reception_paused)
                     runtimeState.realtimeRunning ->
@@ -222,6 +205,9 @@ private fun ReceptionStatusRow(title: String, details: String, error: Boolean = 
         )
         BeaconText(
             details,
+            modifier = Modifier.heightIn(min = with(androidx.compose.ui.platform.LocalDensity.current) {
+                MaterialTheme.typography.bodySmall.lineHeight.toDp() * 2
+            }),
             style = MaterialTheme.typography.bodySmall,
             maxLines = 2,
             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,

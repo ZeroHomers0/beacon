@@ -25,9 +25,10 @@ internal fun NotificationSettingsPanel(
                 if (draft.freshMinutes in it) it else (it + draft.freshMinutes).sorted()
             }
         Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SettingsGroupGap)) {
-            if (!loaded && !failed && state.runtimeConnected)
-                SettingsHint(stringResource(R.string.settings_data_loading))
-            SettingsPreferences(stringResource(R.string.notification_age_title)) {
+            SettingsPreferences(stringResource(
+                if (!loaded && !failed && state.runtimeConnected) R.string.settings_data_loading
+                else R.string.notification_age_title
+            )) {
                 SettingsFieldGroup(
                     {
                         BeaconDropdownPreference(

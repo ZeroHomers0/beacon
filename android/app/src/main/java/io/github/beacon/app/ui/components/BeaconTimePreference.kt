@@ -12,7 +12,12 @@ import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.runtime.saveable.rememberSaveable
+import top.yukonga.miuix.kmp.basic.NumberPicker
+import top.yukonga.miuix.kmp.basic.NumberPickerDefaults
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
@@ -87,24 +92,65 @@ fun BeaconTimePreference(
     if (open) {
         val minute = timeMinute(value) ?: 0
         if (miuix()) {
-            val context = LocalContext.current
-            DisposableEffect(context, minute) {
-                val dialog =
-                    android.app.TimePickerDialog(
-                        context,
-                        { _, hour, selectedMinute ->
-                            onChange(String.format(Locale.ROOT, "%02d:%02d", hour, selectedMinute))
-                            open = false
-                        },
-                        minute / 60,
-                        minute % 60,
-                        true,
-                    )
-                dialog.setTitle(label)
-                dialog.setOnDismissListener { open = false }
-                dialog.show()
-                onDispose { dialog.dismiss() }
-            }
+            var hour by rememberSaveable { mutableIntStateOf(minute / 60) }
+            var selectedMinute by rememberSaveable { mutableIntStateOf(minute % 60) }
+            val hourLabel = stringResource(R.string.time_picker_hour)
+            val minuteLabel = stringResource(R.string.time_picker_minute)
+            val colors = NumberPickerDefaults.colors(
+                selectedTextColor = MaterialTheme.colorScheme.primary,
+                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            BeaconAlertDialog(
+                onDismissRequest = { open = false },
+                title = { BeaconText(label) },
+                text = {
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Surface(
+                            Modifier.fillMaxWidth().height(48.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        ) {}
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8),
+                        ) {
+                            NumberPicker(
+                                value = hour,
+                                onValueChange = { hour = it },
+                                range = 0..23,
+                                label = { it.toString().padStart(2, '0') },
+                                wrapAround = true,
+                                visibleItemCount = 3,
+                                colors = colors,
+                                itemHeight = 48.dp,
+                                textStyle = MaterialTheme.typography.headlineMedium,
+                                modifier = Modifier.weight(1f).semantics { contentDescription = hourLabel },
+                            )
+                            BeaconText(":", style = MaterialTheme.typography.headlineMedium)
+                            NumberPicker(
+                                value = selectedMinute,
+                                onValueChange = { selectedMinute = it },
+                                range = 0..59,
+                                label = { it.toString().padStart(2, '0') },
+                                wrapAround = true,
+                                visibleItemCount = 3,
+                                colors = colors,
+                                itemHeight = 48.dp,
+                                textStyle = MaterialTheme.typography.headlineMedium,
+                                modifier = Modifier.weight(1f).semantics { contentDescription = minuteLabel },
+                            )
+                        }
+                    }
+                },
+                confirmButton = {
+                    BeaconButton(onClick = {
+                        onChange(String.format(Locale.ROOT, "%02d:%02d", hour, selectedMinute))
+                        open = false
+                    }) { BeaconText(stringResource(R.string.settings_confirm)) }
+                },
+                dismissButton = { BeaconCancelButton(onClick = { open = false }) },
+            )
         } else {
             val picker = rememberTimePickerState(minute / 60, minute % 60, true)
             BeaconAlertDialog(

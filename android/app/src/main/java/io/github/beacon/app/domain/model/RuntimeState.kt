@@ -30,6 +30,7 @@ data class RuntimeState(
     val lastManualOutcome: SyncOutcome? = null,
     val runtimeConnected: Boolean = false,
     val cleanupPreview: CleanupPreview? = null,
+    val cleanupPreviewFresh: Boolean = false,
     val cleanupPolicy: CleanupPolicy? = null,
 ) {
     val messageBusy: Boolean

@@ -49,10 +49,11 @@ internal fun QuietHoursPanel(
         val editable = loaded && !saving && !editorSaving && state.runtimeConnected
         val labels = stringResource(R.string.quiet_weekdays).split(",")
         Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SettingsGroupGap)) {
-            if (!loaded && !failed && state.runtimeConnected)
-                SettingsHint(stringResource(R.string.settings_data_loading))
             if (!scheduleOnly)
-                SettingsPreferences(stringResource(R.string.ui_v2_quiet_section)) {
+                SettingsPreferences(stringResource(
+                    if (!loaded && !failed && state.runtimeConnected) R.string.settings_data_loading
+                    else R.string.ui_v2_quiet_section
+                )) {
                     SettingsFieldGroup(
                         {
                             BeaconPreferenceToggle(
@@ -128,7 +129,11 @@ internal fun QuietHoursPanel(
             }
             if (scheduleOnly || onSchedule == null) {
                 SettingsSection(
-                    stringResource(R.string.settings_time_range_heading),
+                    stringResource(
+                        if (scheduleOnly && !loaded && !failed && state.runtimeConnected)
+                            R.string.settings_data_loading
+                        else R.string.settings_time_range_heading
+                    ),
                     scheduleContent,
                 )
             }
