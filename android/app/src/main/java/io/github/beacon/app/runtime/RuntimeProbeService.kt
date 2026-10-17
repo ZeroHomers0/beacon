@@ -215,17 +215,28 @@ class RuntimeProbeService : Service() {
 
     private val realtime by realtimeDelegate
 
+    /**
+     * The foreground channel is created once per process. [showRealtimeStatus] runs on every
+     * connection-state change, and `createNotificationChannel` is a binder round trip into the
+     * system server that returns identical results after the first call, so repeating it turned a
+     * status line update into avoidable IPC.
+     */
+    @Volatile private var foregroundChannelReady = false
+
     internal fun controlGeneration(): Long = generation.get()
 
     internal fun showRealtimeStatus(text: String) {
         val manager = getSystemService(android.app.NotificationManager::class.java)
-        manager.createNotificationChannel(
-            android.app.NotificationChannel(
-                FOREGROUND_CHANNEL,
-                getString(io.github.beacon.app.R.string.channel_runtime),
-                android.app.NotificationManager.IMPORTANCE_LOW,
+        if (!foregroundChannelReady) {
+            manager.createNotificationChannel(
+                android.app.NotificationChannel(
+                    FOREGROUND_CHANNEL,
+                    getString(io.github.beacon.app.R.string.channel_runtime),
+                    android.app.NotificationManager.IMPORTANCE_LOW,
+                )
             )
-        )
+            foregroundChannelReady = true
+        }
         val open =
             android.app.PendingIntent.getActivity(
                 this,
@@ -290,6 +301,10 @@ class RuntimeProbeService : Service() {
     }
 
     private fun saveState(value: PollingState) {
+        // Several call sites pass the current state when only a side effect (a reset, a recheck)
+        // is wanted. Committing an unchanged value costs a synchronous preference write, a UI
+        // broadcast and a WorkManager reconcile, so skip all three when nothing differs.
+        if (value == pollingState) return
         val revised = value.copy(revision = pollingState.revision + 1)
         PollingStateStore(this).save(revised)
         val enabledChanged = pollingState.config.enabled != revised.config.enabled
