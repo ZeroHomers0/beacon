@@ -78,21 +78,41 @@ internal fun LazyListScope.receptionSettingsItems(
     item {
         SettingsPreferences(stringResource(R.string.settings_receive_status_title)) {
             ReceptionStatusRow(
-                stringResource(
-                    if (receivePlan.mode == ReceiveMode.POWER_SAVING)
-                        R.string.settings_auto_receive_title
-                    else R.string.receive_realtime_status_title
-                ),
+                stringResource(R.string.reception_https_status),
                 when {
                     runtimeState.configuredEndpoint.isBlank() ->
                         stringResource(R.string.settings_receive_unbound)
                     !runtimeState.runtimeConnected ->
                         stringResource(R.string.settings_runtime_disconnected)
+                    !runtimeState.receivePlanLoaded ->
+                        stringResource(R.string.settings_data_loading)
                     polling.blocked.isNotBlank() -> polling.blocked
-                    !polling.config.enabled || receivePlan.mode == ReceiveMode.POWER_SAVING ->
-                        io.github.beacon.app.ui.components.receiveLabel(polling)
+                    !polling.config.enabled -> stringResource(R.string.reception_paused)
+                    runtimeState.transportBusy -> stringResource(R.string.reception_syncing)
+                    polling.lastOutcome == io.github.beacon.app.domain.model.SyncOutcome.TRANSIENT ->
+                        stringResource(R.string.reception_sync_retry)
+                    polling.lastOutcome == io.github.beacon.app.domain.model.SyncOutcome.STORAGE ->
+                        stringResource(R.string.reception_storage_failure)
+                    polling.lastOutcome == io.github.beacon.app.domain.model.SyncOutcome.OK ->
+                        stringResource(R.string.reception_sync_ready)
+                    else -> stringResource(R.string.reception_sync_waiting)
+                },
+                error = polling.blocked.isNotBlank() && runtimeState.runtimeConnected &&
+                    runtimeState.configuredEndpoint.isNotBlank() && runtimeState.receivePlanLoaded,
+            )
+            if (receivePlan.mode != ReceiveMode.POWER_SAVING && runtimeState.receivePlanLoaded)
+                ReceptionStatusRow(
+                    stringResource(R.string.receive_realtime_status_title),
+                    when {
+                    runtimeState.configuredEndpoint.isBlank() ->
+                        stringResource(R.string.settings_receive_unbound)
+                    !runtimeState.runtimeConnected ->
+                        stringResource(R.string.settings_runtime_disconnected)
+                    polling.blocked.isNotBlank() -> stringResource(R.string.reception_sync_blocked)
+                    !polling.config.enabled -> stringResource(R.string.reception_paused)
                     runtimeState.realtimeRunning ->
                         stringResource(R.string.settings_realtime_connected)
+                    receivePlan.mode == ReceiveMode.RULES -> runtimeState.realtimeStatus
                     runtimeState.realtimeDiagnostics.failure !=
                         io.github.beacon.app.domain.model.RealtimeFailure.NONE ->
                         stringResource(
@@ -107,8 +127,7 @@ internal fun LazyListScope.receptionSettingsItems(
                                     .CERTIFICATE_NOT_YET_VALID,
                                 io.github.beacon.app.domain.model.RealtimeFailure
                                     .CERTIFICATE_UNTRUSTED,
-                                io.github.beacon.app.domain.model.RealtimeFailure.HOSTNAME,
-                                io.github.beacon.app.domain.model.RealtimeFailure.TLS_INTERRUPTED ->
+                                io.github.beacon.app.domain.model.RealtimeFailure.HOSTNAME ->
                                     R.string.settings_realtime_tls_failure
                                 else -> R.string.settings_realtime_network_failure
                             }
@@ -119,7 +138,6 @@ internal fun LazyListScope.receptionSettingsItems(
                             .lineSequence()
                             .first()
                 },
-                error = polling.blocked.isNotBlank(),
             )
             ReceptionStatusRow(
                 stringResource(R.string.settings_last_sync_success_desc) +

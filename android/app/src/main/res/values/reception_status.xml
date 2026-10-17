@@ -1,0 +1,10 @@
+<resources>
+    <string name="reception_https_status">HTTPS 同步</string>
+    <string name="reception_paused">接收已暂停</string>
+    <string name="reception_syncing">正在同步</string>
+    <string name="reception_sync_retry">连接暂时中断，等待自动重试</string>
+    <string name="reception_storage_failure">本地存储异常，等待重试</string>
+    <string name="reception_sync_ready">最近同步成功，等待下次同步</string>
+    <string name="reception_sync_waiting">等待首次同步</string>
+    <string name="reception_sync_blocked">HTTPS 同步受阻，即时连接暂不可用</string>
+</resources>

@@ -10,11 +10,19 @@ import io.github.beacon.app.domain.receive.SyncStage
 
 /** Only fixed text and typed HTTP metadata may cross into UI/persistent diagnostics. */
 object SyncFailure {
+    private fun certificateFailure(error: Throwable): Boolean =
+        generateSequence(error) { it.cause }.take(10).any {
+            it is java.security.cert.CertificateException ||
+                it is java.security.cert.CertPathValidatorException ||
+                it is javax.net.ssl.SSLPeerUnverifiedException
+        }
+
     fun outcome(error: Exception, storage: Boolean = false): SyncOutcome =
         when {
             error is SyncCancelledException -> SyncOutcome.STOPPED
             error is SyncAuthenticationException -> SyncOutcome.AUTH
-            error is javax.net.ssl.SSLException -> SyncOutcome.TLS
+            certificateFailure(error) -> SyncOutcome.TLS
+            error is javax.net.ssl.SSLException -> SyncOutcome.TRANSIENT
             error is HttpRejectedException || error is SyncResponseException -> SyncOutcome.PROTOCOL
             storage -> SyncOutcome.STORAGE
             error is java.io.IOException -> SyncOutcome.TRANSIENT
@@ -54,11 +62,14 @@ object SyncFailure {
                 is java.net.UnknownHostException -> "域名解析失败，请检查 DNS 与网络"
                 is java.net.SocketTimeoutException -> "连接或读取超时，请检查网络与服务器"
                 is java.net.ConnectException -> "连接失败，请检查服务器端口与反代服务"
-                is javax.net.ssl.SSLException -> "TLS 校验或握手失败，请检查证书、域名和设备时间"
+                is javax.net.ssl.SSLException ->
+                    if (outcome == SyncOutcome.TLS) "证书校验失败，请检查证书链、域名和设备时间"
+                    else "安全连接中断，将自动重试；请检查网络与代理"
                 else ->
                     when (outcome) {
                         SyncOutcome.STOPPED -> "任务已停止"
                         SyncOutcome.STORAGE -> "本地存储未完成，请检查可用空间后重试"
+                        SyncOutcome.TLS -> "证书校验失败，请检查证书链、域名和设备时间"
                         SyncOutcome.TRANSIENT -> "网络请求未完成，请稍后重试"
                         else -> "协议数据不兼容，请检查服务版本"
                     }

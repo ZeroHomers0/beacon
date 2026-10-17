@@ -60,7 +60,7 @@ internal fun NotificationSettingsPanel(
             SettingsPreferences(stringResource(R.string.notification_privacy_title)) {
                 BeaconPreferenceToggle(
                     stringResource(R.string.notification_lockscreen_preview),
-                    stringResource(R.string.notification_lockscreen_hint),
+                    "",
                     draft.lockscreenPreview,
                     enabled = enabled,
                 ) {

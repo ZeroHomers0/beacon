@@ -158,12 +158,14 @@ fun BeaconPreferenceToggle(
 ) {
     Row(
         Modifier.fillMaxWidth()
-            .heightIn(min = BeaconUiMetrics.FieldMinHeight)
-            .padding(vertical = if (summary.isBlank()) 0.dp else 12.dp),
+            .heightIn(min = BeaconUiMetrics.FieldMinHeight),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(
+            Modifier.weight(1f).padding(vertical = BeaconUiMetrics.FieldVerticalInset),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
             BeaconText(title, style = MaterialTheme.typography.bodyLarge)
             if (summary.isNotBlank())
                 BeaconText(
