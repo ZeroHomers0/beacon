@@ -164,6 +164,7 @@ fun BeaconSummaryPill(
     Surface(
         modifier = if (onClick == null) Modifier else Modifier
             .heightIn(min = BeaconUiMetrics.ControlMinHeight)
+            .clip(RoundedCornerShape(50))
             .clickable(enabled = enabled, role = androidx.compose.ui.semantics.Role.Button, onClick = onClick),
         shape = RoundedCornerShape(50),
         color =
