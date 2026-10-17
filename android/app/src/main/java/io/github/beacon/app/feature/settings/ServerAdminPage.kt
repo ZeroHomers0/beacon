@@ -214,24 +214,15 @@ internal fun ServerAdminPage(
                             )
                         },
                         {
-                            SettingsStatusSummary(
-                                stringResource(R.string.admin_version),
-                                state.version,
-                                icon = BeaconIcons.Info,
-                                interactive = false,
-                                compact = true,
-                            )
+                            DiagnosticRow(stringResource(R.string.admin_version), state.version)
                         },
                         {
-                            SettingsStatusSummary(
+                            DiagnosticRow(
                                 stringResource(R.string.admin_compatibility),
                                 stringResource(
                                     if (state.protocol == 1) R.string.admin_compatible_short
                                     else R.string.admin_protocol_unknown_short
                                 ),
-                                icon = BeaconIcons.Cloud,
-                                interactive = false,
-                                compact = true,
                             )
                         },
                     )
