@@ -6,6 +6,11 @@ services:
   beacon:
     image: ghcr.io/zerohomers0/beacon-server:latest
     restart: unless-stopped
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       - 127.0.0.1:8088:8080
     environment:

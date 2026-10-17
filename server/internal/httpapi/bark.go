@@ -62,6 +62,9 @@ func barkValues(raw string) (map[string]string, error) {
 // rejected for every key: encoding/json would silently keep the last value, and
 // the Workers backend rejects it while parsing too.
 func barkJSON(raw []byte) (map[string]string, error) {
+	if !validJSONUnicode(raw) {
+		return nil, domain.ErrInvalidMessage
+	}
 	if !utf8.Valid(raw) {
 		return nil, errors.New("invalid utf8")
 	}

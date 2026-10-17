@@ -1,0 +1,3 @@
+<resources>
+    <string name="admin_input_limits">请检查输入：名称最多 128、标题 1024、正文 65536 个 UTF-8 字节，正文不能为空</string>
+</resources>

@@ -65,7 +65,7 @@ class RealtimeMessageDecoder(
                 (row.opt("bark") ?: "").also {
                     require(it is String && it.toByteArray(Charsets.UTF_8).size <= 100000)
                 } as String,
-        )
+        ).also(io.github.beacon.app.domain.receive.ReceiveMessageValidation::validate)
     }
 
     private fun string(row: JSONObject, key: String, limit: Int): String {

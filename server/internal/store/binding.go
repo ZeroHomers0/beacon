@@ -3,7 +3,9 @@ package store
 import (
 	"database/sql"
 	"errors"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"beacon.local/server/internal/auth"
 	"beacon.local/server/internal/domain"
@@ -11,6 +13,10 @@ import (
 
 // Only hashes are persisted. The administrator delivers the code out of band.
 func (a *Store) CreateBindingCode(name string, ttl time.Duration) (domain.BindingCode, error) {
+	name = strings.TrimSpace(name)
+	if name == "" || len(name) > domain.MaxDeviceNameBytes || !utf8.ValidString(name) || ttl < time.Minute || ttl > 24*time.Hour {
+		return domain.BindingCode{}, domain.ErrInvalidBinding
+	}
 	token, err := auth.NewToken()
 	if err != nil {
 		return domain.BindingCode{}, err
@@ -25,6 +31,13 @@ func (a *Store) CreateBindingCode(name string, ttl time.Duration) (domain.Bindin
 	if _, err = tx.Exec("DELETE FROM binding_codes WHERE expires_at<=?", now); err != nil {
 		return domain.BindingCode{}, err
 	}
+	var count int
+	if err = tx.QueryRow("SELECT count(*) FROM binding_codes").Scan(&count); err != nil {
+		return domain.BindingCode{}, err
+	}
+	if count >= 1000 {
+		return domain.BindingCode{}, domain.ErrStorageCapacity
+	}
 	if _, err = tx.Exec("INSERT INTO binding_codes(code_hash,device_name,expires_at) VALUES(?,?,?)", auth.HashToken(code.Code), name, code.ExpiresAt); err != nil {
 		return domain.BindingCode{}, err
 	}
@@ -33,12 +46,22 @@ func (a *Store) CreateBindingCode(name string, ttl time.Duration) (domain.Bindin
 
 // Consuming the code and creating the device are one transaction, including racing requests.
 func (a *Store) RedeemBindingCode(code, name string) (domain.DeviceCredentials, error) {
+	if len(code) != domain.BindingCodeLength || len(name) > domain.MaxDeviceNameBytes || !utf8.ValidString(name) {
+		return domain.DeviceCredentials{}, domain.ErrInvalidBinding
+	}
 	tx, err := a.db.Begin()
 	if err != nil {
 		return domain.DeviceCredentials{}, err
 	}
 	defer tx.Rollback()
 	var storedName string
+	var count int
+	if err = tx.QueryRow("SELECT count(*) FROM devices").Scan(&count); err != nil {
+		return domain.DeviceCredentials{}, err
+	}
+	if count >= 1024 {
+		return domain.DeviceCredentials{}, domain.ErrStorageCapacity
+	}
 	now := time.Now().UnixMilli()
 	err = tx.QueryRow("SELECT device_name FROM binding_codes WHERE code_hash=? AND used_at IS NULL AND expires_at>?", auth.HashToken(code), now).Scan(&storedName)
 	if errors.Is(err, sql.ErrNoRows) {

@@ -4,7 +4,10 @@ package store
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"beacon.local/server/internal/auth"
 	"beacon.local/server/internal/domain"
@@ -35,6 +38,7 @@ func Open(path string) (*Store, error) {
 	}()
 	for _, q := range []string{
 		"PRAGMA busy_timeout=5000", "PRAGMA journal_mode=WAL", "PRAGMA foreign_keys=ON",
+		"PRAGMA wal_autocheckpoint=256", "PRAGMA journal_size_limit=4194304",
 		"CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL)",
 		"CREATE TABLE IF NOT EXISTS devices(id TEXT PRIMARY KEY,name TEXT NOT NULL,receive_hash TEXT UNIQUE NOT NULL,push_hash TEXT UNIQUE NOT NULL)",
 		"CREATE TABLE IF NOT EXISTS messages(seq INTEGER PRIMARY KEY AUTOINCREMENT,id TEXT UNIQUE NOT NULL,device TEXT NOT NULL REFERENCES devices(id),title TEXT NOT NULL,body TEXT NOT NULL,created INTEGER NOT NULL,acked INTEGER NOT NULL DEFAULT 0)",
@@ -45,6 +49,13 @@ func Open(path string) (*Store, error) {
 		}
 	}
 	// Transactional additive migration of the existing unversioned schema.
+	var pageSize int64
+	if err = db.QueryRow("PRAGMA page_size").Scan(&pageSize); err != nil {
+		return nil, err
+	}
+	if _, err = db.Exec(fmt.Sprintf("PRAGMA max_page_count=%d", 2*domain.MaxLiveDatabaseBytes/pageSize)); err != nil {
+		return nil, err
+	}
 	if err = migrateMessageSchema(db); err != nil {
 		return nil, err
 	}
@@ -64,8 +75,24 @@ func Open(path string) (*Store, error) {
 }
 
 func (a *Store) CreateDevice(name string) (domain.DeviceCredentials, error) {
+	name = strings.TrimSpace(name)
+	if name == "" || len(name) > domain.MaxDeviceNameBytes || !utf8.ValidString(name) {
+		return domain.DeviceCredentials{}, domain.ErrInvalidDevice
+	}
 	c := domain.DeviceCredentials{ServerID: a.serverID}
 	var err error
+	tx, err := a.db.Begin()
+	if err != nil {
+		return c, err
+	}
+	defer tx.Rollback()
+	var count int
+	if err = tx.QueryRow("SELECT count(*) FROM devices").Scan(&count); err != nil {
+		return c, err
+	}
+	if count >= 1024 {
+		return c, domain.ErrStorageCapacity
+	}
 	if c.DeviceID, err = auth.NewToken(); err != nil {
 		return c, err
 	}
@@ -75,8 +102,10 @@ func (a *Store) CreateDevice(name string) (domain.DeviceCredentials, error) {
 	if c.PushKey, err = auth.NewToken(); err != nil {
 		return c, err
 	}
-	_, err = a.db.Exec("INSERT INTO devices(id,name,receive_hash,push_hash) VALUES(?,?,?,?)", c.DeviceID, name, auth.HashToken(c.ReceiveToken), auth.HashToken(c.PushKey))
-	return c, err
+	if _, err = tx.Exec("INSERT INTO devices(id,name,receive_hash,push_hash) VALUES(?,?,?,?)", c.DeviceID, name, auth.HashToken(c.ReceiveToken), auth.HashToken(c.PushKey)); err != nil {
+		return c, err
+	}
+	return c, tx.Commit()
 }
 
 func (a *Store) AuthenticateToken(token string, push bool) (string, error) {
@@ -111,13 +140,13 @@ func (a *Store) SavePushMessage(device, title, subtitle, body string, priority i
 	if !options.Valid() {
 		return domain.Message{}, domain.ErrInvalidMessage
 	}
-	if len(bark) > 100000 {
+	if len(bark) > 100000 || !utf8.ValidString(bark) {
 		return domain.Message{}, domain.ErrInvalidMessage
 	}
 	if priority < 0 || priority > 10 {
 		return domain.Message{}, domain.ErrInvalidMessage
 	}
-	if len(title) > domain.MaxTitleBytes || len(subtitle) > domain.MaxTitleBytes || len(body) == 0 || len(body) > domain.MaxBodyBytes {
+	if !domain.ValidMessageText(title, subtitle, body) {
 		return domain.Message{}, domain.ErrInvalidMessage
 	}
 	id, err := auth.NewToken()

@@ -4,6 +4,7 @@ package domain
 import (
 	"errors"
 	"time"
+	"unicode/utf8"
 )
 
 const PendingLifetime = 7 * 24 * time.Hour
@@ -94,7 +95,7 @@ func (o PushOptions) Valid() bool {
 	if !ValidMessageActions(o.Actions) {
 		return false
 	}
-	if len(o.Key) > 128 || len(o.Group) > 128 || o.TTL < 0 || o.TTL > 604800 {
+	if len(o.Key) > 128 || len(o.Group) > 128 || !utf8.ValidString(o.Group) || o.TTL < 0 || o.TTL > 604800 {
 		return false
 	}
 	for _, c := range o.Key {

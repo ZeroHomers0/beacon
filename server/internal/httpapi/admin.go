@@ -65,6 +65,10 @@ func (a *API) registerAdmin(router *gin.Engine) {
 		}
 		code, err := a.service.CreateBindingCode(body.Name, 10*time.Minute)
 		if err != nil {
+			if errors.Is(err, domain.ErrStorageCapacity) {
+				apiError(c.Writer, 507, "storage_capacity_reached")
+				return
+			}
 			apiError(c.Writer, 400, "invalid_binding")
 			return
 		}
@@ -157,6 +161,10 @@ func (a *API) registerAdmin(router *gin.Engine) {
 		}
 		credential, err := a.service.CreateApplication(body.Device, body.Name, body.Priority)
 		if err != nil {
+			if errors.Is(err, domain.ErrStorageCapacity) {
+				apiError(c.Writer, 507, "storage_capacity_reached")
+				return
+			}
 			apiError(c.Writer, 400, "invalid_application")
 			return
 		}

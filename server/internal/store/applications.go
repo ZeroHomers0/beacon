@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"strings"
+	"unicode/utf8"
 
 	"beacon.local/server/internal/auth"
 	"beacon.local/server/internal/domain"
@@ -11,8 +12,20 @@ import (
 
 func (a *Store) CreateApplication(device, name string, priority int) (domain.ApplicationCredential, error) {
 	name = strings.TrimSpace(name)
-	if name == "" || len(name) > domain.MaxDeviceNameBytes || priority < 0 || priority > 10 {
+	if name == "" || len(name) > domain.MaxDeviceNameBytes || !utf8.ValidString(name) || priority < 0 || priority > 10 {
 		return domain.ApplicationCredential{}, domain.ErrInvalidMessage
+	}
+	tx, err := a.db.Begin()
+	if err != nil {
+		return domain.ApplicationCredential{}, err
+	}
+	defer tx.Rollback()
+	var total int
+	if err = tx.QueryRow("SELECT count(*) FROM applications").Scan(&total); err != nil {
+		return domain.ApplicationCredential{}, err
+	}
+	if total >= 4096 {
+		return domain.ApplicationCredential{}, domain.ErrStorageCapacity
 	}
 	id, err := auth.NewToken()
 	if err != nil {
@@ -22,13 +35,16 @@ func (a *Store) CreateApplication(device, name string, priority int) (domain.App
 	if err != nil {
 		return domain.ApplicationCredential{}, err
 	}
-	result, err := a.db.Exec(`INSERT INTO applications(id,device,name,token_hash,default_priority) SELECT ?,id,?,?,? FROM devices WHERE id=? AND revoked=0`, id, name, auth.HashToken(token), priority, device)
+	result, err := tx.Exec(`INSERT INTO applications(id,device,name,token_hash,default_priority) SELECT ?,id,?,?,? FROM devices WHERE id=? AND revoked=0`, id, name, auth.HashToken(token), priority, device)
 	if err != nil {
 		return domain.ApplicationCredential{}, err
 	}
 	count, err := result.RowsAffected()
 	if err != nil || count != 1 {
 		return domain.ApplicationCredential{}, domain.ErrInvalidDevice
+	}
+	if err = tx.Commit(); err != nil {
+		return domain.ApplicationCredential{}, err
 	}
 	return domain.ApplicationCredential{Application: domain.Application{ID: id, DeviceID: device, Name: name, DefaultPriority: priority}, Token: token}, nil
 }

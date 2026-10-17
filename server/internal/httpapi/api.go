@@ -2,6 +2,7 @@
 package httpapi
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io"
@@ -48,7 +49,14 @@ func apiError(w http.ResponseWriter, status int, code string) {
 func decodeJSON(w http.ResponseWriter, r *http.Request, value any) error {
 	r.Body = http.MaxBytesReader(w, r.Body, domain.MaxRequestBytes)
 	defer r.Body.Close()
-	d := json.NewDecoder(r.Body)
+	payload, err := io.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+	if !validJSONUnicode(payload) {
+		return errors.New("invalid UTF-8")
+	}
+	d := json.NewDecoder(bytes.NewReader(payload))
 	d.DisallowUnknownFields()
 	if err := d.Decode(value); err != nil {
 		return err

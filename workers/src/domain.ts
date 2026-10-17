@@ -4,6 +4,9 @@ export const PENDING = 7 * DAY;
 export const RECEIPT = 30 * DAY;
 export const GRACE = 30 * 60_000;
 export const MAX_REQUEST = 512 * 1024;
+export const MAX_TITLE = 1024;
+export const MAX_BODY = 65536;
+export const MAX_BARK = 100000;
 export const BATCH = 100;
 export const MAINTENANCE = 60 * 60_000;
 export type Row = Record<string, SqlStorageValue>;
@@ -142,6 +145,15 @@ export function reject(status: number, code: string): never {
   throw new Fault(status, code);
 }
 export function bytes(value: string): number {
+  for (let i = 0; i < value.length; i++) {
+    const code = value.charCodeAt(i);
+    if (code >= 0xd800 && code <= 0xdbff) {
+      const next = value.charCodeAt(++i);
+      if (!(next >= 0xdc00 && next <= 0xdfff)) reject(400, "invalid_message");
+    } else if (code >= 0xdc00 && code <= 0xdfff) {
+      reject(400, "invalid_message");
+    }
+  }
   return new TextEncoder().encode(value).length;
 }
 export function token(length = 32): string {

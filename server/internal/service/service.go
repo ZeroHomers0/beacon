@@ -62,7 +62,7 @@ func (s *Service) PushPriority(device, title, subtitle, body string, priority *i
 	if priority != nil {
 		selected = *priority
 	}
-	if len(title) > domain.MaxTitleBytes || len(subtitle) > domain.MaxTitleBytes || len(body) == 0 || len(body) > domain.MaxBodyBytes || selected < 0 || selected > 10 {
+	if !domain.ValidMessageText(title, subtitle, body) || selected < 0 || selected > 10 {
 		return domain.Message{}, domain.ErrInvalidMessage
 	}
 	if !s.pushLimit.allow(device, time.Now()) {

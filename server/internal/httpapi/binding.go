@@ -52,7 +52,9 @@ func (a *API) bind(w http.ResponseWriter, r *http.Request) {
 	}
 	credentials, err := a.service.Bind(request.Code, request.Name)
 	if err != nil {
-		if errors.Is(err, domain.ErrInvalidBinding) {
+		if errors.Is(err, domain.ErrStorageCapacity) {
+			apiError(w, http.StatusInsufficientStorage, "storage_capacity_reached")
+		} else if errors.Is(err, domain.ErrInvalidBinding) {
 			apiError(w, http.StatusBadRequest, "invalid_or_expired_binding")
 		} else {
 			apiError(w, http.StatusInternalServerError, "storage_error")

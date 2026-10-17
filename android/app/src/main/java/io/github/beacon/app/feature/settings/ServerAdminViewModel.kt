@@ -301,6 +301,7 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
                                 in 300..399 -> R.string.admin_redirect
                                 else -> R.string.admin_request_failed
                             }
+                        is io.github.beacon.app.data.remote.AdminInputException -> R.string.admin_input_limits
                         is IllegalArgumentException -> R.string.admin_incompatible
                         else -> R.string.admin_network_failed
                     }

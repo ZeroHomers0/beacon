@@ -1,5 +1,8 @@
 import {
   BATCH,
+  MAX_TITLE,
+  MAX_BODY,
+  MAX_BARK,
   GRACE,
   Message,
   PENDING,
@@ -35,11 +38,11 @@ export class MessageStore extends IdentityStore implements Repository {
     options?: import("../domain").PushOptions,
   ): Message {
     if (
-      bytes(title) > 1024 ||
-      bytes(subtitle) > 1024 ||
+      bytes(title) > MAX_TITLE ||
+      bytes(subtitle) > MAX_TITLE ||
       !body ||
-      bytes(body) > 65536 ||
-      bytes(bark) > 100000
+      bytes(body) > MAX_BODY ||
+      bytes(bark) > MAX_BARK
     )
       reject(400, "invalid_message");
     const actionJSON = options?.actions?.length ? JSON.stringify(options.actions) : "";
@@ -311,15 +314,21 @@ export class MessageStore extends IdentityStore implements Repository {
         );
         full ||= deleted.length === BATCH;
       }
-      this.rows(
-        "DELETE FROM push_requests WHERE rowid IN (SELECT rowid FROM push_requests WHERE expires_at<=? LIMIT 100)",
-        now,
-      );
-      this.rows("DELETE FROM binding_codes WHERE expires_at<=?", now);
-      this.rows("DELETE FROM rate_buckets WHERE at<?", now - 120000);
+      for (const [table, column, cutoff] of [
+        ["push_requests", "expires_at", now],
+        ["binding_codes", "expires_at", now],
+        ["rate_buckets", "at", now - 120000],
+      ] as const) {
+        const deleted = this.rows(
+          `DELETE FROM ${table} WHERE rowid IN (SELECT rowid FROM ${table} WHERE ${column}<=? LIMIT ?) RETURNING rowid`,
+          cutoff,
+          BATCH,
+        );
+        full ||= deleted.length === BATCH;
+      }
       this.rows(
         "INSERT INTO metadata VALUES('maintenance_due',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-        String(now + (full ? 1000 : 3600000)),
+        String(now + (full ? 1000 : 60000)),
       );
       return full;
     });

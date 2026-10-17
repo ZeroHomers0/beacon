@@ -46,5 +46,8 @@ func (a *Store) ExpireDeliveryBatch(ctx context.Context, now int64) (int64, erro
 	if _, err = tx.ExecContext(ctx, "DELETE FROM push_requests WHERE rowid IN (SELECT rowid FROM push_requests WHERE expires_at<=? LIMIT 100)", now); err != nil {
 		return 0, err
 	}
+	if _, err = tx.ExecContext(ctx, "DELETE FROM binding_codes WHERE rowid IN (SELECT rowid FROM binding_codes WHERE expires_at<=? LIMIT 100)", now); err != nil {
+		return 0, err
+	}
 	return count, tx.Commit()
 }

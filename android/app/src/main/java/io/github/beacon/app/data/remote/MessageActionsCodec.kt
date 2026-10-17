@@ -1,6 +1,7 @@
 package io.github.beacon.app.data.remote
 
 import io.github.beacon.app.domain.model.MessageLinkAction
+import io.github.beacon.app.domain.model.MessageLimits
 import java.net.URI
 import org.json.JSONArray
 import org.json.JSONObject
@@ -9,13 +10,13 @@ import org.json.JSONTokener
 /** Strict, bounded link actions shared by transport, storage and history archives. */
 object MessageActionsCodec {
     fun validate(actions: List<MessageLinkAction>) {
-        require(actions.size <= 3)
+        require(actions.size <= MessageLimits.ACTION_COUNT)
         actions.forEach { action ->
             require(
-                action.title.isNotBlank() && action.title.toByteArray(Charsets.UTF_8).size <= 64
+                action.title.isNotBlank() && MessageLimits.textFits(action.title, 64)
             )
             require(action.title.none { Character.isISOControl(it) })
-            require(action.url.toByteArray(Charsets.UTF_8).size <= 2048)
+            require(MessageLimits.textFits(action.url, 2048))
             require(
                 action.url.none {
                     Character.isISOControl(it) || it.isWhitespace() || Character.isSpaceChar(it)
@@ -70,7 +71,7 @@ object MessageActionsCodec {
     }
 
     fun decode(array: JSONArray): List<MessageLinkAction> {
-        require(array.length() <= 3)
+        require(array.length() <= MessageLimits.ACTION_COUNT)
         return (0 until array.length())
             .map { index ->
                 val row = array.getJSONObject(index)

@@ -1,6 +1,7 @@
 package io.github.beacon.app.data.remote
 
 import io.github.beacon.app.domain.model.TransportSettings
+import io.github.beacon.app.domain.model.MessageLimits
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import okhttp3.MediaType.Companion.toMediaType
@@ -81,6 +82,22 @@ class ServerAdminClient(
         request("applications/delete", JSONObject().put("id", id))
 
     private fun request(path: String, body: JSONObject? = null): JSONObject {
+        body?.let { payload ->
+            if (payload.has("name")) {
+                val name = payload.getString("name").trim()
+                if (name.isEmpty() || !MessageLimits.textFits(name, MessageLimits.NAME_BYTES))
+                    throw AdminInputException()
+            }
+            if (path == "test") {
+                if (!MessageLimits.textFits(payload.getString("title"), MessageLimits.TITLE_BYTES))
+                    throw AdminInputException()
+                val text = payload.getString("body")
+                if (text.isEmpty() || !MessageLimits.textFits(text, MessageLimits.BODY_BYTES) ||
+                    payload.getInt("priority") !in 0..10) throw AdminInputException()
+            }
+            if (!MessageLimits.textFits(payload.toString(), MessageLimits.REQUEST_BYTES))
+                throw AdminInputException()
+        }
         val builder =
             Request.Builder()
                 .url("$endpoint/api/admin/$path")
@@ -110,3 +127,5 @@ class ServerAdminClient(
 }
 
 class AdminRequestException(val status: Int) : IOException("admin request failed ($status)")
+
+class AdminInputException : IllegalArgumentException("invalid administrator input")
