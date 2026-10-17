@@ -34,14 +34,10 @@ server/beacon-server
 .vscode/
 .agents/
 .codex/
-# Test sources stay on the local machine; they are not part of the published repository.
-android/app/src/test/
-android/app/src/androidTest/
-server/**/*_test.go
-workers/test/
-workers/vitest.config.ts
-workers/tools/test.mjs
-workers/tools/protocol.mjs
+# Test sources are part of the repository and run in CI. Local-only scratch runners stay ignored.
+*.retired
+android/app/src/androidTest/assets/*.local.json
+workers/dist/
 
 # MCP dependencies and local client-registration helper.
 /mcp/node_modules/

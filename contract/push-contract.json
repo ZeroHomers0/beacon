@@ -1,0 +1,13 @@
+[
+  {"name":"defaults","payload":{"body":"hello"},"status":200,"ttl":604800,"group":""},
+  {"name":"group and ttl","payload":{"body":"hello","group":"NAS","ttl":60},"status":200,"ttl":60,"group":"NAS"},
+  {"name":"zero ttl uses default","payload":{"body":"hello","ttl":0},"status":200,"ttl":604800,"group":""},
+  {"name":"negative ttl","payload":{"body":"hello","ttl":-1},"status":400},
+  {"name":"ttl beyond limit","payload":{"body":"hello","ttl":604801},"status":400},
+  {"name":"fractional ttl","payload":{"body":"hello","ttl":0.5},"status":400},
+  {"name":"string ttl","payload":{"body":"hello","ttl":"60"},"status":400},
+  {"name":"invalid group","payload":{"body":"hello","group":2},"status":400},
+  {"name":"empty body","payload":{"body":""},"status":400},
+  {"name":"unknown field","payload":{"body":"hello","unexpected":true},"status":400},
+  {"name":"bad key","payload":{"body":"hello"},"key":"has space","status":400}
+]

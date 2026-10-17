@@ -14,8 +14,8 @@ jobs:
       run:
         working-directory: workers
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
         with:
           node-version: '22'
           cache: npm
@@ -23,3 +23,6 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm run build
+      - run: npm test
+      - name: Verify real WebSocket protocol frames
+        run: npm run test:protocol
