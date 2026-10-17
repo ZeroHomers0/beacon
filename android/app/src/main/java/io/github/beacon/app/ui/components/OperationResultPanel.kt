@@ -74,7 +74,7 @@ fun SettingsStatusSummary(
                 .background(tint.copy(alpha = 0.10f)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, null, Modifier.size(26.dp), tint = tint)
+            BeaconLoadingIcon(icon, loading, Modifier.size(26.dp), tint = tint)
         }
         Column(
             Modifier.weight(1f),

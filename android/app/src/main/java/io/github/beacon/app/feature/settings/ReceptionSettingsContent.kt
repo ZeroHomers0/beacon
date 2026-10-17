@@ -169,6 +169,14 @@ internal fun LazyListScope.receptionSettingsItems(
                             modifier = Modifier.fillMaxWidth(),
                             enabled = !busy && runtimeState.runtimeConnected,
                         ) {
+                            if (runtimeState.transportBusy) {
+                                CircularProgressIndicator(
+                                    Modifier.size(16.dp),
+                                    color = LocalContentColor.current,
+                                    strokeWidth = 2.dp,
+                                )
+                                Spacer(Modifier.width(8.dp))
+                            }
                             BeaconText(stringResource(R.string.action_sync_now))
                         }
                     },

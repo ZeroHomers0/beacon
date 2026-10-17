@@ -852,10 +852,10 @@ fun BeaconApp(
                                                     displayedSettingsScreen ==
                                                         SettingsScreen.SERVER_ADMIN
                                             ) {
-                                                BeaconActionIcon(
-                                                    BeaconIcons.Sync,
+                                                io.github.beacon.app.ui.components.BeaconRefreshAction(
                                                     stringResource(R.string.admin_refresh),
                                                     adminState.loggedIn && !adminState.busy,
+                                                    adminState.busy,
                                                 ) {
                                                     adminModel.refresh()
                                                 }
@@ -868,10 +868,10 @@ fun BeaconApp(
                                                             SettingsScreen.SERVER_APPLICATIONS,
                                                         )
                                             ) {
-                                                BeaconActionIcon(
-                                                    BeaconIcons.Sync,
+                                                io.github.beacon.app.ui.components.BeaconRefreshAction(
                                                     stringResource(R.string.admin_refresh),
                                                     adminState.loggedIn && !adminState.busy,
+                                                    adminState.busy,
                                                 ) {
                                                     adminModel.refresh()
                                                 }
