@@ -383,3 +383,17 @@ Go 与 Workers 均限制设备最多 1024 个、应用最多 4096 个，包含�
 ### 推送密钥泄露或遇到其他问题怎么办？
 
 撤销受影响的设备并创建新绑定码，在 App 中重新绑定；也可单独撤销泄露的应用令牌，再更新脚本中的密钥。反馈问题请到 [GitHub Issues](https://github.com/ZeroHomers0/beacon/issues)，附上版本、部署方式、复现步骤和错误提示。不要公开管理令牌、绑定码、推送密钥或私人消息内容；反向代理访问日志也应避免记录带密钥和正文的 Bark URL。
+
+## 开源许可与第三方致谢
+
+第三方组件及图标的许可说明统一在此查阅，App 的“使用与部署文档”入口可打开本 README。
+
+| 组件或资源 | 版权归属 | 许可 |
+| --- | --- | --- |
+| OkHttp、Okio | Square, Inc. | Apache-2.0 |
+| Material Symbols Rounded | Google LLC | Apache-2.0 |
+| MIUIX | compose-miuix-ui contributors | Apache-2.0 |
+| Markwon core | Markwon contributors | Apache-2.0 |
+| commonmark-java | Atlassian Pty Ltd | BSD-2-Clause |
+
+完整归属信息见 [第三方 NOTICE](android/app/src/main/assets/third-party/NOTICE.txt)，许可全文见 [Apache-2.0](android/app/src/main/assets/third-party/Apache-2.0.txt) 和 [BSD-2-Clause](android/app/src/main/assets/third-party/commonmark-BSD-2-Clause.txt)。这些声明与许可文件仍随 APK 分发；上述第三方许可不代表 Beacon 项目本身的授权声明。

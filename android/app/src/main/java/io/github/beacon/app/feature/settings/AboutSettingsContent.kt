@@ -6,12 +6,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,8 +17,6 @@ import io.github.beacon.app.R
 import io.github.beacon.app.ui.components.*
 import io.github.beacon.app.ui.components.BeaconText
 import io.github.beacon.app.ui.icons.BeaconIcons
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 internal fun LazyListScope.aboutSettingsItems(
     resources: android.content.res.Resources,
@@ -64,40 +57,6 @@ private fun AboutLinks(
     context: Context,
     onOperationDetails: (String) -> Unit,
 ) {
-    var licenses by rememberSaveable { mutableStateOf(false) }
-    var attempt by remember { mutableIntStateOf(0) }
-    var licenseText by remember { mutableStateOf<List<Pair<String, String>>?>(null) }
-    var licenseFailed by remember { mutableStateOf(false) }
-    LaunchedEffect(attempt) {
-        licenseText = null
-        licenseFailed = false
-        val result =
-            withContext(Dispatchers.IO) {
-                runCatching {
-                    val names =
-                        context.assets
-                            .list("third-party")
-                            .orEmpty()
-                            .filter { it.endsWith(".txt") }
-                            .sorted()
-                    check(names.isNotEmpty())
-                    names.map { name ->
-                        name.removeSuffix(".txt") to
-                            context.assets.open("third-party/$name").bufferedReader().use {
-                                it.readText().trim().split(Regex("\\n\\s*\\n")).joinToString(
-                                    "\n\n"
-                                ) { paragraph ->
-                                    paragraph.lineSequence().joinToString(" ") { line ->
-                                        line.trim()
-                                    }
-                                }
-                            }
-                    }
-                }
-            }
-        licenseText = result.getOrNull()
-        licenseFailed = result.isFailure
-    }
     fun open(url: String) {
         try {
             context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
@@ -114,51 +73,5 @@ private fun AboutLinks(
         SettingsRow(stringResource(R.string.ui_v2_docs), "", BeaconIcons.Guide) {
             open("https://github.com/ZeroHomers0/beacon/blob/main/README.md")
         }
-        SettingsRow(stringResource(R.string.ui_v2_licenses), "", BeaconIcons.Info) {
-            licenses = true
-        }
     }
-    if (licenses)
-        BeaconAlertDialog(
-            onDismissRequest = { licenses = false },
-            title = { BeaconText(stringResource(R.string.ui_v2_licenses)) },
-            text = {
-                Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
-                    if (licenseText == null) {
-                        SettingsHint(
-                            stringResource(
-                                if (licenseFailed) R.string.ui_v2_license_failed
-                                else R.string.ui_v2_license_loading
-                            )
-                        )
-                        if (licenseFailed)
-                            BeaconTextButton(onClick = { attempt++ }) {
-                                BeaconText(stringResource(R.string.action_retry))
-                            }
-                    } else
-                        SelectionContainer {
-                            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                                licenseText.orEmpty().forEach { (name, text) ->
-                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        BeaconText(
-                                            name,
-                                            style = MaterialTheme.typography.titleSmall,
-                                        )
-                                        BeaconText(
-                                            text,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                }
-            },
-            confirmButton = {
-                BeaconButton(onClick = { licenses = false }) {
-                    BeaconText(stringResource(R.string.ui_got_it_action))
-                }
-            },
-        )
 }
