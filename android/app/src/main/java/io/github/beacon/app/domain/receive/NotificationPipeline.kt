@@ -91,20 +91,27 @@ class NotificationPipeline(
         val intents = store.pendingNotifications()
         if (intents.isEmpty()) return ""
         settings.validate()
-        val originalBatch = NotificationPolicy.batch(intents, nowMs, settings.freshWindowMs)
+        NotificationPolicy.batch(intents, nowMs, settings.freshWindowMs)
         val quiet = quietHours.active(nowMs, zone())
         if (quiet && quietHours.behavior == QuietHoursBehavior.SAVE_ONLY) {
             store.notificationsPosted(intents)
             return "免打扰时段：${intents.size} 条消息仅保存，不显示通知"
         }
-        if (!originalBatch.alert && settings.outdatedReminder == OutdatedReminder.SAVE_ONLY) {
-            store.notificationsPosted(intents)
-            return "过时或时间未验证：${intents.size} 条消息仅保存，不显示通知"
+        val groups = if (intents.size >= 3) listOf(intents) else intents.map { listOf(it) }
+        var postedCount = 0
+        for (group in groups) {
+            val originalBatch = NotificationPolicy.batch(group, nowMs, settings.freshWindowMs)
+            if (!originalBatch.alert && settings.outdatedReminder == OutdatedReminder.SAVE_ONLY) {
+                store.notificationsPosted(group)
+                continue
+            }
+            val batch = if (quiet) originalBatch.copy(alert = false) else originalBatch
+            if (!post(batch)) return "通知未能显示，未完成的提醒将在稍后重试"
+            store.notificationsPosted(group)
+            postedCount += group.size
         }
-        val batch = if (quiet) originalBatch.copy(alert = false) else originalBatch
-        if (!post(batch)) return "通知被系统权限或渠道阻止；${intents.size} 条提醒任务保留"
-        store.notificationsPosted(intents)
+        if (postedCount == 0) return "消息已保存，无需显示通知"
         return if (quiet) "免打扰时段：已向系统提交静音通知"
-        else if (intents.size == 1) "已向系统提交消息通知" else "已向系统提交 ${intents.size} 条消息的摘要通知"
+        else if (intents.size < 3) "已向系统提交 $postedCount 条消息通知" else "已向系统提交 $postedCount 条消息的摘要通知"
     }
 }

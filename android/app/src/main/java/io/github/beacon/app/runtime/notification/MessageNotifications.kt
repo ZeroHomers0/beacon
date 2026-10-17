@@ -128,13 +128,8 @@ class MessageNotifications(
         val public =
             Notification.Builder(context, channel)
                 .setSmallIcon(R.drawable.ic_notification)
-                .setContentTitle(if (settings.lockscreenPreview) title(batch) else "Beacon")
-                .setContentText(if (settings.lockscreenPreview) summary else "有新消息，请打开应用查看")
-                .apply {
-                    if (settings.lockscreenPreview) {
-                        setStyle(Notification.BigTextStyle().bigText(expanded))
-                    }
-                }
+                .setContentTitle("Beacon")
+                .setContentText("有新消息，请打开应用查看")
                 .build()
         val notification =
             Notification.Builder(context, channel)
@@ -152,16 +147,11 @@ class MessageNotifications(
                 }
                 .apply {
                     if (!batch.alert) {
-                        setGroup("beacon.silent")
-                        setGroupAlertBehavior(Notification.GROUP_ALERT_SUMMARY)
                         setSound(null)
                         setVibrate(null)
                     }
                 }
-                .setVisibility(
-                    if (settings.lockscreenPreview) Notification.VISIBILITY_PUBLIC
-                    else Notification.VISIBILITY_PRIVATE
-                )
+                .setVisibility(Notification.VISIBILITY_PRIVATE)
                 .setPublicVersion(public)
                 .setLocalOnly(true)
                 .setCategory(Notification.CATEGORY_MESSAGE)
@@ -195,9 +185,6 @@ class MessageNotifications(
         manager.notify(batch.tag, ID, presented)
         return true
     }
-
-    private fun title(batch: NotificationBatch): String =
-        if (batch.count == 1) batch.title.ifBlank { "Beacon 新消息" } else "Beacon 消息摘要"
 
     private fun body(batch: NotificationBatch): String =
         if (batch.count == 1) MessageMarkdown.summary(batch.body)

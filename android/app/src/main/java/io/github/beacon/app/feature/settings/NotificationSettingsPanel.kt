@@ -57,16 +57,6 @@ internal fun NotificationSettingsPanel(
                     },
                 )
             }
-            SettingsPreferences(stringResource(R.string.notification_privacy_title)) {
-                BeaconPreferenceToggle(
-                    stringResource(R.string.notification_lockscreen_preview),
-                    "",
-                    draft.lockscreenPreview,
-                    enabled = enabled,
-                ) {
-                    draft = draft.copy(lockscreenPreview = it)
-                }
-            }
             if (failed) {
                 BeaconText(state.status.text, color = MaterialTheme.colorScheme.error)
                 BeaconActionButton(

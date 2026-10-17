@@ -5,7 +5,4 @@
     <string name="notification_minutes">%1$d 分钟</string>
     <string name="notification_hours">%1$d 小时</string>
     <string name="notification_outdated_behavior">过时消息处理</string>
-    <string name="notification_privacy_title">锁屏隐私</string>
-    <string name="notification_lockscreen_preview">锁屏预览消息内容</string>
-    <string name="notification_lockscreen_hint">默认隐藏标题和正文</string>
 </resources>

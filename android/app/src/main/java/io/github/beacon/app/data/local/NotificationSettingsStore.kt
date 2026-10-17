@@ -17,7 +17,6 @@ class NotificationSettingsStore(context: Context) {
                         preferences.getString("outdated", defaults.outdatedReminder.name)
                     )
                 ),
-                preferences.getBoolean("lockscreen_preview", defaults.lockscreenPreview),
             )
             .also { it.validate() }
 
@@ -28,7 +27,7 @@ class NotificationSettingsStore(context: Context) {
                 .edit()
                 .putInt("fresh_minutes", value.freshMinutes)
                 .putString("outdated", value.outdatedReminder.name)
-                .putBoolean("lockscreen_preview", value.lockscreenPreview)
+                .remove("lockscreen_preview")
                 .commit()
         )
     }

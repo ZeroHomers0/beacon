@@ -52,14 +52,14 @@ class SettingsBackup(private val context: Context) {
             val names = fields.findAll(payload).map { it.groupValues[1] }.toList()
             val value = JSONObject(payload)
             val version = value.opt("version")
-            require(value.get("format") == "beacon_settings" && version in listOf(1, 2, 3, 4))
+            require(value.get("format") == "beacon_settings" && version in listOf(1, 2, 3, 4, 5))
             val expected =
                 when (version) {
                     1 -> keys
                     2 -> keys + ruleKeys
                     3 -> keys + ruleKeys + "heartbeat_seconds"
                     else ->
-                        keys +
+                        (if (version == 5) keys - "lockscreen_preview" else keys) +
                             ruleKeys +
                             setOf(
                                 "heartbeat_seconds",
@@ -70,7 +70,7 @@ class SettingsBackup(private val context: Context) {
             require(names.size == expected.size && names.toSet() == expected)
             // Preserve the historical choice when restoring pre-heartbeat backups.
             if (version in listOf(1, 2)) value.put("heartbeat_seconds", 60)
-            if (version != 4)
+            if (version in listOf(1, 2, 3))
                 value.put("adaptive_heartbeat", false).put("batch_ordinary_messages", false)
             if (version == 1)
                 value
@@ -108,7 +108,6 @@ class SettingsBackup(private val context: Context) {
             NotificationSettings(
                     number("fresh_minutes"),
                     OutdatedReminder.valueOf(value.getString("outdated")),
-                    boolean("lockscreen_preview"),
                 )
                 .validate()
             QuietHours(
@@ -132,7 +131,7 @@ class SettingsBackup(private val context: Context) {
         val cleanup = CleanupPreferenceStore(context).settings().policy
         return JSONObject()
             .put("format", "beacon_settings")
-            .put("version", 4)
+            .put("version", 5)
             .put("interval", polling.intervalMinutes)
             .put("unmetered", polling.unmetered)
             .put("charging", polling.charging)
@@ -150,7 +149,6 @@ class SettingsBackup(private val context: Context) {
             .put("batch_ordinary_messages", plan.batchOrdinaryMessages)
             .put("fresh_minutes", notification.freshMinutes)
             .put("outdated", notification.outdatedReminder.name)
-            .put("lockscreen_preview", notification.lockscreenPreview)
             .put("quiet_enabled", quiet.enabled)
             .put("quiet_start", quiet.startMinute)
             .put("quiet_end", quiet.endMinute)
@@ -194,6 +192,7 @@ class SettingsBackup(private val context: Context) {
                     "quiet_weekdays" -> "weekdays"
                     "quiet_behavior" -> "behavior"
                     "format",
+                    "lockscreen_preview",
                     "version",
                     "interval",
                     "unmetered",
