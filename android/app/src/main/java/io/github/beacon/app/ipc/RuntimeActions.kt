@@ -14,6 +14,18 @@ import io.github.beacon.app.domain.model.RuntimeState
 import io.github.beacon.app.domain.model.TransportSettings
 import kotlinx.coroutines.flow.StateFlow
 
+/**
+ * Everything the UI may ask the reception runtime to do.
+ *
+ * Every member is abstract on purpose. Earlier revisions gave the rarely used
+ * entry points an empty default body, which meant a new action could be added
+ * here, wired into a screen, and then silently do nothing because the
+ * implementation was never written. An unimplemented member is now a compile
+ * error at the single implementation site.
+ *
+ * Default *arguments* stay: they encode the "act on the current state" idiom
+ * that call sites rely on, and they cannot hide a missing implementation.
+ */
 interface RuntimeActions {
     val state: StateFlow<RuntimeState>
 
@@ -21,18 +33,18 @@ interface RuntimeActions {
 
     fun stop(status: OperationStatus = OperationStatus.connectionLost("已解除接收服务诊断绑定"))
 
-    fun checkServer() {}
+    fun checkServer()
 
     /**
      * Probes the saved server after returning to the foreground. Unlike [checkServer] it never
      * takes over the displayed result: the last answer stays on screen and is only replaced by the
      * new one.
      */
-    fun autoCheckServer() {}
+    fun autoCheckServer()
 
-    fun barkEncryption(key: String, iv: String, onComplete: (String) -> Unit) {}
+    fun barkEncryption(key: String, iv: String, onComplete: (String) -> Unit)
 
-    fun testDelivery(onFailure: (String) -> Unit = {}, onComplete: (String) -> Unit) {}
+    fun testDelivery(onFailure: (String) -> Unit = {}, onComplete: (String) -> Unit)
 
     fun historyArchive(
         uri: String,
@@ -41,32 +53,32 @@ interface RuntimeActions {
         encrypted: Boolean,
         onFailure: (String) -> Unit = {},
         onComplete: (String) -> Unit,
-    ) {}
+    )
 
     fun settingsBackup(
         payload: String? = null,
         onFailure: () -> Unit = {},
         onComplete: (String) -> Unit,
-    ) {}
+    )
 
     fun eventLog(
         onFailure: () -> Unit = {},
         onComplete: (List<io.github.beacon.app.domain.model.RuntimeEvent>) -> Unit,
-    ) {}
+    )
 
-    fun clearEventLog(onFailure: () -> Unit = {}, onComplete: () -> Unit) {}
+    fun clearEventLog(onFailure: () -> Unit = {}, onComplete: () -> Unit)
 
-    fun reconnectRealtime() {}
+    fun reconnectRealtime()
 
-    fun clearConnection(onCleared: () -> Unit = {}) {}
+    fun clearConnection(onCleared: () -> Unit = {})
 
-    fun revokeDevice(onRevoked: () -> Unit = {}) {}
+    fun revokeDevice(onRevoked: () -> Unit = {})
 
-    fun bindDevice(request: BindingRequest, onBound: () -> Unit) {}
+    fun bindDevice(request: BindingRequest, onBound: () -> Unit)
 
-    fun rotateCredentials(payload: String, onRotated: () -> Unit) {}
+    fun rotateCredentials(payload: String, onRotated: () -> Unit)
 
-    fun copyPushKey(onReady: (String) -> Unit) {}
+    fun copyPushKey(onReady: (String) -> Unit)
 
     fun refreshConnectionSummary()
 
@@ -87,9 +99,9 @@ interface RuntimeActions {
 
     fun loadDetail(message: IncomingMessage, onLoaded: ((IncomingMessage) -> Unit)? = null)
 
-    fun openMessage(key: MessageKey, onComplete: () -> Unit = {}) {}
+    fun openMessage(key: MessageKey, onComplete: () -> Unit = {})
 
-    fun remindMessage(key: MessageKey) {}
+    fun remindMessage(key: MessageKey)
 
     fun manageMessages(
         action: MessageAction,
@@ -98,28 +110,28 @@ interface RuntimeActions {
         onComplete: (() -> Unit)? = null,
     )
 
-    fun previewCleanup(policy: io.github.beacon.app.domain.model.CleanupPolicy) {}
+    fun previewCleanup(policy: io.github.beacon.app.domain.model.CleanupPolicy)
 
-    fun applyCleanup(token: String) {}
+    fun applyCleanup(token: String)
 
-    fun markAllRead() {}
+    fun markAllRead()
 
-    fun clearAllMessages() {}
+    fun clearAllMessages()
 
-    fun checkpointStorage() {}
+    fun checkpointStorage()
 
     fun saveReception(
         plan: io.github.beacon.app.domain.model.ReceivePlan,
         polling: PollingConfig,
-    ) {}
+    )
 
-    fun pendingReminders(onFailure: () -> Unit = {}, onReady: (Long) -> Unit) {}
+    fun pendingReminders(onFailure: () -> Unit = {}, onReady: (Long) -> Unit)
 
     fun cleanupSettings(
         value: io.github.beacon.app.domain.model.CleanupSettings? = null,
         onFailure: () -> Unit = {},
         onComplete: (io.github.beacon.app.domain.model.CleanupSettings) -> Unit,
-    ) {}
+    )
 
     fun transport(
         settings: TransportSettings? = null,
@@ -133,15 +145,15 @@ interface RuntimeActions {
         value: NotificationSettings? = null,
         onFailure: () -> Unit = {},
         onComplete: (NotificationSettings) -> Unit,
-    ) {}
+    )
 
     fun quietHours(
         value: QuietHours? = null,
         onFailure: () -> Unit = {},
         onComplete: (QuietHours) -> Unit,
-    ) {}
+    )
 
-    fun receivePlan(value: io.github.beacon.app.domain.model.ReceivePlan? = null) {}
+    fun receivePlan(value: io.github.beacon.app.domain.model.ReceivePlan? = null)
 
     fun setPolling(config: PollingConfig)
 
