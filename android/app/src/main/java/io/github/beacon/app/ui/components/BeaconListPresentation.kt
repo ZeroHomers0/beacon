@@ -160,10 +160,12 @@ fun BeaconPullToRefresh(
 fun BeaconSummaryPill(
     label: String, icon: ImageVector, highlighted: Boolean = false,
     enabled: Boolean = true, onClick: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
 ) {
     Surface(
-        modifier = if (onClick == null) Modifier else Modifier
-            .heightIn(min = BeaconUiMetrics.ControlMinHeight)
+        modifier = if (onClick == null) modifier else modifier
+            .heightIn(min = if (compact) InputChipDefaults.Height else BeaconUiMetrics.ControlMinHeight)
             .clip(RoundedCornerShape(50))
             .clickable(enabled = enabled, role = androidx.compose.ui.semantics.Role.Button, onClick = onClick),
         shape = RoundedCornerShape(50),
@@ -172,9 +174,9 @@ fun BeaconSummaryPill(
             else MaterialTheme.colorScheme.surfaceContainerHigh,
     ) {
         Row(
-            Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            Modifier.padding(horizontal = 12.dp, vertical = if (compact) 2.dp else 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6),
+            horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6, Alignment.CenterHorizontally),
         ) {
             Icon(
                 icon,

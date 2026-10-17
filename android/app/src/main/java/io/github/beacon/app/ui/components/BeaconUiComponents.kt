@@ -4,6 +4,7 @@ package io.github.beacon.app.ui.components
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
@@ -20,6 +21,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -457,13 +459,25 @@ internal fun MessageFilterTag(
     modifier: Modifier = Modifier,
     compact: Boolean = false,
     enabled: Boolean = true,
+    outlined: Boolean = false,
     onClick: (() -> Unit)? = null,
 ) {
     Box(
         modifier
             .semantics { if (compact) contentDescription = label }
             .clip(RoundedCornerShape(6.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .background(
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
+                    .compositeOver(MaterialTheme.colorScheme.surfaceContainerLow)
+            )
+            .then(
+                if (!outlined) Modifier
+                else Modifier.border(
+                    1.dp,
+                    MaterialTheme.colorScheme.outline.copy(alpha = 0.6f),
+                    RoundedCornerShape(6.dp),
+                )
+            )
             .then(
                 if (onClick == null) Modifier
                 else
@@ -475,9 +489,14 @@ internal fun MessageFilterTag(
             ),
         contentAlignment = Alignment.Center,
     ) {
+        Row(
+            Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
         BeaconText(
             label,
-            Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            Modifier.weight(1f, fill = false),
             style =
                 if (compact)
                     MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 14.sp)
@@ -486,5 +505,6 @@ internal fun MessageFilterTag(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+        }
     }
 }

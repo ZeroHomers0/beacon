@@ -225,13 +225,18 @@ private fun MessagesContent(
                 val applied = runtimeState.messageQuery
                 item(key = "count", contentType = "count") {
                     Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6)) {
-                        ActionFlow {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8),
+                        ) {
                             BeaconSummaryPill(
                                 stringResource(R.string.msg_stat_total, runtimeState.messageTotal),
                                 BeaconIcons.Mail,
                                 highlighted = applied.readFilter == MessageReadFilter.ALL,
                                 enabled = !busy,
                                 onClick = { onApplyFilter(applied.search, MessageReadFilter.ALL) },
+                                modifier = Modifier.weight(1f),
+                                compact = true,
                             )
                             BeaconSummaryPill(
                                 stringResource(
@@ -242,6 +247,8 @@ private fun MessagesContent(
                                 highlighted = applied.readFilter == MessageReadFilter.UNREAD,
                                 enabled = !busy,
                                 onClick = { onApplyFilter(applied.search, MessageReadFilter.UNREAD) },
+                                modifier = Modifier.weight(1f),
+                                compact = true,
                             )
                         }
                         if (

@@ -56,9 +56,6 @@ internal fun ServerAdminPage(
         }
     val creating by model.creating.collectAsStateWithLifecycle()
     LaunchedEffect(screen) { model.dismissCreation() }
-    androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-        if (model.state.value.loggedIn && !model.state.value.busy) model.refresh()
-    }
     var loginHelp by remember { mutableStateOf(false) }
     if (loginHelp)
         BeaconAlertDialog(

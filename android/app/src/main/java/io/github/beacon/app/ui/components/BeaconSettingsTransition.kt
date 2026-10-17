@@ -12,9 +12,11 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 
@@ -28,7 +30,7 @@ fun BeaconSettingsTransition(
 ) {
     val direction = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1 else 1
     transition.AnimatedContent(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = (if (animateSize) Modifier.fillMaxWidth() else Modifier.fillMaxSize()).clipToBounds(),
         transitionSpec = {
             val entering = targetState != SettingsScreen.HOME && !navigatingBack
             val motion =
@@ -62,7 +64,10 @@ fun BeaconSettingsTransition(
         },
         contentKey = { it },
     ) { screen ->
-        Box(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface)) {
+        Box(
+            (if (animateSize) Modifier.fillMaxWidth() else Modifier.fillMaxSize())
+                .background(MaterialTheme.colorScheme.surface)
+        ) {
             content(screen)
         }
     }

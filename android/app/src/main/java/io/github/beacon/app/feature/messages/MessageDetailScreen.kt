@@ -115,11 +115,17 @@ fun MessageDetailScreen(
                             }
                         }
                     }
-                    if (message.group.isNotBlank() || message.applicationId.isNotBlank())
-                        FlowRow(
+                    MessageMarkdownBody(message.body) { canToggle, raw, toggle ->
+                    if (message.group.isNotBlank() || message.applicationId.isNotBlank() || canToggle)
+                        Row(
+                            Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6),
-                            verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap4),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
+                            Row(
+                                Modifier.weight(1f),
+                                horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6),
+                            ) {
                             if (message.applicationId.isNotBlank())
                                 MessageFilterTag(
                                     message.applicationName.ifBlank {
@@ -127,9 +133,19 @@ fun MessageDetailScreen(
                                             R.string.message_application_short,
                                             message.applicationId.take(8),
                                         )
-                                    }
+                                    },
+                                    modifier = Modifier.weight(1f, fill = false),
                                 )
-                            if (message.group.isNotBlank()) MessageFilterTag(message.group)
+                            if (message.group.isNotBlank()) MessageFilterTag(
+                                message.group,
+                                modifier = Modifier.weight(1f, fill = false),
+                            )
+                            }
+                            if (canToggle) MessageFilterTag(
+                                stringResource(if (raw) R.string.message_markdown_rendered else R.string.message_markdown_source),
+                                outlined = true,
+                                onClick = toggle,
+                            )
                         }
                     if (message.subtitle.isNotBlank())
                         SelectionContainer {
@@ -139,7 +155,7 @@ fun MessageDetailScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                    MessageMarkdownBody(message.body)
+                    }
                     val hasMedia = remember(message.bark) {
                         runCatching { org.json.JSONObject(message.bark) }.getOrNull()?.let {
                             it.optString("image").isNotBlank() || it.optString("icon").isNotBlank()
