@@ -314,6 +314,7 @@ curl -X POST 'https://push.example.com/push' \
 | POST | `/api/v1/receipts/status` | 设备接收凭据 | 查询消息回执，请求体为 `{"ids":["消息 ID"]}` |
 | POST | `/api/v1/device/revoke` | 设备接收凭据 | 撤销当前设备 |
 | GET | `/api/admin/overview` | 管理令牌 | 查询设备、应用和存储概况 |
+| GET | `/api/admin/metrics` | 管理令牌 | 按路由模板聚合的请求量、5xx 数与延迟分桶（用于排查慢接口，不含路径参数与凭证） |
 | POST | `/api/admin/binding` | 管理令牌 | 创建绑定码，字段为 `name` |
 | POST | `/api/admin/test` | 管理令牌 | 向设备发送测试消息，字段为 `device_id`、`title`、`subtitle`、`body`、`priority` |
 | POST | `/api/admin/revoke` | 管理令牌 | 撤销设备，字段为 `device_id` |
@@ -386,6 +387,8 @@ Go 与 Workers 均限制设备最多 1024 个、应用最多 4096 个，包含�
 
 ## 开源许可与第三方致谢
 
+Beacon 项目本身以 [MIT License](LICENSE) 发布。
+
 第三方组件及图标的许可说明统一在此查阅，App 的“使用与部署文档”入口可打开本 README。
 
 | 组件或资源 | 版权归属 | 许可 |
@@ -396,4 +399,4 @@ Go 与 Workers 均限制设备最多 1024 个、应用最多 4096 个，包含�
 | Markwon core | Markwon contributors | Apache-2.0 |
 | commonmark-java | Atlassian Pty Ltd | BSD-2-Clause |
 
-完整归属信息见 [第三方 NOTICE](android/app/src/main/assets/third-party/NOTICE.txt)，许可全文见 [Apache-2.0](android/app/src/main/assets/third-party/Apache-2.0.txt) 和 [BSD-2-Clause](android/app/src/main/assets/third-party/commonmark-BSD-2-Clause.txt)。这些声明与许可文件仍随 APK 分发；上述第三方许可不代表 Beacon 项目本身的授权声明。
+完整归属信息见 [第三方 NOTICE](android/app/src/main/assets/third-party/NOTICE.txt)，许可全文见 [Apache-2.0](android/app/src/main/assets/third-party/Apache-2.0.txt) 和 [BSD-2-Clause](android/app/src/main/assets/third-party/commonmark-BSD-2-Clause.txt)。这些声明与许可文件仍随 APK 分发。上述第三方许可与 [MIT License](LICENSE)（Beacon 项目自身）互相独立，各覆盖各自的部分。
