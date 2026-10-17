@@ -61,8 +61,6 @@
     <string name="settings_about_title">关于 Beacon</string>
     <string name="settings_allow_notifications_action">允许通知</string>
     <string name="settings_app_tagline_hint">自部署消息推送客户端</string>
-    <string name="settings_auto_receive_title">自动接收</string>
-    <string name="settings_battery_saver_title">启用自动接收</string>
     <string name="settings_connection_section_title">连接配置</string>
     <string name="settings_first_setup_hint">服务器地址与设备绑定</string>
     <string name="settings_interface_section_title">界面</string>
@@ -136,8 +134,6 @@
     <string name="receive_rule_charging">充电时即时接收</string>
     <string name="receive_rule_wifi">Wi-Fi 时即时接收</string>
     <string name="settings_reception_page_title">接收模式</string>
-    <string name="settings_receive_switch_hint">按所选模式自动接收消息</string>
-    <string name="receive_fallback_title">省电回退设置</string>
     <string name="settings_background_permissions_title">后台权限</string>
     <string name="settings_background_permissions_desc">自启动与电池管理</string>
     <string name="background_autostart_title">自启动</string>
@@ -176,9 +172,6 @@
     <string name="storage_max_messages">消息数量上限</string>
     <string name="storage_keep_unread">保留未读</string>
     <string name="storage_local_database">本地数据库</string>
-    <string name="storage_pending_wal_summary">待通知 %1$s · 临时日志 %2$s</string>
-    <string name="storage_refresh">刷新</string>
-    <string name="storage_sampled_inline">统计时间：%1$s</string>
     <string name="storage_preview_title">清理预览</string>
     <string name="storage_preview_refresh">刷新预览</string>
     <string name="storage_clean_action">立即清理</string>
@@ -307,7 +300,6 @@
     <string name="settings_rules_end">结束时间</string>
     <string name="settings_rules_battery_percent">%1$d%%</string>
     <string name="settings_rules_schedule_mode">时间段内接收方式</string>
-    <string name="settings_rules_other_times">其他时间的即时条件</string>
     <string name="settings_rules_time_invalid">请选择有效的开始与结束时间，且两者不能相同</string>
     <string name="settings_backup_export_done">设置备份已导出</string>
     <string name="settings_backup_export_failed">文件保存失败，请重新导出</string>
@@ -332,6 +324,17 @@
     <string name="settings_about_project">项目地址</string>
     <string name="settings_about_browser_unavailable">未找到可以打开项目页面的浏览器</string>
     <string name="settings_about_browser_blocked">系统阻止了打开项目页面</string>
+    <string name="settings_share_unavailable">未找到可以分享的应用</string>
+    <string name="settings_share_blocked">系统阻止了本次分享</string>
+    <string name="settings_diagnostics_group">诊断</string>
+    <string name="settings_diagnostics_row">接收事件记录</string>
+    <string name="settings_diagnostics_summary">仅含事件类型、结果与时间，最多 100 条</string>
+    <string name="settings_diagnostics_reading">正在读取…</string>
+    <string name="settings_diagnostics_shared">已打开分享面板</string>
+    <string name="settings_diagnostics_unavailable">读取失败，接收服务可能未运行</string>
+    <string name="settings_diagnostics_empty">暂无记录</string>
+    <string name="settings_diagnostics_count">共 %1$d 条记录，可分享</string>
+    <string name="settings_diagnostics_export">导出并分享</string>
     <string name="settings_update_title">检查更新</string>
     <string name="settings_update_checking">正在检查更新…</string>
     <string name="settings_update_latest">已是最新版本</string>
@@ -353,8 +356,6 @@
     <string name="settings_cleanup_forever">永久</string>
     <string name="settings_cleanup_days">%1$d 天</string>
     <string name="settings_cleanup_count">%1$d 条</string>
-    <string name="settings_storage_receipts">待回传</string>
-    <string name="storage_wal_clear">清理临时日志</string>
     <string name="settings_cleanup_all_title">清理所有本地消息</string>
     <string name="settings_cleanup_eligible">可清理</string>
     <string name="settings_cleanup_protected">受保护</string>
@@ -385,7 +386,6 @@
     <string name="admin_devices">设备</string>
     <string name="admin_messages">消息</string>
     <string name="admin_pending">待接收</string>
-    <string name="admin_database">数据库</string>
     <string name="admin_logout">退出登录</string>
     <string name="admin_refresh">刷新状态</string>
     <string name="admin_applications">应用</string>
@@ -427,7 +427,6 @@
     <string name="admin_logged_out">已退出登录，并清除本机管理员令牌。</string>
     <string name="admin_invalid_login">请输入有效的 HTTPS 根地址和 64 位十六进制管理员令牌。</string>
     <string name="admin_connected">管理员登录成功。</string>
-    <string name="admin_refreshed">服务器状态已刷新。</string>
     <string name="admin_binding_created">绑定码已创建。</string>
     <string name="admin_binding_code">一次性绑定码</string>
     <string name="admin_application_created">发送应用已创建，请保存一次性显示的凭证。</string>
@@ -457,8 +456,6 @@
     <string name="admin_delete_device">删除设备</string>
     <string name="admin_delete_device_hint">彻底删除已解绑设备「%1$s」及其所有消息、回执和发送应用。此操作无法恢复。</string>
     <string name="admin_device_deleted">设备及其消息已删除</string>
-    <string name="time_picker_hour">时</string>
-    <string name="time_picker_minute">分</string>
     <string name="message_application_short">应用 %1$s</string>
     <string name="message_markdown_source">查看原文</string>
     <string name="message_markdown_rendered">显示排版</string>
@@ -522,7 +519,6 @@
     <string name="settings_retry_save">重试保存</string>
     <string name="settings_reload">重新加载</string>
     <string name="settings_quiet_invalid_disabled">当前时段无效。保存停用状态时将保留上次有效时段；如需预设新时段，请先修正时间和星期。</string>
-    <string name="settings_temporary_log_size">临时日志</string>
     <string name="settings_realtime_connected">已连接</string>
     <string name="settings_realtime_auth_failure">无法验证设备，请重新绑定服务器</string>
     <string name="settings_realtime_config_failure">连接配置异常，请检查服务器设置</string>
@@ -537,4 +533,12 @@
     <string name="admin_application_device">所属设备：%1$s</string>
     <string name="notification_action_read">已读</string>
     <string name="notification_action_body">正文</string>
+    <string name="notification_public_body">有新消息，请打开应用查看</string>
+    <string name="notification_single_title_fallback">Beacon 新消息</string>
+    <string name="notification_summary_title">Beacon 消息摘要</string>
+    <string name="notification_batch_body">本轮保存 %1$d 条消息，点击查看</string>
+    <string name="shortcut_messages_short">消息</string>
+    <string name="shortcut_messages_long">查看消息</string>
+    <string name="shortcut_settings_short">设置</string>
+    <string name="shortcut_settings_long">打开设置</string>
 </resources>

@@ -4,7 +4,6 @@
     <string name="ui_v2_style_material3">Material 3</string>
     <string name="ui_v2_style_miuix">MIUIX</string>
     <string name="ui_v2_receive_mode_dialog_title">选择接收模式</string>
-    <string name="ui_v2_receive_strategy">接收策略</string>
     <string name="ui_v2_examples_formats">curl / PowerShell / JSON</string>
     <string name="ui_v2_quiet_scope_short">只影响通知提醒，不停止消息接收</string>
     <string name="ui_v2_quiet_effect">免打扰期间</string>

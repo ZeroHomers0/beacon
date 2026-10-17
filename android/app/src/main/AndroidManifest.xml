@@ -25,13 +25,13 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
-        <activity android:name=".MainActivity" android:exported="true" android:windowSoftInputMode="adjustNothing">
+        <activity android:name=".MainActivity" android:exported="true" android:theme="@style/Theme.Beacon.Splash" android:windowSoftInputMode="adjustNothing">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".NotificationOpenActivity" android:exported="false" android:launchMode="singleTask" android:windowSoftInputMode="adjustNothing" />
+        <activity android:name=".NotificationOpenActivity" android:exported="false" android:launchMode="singleTask" android:theme="@style/Theme.Beacon.Splash" android:windowSoftInputMode="adjustNothing" />
         <receiver android:name=".runtime.notification.NotificationReadReceiver" android:process=":runtime" android:exported="false" />
         <receiver android:name=".runtime.notification.NotificationCopyReceiver" android:process=":runtime" android:exported="false" />
         <!-- Hands the downloaded update to the system installer without a world-readable file. -->

@@ -5,6 +5,7 @@ package io.github.beacon.app
 import android.Manifest
 import android.app.NotificationManager
 import android.content.ComponentCallbacks2
+import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -21,6 +22,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import io.github.beacon.app.ui.AppShortcuts
 import io.github.beacon.app.ui.BeaconApp
 import io.github.beacon.app.ui.BeaconViewModel
 import io.github.beacon.app.ui.components.NotificationPermissionState
@@ -71,6 +74,19 @@ open class MainActivity : ComponentActivity() {
         viewModel.uiState.selectionMode = false
         viewModel.uiState.selectedKeys = emptyList()
         viewModel.uiState.pendingNotification = key
+    }
+
+    /**
+     * Land on the tab a launcher shortcut asked for.
+     *
+     * Only the page index is touched: a shortcut must not be able to open a message, so this never
+     * goes through [openNotificationMessage].
+     */
+    private fun showShortcutTab(intent: Intent?) {
+        val tab = AppShortcuts.requestedTab(this, intent) ?: return
+        viewModel.uiState.selectionMode = false
+        viewModel.uiState.selectedKeys = emptyList()
+        viewModel.uiState.finishNavigation(tab)
     }
 
     /**
@@ -138,9 +154,24 @@ open class MainActivity : ComponentActivity() {
         refreshNotificationStatus()
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        // A launcher may reuse an existing task instead of starting a new activity; the shortcut
+        // hint then arrives here rather than in onCreate.
+        showShortcutTab(intent)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Without a keep-on-screen condition the splash retires the moment the first frame is
+        // ready, which is exactly the window the old white host background used to occupy.
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Republished on every cold start so a launcher that dropped them (or an app that was
+        // updated) gets the current labels; failures are swallowed inside.
+        AppShortcuts.publish(this)
+        if (savedInstanceState == null) showShortcutTab(intent)
         setContent {
             val savedUi = rememberSaveableStateHolder()
             AndroidView(

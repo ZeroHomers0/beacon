@@ -495,6 +495,7 @@ fun SettingsPage(
             }
             SettingsScreen.ABOUT -> {
                 aboutSettingsItems(resources, context, onOperationDetails)
+                diagnosticsItems(context, actions, onOperationDetails)
             }
         }
     }
