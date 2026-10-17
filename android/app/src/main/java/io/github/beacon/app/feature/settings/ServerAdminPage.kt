@@ -163,7 +163,13 @@ internal fun ServerAdminPage(
                 )
             }
         }
-        if (!state.loggedIn) {
+        if (state.restoring) {
+            item {
+                SettingsSection(stringResource(R.string.admin_title)) {
+                    SettingsHint(stringResource(R.string.admin_loading))
+                }
+            }
+        } else if (!state.loggedIn) {
             item {
                 SettingsSection(stringResource(R.string.admin_login_title)) {
                     SettingsHint(stringResource(R.string.admin_login_hint))

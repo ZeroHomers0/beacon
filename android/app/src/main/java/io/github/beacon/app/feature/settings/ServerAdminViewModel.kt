@@ -34,6 +34,7 @@ data class AdminSecret(
 )
 
 data class AdminUiState(
+    val restoring: Boolean = false,
     val endpoint: String = "",
     val loggedIn: Boolean = false,
     val busy: Boolean = false,
@@ -56,7 +57,7 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
     ViewModel() {
     constructor() : this({ endpoint, token -> ServerAdminClient(endpoint, token) })
 
-    private val mutable = MutableStateFlow(AdminUiState())
+    private val mutable = MutableStateFlow(AdminUiState(restoring = true))
     val state = mutable.asStateFlow()
     private val mutableCreating = MutableStateFlow(false)
     val creating = mutableCreating.asStateFlow()
@@ -91,13 +92,17 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
         val restoreGeneration = generation
         viewModelScope.launch {
             val saved = withContext(Dispatchers.IO) { runCatching { store.load() }.getOrNull() }
-            if (
-                saved != null &&
-                    generation == restoreGeneration &&
-                    session == null &&
-                    !mutable.value.busy
-            )
-                login(saved.endpoint, saved.token)
+            if (generation != restoreGeneration || session != null || mutable.value.busy)
+                return@launch
+            val client = saved?.let { runCatching { createClient(it.endpoint, it.token) }.getOrNull() }
+            session = client
+            mutable.value =
+                mutable.value.copy(
+                    restoring = false,
+                    endpoint = client?.endpoint.orEmpty(),
+                    loggedIn = client != null,
+                )
+            if (client != null) refresh()
         }
     }
 
@@ -308,7 +313,7 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
                     }
                 if (!mutable.value.loggedIn || feedback == R.string.admin_unauthorized) {
                     session = null
-                    mutable.value = AdminUiState(feedback = feedback)
+                    mutable.value = AdminUiState(endpoint = mutable.value.endpoint, feedback = feedback)
                 } else
                     mutable.value =
                         if (success == null)

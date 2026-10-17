@@ -9,9 +9,11 @@ import android.widget.TextView
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -22,7 +24,8 @@ import io.github.beacon.app.R
 import io.github.beacon.app.domain.policy.MessageMarkdown
 import io.github.beacon.app.domain.policy.messageMarkdownDocuments
 import io.github.beacon.app.ui.components.BeaconText
-import io.github.beacon.app.ui.components.BeaconTextButton
+import io.github.beacon.app.ui.components.BeaconOutlinedButton
+import io.github.beacon.app.ui.icons.BeaconIcons
 import io.noties.markwon.AbstractMarkwonPlugin
 import io.noties.markwon.Markwon
 import io.noties.markwon.MarkwonConfiguration
@@ -88,8 +91,26 @@ internal fun MessageMarkdownBody(body: String) {
         }
     }
     Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
-        if (rendered?.let { !it.failed && it.text.toString() != body } == true) BeaconTextButton(onClick = { raw = !raw }) {
-            BeaconText(stringResource(if (raw) R.string.message_markdown_rendered else R.string.message_markdown_source))
+        if (rendered?.let { !it.failed && it.text.toString() != body } == true) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                BeaconOutlinedButton(onClick = { raw = !raw }) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector = if (raw) BeaconIcons.Messages else BeaconIcons.Code,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        BeaconText(
+                            stringResource(if (raw) R.string.message_markdown_rendered else R.string.message_markdown_source),
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1,
+                        )
+                    }
+                }
+            }
         }
         if (raw || rendered?.failed == true || body.isBlank()) {
             if (rendered?.failed == true && !raw)

@@ -70,6 +70,7 @@ fun BeaconApp(
                     io.github.beacon.app.feature.settings.ServerAdminViewModel::class.java]
         }
     val adminState by adminModel.state.collectAsStateWithLifecycle()
+    LaunchedEffect(adminModel) { adminModel.restoreSession(adminActivity) }
     val ui = viewModel.uiState
     val runtimeState by actions.state.collectAsStateWithLifecycle()
     LaunchedEffect(
