@@ -85,17 +85,21 @@ object BeaconIcons {
             24f,
             "M12 2a10 10 0 1 0 0 20a10 10 0 0 0 0-20Zm0 2v16a8 8 0 0 1 0-16Z",
         )
-    // Original battery/leaf drawing: receive-mode identity, separate from status/error icons.
     val PowerSaving =
         vector(
             "PowerSaving",
             24f,
             24f,
-            "M7 2h10v2h2v18H5V4h2V2Zm0 4v14h10V6H7Z",
-            "M9 15c-2-4 1-7 6-7 0 5-1 8-5 8l3-5-4 4Z",
+            "M21 3C10 2 3 7 3 14c0 3 2 5 5 5 7 0 12-7 13-16Zm-2.4 2.2C17.3 12.5 13.1 17 8 17c-1.9 0-3-1.1-3-3 0-5.2 5.4-9.2 13.6-8.8Z",
+            "m3 21 1.4 1.4L16 10.8 14.6 9.4 3 21Z",
         )
 
-    // Original radio-wave drawing for realtime reception, currently a disabled placeholder.
+    val ReceiveRules = vector(
+        "ReceiveRules", 24f, 24f,
+        "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16Z",
+        "M11 6h2v5.4l3.5 2-.9 1.8-4.6-2.6V6Z",
+    )
+
     val Realtime =
         vector(
             "Realtime",

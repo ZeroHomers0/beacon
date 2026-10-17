@@ -491,7 +491,7 @@ internal fun MessageFilterTag(
     ) {
         Row(
             Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap4),
             verticalAlignment = Alignment.CenterVertically,
         ) {
         BeaconText(

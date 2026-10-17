@@ -13,7 +13,15 @@ import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,7 +48,7 @@ fun receiveModeIcon(mode: ReceiveMode) =
     when (mode) {
         ReceiveMode.POWER_SAVING -> BeaconIcons.PowerSaving
         ReceiveMode.REALTIME -> BeaconIcons.Realtime
-        ReceiveMode.RULES -> BeaconIcons.Tune
+        ReceiveMode.RULES -> BeaconIcons.ReceiveRules
     }
 
 @Composable
@@ -64,9 +72,30 @@ fun ReceiveModeButton(
     checkingServer: Boolean = false,
     connected: Boolean = receiving,
 ) {
-    val accent =
-        if (connected && !serverIssue && !checkingServer) receiveModeColor(mode)
-        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .6f)
+    val modeColor = receiveModeColor(mode)
+    val accent by animateColorAsState(
+        if (serverIssue) MaterialTheme.colorScheme.error
+        else if (connected && !checkingServer) modeColor
+        else MaterialTheme.colorScheme.onSurfaceVariant,
+        tween(200), label = "receive-mode-color",
+    )
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (pressed) .96f else 1f, tween(150), label = "receive-mode-press")
+    var resumed by remember { mutableStateOf(false) }
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
+        resumed = true
+        onPauseOrDispose { resumed = false }
+    }
+    val angle = if (checkingServer && resumed) {
+        val motion = rememberInfiniteTransition(label = "receive-mode-check")
+        motion.animateFloat(
+            0f, 360f, infiniteRepeatable(tween(1200, easing = LinearEasing)),
+            label = "receive-mode-check-angle",
+        )
+    } else {
+        rememberUpdatedState(0f)
+    }
     val description =
         if (checkingServer) stringResource(R.string.server_checking)
         else if (serverIssue) stringResource(R.string.server_warning_action)
@@ -81,32 +110,55 @@ fun ReceiveModeButton(
     Box(
         Modifier.padding(start = 8.dp)
             .size(48.dp)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(CircleShape)
             .combinedClickable(
+                interactionSource = interaction,
+                indication = androidx.compose.material3.ripple(),
                 onClick = onClick,
                 onLongClick = onLongClick,
                 onLongClickLabel = stringResource(R.string.receive_mode_settings_long_press),
             ),
         contentAlignment = Alignment.Center,
     ) {
-        Canvas(Modifier.matchParentSize().padding(1.dp)) {
-            val width = 1.5.dp.toPx()
-            drawCircle(
-                color = accent.copy(alpha = .75f),
-                radius = size.minDimension / 2 - width / 2,
-                style = Stroke(width = width),
-            )
-        }
         Box(
-            Modifier.size(40.dp).background(accent.copy(alpha = .1f), CircleShape),
+            Modifier.size(42.dp).background(
+                accent.copy(alpha = .14f).compositeOver(MaterialTheme.colorScheme.surface),
+                CircleShape,
+            ),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                receiveModeIcon(mode),
-                description,
-                Modifier.size(26.dp),
-                tint = accent,
-            )
+            Crossfade(mode, animationSpec = tween(200), label = "receive-mode-icon") { displayed ->
+                Icon(receiveModeIcon(displayed), description, Modifier.size(26.dp), tint = accent)
+            }
+        }
+        if (checkingServer) {
+            Canvas(Modifier.matchParentSize().padding(1.dp)) {
+                drawArc(
+                    modeColor, angle.value - 90f, 85f, false,
+                    style = Stroke(2.dp.toPx(), cap = StrokeCap.Round),
+                )
+            }
+        } else {
+            val badgeColor = if (serverIssue) MaterialTheme.colorScheme.error
+                else if (receiving && connected) io.github.beacon.app.ui.theme.beaconSuccessColor()
+                else MaterialTheme.colorScheme.onSurfaceVariant
+            Box(
+                Modifier.align(Alignment.BottomEnd).padding(2.dp).size(14.dp)
+                    .background(MaterialTheme.colorScheme.surface, CircleShape).padding(2.dp)
+                    .background(badgeColor, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (serverIssue || !receiving || !connected) Canvas(Modifier.size(6.dp)) {
+                    val stroke = 1.4.dp.toPx()
+                    if (serverIssue) {
+                        drawLine(Color.White, androidx.compose.ui.geometry.Offset(center.x, 0f),
+                            androidx.compose.ui.geometry.Offset(center.x, size.height * .55f), stroke, StrokeCap.Round)
+                        drawCircle(Color.White, stroke / 2, androidx.compose.ui.geometry.Offset(center.x, size.height))
+                    } else drawLine(Color.White, androidx.compose.ui.geometry.Offset(0f, center.y),
+                        androidx.compose.ui.geometry.Offset(size.width, center.y), stroke, StrokeCap.Round)
+                }
+            }
         }
     }
 }
