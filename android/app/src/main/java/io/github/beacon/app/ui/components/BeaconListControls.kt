@@ -370,12 +370,18 @@ fun BeaconEmptyState(
                 Modifier.size(40.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-        BeaconText(title, style = MaterialTheme.typography.titleMedium)
+        BeaconText(
+            title,
+            modifier = Modifier.fillMaxWidth(),
+            style = MaterialTheme.typography.titleMedium,
+            textAlign = TextAlign.Center,
+        )
         BeaconText(
             description,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center,
         )
         if (!loading) action()
     }
