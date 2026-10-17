@@ -29,7 +29,7 @@ class RuntimeMessageStore(
     private val availableBytes: () -> Long = {
         android.os.StatFs(context.filesDir.absolutePath).availableBytes
     },
-) : SQLiteOpenHelper(context, "beacon-messages.db", null, 14), SyncStore, NotificationIntentStore {
+) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION), SyncStore, NotificationIntentStore {
     init {
         // A server ACK must not outlive a durable local commit after power loss.
         // OpenParams configures every pooled connection; a raw PRAGMA changes only one.
@@ -54,7 +54,7 @@ class RuntimeMessageStore(
         submissionStore.ackCompleted(server, ids)
 
     private val appContext = context.applicationContext
-    private val databaseFile = context.getDatabasePath("beacon-messages.db")
+    private val databaseFile = context.getDatabasePath(DATABASE_NAME)
 
     private val queryStore by lazy { MessageQueryStore(this) }
     private val submissionStore by lazy {
@@ -113,22 +113,15 @@ class RuntimeMessageStore(
         createNotifications(db)
         createServerIndex(db)
         createDeletionIndex(db)
+        createMessageFilterIndexes(db)
         createReceiptTimes(db)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        check(oldVersion in 1..13 && newVersion == 14)
-        db.execSQL("ALTER TABLE messages ADD COLUMN actions TEXT NOT NULL DEFAULT '[]'")
-        if (oldVersion == 13) return
-        db.execSQL("ALTER TABLE messages ADD COLUMN application_id TEXT NOT NULL DEFAULT ''")
-        db.execSQL("ALTER TABLE messages ADD COLUMN message_group TEXT NOT NULL DEFAULT ''")
-        db.execSQL("ALTER TABLE messages ADD COLUMN expires_at INTEGER NOT NULL DEFAULT 0")
-        db.execSQL("ALTER TABLE messages ADD COLUMN application_name TEXT NOT NULL DEFAULT ''")
-        if (oldVersion == 12) return
-        if (oldVersion < 12)
-            db.execSQL("ALTER TABLE messages ADD COLUMN bark TEXT NOT NULL DEFAULT ''")
-        if (oldVersion < 10)
-            db.execSQL("ALTER TABLE messages ADD COLUMN priority INTEGER NOT NULL DEFAULT 5")
+        // Steps run in ascending order, each guarded by its own target version: the version this
+        // file creates is the version it upgrades from, so a bump only has to touch
+        // DATABASE_VERSION and append one guarded step below.
+        check(newVersion == DATABASE_VERSION && oldVersion in 1 until DATABASE_VERSION)
         if (oldVersion < 2) createCursors(db)
         if (oldVersion < 3) {
             db.execSQL("ALTER TABLE messages ADD COLUMN source_created INTEGER NOT NULL DEFAULT 0")
@@ -142,7 +135,34 @@ class RuntimeMessageStore(
         }
         if (oldVersion < 7)
             db.execSQL("ALTER TABLE messages ADD COLUMN subtitle TEXT NOT NULL DEFAULT ''")
+        if (oldVersion < 10)
+            db.execSQL("ALTER TABLE messages ADD COLUMN priority INTEGER NOT NULL DEFAULT 5")
+        if (oldVersion < 12)
+            db.execSQL("ALTER TABLE messages ADD COLUMN bark TEXT NOT NULL DEFAULT ''")
+        if (oldVersion < 13) {
+            db.execSQL("ALTER TABLE messages ADD COLUMN application_id TEXT NOT NULL DEFAULT ''")
+            db.execSQL("ALTER TABLE messages ADD COLUMN message_group TEXT NOT NULL DEFAULT ''")
+            db.execSQL("ALTER TABLE messages ADD COLUMN expires_at INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE messages ADD COLUMN application_name TEXT NOT NULL DEFAULT ''")
+        }
+        if (oldVersion < 14)
+            db.execSQL("ALTER TABLE messages ADD COLUMN actions TEXT NOT NULL DEFAULT '[]'")
+        if (oldVersion < 15) createMessageFilterIndexes(db)
+        // Idempotent repairs that have always run on every upgrade; they must follow the column
+        // additions above because they read `delete_token` and `source_created`.
+        repairLegacyTables(db)
+    }
+
+    /**
+     * Idempotent repairs every upgrade performs: drop the dead undo tables, move revoked rows into
+     * tombstones, and backfill receipt times. Safe to rerun, which is why it is not version-gated.
+     */
+    private fun repairLegacyTables(db: SQLiteDatabase) {
         db.execSQL("DROP TABLE IF EXISTS source_preferences")
+        db.execSQL("DROP TABLE IF EXISTS undo_batches")
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS tombstones(server TEXT NOT NULL, id TEXT NOT NULL, PRIMARY KEY(server,id))"
+        )
         db.execSQL(
             "INSERT OR IGNORE INTO tombstones(server,id) SELECT server,id FROM messages WHERE delete_token<>''"
         )
@@ -150,7 +170,6 @@ class RuntimeMessageStore(
             "DELETE FROM notification_intents WHERE EXISTS(SELECT 1 FROM messages m WHERE m.server=notification_intents.server AND m.id=notification_intents.id AND m.delete_token<>'')"
         )
         db.execSQL("DELETE FROM messages WHERE delete_token<>''")
-        db.execSQL("DROP TABLE IF EXISTS undo_batches")
         createReceiptTimes(db)
         db.execSQL(
             "INSERT OR IGNORE INTO receipt_times SELECT p.server,p.id,m.source_created,0 FROM pending_ack p JOIN messages m ON m.server=p.server AND m.id=p.id WHERE m.source_created>0"
@@ -220,6 +239,19 @@ class RuntimeMessageStore(
         db.execSQL("CREATE INDEX messages_delete_token ON messages(delete_token)")
     }
 
+    /**
+     * Indexes for the chip row and the read-state filter.
+     *
+     * The list query is `delete_token='' AND rowid < ? ORDER BY rowid DESC`, which the primary
+     * key already serves. These cover the two filters that would otherwise degrade into a scan
+     * of the whole table once the history is full.
+     */
+    private fun createMessageFilterIndexes(db: SQLiteDatabase) {
+        db.execSQL("CREATE INDEX IF NOT EXISTS messages_group ON messages(message_group)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS messages_application ON messages(application_id)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS messages_unread ON messages(is_read)")
+    }
+
     private fun createNotifications(db: SQLiteDatabase) {
         db.execSQL(
             "CREATE TABLE notification_intents(seq INTEGER PRIMARY KEY AUTOINCREMENT, server TEXT NOT NULL, id TEXT NOT NULL, UNIQUE(server,id))"
@@ -241,4 +273,10 @@ class RuntimeMessageStore(
         queryStore.advanceCursor(server, sequence)
 
     override fun pendingIds(server: String): List<String> = queryStore.pendingIds(server)
+
+    companion object {
+        const val DATABASE_NAME = "beacon-messages.db"
+        // Bump this and add the matching step in onUpgrade; nothing else names the version.
+        const val DATABASE_VERSION = 15
+    }
 }

@@ -2,8 +2,6 @@ package io.github.beacon.app.data.local.message
 
 import android.database.sqlite.SQLiteOpenHelper
 import io.github.beacon.app.data.local.sql.MessageQuerySql
-import io.github.beacon.app.data.local.sql.filterArgs
-import io.github.beacon.app.data.local.sql.pageArgs
 import io.github.beacon.app.domain.model.IncomingMessage
 import io.github.beacon.app.domain.model.MessagePage
 import io.github.beacon.app.domain.model.MessageQuery
@@ -44,13 +42,15 @@ internal class MessageQueryStore(private val helper: SQLiteOpenHelper) {
                         else null
                     }
             } ?: query
+        val (countSql, countArgs) = MessageQuerySql.counts(query)
         val (total, unread) =
-            db.rawQuery(MessageQuerySql.COUNTS, query.filterArgs()).use {
+            db.rawQuery(countSql, countArgs).use {
                 it.moveToFirst()
                 it.getLong(0) to it.getLong(1)
             }
+        val (pageSql, pageArgs) = MessageQuerySql.page(anchored)
         val rows =
-            db.rawQuery(MessageQuerySql.PAGE, anchored.pageArgs()).use { cursor ->
+            db.rawQuery(pageSql, pageArgs).use { cursor ->
                 buildList {
                     while (cursor.moveToNext()) add(
                         cursor.getLong(0) to
