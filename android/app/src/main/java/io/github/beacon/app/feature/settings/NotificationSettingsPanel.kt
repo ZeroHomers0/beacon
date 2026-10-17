@@ -19,14 +19,14 @@ internal fun NotificationSettingsPanel(
     onRetrySave: () -> Unit,
 ) {
     with(form) {
-        val enabled = loaded && !saving && !rulesSaving && state.runtimeConnected
+        val enabled = pageState.hasContent && !saving && !rulesSaving && state.runtimeConnected
         val minutes =
             listOf(1, 5, 15, 60).let {
                 if (draft.freshMinutes in it) it else (it + draft.freshMinutes).sorted()
             }
         Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SettingsGroupGap)) {
             SettingsPreferences(stringResource(
-                if (!loaded && !failed && state.runtimeConnected) R.string.settings_data_loading
+                if (pageState == AsyncPageState.INITIAL_LOADING) R.string.settings_data_loading
                 else R.string.notification_age_title
             )) {
                 SettingsFieldGroup(

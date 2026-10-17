@@ -116,7 +116,7 @@ fun ReceiveModeButton(
         badgeAlpha.snapTo(1f)
         if (breathing) {
             while (true) {
-                kotlinx.coroutines.delay(1600)
+                kotlinx.coroutines.delay(2600)
                 badgeAlpha.animateTo(.55f, tween(700))
                 badgeAlpha.animateTo(1f, tween(700))
             }

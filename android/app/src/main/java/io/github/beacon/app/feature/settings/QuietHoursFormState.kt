@@ -6,6 +6,8 @@ import io.github.beacon.app.ipc.RuntimeActions
 
 /** One draft shared by the notification rules page and its persistent toolbar save action. */
 class QuietHoursFormState {
+    val pageState: io.github.beacon.app.domain.model.AsyncPageState
+        get() = io.github.beacon.app.domain.model.AsyncPageState.resolve(loaded, loading, failed && !loaded)
     var saved by mutableStateOf(QuietHours())
     var draft by mutableStateOf(saved)
     var start by mutableStateOf("22:00")

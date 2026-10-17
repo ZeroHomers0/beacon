@@ -1,4 +1,4 @@
-export const VERSION = "1.2.5-workers";
+export const VERSION = "1.3.0-workers";
 export const DAY = 86_400_000;
 export const PENDING = 7 * DAY;
 export const RECEIPT = 30 * DAY;

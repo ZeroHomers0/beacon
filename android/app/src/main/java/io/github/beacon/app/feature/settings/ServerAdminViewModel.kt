@@ -54,7 +54,14 @@ data class AdminUiState(
     val applications: List<AdminApplication> = emptyList(),
     val secret: AdminSecret? = null,
     val testDeviceId: String = "",
-)
+) {
+    fun listState(empty: Boolean) = io.github.beacon.app.domain.model.AsyncPageState.resolve(
+        loaded = overviewLoaded,
+        loading = busy,
+        failed = refreshFailure != null,
+        empty = empty,
+    )
+}
 
 /** Administrator credentials use an independent Keystore; never saved state or settings exports. */
 class ServerAdminViewModel(private val createClient: (String, String) -> ServerAdministration) :

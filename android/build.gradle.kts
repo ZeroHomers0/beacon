@@ -3,6 +3,6 @@ plugins {
     alias(libs.plugins.kotlin.compose) apply false
 }
 
-extra["beaconVersionCode"] = 16
+extra["beaconVersionCode"] = 17
 
-extra["beaconVersionName"] = "1.2.5"
+extra["beaconVersionName"] = "1.3.0"

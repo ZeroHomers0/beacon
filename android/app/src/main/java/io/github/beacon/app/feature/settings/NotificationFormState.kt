@@ -6,6 +6,8 @@ import io.github.beacon.app.domain.model.NotificationSettings
 import io.github.beacon.app.ipc.RuntimeActions
 
 class NotificationFormState {
+    val pageState: io.github.beacon.app.domain.model.AsyncPageState
+        get() = io.github.beacon.app.domain.model.AsyncPageState.resolve(loaded, loading, failed && !loaded)
     var saved by mutableStateOf(NotificationSettings())
     var draft by mutableStateOf(saved)
     var loaded by mutableStateOf(false)

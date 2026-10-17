@@ -46,12 +46,12 @@ internal fun QuietHoursPanel(
                 }
             }
         }
-        val editable = loaded && !saving && !editorSaving && state.runtimeConnected
+        val editable = pageState.hasContent && !saving && !editorSaving && state.runtimeConnected
         val labels = stringResource(R.string.quiet_weekdays).split(",")
         Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SettingsGroupGap)) {
             if (!scheduleOnly)
                 SettingsPreferences(stringResource(
-                    if (!loaded && !failed && state.runtimeConnected) R.string.settings_data_loading
+                    if (pageState == AsyncPageState.INITIAL_LOADING) R.string.settings_data_loading
                     else R.string.ui_v2_quiet_section
                 )) {
                     SettingsFieldGroup(
@@ -130,7 +130,7 @@ internal fun QuietHoursPanel(
             if (scheduleOnly || onSchedule == null) {
                 SettingsSection(
                     stringResource(
-                        if (scheduleOnly && !loaded && !failed && state.runtimeConnected)
+                        if (scheduleOnly && pageState == AsyncPageState.INITIAL_LOADING)
                             R.string.settings_data_loading
                         else R.string.settings_time_range_heading
                     ),

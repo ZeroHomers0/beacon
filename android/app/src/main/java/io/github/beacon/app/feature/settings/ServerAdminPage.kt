@@ -326,7 +326,7 @@ internal fun ServerAdminPage(
                         }
 
                     item {
-                        if (!state.overviewLoaded)
+                        if (!state.listState(devices.isEmpty()).hasContent)
                             SettingsHint(stringResource(
                                 if (state.busy) R.string.settings_data_loading
                                 else R.string.admin_overview_unavailable
@@ -387,7 +387,7 @@ internal fun ServerAdminPage(
                 1 -> {
 
                     item {
-                        if (!state.overviewLoaded)
+                        if (!state.listState(applications.isEmpty()).hasContent)
                             SettingsHint(stringResource(
                                 if (state.busy) R.string.settings_data_loading
                                 else R.string.admin_overview_unavailable

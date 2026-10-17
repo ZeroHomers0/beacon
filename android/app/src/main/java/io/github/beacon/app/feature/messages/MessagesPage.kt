@@ -122,7 +122,13 @@ private fun MessagesContent(
     // The shared title only folds once the list has actually scrolled.
     val titleCollapsed by remember { derivedStateOf { scroll.firstVisibleItemIndex > 0 } }
     val busy = runtimeState.messageBusy
-    val awaitingMessages = !runtimeState.messagesLoaded && !runtimeState.messageLoadFailed
+    val pageState = io.github.beacon.app.domain.model.AsyncPageState.resolve(
+        loaded = runtimeState.messagesLoaded || runtimeState.messages.isNotEmpty(),
+        loading = runtimeState.messageBusy || (!runtimeState.messagesLoaded && !runtimeState.messageLoadFailed),
+        failed = runtimeState.messageLoadFailed,
+        empty = runtimeState.messages.isEmpty(),
+    )
+    val awaitingMessages = pageState == io.github.beacon.app.domain.model.AsyncPageState.INITIAL_LOADING
     var showLoading by remember { mutableStateOf(false) }
     LaunchedEffect(awaitingMessages, busy, runtimeState.runtimeConnected) {
         showLoading = false
@@ -331,7 +337,7 @@ private fun MessagesContent(
                 if (runtimeState.messages.isEmpty())
                     item(key = "empty", contentType = "empty") {
                         when {
-                            (awaitingMessages || busy) && showLoading ->
+                            awaitingMessages && showLoading ->
                                 BeaconEmptyState(
                                     BeaconIcons.Messages,
                                     stringResource(R.string.msg_loading),
@@ -339,7 +345,8 @@ private fun MessagesContent(
                                     loading = true,
                                 )
 
-                            runtimeState.messageLoadFailed ->
+                            pageState == io.github.beacon.app.domain.model.AsyncPageState.INITIAL_ERROR ||
+                                pageState == io.github.beacon.app.domain.model.AsyncPageState.REFRESH_ERROR ->
                                 BeaconEmptyState(
                                     BeaconIcons.Warning,
                                     stringResource(R.string.ui_list_load_failed),
@@ -350,7 +357,7 @@ private fun MessagesContent(
                                     }
                                 }
 
-                            awaitingMessages || busy -> Unit
+                            awaitingMessages || pageState == io.github.beacon.app.domain.model.AsyncPageState.IDLE -> Unit
 
                             else -> {
                                 val filtered = search.isNotBlank() || readFilter != MessageReadFilter.ALL ||
