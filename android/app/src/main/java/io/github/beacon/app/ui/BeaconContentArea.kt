@@ -152,8 +152,6 @@ BeaconMessageTransition(
                                     barBehavior.connection(ui.uiStyle)
                                 ),
                         sharedTitle = sharedTitleLabel,
-                        searchOpen = ui.searchOpen,
-                        onSearchOpenChange = { ui.searchOpen = it },
                         onSearch = { ui.search = it },
                         onApplyFilter = { text, filter ->
                             ui.applyFilter(actions, text, filter)

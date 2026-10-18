@@ -27,9 +27,9 @@ object BeaconUiMetrics {
     val FieldMinHeight = 56.dp
     val FieldVerticalInset = 12.dp
 
-    /** List search field: 85% of the former 52dp row, so the pinned header costs a line less. */
-    val SearchFieldMinHeight = 44.dp
-    val SearchFieldVerticalInset = 10.dp
+    /** List search field: 40dp keeps the header slim without crowding the hint text. */
+    val SearchFieldMinHeight = 40.dp
+    val SearchFieldVerticalInset = 8.dp
     val CardRadius = 16.dp
 
     /** Two-line label/detail status rows keep a stable height while their detail text changes. */

@@ -87,8 +87,6 @@
     <string name="ui_back_to_settings_action">返回设置</string>
     <string name="ui_battery_saver_on_desc">自动接收已开启</string>
     <string name="ui_clear_search_action">清除搜索</string>
-    <string name="msg_open_search">搜索消息</string>
-    <string name="msg_close_search">收起搜索</string>
     <string name="ui_confirm_delete_action">确认删除</string>
     <string name="ui_delete_multi_warning_hint">删除所选消息，可能包含其他页的选择。无法恢复。</string>
     <string name="ui_delete_selected_action">删除所选消息</string>
