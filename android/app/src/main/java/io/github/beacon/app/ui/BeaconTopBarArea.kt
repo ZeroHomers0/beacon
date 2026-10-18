@@ -55,8 +55,7 @@ internal fun BeaconTopBarArea(
     settingsMotion: SeekableTransitionState<SettingsScreen>,
     pager: PagerState,
     barBehavior: BeaconBarBehavior,
-    compactMessageBar: Boolean,
-    titleVisible: Boolean,
+    sharedTitleBar: Boolean,
     navigate: (Int) -> Unit,
 ) {
     // Both change per recomposition and are cheap to read, so deriving them here keeps the call
@@ -77,10 +76,9 @@ internal fun BeaconTopBarArea(
                             R.string.msg_selected_count_label,
                             ui.selectedKeys.size,
                         )
-                    else if (compactMessageBar && barPage == 0)
-                        if (titleVisible) stringResource(ui.pages[0]) else ""
+                    else if (sharedTitleBar && barPage == 0) ""
                     else stringResource(ui.pages[barPage]),
-                    (compactMessageBar && barPage == 0) ||
+                    (sharedTitleBar && barPage == 0) ||
                         (barPage == 0 && ui.selectionMode) ||
                         displayedDetail != null ||
                         (barPage == 1 &&

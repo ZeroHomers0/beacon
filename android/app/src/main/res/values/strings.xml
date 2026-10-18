@@ -124,8 +124,8 @@
     <string name="msg_detail_id_desc">消息 ID：%1$s</string>
     <string name="msg_detail_source_desc">服务器标识：%1$s</string>
     <string name="msg_selected_count_label">已选 %1$d 条</string>
-    <string name="msg_count_total_cd">全部消息，共 %1$d 条</string>
-    <string name="msg_count_unread_cd">未读消息，共 %1$d 条</string>
+    <string name="msg_stat_total">共 %1$d 条</string>
+    <string name="msg_stat_unread">%1$d 条未读</string>
     <string name="settings_interval_hours_option">%1$d 小时</string>
     <string name="settings_interval_minutes_option">%1$d 分钟</string>
     <string name="settings_version_label">版本 %1$s</string>

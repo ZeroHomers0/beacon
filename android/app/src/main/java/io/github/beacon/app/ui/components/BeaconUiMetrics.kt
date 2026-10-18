@@ -43,14 +43,6 @@ object BeaconUiMetrics {
     val PillShape = RoundedCornerShape(percent = 50)
     val ControlMinHeight = 48.dp
 
-    /**
-     * Count chips share the search row, so they take the field's height: the row reads as one set of
-     * pills instead of a tall field with two short tags beside it.
-     */
-    val CountChipMinWidth = 56.dp
-    val CountChipHeight = SearchFieldMinHeight
-    val CountChipPadding = 14.dp
-
     /** Inline spacing steps, smallest first. */
     val Gap2 = 2.dp
     val Gap4 = 4.dp

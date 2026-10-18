@@ -92,6 +92,51 @@ fun BeaconSearchBox(
     )
 }
 
+/**
+ * When the window is short (landscape, split screen) the page title and the search field share one
+ * 44dp row: the title sits on the left, the field takes the rest. The header then costs a single
+ * slot instead of a title band plus a field, and search stays persistent in both orientations. Once
+ * the list scrolls the title folds away and the field keeps the whole row.
+ */
+@Composable
+fun BeaconTitleSearchRow(
+    title: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    hint: String,
+    modifier: Modifier = Modifier,
+    titleCollapsed: Boolean = false,
+    onSearch: () -> Unit,
+) {
+    Row(
+        modifier.fillMaxWidth().heightIn(min = BeaconUiMetrics.SearchFieldMinHeight),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        AnimatedVisibility(
+            visible = !titleCollapsed,
+            enter = fadeIn(tween(BeaconMotion.StandardMs)) + expandHorizontally(tween(BeaconMotion.StandardMs)),
+            exit = fadeOut(tween(BeaconMotion.QuickMs)) + shrinkHorizontally(tween(BeaconMotion.QuickMs)),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                BeaconText(
+                    title,
+                    style = MaterialTheme.typography.titleLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.width(12.dp))
+            }
+        }
+        BeaconSearchBox(
+            value,
+            onValueChange,
+            hint,
+            Modifier.weight(1f),
+            onSearch,
+        )
+    }
+}
+
 @Composable
 fun BeaconActionIcon(
     icon: ImageVector,

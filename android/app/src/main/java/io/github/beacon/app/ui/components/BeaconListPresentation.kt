@@ -21,7 +21,6 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -36,10 +35,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.BeaconUiStyle
@@ -240,63 +235,38 @@ fun BeaconPullToRefresh(
     }
 }
 
-/**
- * A count that lives next to the search field instead of on its own row: one glyph plus the compact
- * number, widening only when the number outgrows the slot. Screen readers hear the full value, and
- * the highlighted state reuses the pill language of the filters and the saved-search chips.
- */
+/** Small information pills and removable filters share the page's color and radius. */
 @Composable
-fun BeaconCountPill(
-    count: Long,
-    icon: ImageVector,
-    description: String,
-    selected: Boolean,
-    onClick: () -> Unit,
+fun BeaconSummaryPill(
+    label: String, icon: ImageVector, highlighted: Boolean = false,
+    enabled: Boolean = true, onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true,
+    compact: Boolean = false,
 ) {
-    // Selection is a step in neutral tone, never a hue: the chips sit next to the field and any
-    // accent here competed with the list's own unread markers.
-    val contentColor =
-        if (selected) MaterialTheme.colorScheme.onSurface
-        else MaterialTheme.colorScheme.onSurfaceVariant
     Surface(
-        modifier = modifier
-            .defaultMinSize(minWidth = BeaconUiMetrics.CountChipMinWidth)
-            .heightIn(min = BeaconUiMetrics.CountChipHeight)
-            .animateContentSize(MotionResize)
-            .clip(BeaconUiMetrics.PillShape)
-            .semantics {
-                contentDescription = description
-                this.selected = selected
-            }
-            .clickable(
-                enabled = enabled,
-                role = androidx.compose.ui.semantics.Role.Button,
-                onClickLabel = description,
-                onClick = onClick,
-            ),
-        shape = BeaconUiMetrics.PillShape,
+        modifier = if (onClick == null) modifier else modifier
+            .heightIn(min = if (compact) InputChipDefaults.Height else BeaconUiMetrics.ControlMinHeight)
+            .clip(RoundedCornerShape(50))
+            .clickable(enabled = enabled, role = androidx.compose.ui.semantics.Role.Button, onClick = onClick),
+        shape = RoundedCornerShape(50),
         color =
-            if (selected) MaterialTheme.colorScheme.surfaceContainerHighest
-            else Color.Transparent,
+            if (highlighted) MaterialTheme.colorScheme.secondaryContainer
+            else MaterialTheme.colorScheme.surfaceContainerHigh,
     ) {
         Row(
-            Modifier.padding(horizontal = BeaconUiMetrics.CountChipPadding),
+            Modifier.padding(horizontal = 12.dp, vertical = if (compact) 2.dp else 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6, Alignment.CenterHorizontally),
         ) {
-            Icon(icon, null, Modifier.size(BeaconUiMetrics.IconInline), tint = contentColor)
-            BeaconText(
-                formatCompactCount(count),
-                style =
-                    MaterialTheme.typography.labelLarge.copy(
-                        fontFeatureSettings = "tnum",
-                        fontWeight = if (selected) FontWeight.SemiBold else null,
-                    ),
-                color = contentColor,
-                maxLines = 1,
+            Icon(
+                icon,
+                null,
+                Modifier.size(16.dp),
+                tint =
+                    if (highlighted) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            BeaconText(label, style = MaterialTheme.typography.labelMedium)
         }
     }
 }

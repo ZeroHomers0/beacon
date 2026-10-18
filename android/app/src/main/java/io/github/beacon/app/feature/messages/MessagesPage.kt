@@ -36,9 +36,10 @@ import io.github.beacon.app.ui.components.BeaconEmptyState
 import io.github.beacon.app.ui.components.BeaconMotion
 import io.github.beacon.app.ui.components.BeaconPullToRefresh
 import io.github.beacon.app.ui.components.BeaconSearchBox
-import io.github.beacon.app.ui.components.BeaconCountPill
+import io.github.beacon.app.ui.components.BeaconSummaryPill
 import io.github.beacon.app.ui.components.BeaconText
 import io.github.beacon.app.ui.components.BeaconTextButton
+import io.github.beacon.app.ui.components.BeaconTitleSearchRow
 import io.github.beacon.app.ui.components.BeaconUiMetrics
 import io.github.beacon.app.ui.components.MessageItem
 import io.github.beacon.app.ui.icons.BeaconIcons
@@ -63,7 +64,8 @@ fun MessagesPage(
     selectedKeys: List<MessageKey>,
     selectionHint: String,
     scrollModifier: Modifier = Modifier,
-    onListScrolled: (Boolean) -> Unit = {},
+    sharedTitle: String? = null,
+    hideSharedTitle: Boolean = false,
     onSearch: (String) -> Unit,
     onApplyFilter: (String, MessageReadFilter) -> Unit,
     onConnectionSettings: () -> Unit,
@@ -81,7 +83,7 @@ fun MessagesPage(
     MessagesContent(
         scroll, modifier, padding, rememberMessageListState(runtimeState), actions,
         search, readFilter, selectionMode, selectedKeys, selectionHint, scrollModifier,
-        onListScrolled, onSearch, onApplyFilter, onConnectionSettings,
+        sharedTitle, hideSharedTitle, onSearch, onApplyFilter, onConnectionSettings,
         onEnterSelection, onSelectionChange, onSelectionHint, onRequestDelete, onCopyText, calendar,
     )
 }
@@ -101,7 +103,8 @@ private fun MessagesContent(
     selectedKeys: List<MessageKey>,
     selectionHint: String,
     scrollModifier: Modifier,
-    onListScrolled: (Boolean) -> Unit,
+    sharedTitle: String?,
+    hideSharedTitle: Boolean,
     onSearch: (String) -> Unit,
     onApplyFilter: (String, MessageReadFilter) -> Unit,
     onConnectionSettings: () -> Unit,
@@ -121,10 +124,7 @@ private fun MessagesContent(
     val focus = LocalFocusManager.current
     val layoutDirection = LocalLayoutDirection.current
     // The shared title only folds once the list has actually scrolled.
-    // The title lives in the compact top bar, so the list tells the shell when it starts scrolling:
-    // at the top the bar only carries actions, once the reader moves the page name appears.
     val titleCollapsed by remember { derivedStateOf { scroll.firstVisibleItemIndex > 0 } }
-    LaunchedEffect(titleCollapsed) { onListScrolled(titleCollapsed) }
     val busy = runtimeState.messageBusy
     // The pinned filter row and the chips read the same applied query, so they never disagree.
     val applied = runtimeState.messageQuery
@@ -202,44 +202,58 @@ private fun MessagesContent(
                     focus.clearFocus()
                 }
             }
-            // Search and counts share one row. The counts used to own a band of their own, which
-            // cost the list a whole message to repeat two numbers that fit beside the field.
-            Row(
-                Modifier.fillMaxWidth().heightIn(min = BeaconUiMetrics.SearchFieldMinHeight),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8),
-            ) {
+            if (sharedTitle != null)
+                BeaconTitleSearchRow(
+                    sharedTitle,
+                    search,
+                    { if (it.length <= 256) onSearch(it) },
+                    stringResource(R.string.msg_search_hint),
+                    titleCollapsed = titleCollapsed || hideSharedTitle,
+                    onSearch = submit,
+                )
+            else
                 BeaconSearchBox(
                     search,
                     { if (it.length <= 256) onSearch(it) },
                     stringResource(R.string.msg_search_hint),
-                    Modifier.weight(1f),
                     onSearch = submit,
                 )
-                BeaconCountPill(
-                    runtimeState.messageTotal.toLong(),
-                    BeaconIcons.Mail,
-                    stringResource(R.string.msg_count_total_cd, runtimeState.messageTotal),
-                    selected = applied.readFilter == MessageReadFilter.ALL,
-                    onClick = { onApplyFilter(applied.search, MessageReadFilter.ALL) },
-                    enabled = !busy,
+            // Counts and active filters stay with the search instead of scrolling: they pin under
+            // the search box with it, and the pull indicator then opens below this row.
+            Column(
+                Modifier.padding(top = BeaconUiMetrics.Gap8),
+                verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6),
+            ) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8),
+                ) {
+                    BeaconSummaryPill(
+                        stringResource(R.string.msg_stat_total, runtimeState.messageTotal),
+                        BeaconIcons.Mail,
+                        highlighted = applied.readFilter == MessageReadFilter.ALL,
+                        enabled = !busy,
+                        onClick = { onApplyFilter(applied.search, MessageReadFilter.ALL) },
+                        modifier = Modifier.weight(1f),
+                        compact = true,
+                    )
+                    BeaconSummaryPill(
+                        stringResource(
+                            R.string.msg_stat_unread,
+                            runtimeState.messageUnread,
+                        ),
+                        BeaconIcons.Messages,
+                        highlighted = applied.readFilter == MessageReadFilter.UNREAD,
+                        enabled = !busy,
+                        onClick = { onApplyFilter(applied.search, MessageReadFilter.UNREAD) },
+                        modifier = Modifier.weight(1f),
+                        compact = true,
+                    )
+                }
+                if (
+                    applied.readFilter != MessageReadFilter.ALL ||
+                        applied.search.isNotBlank()
                 )
-                BeaconCountPill(
-                    runtimeState.messageUnread.toLong(),
-                    BeaconIcons.Messages,
-                    stringResource(R.string.msg_count_unread_cd, runtimeState.messageUnread),
-                    selected = applied.readFilter == MessageReadFilter.UNREAD,
-                    onClick = { onApplyFilter(applied.search, MessageReadFilter.UNREAD) },
-                    enabled = !busy,
-                )
-            }
-            // Active filters stay pinned with the search; they are the only reason this row exists,
-            // so an unfiltered list pays nothing for it.
-            if (
-                applied.readFilter != MessageReadFilter.ALL ||
-                    applied.search.isNotBlank()
-            )
-                Column(Modifier.padding(top = BeaconUiMetrics.Gap8)) {
                     ActionFlow {
                         if (applied.readFilter != MessageReadFilter.ALL)
                             InputChip(
@@ -290,11 +304,7 @@ private fun MessagesContent(
                                     )
                                 },
                                 leadingIcon = {
-                                    Icon(
-                                        BeaconIcons.Search,
-                                        null,
-                                        Modifier.size(BeaconUiMetrics.IconSmall),
-                                    )
+                                    Icon(BeaconIcons.Search, null, Modifier.size(BeaconUiMetrics.IconSmall))
                                 },
                                 trailingIcon = {
                                     Icon(
@@ -304,9 +314,8 @@ private fun MessagesContent(
                                     )
                                 },
                             )
-
                     }
-                }
+            }
         }
         BeaconPullToRefresh(
             refreshing,
