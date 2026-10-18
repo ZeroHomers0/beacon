@@ -56,14 +56,12 @@ fun SettingsStatusSummary(
     }
     val displayedTitle = if (loading) settledTitle else title
     val displayedDetails = if (loading) settledDetails else details
-    // The row is exactly as tall as its own words: the icon then centres against the text block, so
-    // the title and the detail lines stay one optical group. A fixed slot for the detail text made
-    // the icon centre against the slot instead, which opened the gap between the icon and the two
-    // lines whenever the detail was shorter than the slot — and left the slot empty when the server
-    // was not configured yet.
-    Row(
+    // The icon belongs to the title and detail lines only: the two texts are one optical group, so
+    // a caption (last check time, size, ...) sits below the row instead of dragging the icon down
+    // to the middle of three lines. Keeping the caption inside the same clickable column means it
+    // stays part of the same "view details" affordance.
+    Column(
         Modifier.fillMaxWidth()
-            .heightIn(min = iconSize)
             .clip(RoundedCornerShape(14.dp))
             .then(
                 if (interactive)
@@ -75,63 +73,71 @@ fun SettingsStatusSummary(
                     }
                 else Modifier
             )
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(vertical = 4.dp)
     ) {
-        Box(
-            Modifier.size(iconSize)
-                .clip(RoundedCornerShape(14.dp))
-                .background(displayedTint.copy(alpha = 0.10f)),
-            contentAlignment = Alignment.Center,
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = iconSize),
+            horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            BeaconLoadingIcon(icon, loading, Modifier.size(26.dp), tint = displayedTint)
-        }
-        Column(
-            Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap2),
-        ) {
-            androidx.compose.animation.Crossfade(
-                targetState = displayedTitle,
-                modifier = Modifier.fillMaxWidth(),
-                animationSpec = androidx.compose.animation.core.tween(BeaconMotion.QuickMs),
-                label = "connection-status-title",
-            ) { label ->
-                BeaconText(
-                    label,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+            Box(
+                Modifier.size(iconSize)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(displayedTint.copy(alpha = 0.10f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                BeaconLoadingIcon(icon, loading, Modifier.size(26.dp), tint = displayedTint)
             }
-            if (displayedDetails.isNotBlank()) {
-                val content: @Composable () -> Unit = {
+            Column(
+                Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap2),
+            ) {
+                androidx.compose.animation.Crossfade(
+                    targetState = displayedTitle,
+                    modifier = Modifier.fillMaxWidth(),
+                    animationSpec = androidx.compose.animation.core.tween(BeaconMotion.QuickMs),
+                    label = "connection-status-title",
+                ) { label ->
                     BeaconText(
-                        displayedDetails,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = if (singleLineDetails) 1 else 2,
+                        label,
+                        style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                if (selectableDetails)
-                    androidx.compose.foundation.text.selection.SelectionContainer { content() }
-                else content()
+                if (displayedDetails.isNotBlank()) {
+                    val content: @Composable () -> Unit = {
+                        BeaconText(
+                            displayedDetails,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = if (singleLineDetails) 1 else 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    if (selectableDetails)
+                        androidx.compose.foundation.text.selection.SelectionContainer { content() }
+                    else content()
+                }
             }
-            if (caption != null)
-                BeaconText(
-                    caption,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+            if (interactive && displayedDetails.isNotBlank())
+                Icon(
+                    BeaconIcons.Arrow,
+                    stringResource(R.string.settings_view_details),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
         }
-        if (interactive && displayedDetails.isNotBlank())
-            Icon(
-                BeaconIcons.Arrow,
-                stringResource(R.string.settings_view_details),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        if (caption != null)
+            BeaconText(
+                caption,
+                Modifier.padding(
+                    start = iconSize + BeaconUiMetrics.Gap12,
+                    top = BeaconUiMetrics.Gap4,
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
     }
     if (interactive && showingDetails)
