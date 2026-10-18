@@ -4,7 +4,6 @@ package io.github.beacon.app.ui.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -40,6 +39,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.BeaconUiStyle
@@ -255,8 +255,10 @@ fun BeaconCountPill(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    val tint =
-        if (selected) MaterialTheme.colorScheme.primary
+    // Selection is a step in neutral tone, never a hue: the chips sit next to the field and any
+    // accent here competed with the list's own unread markers.
+    val contentColor =
+        if (selected) MaterialTheme.colorScheme.onSurface
         else MaterialTheme.colorScheme.onSurfaceVariant
     Surface(
         modifier = modifier
@@ -264,15 +266,6 @@ fun BeaconCountPill(
             .heightIn(min = BeaconUiMetrics.CountChipHeight)
             .animateContentSize(MotionResize)
             .clip(BeaconUiMetrics.PillShape)
-            .then(
-                if (selected)
-                    Modifier.border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f),
-                        shape = BeaconUiMetrics.PillShape,
-                    )
-                else Modifier
-            )
             .semantics {
                 contentDescription = description
                 this.selected = selected
@@ -285,26 +278,23 @@ fun BeaconCountPill(
             ),
         shape = BeaconUiMetrics.PillShape,
         color =
-            if (selected)
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
-                    .compositeOver(MaterialTheme.colorScheme.surface)
-            else MaterialTheme.colorScheme.surfaceContainerHigh,
+            if (selected) MaterialTheme.colorScheme.surfaceContainerHighest
+            else Color.Transparent,
     ) {
         Row(
             Modifier.padding(horizontal = BeaconUiMetrics.CountChipPadding),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6, Alignment.CenterHorizontally),
         ) {
-            Icon(icon, null, Modifier.size(BeaconUiMetrics.IconInline), tint = tint)
+            Icon(icon, null, Modifier.size(BeaconUiMetrics.IconInline), tint = contentColor)
             BeaconText(
                 formatCompactCount(count),
                 style =
                     MaterialTheme.typography.labelLarge.copy(
                         fontFeatureSettings = "tnum",
+                        fontWeight = if (selected) FontWeight.SemiBold else null,
                     ),
-                color =
-                    if (selected) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                color = contentColor,
                 maxLines = 1,
             )
         }
