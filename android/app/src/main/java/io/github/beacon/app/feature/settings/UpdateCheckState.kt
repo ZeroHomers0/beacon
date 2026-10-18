@@ -51,9 +51,6 @@ class UpdateCheckState {
     var dialogOpen by mutableStateOf(false)
         private set
 
-    var downloading by mutableStateOf(false)
-        private set
-
     fun openDialog() {
         acknowledge()
         if (release != null) dialogOpen = true
@@ -61,16 +58,6 @@ class UpdateCheckState {
 
     fun closeDialog() {
         dialogOpen = false
-    }
-
-    fun beginDownload(): Boolean {
-        if (downloading) return false
-        downloading = true
-        return true
-    }
-
-    fun endDownload() {
-        downloading = false
     }
 
     /**

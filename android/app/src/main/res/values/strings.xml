@@ -333,11 +333,8 @@
     <string name="settings_update_notes_empty">该版本未提供更新说明</string>
     <string name="settings_update_size">安装包约 %1$s</string>
     <string name="settings_update_later">稍后更新</string>
-    <string name="settings_update_download">下载更新</string>
-    <string name="settings_update_downloading">正在下载更新…</string>
-    <string name="settings_update_download_failed">下载更新失败，请重试</string>
-    <string name="settings_update_install_permission">请允许本应用安装应用，然后再次点击下载更新</string>
-    <string name="settings_update_install_unavailable">系统未提供安装应用的界面</string>
+    <string name="settings_update_open_browser">在浏览器中下载</string>
+    <string name="settings_update_browser_unavailable">未找到可以打开下载页面的浏览器</string>
     <string name="settings_setup_test_title">测试接收链路</string>
     <string name="settings_setup_test_hint">向本机发送并同步一条真实消息，请确认列表和通知。后台效果需另行锁屏验证。</string>
     <string name="settings_setup_test_send">发送测试消息</string>

@@ -122,6 +122,8 @@ private fun MessagesContent(
     // The shared title only folds once the list has actually scrolled.
     val titleCollapsed by remember { derivedStateOf { scroll.firstVisibleItemIndex > 0 } }
     val busy = runtimeState.messageBusy
+    // The pinned filter row and the chips read the same applied query, so they never disagree.
+    val applied = runtimeState.messageQuery
     val pageState = io.github.beacon.app.domain.model.AsyncPageState.resolve(
         loaded = runtimeState.messagesLoaded || runtimeState.messages.isNotEmpty(),
         loading = runtimeState.messageBusy || (!runtimeState.messagesLoaded && !runtimeState.messageLoadFailed),
@@ -172,7 +174,7 @@ private fun MessagesContent(
             actions.nextMessages()
     }
     Column(modifier) {
-        Box(
+        Column(
             Modifier.fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(
@@ -204,6 +206,110 @@ private fun MessagesContent(
                     stringResource(R.string.msg_search_hint),
                     onSearch = submit,
                 )
+            // Counts and active filters stay with the search instead of scrolling: they pin under
+            // the search box with it, and the pull indicator then opens below this row.
+            Column(
+                Modifier.padding(top = BeaconUiMetrics.Gap8),
+                verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6),
+            ) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8),
+                ) {
+                    BeaconSummaryPill(
+                        stringResource(R.string.msg_stat_total, runtimeState.messageTotal),
+                        BeaconIcons.Mail,
+                        highlighted = applied.readFilter == MessageReadFilter.ALL,
+                        enabled = !busy,
+                        onClick = { onApplyFilter(applied.search, MessageReadFilter.ALL) },
+                        modifier = Modifier.weight(1f),
+                        compact = true,
+                    )
+                    BeaconSummaryPill(
+                        stringResource(
+                            R.string.msg_stat_unread,
+                            runtimeState.messageUnread,
+                        ),
+                        BeaconIcons.Messages,
+                        highlighted = applied.readFilter == MessageReadFilter.UNREAD,
+                        enabled = !busy,
+                        onClick = { onApplyFilter(applied.search, MessageReadFilter.UNREAD) },
+                        modifier = Modifier.weight(1f),
+                        compact = true,
+                    )
+                }
+                if (
+                    applied.readFilter != MessageReadFilter.ALL ||
+                        applied.search.isNotBlank()
+                )
+                    ActionFlow {
+                        if (applied.readFilter != MessageReadFilter.ALL)
+                            InputChip(
+                                shape =
+                                    androidx.compose.foundation.shape.RoundedCornerShape(
+                                        50
+                                    ),
+                                selected = true,
+                                enabled = !busy,
+                                onClick = {
+                                    onApplyFilter(
+                                        applied.search,
+                                        MessageReadFilter.ALL,
+                                    )
+                                },
+                                label = {
+                                    BeaconText(
+                                        stringResource(
+                                            if (
+                                                applied.readFilter == MessageReadFilter.READ
+                                            )
+                                                R.string.msg_read_label
+                                            else R.string.msg_unread_label
+                                        )
+                                    )
+                                },
+                                trailingIcon = {
+                                    Icon(
+                                        BeaconIcons.Close,
+                                        stringResource(R.string.msg_clear_filters_action),
+                                        Modifier.size(16.dp),
+                                    )
+                                },
+                            )
+                        if (applied.search.isNotBlank())
+                            InputChip(
+                                shape =
+                                    androidx.compose.foundation.shape.RoundedCornerShape(
+                                        50
+                                    ),
+                                selected = true,
+                                enabled = !busy,
+                                onClick = {
+                                    onSearch("")
+                                    onApplyFilter("", applied.readFilter)
+                                },
+                                label = {
+                                    BeaconText(
+                                        applied.search,
+                                        maxLines = 1,
+                                        overflow =
+                                            androidx.compose.ui.text.style.TextOverflow
+                                                .Ellipsis,
+                                    )
+                                },
+                                leadingIcon = {
+                                    Icon(BeaconIcons.Search, null, Modifier.size(16.dp))
+                                },
+                                trailingIcon = {
+                                    Icon(
+                                        BeaconIcons.Close,
+                                        stringResource(R.string.msg_clear_filters_action),
+                                        Modifier.size(16.dp),
+                                    )
+                                },
+                            )
+                    }
+            }
         }
         BeaconPullToRefresh(
             refreshing,
@@ -228,108 +334,6 @@ private fun MessagesContent(
                     ),
                 verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
             ) {
-                val applied = runtimeState.messageQuery
-                item(key = "count", contentType = "count") {
-                    Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6)) {
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8),
-                        ) {
-                            BeaconSummaryPill(
-                                stringResource(R.string.msg_stat_total, runtimeState.messageTotal),
-                                BeaconIcons.Mail,
-                                highlighted = applied.readFilter == MessageReadFilter.ALL,
-                                enabled = !busy,
-                                onClick = { onApplyFilter(applied.search, MessageReadFilter.ALL) },
-                                modifier = Modifier.weight(1f),
-                                compact = true,
-                            )
-                            BeaconSummaryPill(
-                                stringResource(
-                                    R.string.msg_stat_unread,
-                                    runtimeState.messageUnread,
-                                ),
-                                BeaconIcons.Messages,
-                                highlighted = applied.readFilter == MessageReadFilter.UNREAD,
-                                enabled = !busy,
-                                onClick = { onApplyFilter(applied.search, MessageReadFilter.UNREAD) },
-                                modifier = Modifier.weight(1f),
-                                compact = true,
-                            )
-                        }
-                        if (
-                            applied.readFilter != MessageReadFilter.ALL ||
-                                applied.search.isNotBlank()
-                        )
-                            ActionFlow {
-                                if (applied.readFilter != MessageReadFilter.ALL)
-                                    InputChip(
-                                        shape =
-                                            androidx.compose.foundation.shape.RoundedCornerShape(
-                                                50
-                                            ),
-                                        selected = true,
-                                        enabled = !busy,
-                                        onClick = {
-                                            onApplyFilter(
-                                                applied.search,
-                                                MessageReadFilter.ALL,
-                                            )
-                                        },
-                                        label = {
-                                            BeaconText(
-                                                stringResource(
-                                                    if (
-                                                        applied.readFilter == MessageReadFilter.READ
-                                                    )
-                                                        R.string.msg_read_label
-                                                    else R.string.msg_unread_label
-                                                )
-                                            )
-                                        },
-                                        trailingIcon = {
-                                            Icon(
-                                                BeaconIcons.Close,
-                                                stringResource(R.string.msg_clear_filters_action),
-                                                Modifier.size(16.dp),
-                                            )
-                                        },
-                                    )
-                                if (applied.search.isNotBlank())
-                                    InputChip(
-                                        shape =
-                                            androidx.compose.foundation.shape.RoundedCornerShape(
-                                                50
-                                            ),
-                                        selected = true,
-                                        enabled = !busy,
-                                        onClick = {
-                                            onSearch("")
-                                            onApplyFilter("", applied.readFilter)
-                                        },
-                                        label = {
-                                            BeaconText(
-                                                applied.search,
-                                                maxLines = 1,
-                                                overflow =
-                                                    androidx.compose.ui.text.style.TextOverflow
-                                                        .Ellipsis,
-                                            )
-                                        },
-                                        leadingIcon = {
-                                            Icon(BeaconIcons.Search, null, Modifier.size(16.dp))
-                                        },
-                                        trailingIcon = {
-                                            Icon(
-                                                BeaconIcons.Close,
-                                                stringResource(R.string.msg_clear_filters_action),
-                                                Modifier.size(16.dp),
-                                            )
-                                        },
-                                    )
-                            }
-                    }
-                }
                 if (selectionHint.isNotBlank())
                     item(key = "selection-hint", contentType = "hint") {
                         BeaconText(selectionHint, color = MaterialTheme.colorScheme.error)

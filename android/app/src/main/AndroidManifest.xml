@@ -6,8 +6,6 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <!-- Installing a downloaded update; the system still asks the user to allow this app. -->
-    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <application
         android:name=".BeaconApplication"
         android:allowBackup="false"
@@ -34,14 +32,6 @@
         <activity android:name=".NotificationOpenActivity" android:exported="false" android:launchMode="singleTask" android:windowSoftInputMode="adjustNothing" />
         <receiver android:name=".runtime.notification.NotificationReadReceiver" android:process=":runtime" android:exported="false" />
         <receiver android:name=".runtime.notification.NotificationCopyReceiver" android:process=":runtime" android:exported="false" />
-        <!-- Hands the downloaded update to the system installer without a world-readable file. -->
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.update"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
-        </provider>
         <!-- Only the communication process owns WorkManager. UI requests scheduling over IPC. -->
         <provider android:name="androidx.startup.InitializationProvider" android:authorities="${applicationId}.androidx-startup" tools:node="merge">
             <meta-data android:name="androidx.work.WorkManagerInitializer" tools:node="remove" />

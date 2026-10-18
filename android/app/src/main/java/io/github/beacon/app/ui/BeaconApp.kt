@@ -174,9 +174,7 @@ fun BeaconApp(
         ui.updateState.release?.let { release ->
             if (ui.updateState.dialogOpen)
                 UpdateCheckDialog(
-                    state = ui.updateState,
                     release = release,
-                    scope = updateScope,
                     onDismiss = { ui.updateState.closeDialog() },
                     onFeedback = { message ->
                         updateScope.launch {

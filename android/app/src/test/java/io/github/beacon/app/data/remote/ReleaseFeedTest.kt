@@ -60,7 +60,7 @@ class ReleaseFeedTest {
 
     @Test
     fun unusableTagIsRejected() {
-        // The tag becomes a staged file name, so a path-shaped tag must never reach the downloader.
+        // The tag is shown in the update dialog, so a path-shaped tag must never be offered.
         assertNull(ReleaseFeed.parse(payload(tag = "../../evil")))
         assertNull(ReleaseFeed.parse(payload(tag = "")))
         assertNull(ReleaseFeed.parse(payload(tag = "x".repeat(80))))
@@ -77,39 +77,5 @@ class ReleaseFeedTest {
         val long = "n".repeat(9000)
         val release = ReleaseFeed.parse(payload().replace("修复若干问题", long))
         assertEquals(4000, release?.notes?.length)
-    }
-
-    @Test
-    fun publishedDigestIsAttachedToTheChosenAsset() {
-        val digest = "a".repeat(64)
-        val sums = "$digest  beacon-release.apk\n${"b".repeat(64)}  other.apk\n"
-        val release = ReleaseFeed.parse(payload(), sums)
-        assertEquals(digest, release?.sha256)
-    }
-
-    @Test
-    fun digestSurvivesAPathAndBinaryModeMarker() {
-        // sha256sum writes the path it was given, and "*" for binary mode.
-        val digest = "c".repeat(64)
-        val release =
-            ReleaseFeed.parse(payload(), "$digest *dist/release/beacon-release.apk\n")
-        assertEquals(digest, release?.sha256)
-    }
-
-    @Test
-    fun absentOrUnusableSumsLeaveTheDigestEmpty() {
-        assertEquals("", ReleaseFeed.parse(payload(), null)?.sha256)
-        assertEquals("", ReleaseFeed.parse(payload(), "")?.sha256)
-        // A digest for a different asset must not be attributed to the APK.
-        assertEquals("", ReleaseFeed.parse(payload(), "${"d".repeat(64)}  other.apk\n")?.sha256)
-        // Malformed digests are skipped rather than trusted.
-        assertEquals("", ReleaseFeed.parse(payload(), "notahash  beacon-release.apk\n")?.sha256)
-        assertEquals("", ReleaseFeed.parse(payload(), "${"e".repeat(63)}  beacon-release.apk\n")?.sha256)
-    }
-
-    @Test
-    fun checksumsAssetIsAdvertisedSeparately() {
-        assertEquals("https://example.com/sums", ReleaseFeed.checksumsUrl(payload()))
-        assertNull(ReleaseFeed.checksumsUrl("""{"tag_name":"v1.0.2","assets":[]}"""))
     }
 }

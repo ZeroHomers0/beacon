@@ -60,16 +60,4 @@ class UpdateCheckStateTest {
         state.check(false) { Result.success(release()) }
         assertTrue(state.hasUnreadUpdate)
     }
-    @Test
-    fun updateActionRejectsDuplicateUntilFinished() {
-        val state = UpdateCheckState()
-        assertTrue(state.beginDownload())
-        assertFalse(state.beginDownload())
-        assertTrue(state.downloading)
-        state.endDownload()
-        assertTrue(state.beginDownload())
-        state.endDownload()
-        assertFalse(state.downloading)
-    }
-
 }

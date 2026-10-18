@@ -56,7 +56,7 @@ fun BeaconSearchBox(
         modifier =
             modifier
                 .fillMaxWidth()
-                .heightIn(min = 52.dp)
+                .heightIn(min = BeaconUiMetrics.SearchFieldMinHeight)
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
                 .semantics { contentDescription = hint }
                 .testTag(SEARCH_BOX_TAG),
@@ -68,7 +68,10 @@ fun BeaconSearchBox(
                     Modifier.padding(start = 16.dp, end = 12.dp).size(22.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Box(Modifier.weight(1f).padding(vertical = 14.dp)) {
+                Box(
+                    Modifier.weight(1f)
+                        .padding(vertical = BeaconUiMetrics.SearchFieldVerticalInset)
+                ) {
                     if (value.isEmpty())
                         BeaconText(
                             hint,
@@ -90,7 +93,7 @@ fun BeaconSearchBox(
 
 /**
  * When the window is short (landscape, split screen) the page title and the search field share one
- * 52dp row: the title sits on the left, the field takes the rest. The header then costs a single
+ * 44dp row: the title sits on the left, the field takes the rest. The header then costs a single
  * slot instead of a title band plus a field, and search stays persistent in both orientations. Once
  * the list scrolls the title folds away and the field keeps the whole row.
  */
@@ -105,7 +108,7 @@ fun BeaconTitleSearchRow(
     onSearch: () -> Unit,
 ) {
     Row(
-        modifier.fillMaxWidth().heightIn(min = 52.dp),
+        modifier.fillMaxWidth().heightIn(min = BeaconUiMetrics.SearchFieldMinHeight),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         AnimatedVisibility(
