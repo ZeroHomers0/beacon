@@ -2,6 +2,7 @@
 
 package io.github.beacon.app.feature.messages
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -17,6 +18,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -39,7 +42,6 @@ import io.github.beacon.app.ui.components.BeaconSearchBox
 import io.github.beacon.app.ui.components.BeaconSummaryPill
 import io.github.beacon.app.ui.components.BeaconText
 import io.github.beacon.app.ui.components.BeaconTextButton
-import io.github.beacon.app.ui.components.BeaconTitleSearchRow
 import io.github.beacon.app.ui.components.BeaconUiMetrics
 import io.github.beacon.app.ui.components.MessageItem
 import io.github.beacon.app.ui.icons.BeaconIcons
@@ -66,6 +68,8 @@ fun MessagesPage(
     scrollModifier: Modifier = Modifier,
     sharedTitle: String? = null,
     hideSharedTitle: Boolean = false,
+    searchOpen: Boolean = false,
+    onSearchOpenChange: (Boolean) -> Unit = {},
     onSearch: (String) -> Unit,
     onApplyFilter: (String, MessageReadFilter) -> Unit,
     onConnectionSettings: () -> Unit,
@@ -83,7 +87,8 @@ fun MessagesPage(
     MessagesContent(
         scroll, modifier, padding, rememberMessageListState(runtimeState), actions,
         search, readFilter, selectionMode, selectedKeys, selectionHint, scrollModifier,
-        sharedTitle, hideSharedTitle, onSearch, onApplyFilter, onConnectionSettings,
+        sharedTitle, hideSharedTitle, searchOpen, onSearchOpenChange, onSearch, onApplyFilter,
+        onConnectionSettings,
         onEnterSelection, onSelectionChange, onSelectionHint, onRequestDelete, onCopyText, calendar,
     )
 }
@@ -105,6 +110,8 @@ private fun MessagesContent(
     scrollModifier: Modifier,
     sharedTitle: String?,
     hideSharedTitle: Boolean,
+    searchOpen: Boolean,
+    onSearchOpenChange: (Boolean) -> Unit,
     onSearch: (String) -> Unit,
     onApplyFilter: (String, MessageReadFilter) -> Unit,
     onConnectionSettings: () -> Unit,
@@ -177,6 +184,13 @@ private fun MessagesContent(
         )
             actions.nextMessages()
     }
+    BackHandler(enabled = searchOpen) {
+        focus.clearFocus()
+        onSearchOpenChange(false)
+    }
+    LaunchedEffect(searchOpen) {
+        if (!searchOpen) focus.clearFocus()
+    }
     // Typing applies once the user pauses, so a query is not issued in the middle of a word.
     // Enter and the filter pills still apply immediately.
     LaunchedEffect(search, busy) {
@@ -202,22 +216,29 @@ private fun MessagesContent(
                     focus.clearFocus()
                 }
             }
-            if (sharedTitle != null)
-                BeaconTitleSearchRow(
-                    sharedTitle,
-                    search,
-                    { if (it.length <= 256) onSearch(it) },
-                    stringResource(R.string.msg_search_hint),
-                    titleCollapsed = titleCollapsed || hideSharedTitle,
-                    onSearch = submit,
-                )
-            else
+            // Search is on demand: the bar's magnifier opens the field, back or the same
+            // magnifier folds it away again, so the resting header keeps the title and filters.
+            if (searchOpen) {
+                val searchFocus = remember { FocusRequester() }
+                LaunchedEffect(Unit) { searchFocus.requestFocus() }
                 BeaconSearchBox(
                     search,
                     { if (it.length <= 256) onSearch(it) },
                     stringResource(R.string.msg_search_hint),
-                    onSearch = submit,
+                    Modifier.focusRequester(searchFocus),
+                    submit,
                 )
+            } else if (sharedTitle != null && !titleCollapsed && !hideSharedTitle) {
+                BeaconText(
+                    sharedTitle,
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier =
+                        Modifier.padding(
+                            top = BeaconUiMetrics.Gap4,
+                            bottom = BeaconUiMetrics.Gap8,
+                        ),
+                )
+            }
             // Counts and active filters stay with the search instead of scrolling: they pin under
             // the search box with it, and the pull indicator then opens below this row.
             Column(

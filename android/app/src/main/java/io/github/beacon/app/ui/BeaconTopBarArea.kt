@@ -271,6 +271,17 @@ internal fun BeaconTopBarArea(
                             }
                         } else if (displayedDetail == null && barPage == 0) {
                             BeaconActionIcon(
+                                if (ui.searchOpen) BeaconIcons.Close else BeaconIcons.Search,
+                                stringResource(
+                                    if (ui.searchOpen) R.string.msg_close_search
+                                    else R.string.msg_open_search
+                                ),
+                            ) {
+                                // Closing keeps the query: it stays visible as a filter chip, so
+                                // collapsing the field never silently drops what the user typed.
+                                ui.searchOpen = !ui.searchOpen
+                            }
+                            BeaconActionIcon(
                                 BeaconIcons.ReadAll,
                                 stringResource(
                                     R.string.ui_mark_all_read_action

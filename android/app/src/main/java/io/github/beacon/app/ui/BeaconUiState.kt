@@ -154,6 +154,9 @@ class BeaconUiState(
 
     var filtersOpen: Boolean by savedState(handle, "filtersOpen", false)
 
+    /** Search is an on-demand field: the bar icon opens it, back or the icon closes it again. */
+    var searchOpen: Boolean by savedState(handle, "searchOpen", false)
+
     init {
         if (pendingNotification == null && page == 0) pendingNotification = detailKey
     }
