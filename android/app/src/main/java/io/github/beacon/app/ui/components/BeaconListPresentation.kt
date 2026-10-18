@@ -249,9 +249,13 @@ fun BeaconSummaryPill(
             .clip(RoundedCornerShape(50))
             .clickable(enabled = enabled, role = androidx.compose.ui.semantics.Role.Button, onClick = onClick),
         shape = RoundedCornerShape(50),
+        // The pills below the search box stay neutral: selection is a deeper step of the same
+        // grey, never a hue, so the two counters read as one control pair. The step is derived
+        // from onSurface so it stays visible whichever surface tokens the theme maps together.
         color =
-            if (highlighted) MaterialTheme.colorScheme.secondaryContainer
-            else MaterialTheme.colorScheme.surfaceContainerHigh,
+            MaterialTheme.colorScheme.onSurface.copy(
+                alpha = if (highlighted) 0.14f else 0.06f,
+            ),
     ) {
         Row(
             Modifier.padding(horizontal = 12.dp, vertical = if (compact) 2.dp else 8.dp),
@@ -263,10 +267,16 @@ fun BeaconSummaryPill(
                 null,
                 Modifier.size(16.dp),
                 tint =
-                    if (highlighted) MaterialTheme.colorScheme.primary
+                    if (highlighted) MaterialTheme.colorScheme.onSurface
                     else MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            BeaconText(label, style = MaterialTheme.typography.labelMedium)
+            BeaconText(
+                label,
+                color =
+                    if (highlighted) MaterialTheme.colorScheme.onSurface
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.labelMedium,
+            )
         }
     }
 }
