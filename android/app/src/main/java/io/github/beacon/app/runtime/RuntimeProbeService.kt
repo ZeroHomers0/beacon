@@ -86,6 +86,8 @@ class RuntimeProbeService : Service() {
     private val worker = serialExecutor("beacon-runtime")
     private val scheduler = serialExecutor("beacon-scheduler")
     private val serverProbe = serialExecutor("beacon-server-probe")
+
+    private val statusStore by lazy { ServerStatusStore(this) }
     private val storeDelegate = lazy { RuntimeMessageStore(this) }
     private val store by storeDelegate
     private val events by lazy { RuntimeEventStore(this) }
@@ -487,6 +489,7 @@ class RuntimeProbeService : Service() {
                             io.github.beacon.app.ipc.RuntimeProtocol.TEST_DELIVERY,
                             io.github.beacon.app.ipc.RuntimeProtocol.HISTORY_ARCHIVE,
                             io.github.beacon.app.ipc.RuntimeProtocol.PENDING_REMINDERS,
+                            io.github.beacon.app.ipc.RuntimeProtocol.GET_STATUS,
                         )
                 )
                     return super.onTransact(code, data, reply, flags)
@@ -1233,8 +1236,26 @@ class RuntimeProbeService : Service() {
                     return true
                 }
                 if (code == io.github.beacon.app.ipc.RuntimeProtocol.CHECK_SERVER) {
-                    if (data.dataAvail() != 0) throw SecurityException("Unexpected payload")
+                    val force = data.readInt().also { require(it in 0..1) } == 1
+                    require(data.dataAvail() == 0)
+                    // A live stream or a verdict younger than the freshness window answers the
+                    // question already; only a forced or stale read goes to the network.
+                    val cached =
+                        if (force) null
+                        else
+                            statusStore.load()?.let { verdict ->
+                                val endpoint =
+                                    worker
+                                        .submit<String> {
+                                            val secret = TransportSecretStore(this@RuntimeProbeService)
+                                            if (secret.isConfigured()) secret.load().endpoint else ""
+                                        }
+                                        .get(5, java.util.concurrent.TimeUnit.SECONDS)
+                                if (verdict.endpoint == endpoint) verdict else null
+                            }
                     val result =
+                        if (cached != null) Pair(cached.reachable, cached.message)
+                        else
                         serverProbe
                             .submit<Pair<Boolean, String>> {
                                 try {
@@ -1260,10 +1281,72 @@ class RuntimeProbeService : Service() {
                                 }
                             }
                             .get(35, java.util.concurrent.TimeUnit.SECONDS)
+                    if (cached == null) {
+                        runCatching {
+                            val success = result.first
+                            if (success || result.second.isNotBlank()) {
+                                val endpoint =
+                                    worker
+                                        .submit<String> {
+                                            val secret = TransportSecretStore(this@RuntimeProbeService)
+                                            if (secret.isConfigured()) secret.load().endpoint else ""
+                                        }
+                                        .get(5, java.util.concurrent.TimeUnit.SECONDS)
+                                if (endpoint.isNotBlank()) {
+                                    statusStore.save(
+                                        endpoint,
+                                        success,
+                                        result.second,
+                                        System.currentTimeMillis(),
+                                    )
+                                }
+                            }
+                        }
+                    }
                     requireNotNull(reply).apply {
                         writeNoException()
                         writeInt(if (result.first) 1 else 0)
                         writeString(result.second)
+                    }
+                    return true
+                }
+                if (code == io.github.beacon.app.ipc.RuntimeProtocol.GET_STATUS) {
+                    if (data.dataAvail() != 0) throw SecurityException("Unexpected payload")
+                    val snapshot =
+                        worker
+                            .submit<List<Long>> {
+                                val verdict = statusStore.load()
+                                listOf(
+                                    if (verdict == null) 0L else 1L,
+                                    if (verdict?.reachable == true) 1L else 0L,
+                                    verdict?.checkedAtMs ?: 0L,
+                                    if (realtime.running) 1L else 0L,
+                                    if (realtime.lastHeartbeatAtMs <= 0L) -1L
+                                    else
+                                        android.os.SystemClock.elapsedRealtime() -
+                                            realtime.lastHeartbeatAtMs,
+                                    realtime.plan.heartbeatSeconds * 1000L,
+                                )
+                            }
+                            .get(5, java.util.concurrent.TimeUnit.SECONDS)
+                    val endpoint =
+                        worker
+                            .submit<String> {
+                                val secret = TransportSecretStore(this@RuntimeProbeService)
+                                if (secret.isConfigured()) secret.load().endpoint else ""
+                            }
+                            .get(5, java.util.concurrent.TimeUnit.SECONDS)
+                    val verdict = statusStore.load()
+                    requireNotNull(reply).apply {
+                        writeNoException()
+                        writeString(endpoint)
+                        writeInt(snapshot[0].toInt())
+                        writeInt(snapshot[1].toInt())
+                        writeString(verdict?.message ?: "")
+                        writeLong(snapshot[2])
+                        writeInt(snapshot[3].toInt())
+                        writeLong(snapshot[4])
+                        writeLong(snapshot[5])
                     }
                     return true
                 }

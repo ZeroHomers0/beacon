@@ -43,6 +43,15 @@ internal class RealtimeRuntimeController(
     var running = false
         private set
 
+    /**
+     * When the last proof of life arrived (a heartbeat, a payload or a fresh connection), measured
+     * on the monotonic clock. A socket that reports CONNECTED but stopped beating is half-open, and
+     * the toolbar must not treat that as a healthy server.
+     */
+    @Volatile
+    var lastHeartbeatAtMs = 0L
+        private set
+
     var deliveryRevision = 0L
         private set
 
@@ -323,6 +332,7 @@ internal class RealtimeRuntimeController(
         if (session != null) recordTransition(RuntimeEventKind.REALTIME_STOPPED)
         session?.close()
         session = null
+        lastHeartbeatAtMs = 0L
         running = false
         nextConfigRetry = 0
         failures = 0
@@ -514,6 +524,7 @@ internal class RealtimeRuntimeController(
                         }
                     },
                     onHeartbeat = {
+                        lastHeartbeatAtMs = android.os.SystemClock.elapsedRealtime()
                         runCatching {
                             worker.execute {
                                 if (!valid()) return@execute
@@ -538,6 +549,7 @@ internal class RealtimeRuntimeController(
                                 receivedInBatch++
                                 if (saved == SaveResult.INSERTED) insertedInBatch++
                                 lastReceivedMs = System.currentTimeMillis()
+                                lastHeartbeatAtMs = android.os.SystemClock.elapsedRealtime()
                                 queueReceipts(settings, message.server, ::valid)
                                 messagesChanged()
                                 queueNotifications()
@@ -549,6 +561,11 @@ internal class RealtimeRuntimeController(
                             worker.execute {
                                 if (epoch.get() != capture) return@execute
                                 running = value == RealtimeClient.State.CONNECTED
+                                // A fresh connection is its own proof of life; the first heartbeat
+                                // may still be an interval away.
+                                if (running) {
+                                    lastHeartbeatAtMs = android.os.SystemClock.elapsedRealtime()
+                                }
                                 status =
                                     when (value) {
                                         RealtimeClient.State.CONNECTING -> "即时接收连接中"

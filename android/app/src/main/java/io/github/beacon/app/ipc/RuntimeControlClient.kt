@@ -179,9 +179,34 @@ internal class RuntimeControlClient(private val binder: IBinder) {
             }
         }
 
-    fun checkServer(): Pair<Boolean, String> =
-        binder.request(RuntimeProtocol.CHECK_SERVER) {
+    /**
+     * Probes the saved server. [force] skips the runtime's cached verdict; the automatic foreground
+     * check leaves it false so a live stream or a recent answer is reused instead of re-probing.
+     */
+    fun checkServer(force: Boolean = false): Pair<Boolean, String> =
+        binder.request(
+            RuntimeProtocol.CHECK_SERVER,
+            write = { it.writeInt(if (force) 1 else 0) },
+        ) {
             Pair(it.readInt() == 1, requireNotNull(it.readString()))
+        }
+
+    /**
+     * Reads what the runtime already knows without touching the network: the cached probe verdict
+     * and how long ago the realtime stream last proved itself.
+     */
+    fun status(): RuntimeStatusReply =
+        binder.request(RuntimeProtocol.GET_STATUS) {
+            RuntimeStatusReply(
+                endpoint = requireNotNull(it.readString()),
+                hasVerdict = it.readInt() == 1,
+                reachable = it.readInt() == 1,
+                message = requireNotNull(it.readString()),
+                checkedAtMs = it.readLong(),
+                realtimeRunning = it.readInt() == 1,
+                heartbeatAgeMs = it.readLong(),
+                heartbeatIntervalMs = it.readLong(),
+            )
         }
 
     fun address(): String =
@@ -231,6 +256,18 @@ internal class RuntimeControlClient(private val binder: IBinder) {
             requireNotNull(SyncOutcome.fromWireId(reply.readInt())),
         )
 }
+
+/** Snapshot of the runtime's own view of the saved server, read without network IO. */
+internal data class RuntimeStatusReply(
+    val endpoint: String,
+    val hasVerdict: Boolean,
+    val reachable: Boolean,
+    val message: String,
+    val checkedAtMs: Long,
+    val realtimeRunning: Boolean,
+    val heartbeatAgeMs: Long,
+    val heartbeatIntervalMs: Long,
+)
 
 internal data class ReceivePlanReply(
     val plan: io.github.beacon.app.domain.model.ReceivePlan,

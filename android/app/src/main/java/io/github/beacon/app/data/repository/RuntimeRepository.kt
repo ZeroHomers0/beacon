@@ -9,6 +9,8 @@ import io.github.beacon.app.domain.policy.ServerProbePolicy
 import io.github.beacon.app.ipc.RuntimeActions
 import io.github.beacon.app.ipc.RuntimeConnection
 import io.github.beacon.app.ipc.RuntimeControlClient
+import io.github.beacon.app.ipc.RuntimeStatusReply
+import io.github.beacon.app.domain.policy.ServerStatusPolicy
 import io.github.beacon.app.ipc.RuntimeEventClient
 import io.github.beacon.app.ipc.RuntimeMessageClient
 import io.github.beacon.app.ipc.RuntimeProtocol
@@ -119,6 +121,7 @@ class RuntimeRepository : RuntimeActions {
                 refreshConnectionSummary()
                 refreshPolling()
                 executeReceivePlan(null)
+                readRuntimeStatus()
             },
             onRuntimeChanged = { scheduleReceivePlanRefresh() },
         )
@@ -412,8 +415,6 @@ class RuntimeRepository : RuntimeActions {
             pendingServerCheck = manual || pendingServerCheck == true
             return
         }
-        if (serverProbeInFlight) return
-        pendingServerCheck = null
         if (state.value.configuredEndpoint.isBlank()) {
             mutableState.update {
                 it.copy(
@@ -425,6 +426,63 @@ class RuntimeRepository : RuntimeActions {
             }
             return
         }
+        if (!manual) {
+            // An automatic check first asks the runtime what it already knows: a live stream, or a
+            // verdict inside the freshness window, answers the question without a network round
+            // trip. Only a silent, stale runtime triggers the probe.
+            connection.execute(
+                { RuntimeControlClient(it).status() },
+                { reply ->
+                    applyRuntimeStatus(reply)
+                    val live =
+                        ServerStatusPolicy.websocketLive(
+                            running = reply.realtimeRunning,
+                            heartbeatAgeMs = reply.heartbeatAgeMs,
+                            heartbeatIntervalMs = reply.heartbeatIntervalMs,
+                        )
+                    val ageMs =
+                        if (reply.checkedAtMs <= 0L) -1L
+                        else System.currentTimeMillis() - reply.checkedAtMs
+                    if (ServerStatusPolicy.needsProbe(live, ageMs)) runServerProbe(manual = false)
+                    else pendingServerCheck = null
+                },
+                { runServerProbe(manual = false) },
+            )
+            return
+        }
+        runServerProbe(manual = true)
+    }
+
+    /**
+     * Seeds the displayed verdict and the stream liveness from the runtime snapshot, so a fresh UI
+     * process shows the previous answer instead of "尚未检测" while the probe runs.
+     */
+    private fun applyRuntimeStatus(reply: RuntimeStatusReply) {
+        if (!reply.hasVerdict || reply.checkedAtMs <= 0L) return
+        if (reply.endpoint.isBlank() || reply.endpoint != state.value.configuredEndpoint) return
+        mutableState.update {
+            it.copy(
+                serverChecking = false,
+                serverReachable = reply.reachable,
+                serverCheckResult = reply.message.ifBlank { it.serverCheckResult },
+                serverCheckedAtMs = reply.checkedAtMs,
+            )
+        }
+    }
+
+    /** Reads the runtime's cached view once per service connection, before any probe is owed. */
+    private fun readRuntimeStatus() {
+        if (!state.value.runtimeConnected) return
+        connection.execute(
+            { RuntimeControlClient(it).status() },
+            { applyRuntimeStatus(it) },
+            {},
+        )
+    }
+
+    private fun runServerProbe(manual: Boolean) {
+        if (serverProbeInFlight) return
+        pendingServerCheck = null
         val showProgress =
             ServerProbePolicy.showsProgress(
                 manual = manual,
@@ -440,7 +498,7 @@ class RuntimeRepository : RuntimeActions {
             )
         }
         connection.executeProbe(
-            { RuntimeControlClient(it).checkServer() },
+            { RuntimeControlClient(it).checkServer(force = manual) },
             { result ->
                 // A superseded probe must not release the guard held by the one that replaced it.
                 if (generation == serverCheckGeneration) {
