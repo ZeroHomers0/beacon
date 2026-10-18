@@ -57,7 +57,7 @@ internal fun BeaconContentArea(
     settingsScrollStates: Map<SettingsScreen, LazyListState>,
     barBehavior: BeaconBarBehavior,
     compactBar: Boolean,
-    sharedTitleLabel: String?,
+    onMessageListScrolled: (Boolean) -> Unit,
     busy: Boolean,
     snackbar: SnackbarHostState,
     uiScope: CoroutineScope,
@@ -151,7 +151,7 @@ BeaconMessageTransition(
                                 Modifier.nestedScroll(
                                     barBehavior.connection(ui.uiStyle)
                                 ),
-                        sharedTitle = sharedTitleLabel,
+                        onListScrolled = onMessageListScrolled,
                         onSearch = { ui.search = it },
                         onApplyFilter = { text, filter ->
                             ui.applyFilter(actions, text, filter)

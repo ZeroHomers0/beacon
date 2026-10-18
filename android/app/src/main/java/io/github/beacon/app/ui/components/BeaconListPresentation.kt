@@ -4,6 +4,7 @@ package io.github.beacon.app.ui.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,6 +22,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -35,6 +37,9 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.BeaconUiStyle
@@ -235,38 +240,73 @@ fun BeaconPullToRefresh(
     }
 }
 
-/** Small information pills and removable filters share the page's color and radius. */
+/**
+ * A count that lives next to the search field instead of on its own row: one glyph plus the compact
+ * number, widening only when the number outgrows the slot. Screen readers hear the full value, and
+ * the highlighted state reuses the pill language of the filters and the saved-search chips.
+ */
 @Composable
-fun BeaconSummaryPill(
-    label: String, icon: ImageVector, highlighted: Boolean = false,
-    enabled: Boolean = true, onClick: (() -> Unit)? = null,
+fun BeaconCountPill(
+    count: Long,
+    icon: ImageVector,
+    description: String,
+    selected: Boolean,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    compact: Boolean = false,
+    enabled: Boolean = true,
 ) {
+    val tint =
+        if (selected) MaterialTheme.colorScheme.primary
+        else MaterialTheme.colorScheme.onSurfaceVariant
     Surface(
-        modifier = if (onClick == null) modifier else modifier
-            .heightIn(min = if (compact) InputChipDefaults.Height else BeaconUiMetrics.ControlMinHeight)
-            .clip(RoundedCornerShape(50))
-            .clickable(enabled = enabled, role = androidx.compose.ui.semantics.Role.Button, onClick = onClick),
-        shape = RoundedCornerShape(50),
+        modifier = modifier
+            .defaultMinSize(minWidth = BeaconUiMetrics.CountChipMinWidth)
+            .heightIn(min = BeaconUiMetrics.CountChipHeight)
+            .animateContentSize(MotionResize)
+            .clip(BeaconUiMetrics.PillShape)
+            .then(
+                if (selected)
+                    Modifier.border(
+                        width = 1.dp,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.45f),
+                        shape = BeaconUiMetrics.PillShape,
+                    )
+                else Modifier
+            )
+            .semantics {
+                contentDescription = description
+                this.selected = selected
+            }
+            .clickable(
+                enabled = enabled,
+                role = androidx.compose.ui.semantics.Role.Button,
+                onClickLabel = description,
+                onClick = onClick,
+            ),
+        shape = BeaconUiMetrics.PillShape,
         color =
-            if (highlighted) MaterialTheme.colorScheme.secondaryContainer
+            if (selected)
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+                    .compositeOver(MaterialTheme.colorScheme.surface)
             else MaterialTheme.colorScheme.surfaceContainerHigh,
     ) {
         Row(
-            Modifier.padding(horizontal = 12.dp, vertical = if (compact) 2.dp else 8.dp),
+            Modifier.padding(horizontal = BeaconUiMetrics.CountChipPadding),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6, Alignment.CenterHorizontally),
         ) {
-            Icon(
-                icon,
-                null,
-                Modifier.size(16.dp),
-                tint =
-                    if (highlighted) MaterialTheme.colorScheme.primary
+            Icon(icon, null, Modifier.size(BeaconUiMetrics.IconInline), tint = tint)
+            BeaconText(
+                formatCompactCount(count),
+                style =
+                    MaterialTheme.typography.labelLarge.copy(
+                        fontFeatureSettings = "tnum",
+                    ),
+                color =
+                    if (selected) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
             )
-            BeaconText(label, style = MaterialTheme.typography.labelMedium)
         }
     }
 }

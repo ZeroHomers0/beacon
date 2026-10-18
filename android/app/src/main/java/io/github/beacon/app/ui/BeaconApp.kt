@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -42,13 +43,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-/**
- * Below this window height the list pages move their title into the sticky search row and shrink
- * the top bar, so a short window (landscape, split screen) keeps both the title and the search
- * field without a two-band header.
- */
-private val SHARED_TITLE_MAX_HEIGHT = 560.dp
 
 @Composable
 fun BeaconApp(
@@ -345,20 +339,16 @@ fun BeaconApp(
                 display.join()
             }
         }
-        // A short window (landscape, split screen) folds the page title into the search row. The
-        // container size is read instead of Configuration.screenHeightDp so a resize is picked up
-        // without waiting for a configuration change.
-        val windowInfo = LocalWindowInfo.current
-        val windowHeightDp = with(LocalDensity.current) { windowInfo.containerSize.height.toDp() }
-        val sharedTitleBar =
-            windowHeightDp > 0.dp && windowHeightDp < SHARED_TITLE_MAX_HEIGHT && !ui.selectionMode
-        // A short window folds the title into the search row; opening the IME preserves this
-        // layout.
-        val sharedTitleLabel = if (sharedTitleBar) stringResource(ui.pages[0]) else null
+        // The message page keeps its title out of a band of its own: the compact bar carries the
+        // actions, and the page name joins it only once the list starts scrolling, so the first
+        // screen is header-light and the title still answers "where am I" while reading.
+        val compactMessageBar = ui.page == 0 && !ui.selectionMode
+        val messageTitleVisible = remember { mutableStateOf(false) }
+        // Leaving the page drops the flag: the settings bar must never inherit it.
+        LaunchedEffect(ui.page) { if (ui.page != 0) messageTitleVisible.value = false }
         val barBehavior = rememberBeaconBarBehavior()
         val compactBar =
-            (sharedTitleBar && ui.page == 0) ||
-                (ui.page == 0 && ui.selectionMode) ||
+            ui.page == 0 ||
                 detail != null ||
                 (ui.page == 1 && ui.settingsScreen != SettingsScreen.HOME)
         Row(Modifier.fillMaxSize()) {
@@ -379,7 +369,8 @@ fun BeaconApp(
                             settingsMotion = settingsMotion,
                             pager = pager,
                             barBehavior = barBehavior,
-                            sharedTitleBar = sharedTitleBar,
+                            compactMessageBar = compactMessageBar,
+                            titleVisible = messageTitleVisible.value,
                             navigate = navigate,
                         )
                     },
@@ -396,7 +387,7 @@ fun BeaconApp(
                         settingsScrollStates = settingsScrollStates,
                         barBehavior = barBehavior,
                         compactBar = compactBar,
-                        sharedTitleLabel = sharedTitleLabel,
+                        onMessageListScrolled = { messageTitleVisible.value = it },
                         busy = busy,
                         snackbar = snackbar,
                         uiScope = uiScope,
