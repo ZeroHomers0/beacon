@@ -16,6 +16,7 @@
     <string name="action_confirm">确认</string>
     <string name="action_sync_now">立即同步</string>
     <string name="action_refresh_status">刷新状态</string>
+    <string name="reception_actions_hint">立即同步会拉取服务器上待接收的消息；刷新状态只重新读取本机接收状态。</string>
     <string name="action_copy_body">复制正文</string>
     <string name="action_copy_title">复制标题</string>
     <string name="action_delete_message">删除消息</string>
@@ -392,7 +393,7 @@
     <string name="admin_pending">待接收</string>
     <string name="admin_logout">退出登录</string>
     <string name="admin_logout_hint">退出后需要重新输入管理员令牌才能继续管理服务器。</string>
-    <string name="admin_refresh">刷新状态</string>
+    <string name="admin_refresh">刷新数据</string>
     <string name="admin_applications">应用</string>
     <string name="admin_test">测试发送</string>
     <string name="admin_create_binding">创建绑定码</string>

@@ -411,6 +411,7 @@ internal fun ServerAdminPage(
                                     add(R.string.admin_revoke_device to { pendingDevice = device })
                                 }
                             },
+                            modifier = Modifier.animateItem(),
                         )
                     }
                 }
@@ -468,6 +469,7 @@ internal fun ServerAdminPage(
                                             pendingApplication = app
                                         }
                             ),
+                            modifier = Modifier.animateItem(),
                         )
                     }
                 }
@@ -820,9 +822,10 @@ private fun AdminListCard(
     status: String,
     enabled: Boolean,
     actions: List<Pair<Int, () -> Unit>>,
+    modifier: Modifier = Modifier,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
-    BeaconListCard {
+    BeaconListCard(modifier) {
         Row(
             Modifier.fillMaxWidth(),
             verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,

@@ -44,7 +44,7 @@ internal fun UpdateCheckDialog(
                     BeaconText(
                         stringResource(
                             R.string.settings_update_size,
-                            formatStorageSize(context, release.sizeBytes, short = true),
+                            formatStorageSize(context, release.sizeBytes),
                         ),
                         style = MaterialTheme.typography.bodyMedium,
                     )

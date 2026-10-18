@@ -177,6 +177,14 @@ private fun MessagesContent(
         )
             actions.nextMessages()
     }
+    // Typing applies once the user pauses, so a query is not issued in the middle of a word.
+    // Enter and the filter pills still apply immediately.
+    LaunchedEffect(search, busy) {
+        if (search != applied.search && !busy) {
+            delay(220)
+            onApplyFilter(search, readFilter)
+        }
+    }
     Column(modifier) {
         Column(
             Modifier.fillMaxWidth()
@@ -334,7 +342,7 @@ private fun MessagesContent(
             ) {
                 if (selectionHint.isNotBlank())
                     item(key = "selection-hint", contentType = "hint") {
-                        BeaconText(selectionHint, color = MaterialTheme.colorScheme.error)
+                        io.github.beacon.app.ui.components.SettingsNotice(selectionHint)
                     }
                 if (runtimeState.messages.isEmpty())
                     item(key = "empty", contentType = "empty") {

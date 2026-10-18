@@ -168,6 +168,9 @@ internal fun LazyListScope.receptionSettingsItems(
                     },
                 )
             }
+            io.github.beacon.app.ui.components.SettingsHint(
+                stringResource(R.string.reception_actions_hint)
+            )
         }
     }
     if (receivePlan.mode == ReceiveMode.RULES) {

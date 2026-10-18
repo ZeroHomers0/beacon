@@ -170,16 +170,6 @@ internal fun BeaconListCardColumn(
     )
 }
 
-@Composable
-fun SettingsCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    BeaconCard(
-        modifier.animateContentSize(animationSpec = MotionResize),
-        colors =
-            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        content = content,
-    )
-}
-
 /** Secondary explanations share a readable, quiet treatment across both settings styles. */
 @Composable
 fun SettingsHint(text: String) {
