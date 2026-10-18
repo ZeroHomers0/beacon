@@ -61,8 +61,9 @@ fun SettingsStatusSummary(
     val displayedDetails = if (loading) settledDetails else details
     // The icon belongs to the title and detail lines only: the two texts are one optical group, so
     // a caption (last check time, size, ...) sits below the row instead of dragging the icon down
-    // to the middle of three lines. Keeping the caption inside the same clickable column means it
-    // stays part of the same "view details" affordance.
+    // to the middle of three lines. The caption starts at the icon's edge, the way a footnote under
+    // the whole block reads, and stays inside the same clickable column so it keeps the
+    // "view details" affordance.
     Column(
         Modifier.fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
@@ -133,10 +134,7 @@ fun SettingsStatusSummary(
         if (caption != null)
             BeaconText(
                 caption,
-                Modifier.padding(
-                    start = iconSize + BeaconUiMetrics.Gap12,
-                    top = BeaconUiMetrics.Gap4,
-                ),
+                Modifier.padding(top = BeaconUiMetrics.Gap4),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
