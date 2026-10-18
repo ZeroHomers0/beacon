@@ -109,8 +109,8 @@ fun BeaconActionPair(dismiss: @Composable () -> Unit, confirm: @Composable () ->
 
 /**
  * The confirmation dialog the whole app shares: a title, one line of explanation and a
- * cancel/confirm pair. The confirm label defaults to the title so the common case reads as 「删除设备 /
- * 删除设备」 instead of inventing a second wording.
+ * cancel/confirm pair. The confirm label defaults to 「确认」 because repeating the title produced
+ * 「删除设备 / 删除设备」; a caller that knows the verb (删除、解绑、清理) passes it explicitly.
  *
  * [danger] fills the confirm button with the error container and is reserved for actions that
  * cannot be undone. [enabled] and [dismissEnabled] stay separate because a dialog that keeps the
@@ -125,16 +125,27 @@ fun BeaconConfirmDialog(
     description: String,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
-    confirmText: String = title,
+    confirmText: String = stringResource(R.string.action_confirm),
     danger: Boolean = true,
     enabled: Boolean = true,
     dismissEnabled: Boolean = true,
     dismissText: String = stringResource(R.string.action_cancel),
+    errorText: String? = null,
 ) {
     BeaconAlertDialog(
         onDismissRequest = onDismiss,
         title = { BeaconText(title) },
-        text = { SettingsHint(description) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
+                SettingsHint(description)
+                if (errorText != null)
+                    BeaconText(
+                        errorText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+            }
+        },
         confirmButton = {
             if (danger) BeaconDangerButton(onConfirm, enabled = enabled) { BeaconText(confirmText) }
             else BeaconButton(onConfirm, enabled = enabled) { BeaconText(confirmText) }

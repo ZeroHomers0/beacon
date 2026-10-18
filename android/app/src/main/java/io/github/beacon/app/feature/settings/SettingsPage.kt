@@ -209,10 +209,7 @@ fun SettingsPage(
                 }
             notificationForm.rulesFailure?.let { failure ->
                 item {
-                    io.github.beacon.app.ui.components.BeaconText(
-                        stringResource(failure),
-                        color = MaterialTheme.colorScheme.error,
-                    )
+                    io.github.beacon.app.ui.components.SettingsNotice(stringResource(failure))
                 }
             }
         }

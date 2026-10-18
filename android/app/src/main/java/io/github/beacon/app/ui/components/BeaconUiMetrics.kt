@@ -1,5 +1,6 @@
 package io.github.beacon.app.ui.components
 
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 
 /**
@@ -30,6 +31,16 @@ object BeaconUiMetrics {
     val SearchFieldMinHeight = 44.dp
     val SearchFieldVerticalInset = 10.dp
     val CardRadius = 16.dp
+
+    /** Two-line label/detail status rows keep a stable height while their detail text changes. */
+    val StatusDetailMinHeight = 64.dp
+
+    /** Count badges are small pills; one radius and inset pair keeps them identical everywhere. */
+    val BadgeRadius = 6.dp
+    val BadgeVerticalInset = 3.dp
+
+    /** Filter pills use one shape value so the two chip sites cannot drift apart. */
+    val PillShape = RoundedCornerShape(percent = 50)
     val ControlMinHeight = 48.dp
 
     /** Inline spacing steps, smallest first. */
@@ -40,6 +51,9 @@ object BeaconUiMetrics {
     val Gap10 = 10.dp
     val Gap12 = 12.dp
     val Gap16 = 16.dp
+
+    /** Status rows lead with a square icon tile; the tile, not the glyph, sets the row height. */
+    val StatusIconSize = 48.dp
 
     /** Square icon sizes used next to text. */
     val IconSmall = 16.dp

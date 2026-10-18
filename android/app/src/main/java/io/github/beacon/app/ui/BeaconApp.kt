@@ -35,6 +35,7 @@ import io.github.beacon.app.ui.components.NotificationPermissionState
 import io.github.beacon.app.ui.components.PredictiveBackReset
 import io.github.beacon.app.ui.components.SettingsScreen
 import io.github.beacon.app.ui.components.rememberBeaconBarBehavior
+import io.github.beacon.app.ui.components.showFeedback
 import io.github.beacon.app.ui.components.userOperationFeedback
 import io.github.beacon.app.ui.theme.BeaconTheme
 import kotlinx.coroutines.Dispatchers
@@ -163,9 +164,9 @@ fun BeaconApp(
             updateScope.launch {
                 when (checkForUpdate(true)) {
                     UpdateCheckReport.LATEST ->
-                        snackbar.showSnackbar(updateLatestCopy, duration = SnackbarDuration.Short)
+                        snackbar.showFeedback(updateLatestCopy)
                     UpdateCheckReport.FAILED ->
-                        snackbar.showSnackbar(updateFailedCopy, duration = SnackbarDuration.Short)
+                        snackbar.showFeedback(updateFailedCopy)
                     // AVAILABLE already opened the dialog; SILENT was never requested by the user.
                     else -> Unit
                 }
@@ -178,7 +179,7 @@ fun BeaconApp(
                     onDismiss = { ui.updateState.closeDialog() },
                     onFeedback = { message ->
                         updateScope.launch {
-                            snackbar.showSnackbar(message, duration = SnackbarDuration.Short)
+                            snackbar.showFeedback(message)
                         }
                     },
                 )
@@ -336,9 +337,8 @@ fun BeaconApp(
                 ) ?: 2200L
         LaunchedEffect(runtimeState.status) {
             if (runtimeState.status.showsSnackbar && feedback.isNotBlank()) {
-                snackbar.currentSnackbarData?.dismiss()
                 val display = launch {
-                    snackbar.showSnackbar(feedback, duration = SnackbarDuration.Indefinite)
+                    snackbar.showFeedback(feedback, duration = SnackbarDuration.Indefinite)
                 }
                 kotlinx.coroutines.delay(feedbackTimeout)
                 snackbar.currentSnackbarData?.dismiss()

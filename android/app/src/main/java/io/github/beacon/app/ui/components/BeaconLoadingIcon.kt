@@ -24,13 +24,20 @@ fun BeaconLoadingIcon(
     description: String? = null,
     tint: Color = MaterialTheme.colorScheme.onSurface,
 ) {
+    // A busy indicator is decoration: with system animations disabled it holds still instead of
+    // spinning forever, which also keeps the frame loop off in power-save mode.
+    val animate = loading && rememberSystemAnimationsEnabled()
     val animatedModifier =
-        if (loading) {
+        if (animate) {
             val transition = rememberInfiniteTransition(label = "busy-icon")
             val angle by transition.animateFloat(
                 initialValue = 0f,
                 targetValue = -360f,
-                animationSpec = infiniteRepeatable(tween(1200, easing = LinearEasing), RepeatMode.Restart),
+                animationSpec =
+                    infiniteRepeatable(
+                        tween(BeaconMotion.PulseMs, easing = LinearEasing),
+                        RepeatMode.Restart,
+                    ),
                 label = "busy-icon-rotation",
             )
             modifier.rotate(angle)
@@ -88,7 +95,7 @@ fun BeaconSaveAction(
     ) {
         androidx.compose.animation.Crossfade(
             targetState = saved,
-            animationSpec = tween(150),
+            animationSpec = tween(BeaconMotion.QuickMs),
             label = "save-feedback",
         ) { complete ->
             Icon(

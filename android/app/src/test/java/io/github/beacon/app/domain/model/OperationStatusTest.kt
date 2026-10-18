@@ -2,6 +2,7 @@ package io.github.beacon.app.domain.model
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -31,5 +32,21 @@ class OperationStatusTest {
         val status = RuntimeState().status
         assertEquals(OperationKind.CONNECTION_LOST, status.kind)
         assertEquals("接收服务尚未验证", status.text)
+    }
+
+    @Test
+    fun identicalResultsAreDistinctEvents() {
+        val first = OperationStatus.result("本轮同步：新增 0 条")
+        val second = OperationStatus.result("本轮同步：新增 0 条")
+        assertEquals(first.kind, second.kind)
+        assertEquals(first.text, second.text)
+        // Same content, different event: without this the second sync would update nothing.
+        assertNotEquals(first, second)
+    }
+
+    @Test
+    fun derivedStateKeepsTheOriginalStamp() {
+        val status = OperationStatus.result("已保存")
+        assertEquals(status, status.copy(kind = OperationKind.RESULT))
     }
 }

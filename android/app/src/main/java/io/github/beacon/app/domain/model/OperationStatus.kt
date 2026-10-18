@@ -24,10 +24,16 @@ enum class OperationKind {
 /**
  * Runtime status text paired with the classification the UI needs. [text] stays free-form because
  * the runtime process still answers with prose over protocol 1.
+ *
+ * [stamp] makes two identical results distinct events. State holders skip notification when the new
+ * value equals the old one, so repeating the same operation ("本轮同步：新增 0 条" twice in a row)
+ * used to update nothing: no recomposition, no snackbar. Every new instance now carries a fresh
+ * stamp; [copy] keeps the old one, so deriving state does not invent an event.
  */
 data class OperationStatus(
     val kind: OperationKind = OperationKind.CONNECTION_LOST,
     val text: String = "",
+    val stamp: Long = nextStamp(),
 ) {
     val firstLine: String
         get() = text.lineSequence().first()
@@ -44,6 +50,10 @@ data class OperationStatus(
             }
 
     companion object {
+        private val stamps = java.util.concurrent.atomic.AtomicLong()
+
+        private fun nextStamp(): Long = stamps.incrementAndGet()
+
         fun connecting(text: String) = OperationStatus(OperationKind.CONNECTING, text)
 
         fun diagnostic(text: String) = OperationStatus(OperationKind.DIAGNOSTIC, text)

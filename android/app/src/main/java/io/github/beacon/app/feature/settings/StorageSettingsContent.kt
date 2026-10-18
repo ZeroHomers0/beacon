@@ -82,27 +82,25 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
         // Without this the page rendered every control disabled with no explanation; a failed read
         // is now visible and recoverable instead of looking like a broken toggle.
         if ((loadFailed || saveFailed) && !custom) {
-            SettingsSection(
+            PageStateFailure(
                 stringResource(
                     if (saveFailed) R.string.storage_save_failed_title
                     else R.string.storage_load_failed_title
-                )
-            ) {
-                BeaconText(state.status.text, color = MaterialTheme.colorScheme.error)
-                BeaconActionButton(
+                ),
+                actionLabel =
                     stringResource(
                         if (saveFailed && settingsLoaded) R.string.settings_retry_save
                         else R.string.settings_reload
                     ),
-                    io.github.beacon.app.ui.icons.BeaconIcons.History,
-                    Modifier.fillMaxWidth(),
-                    !state.messageBusy && state.runtimeConnected,
-                ) {
-                    val pending = pendingSave
-                    if (saveFailed && settingsLoaded && pending != null) save(pending)
-                    else attempt++
-                }
-            }
+                onRetry =
+                    if (!state.messageBusy && state.runtimeConnected) {
+                        {
+                            val pending = pendingSave
+                            if (saveFailed && settingsLoaded && pending != null) save(pending)
+                            else attempt++
+                        }
+                    } else null,
+            )
         }
         SettingsGroup(stringResource(R.string.storage_local_database)) {
             Column(
@@ -112,22 +110,22 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                 BeaconText(
                     preview?.databaseBytes?.let {
                         formatStorageSize(context, it)
-                    } ?: "—",
+                    } ?: BeaconUnknownValue,
                     style = MaterialTheme.typography.headlineLarge,
                 )
                 SettingsMetricGrid(
                     listOf(
                         Pair(
                             resources.getString(R.string.ui_nav_messages_title),
-                            preview?.total?.toString() ?: "—",
+                            formatCount(preview?.total),
                         ),
                         Pair(
                             resources.getString(R.string.msg_unread_label),
-                            preview?.unread?.toString() ?: "—",
+                            formatCount(preview?.unread),
                         ),
                         Pair(
                             resources.getString(R.string.settings_pending_notifications_title),
-                            preview?.pendingNotifications?.toString() ?: "—",
+                            formatCount(preview?.pendingNotifications),
                         ),
                     ),
                     columns = 3,
@@ -151,7 +149,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                         stringResource(R.string.storage_last_result_label),
                         io.github.beacon.app.domain.policy.CleanupResultPresentation.compact(
                             settings.lastResult
-                        ).ifBlank { "—" },
+                        ).ifBlank { BeaconUnknownValue },
                         reserveValueLines = 2,
                     )
                 },
@@ -208,11 +206,11 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
             SettingsMetricGrid(
                 listOf(
                     stringResource(R.string.settings_cleanup_eligible) to
-                        (preview?.eligible?.toString() ?: "—"),
+                        formatCount(preview?.eligible),
                     stringResource(R.string.settings_cleanup_protected) to
-                        (preview?.protected?.toString() ?: "—"),
+                        formatCount(preview?.protected),
                     stringResource(R.string.settings_cleanup_planned) to
-                        (preview?.planned?.toString() ?: "—"),
+                        formatCount(preview?.planned),
                 ),
                 columns = 3,
             )

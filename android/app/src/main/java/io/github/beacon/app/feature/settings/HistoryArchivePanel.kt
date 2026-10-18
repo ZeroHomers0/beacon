@@ -5,6 +5,7 @@ import io.github.beacon.app.ui.components.BeaconUiMetrics
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -149,6 +150,20 @@ fun HistoryArchivePanel(actions: RuntimeActions, busy: Boolean, grouped: Boolean
                                 visualTransformation = PasswordVisualTransformation(),
                             )
                         SettingsHint(stringResource(R.string.settings_archive_password_hint))
+                        val archiveReason =
+                            when {
+                                password.length < 8 ->
+                                    stringResource(R.string.settings_archive_password_too_short)
+                                operation != true && password != confirmPassword ->
+                                    stringResource(R.string.settings_archive_password_mismatch)
+                                else -> null
+                            }
+                        if (archiveReason != null)
+                            BeaconText(
+                                archiveReason,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
                     }
                 }
             },

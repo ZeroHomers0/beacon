@@ -137,13 +137,12 @@ fun BackgroundPermissionPanel() {
                 }
             }
         }
-        BeaconOutlinedButton(onClick = { help = true }, modifier = Modifier.fillMaxWidth()) {
-            BeaconText(stringResource(R.string.settings_background_help))
+        // Every block on this page is a titled card; a lone button in the page flow broke that.
+        SettingsSection(stringResource(R.string.background_help_title)) {
+            BeaconOutlinedButton(onClick = { help = true }, modifier = Modifier.fillMaxWidth()) {
+                BeaconText(stringResource(R.string.settings_background_help))
+            }
         }
-        if (unavailable)
-            BeaconText(
-                stringResource(R.string.background_settings_unavailable),
-                color = MaterialTheme.colorScheme.error,
-            )
+        if (unavailable) SettingsNotice(stringResource(R.string.background_settings_unavailable))
     }
 }

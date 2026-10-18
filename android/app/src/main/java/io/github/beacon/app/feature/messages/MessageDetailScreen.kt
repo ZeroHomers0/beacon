@@ -176,6 +176,9 @@ fun MessageDetailScreen(
             }
                 .getOrDefault("")
             MessageActionsPanel(message.actions, barkUrl)
+            // The main card is the message itself; the collapsible technical payload gets a
+            // section label so it reads as a second, subordinate block.
+            SettingsLabel(stringResource(R.string.msg_detail_raw_heading))
             BeaconCard(
                 Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),

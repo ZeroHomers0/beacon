@@ -29,17 +29,13 @@ internal fun BeaconDialogHost(
     actions: RuntimeActions,
 ) {
     ui.operationDetails?.let { details ->
+        // One dismissal is enough: the pair used to read 「知道了 / 关闭」, two ways to say nothing.
         BeaconAlertDialog(
             onDismissRequest = { ui.operationDetails = null },
             title = { BeaconText(stringResource(R.string.ui_operation_result_title)) },
             text = { BeaconText(details) },
             confirmButton = {
                 BeaconButton(onClick = { ui.operationDetails = null }) {
-                    BeaconText(stringResource(R.string.ui_got_it_action))
-                }
-            },
-            dismissButton = {
-                BeaconTextButton(onClick = { ui.operationDetails = null }) {
                     BeaconText(stringResource(R.string.action_close))
                 }
             },
@@ -103,13 +99,16 @@ internal fun BeaconDialogHost(
         )
 
     ui.pendingDelete?.let { keys ->
+        val single = keys.size == 1
         BeaconConfirmDialog(
-            title = stringResource(R.string.msg_delete_confirm_title, keys.size),
+            title =
+                if (single) stringResource(R.string.msg_delete_confirm_single_title)
+                else stringResource(R.string.msg_delete_confirm_title, keys.size),
             description =
-                if (keys.size == 1) stringResource(R.string.ui_delete_undo_hint)
+                if (single) stringResource(R.string.ui_delete_undo_hint)
                 else stringResource(R.string.ui_delete_multi_warning_hint),
             confirmText = stringResource(R.string.ui_confirm_delete_action),
-            danger = false,
+            danger = true,
             enabled = !runtimeState.messageBusy,
             onDismiss = { ui.pendingDelete = null },
             onConfirm = {

@@ -3,6 +3,7 @@
 package io.github.beacon.app.ui.components
 
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -134,10 +135,45 @@ fun SettingsPreferenceActions(content: @Composable ColumnScope.() -> Unit) {
     )
 }
 
+/**
+ * The one standalone list card, for rows that are their own list item rather than a row inside a
+ * settings group. Admin lists and message rows both needed the same shell, and had drifted into two
+ * copies of the same radius/inset/rhythm; both now come from here.
+ */
+@Composable
+internal fun BeaconListCard(
+    modifier: Modifier = Modifier,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainerLow,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    BeaconCard(
+        modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(BeaconUiMetrics.CardRadius),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        content = { BeaconListCardColumn(content = content) },
+    )
+}
+
+/** The body of a list card: one inset and one rhythm, even when the card needs its own modifiers. */
+@Composable
+internal fun BeaconListCardColumn(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(
+        modifier.padding(
+            horizontal = BeaconUiMetrics.CardInset,
+            vertical = BeaconUiMetrics.SectionGap,
+        ),
+        verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap4),
+        content = content,
+    )
+}
+
 @Composable
 fun SettingsCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     BeaconCard(
-        modifier.animateContentSize(),
+        modifier.animateContentSize(animationSpec = MotionResize),
         colors =
             CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
         content = content,
@@ -154,20 +190,97 @@ fun SettingsHint(text: String) {
     )
 }
 
+/**
+ * An inline failure or warning that belongs to the page rather than to one field.
+ *
+ * These used to be coloured text appended straight to a settings list, which left them outside every
+ * card and pushed the section below them down by the height of the sentence. A notice is its own
+ * small surface, so the page keeps its rhythm, and a failure that can be retried offers the action
+ * instead of asking the reader to find it elsewhere.
+ */
+@Composable
+fun SettingsNotice(
+    text: String,
+    modifier: Modifier = Modifier,
+    icon: ImageVector = BeaconIcons.Warning,
+    tone: Color = MaterialTheme.colorScheme.error,
+    actionLabel: String? = null,
+    onAction: (() -> Unit)? = null,
+) {
+    val shape = RoundedCornerShape(BeaconUiMetrics.CardRadius)
+    Row(
+        modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(
+                tone.copy(alpha = 0.08f).compositeOver(MaterialTheme.colorScheme.surfaceContainerLow)
+            )
+            .border(1.dp, tone.copy(alpha = 0.24f), shape)
+            .padding(
+                horizontal = BeaconUiMetrics.CardInset,
+                vertical = BeaconUiMetrics.SectionGap,
+            ),
+        horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, null, Modifier.size(BeaconUiMetrics.IconMedium), tint = tone)
+        BeaconText(text, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+        if (actionLabel != null && onAction != null)
+            BeaconTextButton(onClick = onAction) { BeaconText(actionLabel, color = tone) }
+    }
+}
+
+/**
+ * A primary action together with the reason it cannot be pressed yet.
+ *
+ * A greyed-out button on its own makes the reader hunt for the field that is missing. The reason sits
+ * directly under the button, where the eye already is, and disappears as soon as the action becomes
+ * available — no separate validation pass, no dialog.
+ */
+@Composable
+fun SettingsPrimaryAction(
+    label: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    disabledReason: String? = null,
+) {
+    Column(
+        modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8),
+    ) {
+        BeaconButton(onClick = onClick, modifier = Modifier.fillMaxWidth(), enabled = enabled) {
+            BeaconText(label)
+        }
+        if (!enabled && disabledReason != null)
+            BeaconText(
+                disabledReason,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+    }
+}
+
+/** The section label above a card; the one place that decides how groups are announced. */
+@Composable
+fun SettingsLabel(text: String, modifier: Modifier = Modifier) {
+    if (text.isNotBlank())
+        BeaconText(
+            text,
+            modifier.padding(horizontal = BeaconUiMetrics.CardInset).semantics { heading() },
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+}
+
 @Composable
 fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.GroupTitleGap)) {
-        if (title.isNotBlank())
-            BeaconText(
-                title,
-                Modifier.padding(horizontal = BeaconUiMetrics.CardInset).semantics { heading() },
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+        SettingsLabel(title)
         BeaconCard(
-            Modifier.fillMaxWidth().animateContentSize(),
+            Modifier.fillMaxWidth().animateContentSize(animationSpec = MotionResize),
             colors =
                 CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLow
@@ -347,10 +460,7 @@ fun MessageItem(
                     else MaterialTheme.colorScheme.surfaceContainerLow
             ),
     ) {
-        Column(
-            Modifier.padding(horizontal = BeaconUiMetrics.CardInset, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap4),
-        ) {
+        BeaconListCardColumn {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6),
@@ -467,7 +577,7 @@ internal fun MessageFilterTag(
     Box(
         modifier
             .semantics { if (compact) contentDescription = label }
-            .clip(RoundedCornerShape(6.dp))
+            .clip(RoundedCornerShape(BeaconUiMetrics.BadgeRadius))
             .background(
                 MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
                     .compositeOver(MaterialTheme.colorScheme.surfaceContainerLow)
@@ -477,7 +587,7 @@ internal fun MessageFilterTag(
                 else Modifier.border(
                     1.dp,
                     MaterialTheme.colorScheme.outline.copy(alpha = 0.6f),
-                    RoundedCornerShape(6.dp),
+                    RoundedCornerShape(BeaconUiMetrics.BadgeRadius),
                 )
             )
             .then(
@@ -492,7 +602,7 @@ internal fun MessageFilterTag(
         contentAlignment = Alignment.Center,
     ) {
         Row(
-            Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            Modifier.padding(horizontal = BeaconUiMetrics.Gap8, vertical = BeaconUiMetrics.BadgeVerticalInset),
             horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap4),
             verticalAlignment = Alignment.CenterVertically,
         ) {

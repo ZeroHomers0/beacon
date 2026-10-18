@@ -2,8 +2,8 @@
 
 package io.github.beacon.app.feature.messages
 
-import io.github.beacon.app.ui.components.BeaconUiMetrics
-
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -33,12 +33,14 @@ import io.github.beacon.app.domain.policy.MessagePresentation
 import io.github.beacon.app.ipc.RuntimeActions
 import io.github.beacon.app.ui.components.ActionFlow
 import io.github.beacon.app.ui.components.BeaconEmptyState
+import io.github.beacon.app.ui.components.BeaconMotion
 import io.github.beacon.app.ui.components.BeaconPullToRefresh
 import io.github.beacon.app.ui.components.BeaconSearchBox
 import io.github.beacon.app.ui.components.BeaconSummaryPill
 import io.github.beacon.app.ui.components.BeaconText
 import io.github.beacon.app.ui.components.BeaconTextButton
 import io.github.beacon.app.ui.components.BeaconTitleSearchRow
+import io.github.beacon.app.ui.components.BeaconUiMetrics
 import io.github.beacon.app.ui.components.MessageItem
 import io.github.beacon.app.ui.icons.BeaconIcons
 import kotlinx.coroutines.delay
@@ -70,6 +72,7 @@ fun MessagesPage(
     onEnterSelection: (MessageKey) -> Unit,
     onSelectionChange: (List<MessageKey>) -> Unit,
     onSelectionHint: (String) -> Unit,
+    onRequestDelete: (List<MessageKey>) -> Unit,
     onCopyText: (String, Boolean) -> Unit,
 ) {
     val zone = java.time.ZoneId.systemDefault()
@@ -81,7 +84,7 @@ fun MessagesPage(
         scroll, modifier, padding, rememberMessageListState(runtimeState), actions,
         search, readFilter, selectionMode, selectedKeys, selectionHint, scrollModifier,
         sharedTitle, hideSharedTitle, onSearch, onApplyFilter, onConnectionSettings,
-        onEnterSelection, onSelectionChange, onSelectionHint, onCopyText, calendar,
+        onEnterSelection, onSelectionChange, onSelectionHint, onRequestDelete, onCopyText, calendar,
     )
 }
 
@@ -108,6 +111,7 @@ private fun MessagesContent(
     onEnterSelection: (MessageKey) -> Unit,
     onSelectionChange: (List<MessageKey>) -> Unit,
     onSelectionHint: (String) -> Unit,
+    onRequestDelete: (List<MessageKey>) -> Unit,
     onCopyText: (String, Boolean) -> Unit,
     calendar: Pair<java.time.ZoneId, java.time.LocalDate>,
 ) {
@@ -181,7 +185,7 @@ private fun MessagesContent(
                     start = padding.calculateStartPadding(layoutDirection),
                     end = padding.calculateEndPadding(layoutDirection),
                     top = padding.calculateTopPadding(),
-                    bottom = 8.dp,
+                    bottom = BeaconUiMetrics.Gap8,
                 )
         ) {
             val submit = {
@@ -245,10 +249,7 @@ private fun MessagesContent(
                     ActionFlow {
                         if (applied.readFilter != MessageReadFilter.ALL)
                             InputChip(
-                                shape =
-                                    androidx.compose.foundation.shape.RoundedCornerShape(
-                                        50
-                                    ),
+                                shape = BeaconUiMetrics.PillShape,
                                 selected = true,
                                 enabled = !busy,
                                 onClick = {
@@ -272,16 +273,13 @@ private fun MessagesContent(
                                     Icon(
                                         BeaconIcons.Close,
                                         stringResource(R.string.msg_clear_filters_action),
-                                        Modifier.size(16.dp),
+                                        Modifier.size(BeaconUiMetrics.IconSmall),
                                     )
                                 },
                             )
                         if (applied.search.isNotBlank())
                             InputChip(
-                                shape =
-                                    androidx.compose.foundation.shape.RoundedCornerShape(
-                                        50
-                                    ),
+                                shape = BeaconUiMetrics.PillShape,
                                 selected = true,
                                 enabled = !busy,
                                 onClick = {
@@ -298,13 +296,13 @@ private fun MessagesContent(
                                     )
                                 },
                                 leadingIcon = {
-                                    Icon(BeaconIcons.Search, null, Modifier.size(16.dp))
+                                    Icon(BeaconIcons.Search, null, Modifier.size(BeaconUiMetrics.IconSmall))
                                 },
                                 trailingIcon = {
                                     Icon(
                                         BeaconIcons.Close,
                                         stringResource(R.string.msg_clear_filters_action),
-                                        Modifier.size(16.dp),
+                                        Modifier.size(BeaconUiMetrics.IconSmall),
                                     )
                                 },
                             )
@@ -329,7 +327,7 @@ private fun MessagesContent(
                     PaddingValues(
                         start = padding.calculateStartPadding(layoutDirection),
                         end = padding.calculateEndPadding(layoutDirection),
-                        top = 4.dp,
+                        top = BeaconUiMetrics.Gap4,
                         bottom = padding.calculateBottomPadding(),
                     ),
                 verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
@@ -340,58 +338,91 @@ private fun MessagesContent(
                     }
                 if (runtimeState.messages.isEmpty())
                     item(key = "empty", contentType = "empty") {
-                        when {
-                            awaitingMessages && showLoading ->
-                                BeaconEmptyState(
-                                    BeaconIcons.Messages,
-                                    stringResource(R.string.msg_loading),
-                                    stringResource(R.string.msg_loading_local_list),
-                                    loading = true,
-                                )
+                        // One key per visual state: loading, failure, and empty now fade into
+                        // each other instead of swapping content inside a single item.
+                        val emptyKey =
+                            when {
+                                awaitingMessages && showLoading -> "loading"
+                                pageState ==
+                                    io.github.beacon.app.domain.model.AsyncPageState
+                                        .INITIAL_ERROR ||
+                                    pageState ==
+                                        io.github.beacon.app.domain.model.AsyncPageState
+                                            .REFRESH_ERROR -> "failed"
+                                awaitingMessages ||
+                                    pageState ==
+                                        io.github.beacon.app.domain.model.AsyncPageState.IDLE -> "idle"
+                                else -> "empty"
+                            }
+                        Crossfade(
+                            targetState = emptyKey,
+                            animationSpec = tween(BeaconMotion.StandardMs),
+                            label = "message-empty-state",
+                        ) { key ->
+                            when (key) {
+                                "loading" ->
+                                    BeaconEmptyState(
+                                        BeaconIcons.Messages,
+                                        stringResource(R.string.msg_loading),
+                                        stringResource(R.string.msg_loading_local_list),
+                                        loading = true,
+                                    )
 
-                            pageState == io.github.beacon.app.domain.model.AsyncPageState.INITIAL_ERROR ||
-                                pageState == io.github.beacon.app.domain.model.AsyncPageState.REFRESH_ERROR ->
-                                BeaconEmptyState(
-                                    BeaconIcons.Warning,
-                                    stringResource(R.string.ui_list_load_failed),
-                                    stringResource(R.string.ui_list_load_failed_hint),
-                                ) {
-                                    BeaconTextButton(onClick = { actions.readMessages() }) {
-                                        BeaconText(stringResource(R.string.action_retry))
-                                    }
-                                }
-
-                            awaitingMessages || pageState == io.github.beacon.app.domain.model.AsyncPageState.IDLE -> Unit
-
-                            else -> {
-                                val filtered = search.isNotBlank() || readFilter != MessageReadFilter.ALL ||
-                                    runtimeState.messageQuery.serverId.isNotBlank()
-                                val unconfigured = runtimeState.configuredEndpoint.isBlank()
-                                BeaconEmptyState(
-                                    BeaconIcons.Messages,
-                                    stringResource(when {
-                                        filtered -> R.string.msg_empty_no_match
-                                        unconfigured -> R.string.msg_empty_unconfigured
-                                        else -> R.string.msg_empty_no_messages
-                                    }),
-                                    stringResource(when {
-                                        filtered -> R.string.msg_empty_filter_hint
-                                        unconfigured -> R.string.msg_empty_unconfigured_hint
-                                        else -> R.string.msg_empty_no_messages_hint
-                                    }),
-                                ) {
-                                    BeaconTextButton(onClick = {
-                                        when {
-                                            filtered -> onApplyFilter("", MessageReadFilter.ALL)
-                                            unconfigured -> onConnectionSettings()
-                                            else -> actions.transport()
+                                "failed" ->
+                                    BeaconEmptyState(
+                                        BeaconIcons.Warning,
+                                        stringResource(R.string.ui_list_load_failed),
+                                        stringResource(R.string.ui_list_load_failed_hint),
+                                    ) {
+                                        BeaconTextButton(onClick = { actions.readMessages() }) {
+                                            BeaconText(stringResource(R.string.action_retry))
                                         }
-                                    }) {
-                                        BeaconText(stringResource(when {
-                                            filtered -> R.string.msg_clear_filters_action
-                                            unconfigured -> R.string.ui_v2_server_config_title
-                                            else -> R.string.action_sync_now
-                                        }))
+                                    }
+
+                                "idle" -> Unit
+
+                                else -> {
+                                    val filtered =
+                                        search.isNotBlank() ||
+                                            readFilter != MessageReadFilter.ALL ||
+                                            runtimeState.messageQuery.serverId.isNotBlank()
+                                    val unconfigured = runtimeState.configuredEndpoint.isBlank()
+                                    BeaconEmptyState(
+                                        BeaconIcons.Messages,
+                                        stringResource(
+                                            when {
+                                                filtered -> R.string.msg_empty_no_match
+                                                unconfigured -> R.string.msg_empty_unconfigured
+                                                else -> R.string.msg_empty_no_messages
+                                            }
+                                        ),
+                                        stringResource(
+                                            when {
+                                                filtered -> R.string.msg_empty_filter_hint
+                                                unconfigured ->
+                                                    R.string.msg_empty_unconfigured_hint
+                                                else -> R.string.msg_empty_no_messages_hint
+                                            }
+                                        ),
+                                    ) {
+                                        BeaconTextButton(onClick = {
+                                            when {
+                                                filtered -> onApplyFilter("", MessageReadFilter.ALL)
+                                                unconfigured -> onConnectionSettings()
+                                                else -> actions.transport()
+                                            }
+                                        }) {
+                                            BeaconText(
+                                                stringResource(
+                                                    when {
+                                                        filtered -> R.string.msg_clear_filters_action
+                                                        unconfigured ->
+                                                            R.string.ui_v2_server_config_title
+                                                        else -> R.string.action_sync_now
+                                                    }
+                                                )
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -406,7 +437,8 @@ private fun MessagesContent(
                                     null -> stringResource(R.string.message_unknown_date)
                                     else -> date.toString()
                                 },
-                                Modifier.padding(start = 4.dp, top = 4.dp).semantics { heading() },
+                                Modifier.padding(start = BeaconUiMetrics.Gap4, top = BeaconUiMetrics.Gap4)
+                                .semantics { heading() },
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -418,6 +450,9 @@ private fun MessagesContent(
                             message,
                             selectionMode,
                             key in selectedKeys,
+                            // Arriving, read and selection changes settle into place instead of
+                            // snapping, which is what made a synced batch look like a redraw.
+                            modifier = Modifier.animateItem(),
                             onSelect = { checked ->
                                 if (!checked) onSelectionChange(selectedKeys - key)
                                 else if (selectedKeys.size < 100) {
@@ -432,13 +467,7 @@ private fun MessagesContent(
                                     }
                                 else onCopyText(message.title, false)
                             },
-                            onDelete = {
-                                actions.manageMessages(
-                                    MessageAction.DELETE,
-                                    listOf(key),
-                                    onComplete = { onSelectionChange(selectedKeys - key) },
-                                )
-                            },
+                            onDelete = { onRequestDelete(listOf(key)) },
                             busy = busy,
                             onOpen = { actions.loadDetail(message) },
                             onShare = {
@@ -472,11 +501,11 @@ private fun MessagesContent(
                 }
                 item(key = "history-loading", contentType = "loading") {
                     Box(
-                        Modifier.fillMaxWidth().padding(12.dp),
+                        Modifier.fillMaxWidth().padding(BeaconUiMetrics.SectionGap),
                         contentAlignment = Alignment.Center,
                     ) {
                         if (runtimeState.dataBusy && runtimeState.messages.isNotEmpty())
-                            CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+                            CircularProgressIndicator(Modifier.size(BeaconUiMetrics.IconMedium), strokeWidth = 2.dp)
                         else if (runtimeState.nextMessageCursor != null)
                             BeaconTextButton(enabled = !busy, onClick = actions::nextMessages) {
                                 BeaconText(

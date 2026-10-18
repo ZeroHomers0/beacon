@@ -27,6 +27,7 @@ import io.github.beacon.app.ui.components.SettingsGroup
 import io.github.beacon.app.ui.components.SettingsPreferences
 import io.github.beacon.app.ui.components.SettingsRow
 import io.github.beacon.app.ui.components.SettingsSection
+import io.github.beacon.app.ui.components.SettingsStatusDetail
 import io.github.beacon.app.ui.components.formatMessageTime
 import io.github.beacon.app.ui.components.receiveModeIcon
 import io.github.beacon.app.ui.components.receiveModeTitle
@@ -60,7 +61,7 @@ internal fun LazyListScope.receptionSettingsItems(
     }
     item {
         SettingsPreferences(stringResource(R.string.settings_receive_status_title)) {
-            ReceptionStatusRow(
+            SettingsStatusDetail(
                 stringResource(R.string.reception_https_status),
                 when {
                     runtimeState.configuredEndpoint.isBlank() ->
@@ -84,7 +85,7 @@ internal fun LazyListScope.receptionSettingsItems(
                     runtimeState.configuredEndpoint.isNotBlank() && runtimeState.receivePlanLoaded &&
                     !runtimeState.transportBusy,
             )
-                ReceptionStatusRow(
+                SettingsStatusDetail(
                     stringResource(R.string.receive_realtime_status_title),
                     when {
                     runtimeState.configuredEndpoint.isBlank() ->
@@ -124,7 +125,7 @@ internal fun LazyListScope.receptionSettingsItems(
                             .first()
                 },
             )
-            ReceptionStatusRow(
+            SettingsStatusDetail(
                 stringResource(R.string.settings_last_sync_success_desc) +
                     (polling.lastSuccessInserted?.let {
                         " · " + stringResource(R.string.receive_success_count, it)
@@ -185,36 +186,6 @@ internal fun LazyListScope.receptionSettingsItems(
     }
     if (receivePlan.mode == ReceiveMode.RULES) {
         item { InheritedReceptionPreferences(runtimeState, receptionForm, busy) }
-    }
-}
-
-@androidx.compose.runtime.Composable
-private fun ReceptionStatusRow(title: String, details: String, error: Boolean = false) {
-    Column(
-        Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(vertical = 8.dp),
-        verticalArrangement =
-            Arrangement.spacedBy(BeaconUiMetrics.Gap4, androidx.compose.ui.Alignment.CenterVertically),
-    ) {
-        BeaconText(
-            title,
-            style = MaterialTheme.typography.bodyLarge.copy(
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
-            ),
-            maxLines = 1,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-        )
-        BeaconText(
-            details,
-            modifier = Modifier.heightIn(min = with(androidx.compose.ui.platform.LocalDensity.current) {
-                MaterialTheme.typography.bodySmall.lineHeight.toDp() * 2
-            }),
-            style = MaterialTheme.typography.bodySmall,
-            maxLines = 2,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-            color =
-                if (error) MaterialTheme.colorScheme.error
-                else MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
 

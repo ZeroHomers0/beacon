@@ -35,14 +35,14 @@ fun SettingsStatusSummary(
     tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     loading: Boolean = false,
     interactive: Boolean = true,
-    compact: Boolean = false,
     singleLineDetails: Boolean = false,
     selectableDetails: Boolean = false,
+    caption: String? = null,
 ) {
-    val iconSize = 48.dp
+    val iconSize = BeaconUiMetrics.StatusIconSize
     val displayedTint by androidx.compose.animation.animateColorAsState(
         tint,
-        animationSpec = androidx.compose.animation.core.tween(180),
+        animationSpec = androidx.compose.animation.core.tween(BeaconMotion.StandardMs),
         label = "connection-status-color",
     )
     var showingDetails by remember { mutableStateOf(false) }
@@ -56,10 +56,11 @@ fun SettingsStatusSummary(
     }
     val displayedTitle = if (loading) settledTitle else title
     val displayedDetails = if (loading) settledDetails else details
-    val detailsHeight =
-        with(LocalDensity.current) {
-            MaterialTheme.typography.bodySmall.lineHeight.toDp() * 2
-        }
+    // The row is exactly as tall as its own words: the icon then centres against the text block, so
+    // the title and the detail lines stay one optical group. A fixed slot for the detail text made
+    // the icon centre against the slot instead, which opened the gap between the icon and the two
+    // lines whenever the detail was shorter than the slot — and left the slot empty when the server
+    // was not configured yet.
     Row(
         Modifier.fillMaxWidth()
             .heightIn(min = iconSize)
@@ -93,7 +94,7 @@ fun SettingsStatusSummary(
             androidx.compose.animation.Crossfade(
                 targetState = displayedTitle,
                 modifier = Modifier.fillMaxWidth(),
-                animationSpec = androidx.compose.animation.core.tween(150),
+                animationSpec = androidx.compose.animation.core.tween(BeaconMotion.QuickMs),
                 label = "connection-status-title",
             ) { label ->
                 BeaconText(
@@ -103,11 +104,7 @@ fun SettingsStatusSummary(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Box(
-                if (compact) Modifier.fillMaxWidth()
-                else Modifier.fillMaxWidth().height(detailsHeight),
-                contentAlignment = Alignment.CenterStart,
-            ) {
+            if (displayedDetails.isNotBlank()) {
                 val content: @Composable () -> Unit = {
                     BeaconText(
                         displayedDetails,
@@ -121,6 +118,14 @@ fun SettingsStatusSummary(
                     androidx.compose.foundation.text.selection.SelectionContainer { content() }
                 else content()
             }
+            if (caption != null)
+                BeaconText(
+                    caption,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
         }
         if (interactive && displayedDetails.isNotBlank())
             Icon(
@@ -183,4 +188,42 @@ fun OperationResultPanel(title: String, result: String, failed: Boolean? = null)
                 null -> MaterialTheme.colorScheme.onSurfaceVariant
             },
     )
+}
+/**
+ * A label with a two-line detail, as used by the receive status card. The detail keeps a fixed
+ * two-line box: the values change on every poll, and letting the row breathe would make the card
+ * under it jump while the user is reading.
+ */
+@Composable
+fun SettingsStatusDetail(title: String, details: String, error: Boolean = false) {
+    Column(
+        Modifier.fillMaxWidth()
+            .heightIn(min = BeaconUiMetrics.StatusDetailMinHeight)
+            .padding(vertical = BeaconUiMetrics.Gap8),
+        verticalArrangement =
+            Arrangement.spacedBy(BeaconUiMetrics.Gap4, Alignment.CenterVertically),
+    ) {
+        BeaconText(
+            title,
+            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        BeaconText(
+            details,
+            modifier =
+                Modifier.heightIn(
+                    min =
+                        with(LocalDensity.current) {
+                            MaterialTheme.typography.bodySmall.lineHeight.toDp() * 2
+                        }
+                ),
+            style = MaterialTheme.typography.bodySmall,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            color =
+                if (error) MaterialTheme.colorScheme.error
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }

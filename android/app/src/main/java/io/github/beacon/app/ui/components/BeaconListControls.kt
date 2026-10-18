@@ -1,6 +1,7 @@
 package io.github.beacon.app.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -113,8 +114,8 @@ fun BeaconTitleSearchRow(
     ) {
         AnimatedVisibility(
             visible = !titleCollapsed,
-            enter = fadeIn() + expandHorizontally(),
-            exit = fadeOut() + shrinkHorizontally(),
+            enter = fadeIn(tween(BeaconMotion.StandardMs)) + expandHorizontally(tween(BeaconMotion.StandardMs)),
+            exit = fadeOut(tween(BeaconMotion.QuickMs)) + shrinkHorizontally(tween(BeaconMotion.QuickMs)),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 BeaconText(

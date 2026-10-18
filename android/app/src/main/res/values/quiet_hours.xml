@@ -9,6 +9,6 @@
     <string name="quiet_schedule">免打扰时段</string>
     <string name="quiet_start">开始时间</string>
     <string name="quiet_end">结束时间</string>
-    <string name="quiet_weekdays">周一,周二,周三,周四,周五,周六,周日</string>
+    <string name="quiet_weekdays">周一、周二、周三、周四、周五、周六、周日</string>
     <string name="quiet_invalid">请选择不同的有效时间，并至少选择一天</string>
 </resources>

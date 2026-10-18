@@ -25,49 +25,50 @@ internal fun NotificationSettingsPanel(
                 if (draft.freshMinutes in it) it else (it + draft.freshMinutes).sorted()
             }
         Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SettingsGroupGap)) {
-            SettingsPreferences(stringResource(
-                if (pageState == AsyncPageState.INITIAL_LOADING) R.string.settings_data_loading
-                else R.string.notification_age_title
-            )) {
-                SettingsFieldGroup(
-                    {
-                        BeaconDropdownPreference(
-                            stringResource(R.string.notification_fresh_window),
-                            minutes.map {
-                                if (it < 60) stringResource(R.string.notification_minutes, it)
-                                else stringResource(R.string.notification_hours, it / 60)
-                            },
-                            minutes.indexOf(draft.freshMinutes),
-                            enabled = enabled,
-                        ) {
-                            draft = draft.copy(freshMinutes = minutes[it])
-                        }
-                    },
-                    {
-                        BeaconDropdownPreference(
-                            stringResource(R.string.notification_outdated_behavior),
-                            listOf(
-                                stringResource(R.string.quiet_silent),
-                                stringResource(R.string.quiet_save_only),
-                            ),
-                            draft.outdatedReminder.ordinal,
-                            enabled = enabled,
-                        ) {
-                            draft = draft.copy(outdatedReminder = OutdatedReminder.entries[it])
-                        }
-                    },
-                )
+            // The title used to be swapped for a loading label, so the page appeared to rename
+            // itself while it loaded. The section keeps its name and the body reports the state.
+            SettingsPreferences(stringResource(R.string.notification_age_title)) {
+                if (pageState == AsyncPageState.INITIAL_LOADING) {
+                    PageStateLoading()
+                } else {
+                    SettingsFieldGroup(
+                        {
+                            BeaconDropdownPreference(
+                                stringResource(R.string.notification_fresh_window),
+                                minutes.map {
+                                    if (it < 60) stringResource(R.string.notification_minutes, it)
+                                    else stringResource(R.string.notification_hours, it / 60)
+                                },
+                                minutes.indexOf(draft.freshMinutes),
+                                enabled = enabled,
+                            ) {
+                                draft = draft.copy(freshMinutes = minutes[it])
+                            }
+                        },
+                        {
+                            BeaconDropdownPreference(
+                                stringResource(R.string.notification_outdated_behavior),
+                                listOf(
+                                    stringResource(R.string.quiet_silent),
+                                    stringResource(R.string.quiet_save_only),
+                                ),
+                                draft.outdatedReminder.ordinal,
+                                enabled = enabled,
+                            ) {
+                                draft = draft.copy(outdatedReminder = OutdatedReminder.entries[it])
+                            }
+                        },
+                    )
+                }
             }
             if (failed) {
-                BeaconText(state.status.text, color = MaterialTheme.colorScheme.error)
-                BeaconActionButton(
-                    stringResource(R.string.action_retry),
-                    BeaconIcons.History,
-                    Modifier.fillMaxWidth(),
-                    !saving && !rulesSaving && state.runtimeConnected,
-                ) {
-                    if (loaded) onRetrySave() else attempt++
-                }
+                PageStateFailure(
+                    stringResource(R.string.settings_data_failed),
+                    onRetry =
+                        if (!saving && !rulesSaving && state.runtimeConnected) {
+                            { if (loaded) onRetrySave() else attempt++ }
+                        } else null,
+                )
             }
         }
     }

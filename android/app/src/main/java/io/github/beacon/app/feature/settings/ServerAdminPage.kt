@@ -85,6 +85,7 @@ internal fun ServerAdminPage(
     var clearStage by remember { mutableIntStateOf(0) }
     var deletingDevice by remember { mutableStateOf<AdminDevice?>(null) }
     var confirmTest by remember { mutableStateOf(false) }
+    var logoutConfirm by remember { mutableStateOf(false) }
     var copiedValue by remember { mutableStateOf<String?>(null) }
     var bindingSubmitted by rememberSaveable { mutableStateOf(false) }
     val currentBind by rememberUpdatedState(onUseBinding)
@@ -155,14 +156,19 @@ internal fun ServerAdminPage(
         contentPadding = padding,
         listTag = "server-admin-list",
     ) {
-        state.refreshFailure?.let { failure ->
-            item {
-                BeaconText(
-                    stringResource(failure),
-                    color = androidx.compose.material3.MaterialTheme.colorScheme.error,
-                )
+        // A failed refresh explains the numbers in the overview card, so there it sits inside that
+        // card instead of becoming a block above it that pushes the whole page down. The other tabs
+        // have no overview to explain, so they show the failure as the first row of their own list.
+        if (tab != -1)
+            state.refreshFailure?.let { failure ->
+                item {
+                    SettingsNotice(
+                        stringResource(failure),
+                        actionLabel = stringResource(R.string.action_retry),
+                        onAction = { model.refresh() },
+                    )
+                }
             }
-        }
         if (state.restoring) {
             item {
                 SettingsSection(stringResource(R.string.admin_title)) {
@@ -209,22 +215,44 @@ internal fun ServerAdminPage(
                         !state.busy,
                         password = true,
                     )
-                    BeaconActionButton(
-                        stringResource(
+                    SettingsPrimaryAction(
+                        label = stringResource(
                             if (state.busy) R.string.admin_loading else R.string.admin_login
                         ),
-                        BeaconIcons.Server,
-                        Modifier.fillMaxWidth(),
-                        !state.busy && endpoint.isNotBlank() && token.isNotBlank(),
-                    ) {
-                        model.login(endpoint.trim(), token)
-                        token = ""
-                    }
+                        enabled = !state.busy && endpoint.isNotBlank() && token.isNotBlank(),
+                        disabledReason =
+                            when {
+                                state.busy -> null
+                                endpoint.isBlank() ->
+                                    stringResource(
+                                        R.string.form_missing_field_hint,
+                                        stringResource(R.string.admin_endpoint),
+                                    )
+                                token.isBlank() ->
+                                    stringResource(
+                                        R.string.form_missing_field_hint,
+                                        stringResource(R.string.admin_token),
+                                    )
+                                else -> null
+                            },
+                        onClick = {
+                            model.login(endpoint.trim(), token)
+                            token = ""
+                        },
+                    )
                 }
             }
         } else if (tab == -1) {
             item {
                 SettingsPreferences(stringResource(R.string.admin_overview)) {
+                    state.refreshFailure?.let { failure ->
+                        SettingsNotice(
+                            stringResource(failure),
+                            modifier = Modifier.padding(bottom = BeaconUiMetrics.SectionGap),
+                            actionLabel = stringResource(R.string.action_retry),
+                            onAction = { model.refresh() },
+                        )
+                    }
                     SettingsFieldGroup(
                         {
                             SettingsStatusSummary(
@@ -232,7 +260,6 @@ internal fun ServerAdminPage(
                                 state.endpoint,
                                 icon = BeaconIcons.Server,
                                 interactive = false,
-                                compact = true,
                                 singleLineDetails = true,
                                 selectableDetails = true,
                             )
@@ -250,23 +277,24 @@ internal fun ServerAdminPage(
                             )
                         },
                     )
-                    Column(
-                        Modifier.fillMaxWidth().padding(vertical = BeaconUiMetrics.SectionGap),
-                        verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
-                    ) {
-                        SettingsMetricGrid(
-                            listOf(
-                                stringResource(R.string.admin_devices) to
-                                    state.devices.count { !it.revoked }.toString(),
-                                stringResource(R.string.admin_messages) to
-                                    state.messages.toString(),
-                                stringResource(R.string.admin_pending) to state.pending.toString(),
-                            ),
-                            columns = 3,
-                        )
-                        if (state.protocol != 1)
-                            SettingsHint(stringResource(R.string.admin_protocol_unknown))
-                    }
+                }
+            }
+            // Counts live in their own section: the overview card answers "which server",
+            // this one answers "how much traffic", and the two never compete for the eye.
+            item {
+                SettingsSection(stringResource(R.string.admin_stats_heading)) {
+                    SettingsMetricGrid(
+                        listOf(
+                            stringResource(R.string.admin_devices) to
+                                formatCount(state.devices.count { !it.revoked }),
+                            stringResource(R.string.admin_messages) to
+                                formatCount(state.messages),
+                            stringResource(R.string.admin_pending) to formatCount(state.pending),
+                        ),
+                        columns = 3,
+                    )
+                    if (state.protocol != 1)
+                        SettingsHint(stringResource(R.string.admin_protocol_unknown))
                 }
             }
             item {
@@ -326,12 +354,14 @@ internal fun ServerAdminPage(
                         }
 
                     item {
-                        if (!state.listState(devices.isEmpty()).hasContent)
-                            SettingsHint(stringResource(
-                                if (state.busy) R.string.settings_data_loading
-                                else R.string.admin_overview_unavailable
-                            ))
-                        else if (devices.isEmpty())
+                        if (!state.listState(devices.isEmpty()).hasContent) {
+                            if (state.busy) PageStateLoading()
+                            else
+                                PageStateFailure(
+                                    stringResource(R.string.admin_overview_unavailable),
+                                    onRetry = { model.refresh() },
+                                )
+                        } else if (devices.isEmpty())
                             BeaconEmptyState(
                                 BeaconIcons.Server,
                                 stringResource(R.string.admin_devices_title),
@@ -387,12 +417,14 @@ internal fun ServerAdminPage(
                 1 -> {
 
                     item {
-                        if (!state.listState(applications.isEmpty()).hasContent)
-                            SettingsHint(stringResource(
-                                if (state.busy) R.string.settings_data_loading
-                                else R.string.admin_overview_unavailable
-                            ))
-                        else if (applications.isEmpty())
+                        if (!state.listState(applications.isEmpty()).hasContent) {
+                            if (state.busy) PageStateLoading()
+                            else
+                                PageStateFailure(
+                                    stringResource(R.string.admin_overview_unavailable),
+                                    onRetry = { model.refresh() },
+                                )
+                        } else if (applications.isEmpty())
                             BeaconEmptyState(
                                 BeaconIcons.CredentialUpdate,
                                 stringResource(R.string.admin_applications_title),
@@ -498,10 +530,7 @@ internal fun ServerAdminPage(
             item {
                 SettingsSection(stringResource(R.string.settings_admin_session)) {
                     BeaconOutlinedButton(
-                        onClick = {
-                            model.logout()
-                            token = ""
-                        },
+                        onClick = { logoutConfirm = true },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !state.busy,
                     ) {
@@ -510,6 +539,18 @@ internal fun ServerAdminPage(
                 }
             }
     }
+    if (logoutConfirm)
+        BeaconConfirmDialog(
+            title = stringResource(R.string.admin_logout),
+            description = stringResource(R.string.admin_logout_hint),
+            danger = false,
+            onDismiss = { logoutConfirm = false },
+            onConfirm = {
+                logoutConfirm = false
+                model.logout()
+                token = ""
+            },
+        )
     if (creating && state.loggedIn && tab in 0..1 && state.secret == null) {
         BeaconAlertDialog(
             onDismissRequest = { if (!state.busy) model.dismissCreation() },
@@ -649,90 +690,72 @@ internal fun ServerAdminPage(
             },
         )
     }
-    if (clearStage > 0)
-        BeaconAlertDialog(
-            onDismissRequest = { clearStage = 0 },
-            title = {
-                BeaconText(
-                    stringResource(
-                        if (clearStage == 1) R.string.admin_clear_messages_confirm
-                        else R.string.admin_clear_messages_final
-                    )
-                )
+    if (clearStage == 1)
+        BeaconConfirmDialog(
+            title = stringResource(R.string.admin_clear_messages_confirm),
+            description = stringResource(R.string.admin_clear_messages_warning),
+            danger = true,
+            confirmText = stringResource(R.string.settings_cleanup_all_continue),
+            onDismiss = { clearStage = 0 },
+            onConfirm = { clearStage = 2 },
+        )
+    if (clearStage == 2)
+        AdminActionConfirm(
+            title = stringResource(R.string.admin_clear_messages_final),
+            description = stringResource(R.string.admin_clear_messages_final_warning),
+            state = state,
+            onDismiss = {
+                clearStage = 0
+                model.dismissAction()
             },
-            text = {
-                BeaconText(
-                    stringResource(
-                        if (clearStage == 1) R.string.admin_clear_messages_warning
-                        else R.string.admin_clear_messages_final_warning
-                    )
-                )
-            },
-            confirmButton = {
-                BeaconDangerButton(
-                    onClick = {
-                        if (clearStage == 1) clearStage = 2
-                        else {
-                            clearStage = 0
-                            model.clearMessages()
-                        }
-                    },
-                    enabled = !state.busy,
-                ) {
-                    BeaconText(
-                        stringResource(
-                            if (clearStage == 1) R.string.settings_cleanup_all_continue
-                            else R.string.settings_cleanup_all_apply
-                        )
-                    )
-                }
-            },
-            dismissButton = {
-                BeaconCancelButton(onClick = { clearStage = 0 })
-            },
+            onConfirm = { model.clearMessages() },
         )
     deletingDevice?.let { device ->
-        BeaconConfirmDialog(
+        AdminActionConfirm(
             title = stringResource(R.string.admin_delete_device),
             description = stringResource(R.string.admin_delete_device_hint, device.name),
-            onDismiss = { deletingDevice = null },
-            onConfirm = {
+            state = state,
+            onDismiss = {
                 deletingDevice = null
-                model.deleteDevice(device.id)
+                model.dismissAction()
             },
+            onConfirm = { model.deleteDevice(device.id) },
         )
     }
     pendingDevice?.let { device ->
-        BeaconConfirmDialog(
+        AdminActionConfirm(
             title = stringResource(R.string.admin_revoke_device),
             description = stringResource(R.string.admin_revoke_device_hint, device.name),
-            onDismiss = { pendingDevice = null },
-            onConfirm = {
+            state = state,
+            onDismiss = {
                 pendingDevice = null
-                model.revokeDevice(device.id)
+                model.dismissAction()
             },
+            onConfirm = { model.revokeDevice(device.id) },
         )
     }
     pendingApplication?.let { app ->
-        BeaconConfirmDialog(
+        AdminActionConfirm(
             title = stringResource(R.string.admin_revoke_application),
             description = stringResource(R.string.admin_revoke_application_hint, app.name),
-            onDismiss = { pendingApplication = null },
-            onConfirm = {
+            state = state,
+            onDismiss = {
                 pendingApplication = null
-                model.revokeApplication(app.id)
+                model.dismissAction()
             },
+            onConfirm = { model.revokeApplication(app.id) },
         )
     }
     deletingApplication?.let { app ->
-        BeaconConfirmDialog(
+        AdminActionConfirm(
             title = stringResource(R.string.admin_delete_application),
             description = stringResource(R.string.admin_delete_application_hint, app.name),
-            onDismiss = { deletingApplication = null },
-            onConfirm = {
+            state = state,
+            onDismiss = {
                 deletingApplication = null
-                model.deleteApplication(app.id)
+                model.dismissAction()
             },
+            onConfirm = { model.deleteApplication(app.id) },
         )
     }
     if (confirmTest)
@@ -752,6 +775,44 @@ internal fun ServerAdminPage(
         )
 }
 
+/**
+ * A destructive confirmation that stays open while its request runs and reports a failure in place.
+ * Closing first and raising a snackbar left the reader unsure whether the change had happened, so
+ * the dialog keeps both actions busy until the server answers and only then dismisses itself.
+ */
+@Composable
+private fun AdminActionConfirm(
+    title: String,
+    description: String,
+    state: AdminUiState,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    var submitted by remember { mutableStateOf(false) }
+    var failure by remember { mutableStateOf<Int?>(null) }
+    LaunchedEffect(state.awaiting, state.actionFailure) {
+        if (submitted && state.awaiting == null) {
+            submitted = false
+            failure = state.actionFailure
+            if (failure == null) onDismiss()
+        }
+    }
+    BeaconConfirmDialog(
+        title = title,
+        description = description,
+        danger = true,
+        enabled = state.awaiting == null,
+        dismissEnabled = state.awaiting == null,
+        errorText = failure?.let { stringResource(it) },
+        onDismiss = { if (state.awaiting == null) onDismiss() },
+        onConfirm = {
+            failure = null
+            submitted = true
+            onConfirm()
+        },
+    )
+}
+
 @Composable
 private fun AdminListCard(
     title: String,
@@ -761,13 +822,9 @@ private fun AdminListCard(
     actions: List<Pair<Int, () -> Unit>>,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
-    SettingsCard(Modifier.fillMaxWidth()) {
+    BeaconListCard {
         Row(
-            Modifier.fillMaxWidth()
-                .padding(
-                    horizontal = BeaconUiMetrics.CardInset,
-                    vertical = BeaconUiMetrics.FieldVerticalInset,
-                ),
+            Modifier.fillMaxWidth(),
             verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
         ) {

@@ -47,48 +47,52 @@ internal fun QuietHoursPanel(
             }
         }
         val editable = pageState.hasContent && !saving && !editorSaving && state.runtimeConnected
-        val labels = stringResource(R.string.quiet_weekdays).split(",")
+        val awaitingContent = pageState == AsyncPageState.INITIAL_LOADING
+        val labels = stringResource(R.string.quiet_weekdays).split("、")
         Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SettingsGroupGap)) {
             if (!scheduleOnly)
-                SettingsPreferences(stringResource(
-                    if (pageState == AsyncPageState.INITIAL_LOADING) R.string.settings_data_loading
-                    else R.string.ui_v2_quiet_section
-                )) {
-                    SettingsFieldGroup(
-                        {
-                            BeaconPreferenceToggle(
-                                stringResource(R.string.quiet_enable),
-                                "",
-                                draft.enabled,
+                SettingsPreferences(stringResource(R.string.ui_v2_quiet_section)) {
+                    // The section title used to become「设置数据加载中」while loading, which renamed
+                    // the page instead of reporting state; the body now owns both.
+                    if (awaitingContent) {
+                        PageStateLoading()
+                    } else {
+                        SettingsFieldGroup(
+                            {
+                                BeaconPreferenceToggle(
+                                    stringResource(R.string.quiet_enable),
+                                    "",
+                                    draft.enabled,
+                                    enabled = editable,
+                                ) {
+                                    draft = draft.copy(enabled = it)
+                                }
+                            },
+                            {
+                                BeaconDropdownPreference(
+                                    stringResource(R.string.quiet_behavior),
+                                    listOf(
+                                        stringResource(R.string.quiet_silent),
+                                        stringResource(R.string.quiet_save_only),
+                                    ),
+                                    draft.behavior.ordinal,
+                                    enabled = editable,
+                                ) {
+                                    draft = draft.copy(behavior = QuietHoursBehavior.entries[it])
+                                }
+                            },
+                        )
+                        if (onSchedule != null) {
+                            androidx.compose.material3.Surface(
+                                onClick = onSchedule,
                                 enabled = editable,
+                                color = androidx.compose.ui.graphics.Color.Transparent,
                             ) {
-                                draft = draft.copy(enabled = it)
+                                BeaconTimeSummary(
+                                    stringResource(R.string.quiet_schedule),
+                                    "$start – $end",
+                                )
                             }
-                        },
-                        {
-                            BeaconDropdownPreference(
-                                stringResource(R.string.quiet_behavior),
-                                listOf(
-                                    stringResource(R.string.quiet_silent),
-                                    stringResource(R.string.quiet_save_only),
-                                ),
-                                draft.behavior.ordinal,
-                                enabled = editable,
-                            ) {
-                                draft = draft.copy(behavior = QuietHoursBehavior.entries[it])
-                            }
-                        },
-                    )
-                    if (onSchedule != null) {
-                        androidx.compose.material3.Surface(
-                            onClick = onSchedule,
-                            enabled = editable,
-                            color = androidx.compose.ui.graphics.Color.Transparent,
-                        ) {
-                            BeaconTimeSummary(
-                                stringResource(R.string.quiet_schedule),
-                                "$start – $end",
-                            )
                         }
                     }
                 }
@@ -128,14 +132,9 @@ internal fun QuietHoursPanel(
                     )
             }
             if (scheduleOnly || onSchedule == null) {
-                SettingsSection(
-                    stringResource(
-                        if (scheduleOnly && pageState == AsyncPageState.INITIAL_LOADING)
-                            R.string.settings_data_loading
-                        else R.string.settings_time_range_heading
-                    ),
-                    scheduleContent,
-                )
+                SettingsSection(stringResource(R.string.settings_time_range_heading)) {
+                    if (awaitingContent && scheduleOnly) PageStateLoading() else scheduleContent()
+                }
             }
             if (scheduleOnly) {
                 SettingsSection(stringResource(R.string.ui_v2_quiet_effect)) {
@@ -150,20 +149,20 @@ internal fun QuietHoursPanel(
                 }
             }
             if (failed) {
-                BeaconText(state.status.text, color = MaterialTheme.colorScheme.error)
-                BeaconActionButton(
-                    stringResource(R.string.action_retry),
-                    BeaconIcons.History,
-                    Modifier.fillMaxWidth(),
-                    !saving && !editorSaving && state.runtimeConnected,
-                ) {
-                    if (loaded) {
-                        if (onRetrySave != null) onRetrySave() else save(actions)
-                    } else {
-                        failed = false
-                        attempt++
-                    }
-                }
+                PageStateFailure(
+                    stringResource(R.string.settings_data_failed),
+                    onRetry =
+                        if (!saving && !editorSaving && state.runtimeConnected) {
+                            {
+                                if (loaded) {
+                                    if (onRetrySave != null) onRetrySave() else save(actions)
+                                } else {
+                                    failed = false
+                                    attempt++
+                                }
+                            }
+                        } else null,
+                )
             }
         }
     }

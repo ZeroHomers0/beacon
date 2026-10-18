@@ -26,6 +26,7 @@ import io.github.beacon.app.ui.components.SettingsGroup
 import io.github.beacon.app.ui.components.SettingsHint
 import io.github.beacon.app.ui.components.SettingsRow
 import io.github.beacon.app.ui.components.SettingsSection
+import io.github.beacon.app.ui.components.SettingsStatusSummary
 import io.github.beacon.app.ui.icons.BeaconIcons
 
 internal fun LazyListScope.notificationPermissionSettingsItems(
@@ -42,36 +43,25 @@ internal fun LazyListScope.notificationPermissionSettingsItems(
     onRetry: () -> Unit,
 ) {
     item {
-        SettingsGroup(stringResource(R.string.settings_permission_status_heading)) {
-            Column(
-                Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),
-                verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
-            ) {
+        // Same status header as the connection card: icon tile, title, optional detail.
+        SettingsSection(stringResource(R.string.settings_permission_status_heading)) {
+            Column(Modifier.fillMaxWidth()) {
                 val allowed = notificationPermission == NotificationPermissionState.ALLOWED
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
-                ) {
-                    Icon(
-                        if (allowed) BeaconIcons.Check else BeaconIcons.Warning,
-                        null,
-                        tint =
-                            if (allowed) io.github.beacon.app.ui.theme.beaconSuccessColor()
-                            else if (notificationPermission == NotificationPermissionState.DENIED)
-                                MaterialTheme.colorScheme.error
-                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Column(Modifier.weight(1f)) {
-                        BeaconText(
-                            if (notificationPermission == NotificationPermissionState.UNKNOWN)
-                                stringResource(R.string.diag_not_read_label)
-                            else if (allowed)
-                                stringResource(R.string.settings_notifications_allowed_label)
-                            else stringResource(R.string.settings_notifications_denied_label),
-                            style = MaterialTheme.typography.titleMedium,
-                        )
-                    }
-                }
+                SettingsStatusSummary(
+                    title =
+                        if (notificationPermission == NotificationPermissionState.UNKNOWN)
+                            stringResource(R.string.diag_not_read_label)
+                        else if (allowed) stringResource(R.string.settings_notifications_allowed_label)
+                        else stringResource(R.string.settings_notifications_denied_label),
+                    details = "",
+                    icon = if (allowed) BeaconIcons.Check else BeaconIcons.Warning,
+                    tint =
+                        if (allowed) io.github.beacon.app.ui.theme.beaconSuccessColor()
+                        else if (notificationPermission == NotificationPermissionState.DENIED)
+                            MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                    interactive = false,
+                )
                 if (notificationPermission == NotificationPermissionState.DENIED)
                     BeaconButton(
                         modifier = Modifier.fillMaxWidth(),

@@ -78,35 +78,21 @@ fun ReceiveModeButton(
     connected: Boolean = receiving,
     visible: Boolean = true,
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    var animationsEnabled by remember { mutableStateOf(android.animation.ValueAnimator.areAnimatorsEnabled()) }
-    DisposableEffect(context) {
-        val observer = object : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
-            override fun onChange(selfChange: Boolean) {
-                animationsEnabled = android.animation.ValueAnimator.areAnimatorsEnabled()
-            }
-        }
-        context.contentResolver.registerContentObserver(
-            android.provider.Settings.Global.getUriFor(android.provider.Settings.Global.ANIMATOR_DURATION_SCALE),
-            false,
-            observer,
-        )
-        onDispose { context.contentResolver.unregisterContentObserver(observer) }
-    }
+    // One shared gate: the system switch, the animator scale and this composition all agree now.
+    val animationsEnabled = rememberSystemAnimationsEnabled()
     val modeColor = receiveModeColor(mode)
     val accent by animateColorAsState(
         if (serverIssue) MaterialTheme.colorScheme.error
         else if (connected && !checkingServer) modeColor
         else MaterialTheme.colorScheme.onSurfaceVariant,
-        tween(200), label = "receive-mode-color",
+        tween(BeaconMotion.StandardMs), label = "receive-mode-color",
     )
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed) .90f else 1f, tween(180), label = "receive-mode-press")
+    val scale by animateFloatAsState(if (pressed) .90f else 1f, tween(BeaconMotion.QuickMs), label = "receive-mode-press")
     var resumed by remember { mutableStateOf(false) }
     androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
         resumed = true
-        animationsEnabled = android.animation.ValueAnimator.areAnimatorsEnabled()
         onPauseOrDispose { resumed = false }
     }
     val animateStatus = resumed && visible && animationsEnabled
@@ -116,16 +102,16 @@ fun ReceiveModeButton(
         badgeAlpha.snapTo(1f)
         if (breathing) {
             while (true) {
-                kotlinx.coroutines.delay(2600)
-                badgeAlpha.animateTo(.55f, tween(700))
-                badgeAlpha.animateTo(1f, tween(700))
+                kotlinx.coroutines.delay(BeaconMotion.BreathPeriodMs.toLong())
+                badgeAlpha.animateTo(.55f, tween(BeaconMotion.BreathFadeMs))
+                badgeAlpha.animateTo(1f, tween(BeaconMotion.BreathFadeMs))
             }
         }
     }
     val angle = if (checkingServer && animateStatus) {
         val motion = rememberInfiniteTransition(label = "receive-mode-check")
         motion.animateFloat(
-            0f, 360f, infiniteRepeatable(tween(1200, easing = LinearEasing)),
+            0f, 360f, infiniteRepeatable(tween(BeaconMotion.PulseMs, easing = LinearEasing)),
             label = "receive-mode-check-angle",
         )
     } else {

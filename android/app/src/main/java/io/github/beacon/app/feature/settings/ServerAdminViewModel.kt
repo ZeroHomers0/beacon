@@ -35,6 +35,20 @@ data class AdminSecret(
     val example: String = "",
 )
 
+/**
+ * A mutation a confirmation dialog is waiting for.
+ *
+ * The dialog keeps itself open until [AdminUiState.awaiting] clears, so a failure can be shown in
+ * place instead of dismissing the dialog and leaving the explanation to a snackbar.
+ */
+enum class AdminAction {
+    CLEAR_MESSAGES,
+    DELETE_DEVICE,
+    REVOKE_DEVICE,
+    DELETE_APPLICATION,
+    REVOKE_APPLICATION,
+}
+
 data class AdminUiState(
     val restoring: Boolean = false,
     val restoreFailure: Int? = null,
@@ -44,6 +58,8 @@ data class AdminUiState(
     val busy: Boolean = false,
     val feedback: Int? = null,
     val refreshFailure: Int? = null,
+    val awaiting: AdminAction? = null,
+    val actionFailure: Int? = null,
     val version: String = "—",
     val protocol: Int = 0,
     val serverId: String = "",
@@ -265,19 +281,19 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
         }
 
     fun clearMessages() =
-        authenticated(R.string.admin_messages_cleared) { client ->
+        authenticated(R.string.admin_messages_cleared, AdminAction.CLEAR_MESSAGES) { client ->
             client.clearMessages()
             parseOverview(client.overview()).copy(endpoint = client.endpoint, loggedIn = true)
         }
 
     fun deleteDevice(id: String) =
-        authenticated(R.string.admin_device_deleted) { client ->
+        authenticated(R.string.admin_device_deleted, AdminAction.DELETE_DEVICE) { client ->
             client.deleteDevice(id)
             parseOverview(client.overview()).copy(endpoint = client.endpoint, loggedIn = true)
         }
 
     fun revokeDevice(id: String) =
-        authenticated(R.string.admin_device_revoked) { client ->
+        authenticated(R.string.admin_device_revoked, AdminAction.REVOKE_DEVICE) { client ->
             client.revokeDevice(id)
             mutable.value.copy(
                 devices =
@@ -292,7 +308,7 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
         }
 
     fun revokeApplication(id: String) =
-        authenticated(R.string.admin_application_revoked) { client ->
+        authenticated(R.string.admin_application_revoked, AdminAction.REVOKE_APPLICATION) { client ->
             client.revokeApplication(id)
             mutable.value.copy(
                 applications =
@@ -303,7 +319,7 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
         }
 
     fun deleteApplication(id: String) =
-        authenticated(R.string.admin_application_deleted) { client ->
+        authenticated(R.string.admin_application_deleted, AdminAction.DELETE_APPLICATION) { client ->
             client.deleteApplication(id)
             // The application's messages are gone, so the overview counts are stale too.
             parseOverview(client.overview()).copy(endpoint = client.endpoint, loggedIn = true)
@@ -319,15 +335,37 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
         mutable.value = mutable.value.copy(secret = null)
     }
 
-    private fun authenticated(success: Int?, work: (ServerAdministration) -> AdminUiState) {
-        val client = session ?: return
-        run(success) { work(client) }
+    /** Drops a finished dialog's outcome so the next one opens clean. */
+    fun dismissAction() {
+        if (mutable.value.awaiting == null && mutable.value.actionFailure != null)
+            mutable.value = mutable.value.copy(actionFailure = null)
     }
 
-    private fun run(success: Int?, onSuccess: suspend () -> Unit = {}, work: () -> AdminUiState) {
+    private fun authenticated(
+        success: Int?,
+        action: AdminAction? = null,
+        work: (ServerAdministration) -> AdminUiState,
+    ) {
+        val client = session ?: return
+        run(success, action) { work(client) }
+    }
+
+    private fun run(
+        success: Int?,
+        action: AdminAction? = null,
+        onSuccess: suspend () -> Unit = {},
+        work: () -> AdminUiState,
+    ) {
         if (mutable.value.busy) return
         val captured = generation
-        mutable.value = mutable.value.copy(busy = true, feedback = null, refreshFailure = null)
+        mutable.value =
+            mutable.value.copy(
+                busy = true,
+                feedback = null,
+                refreshFailure = null,
+                awaiting = action,
+                actionFailure = null,
+            )
         job = viewModelScope.launch {
             try {
                 val result = withContext(Dispatchers.IO) { work() }
@@ -376,8 +414,15 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
                                 busy = false,
                                 feedback = null,
                                 refreshFailure = feedback,
+                                awaiting = null,
                             )
-                        else mutable.value.copy(busy = false, feedback = feedback)
+                        else
+                            mutable.value.copy(
+                                busy = false,
+                                feedback = feedback,
+                                awaiting = null,
+                                actionFailure = feedback,
+                            )
             }
         }
     }

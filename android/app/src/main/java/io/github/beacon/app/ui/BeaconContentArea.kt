@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
-import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -33,6 +32,7 @@ import io.github.beacon.app.ui.components.BeaconSettingsTransition
 import io.github.beacon.app.ui.components.BeaconUiMetrics
 import io.github.beacon.app.ui.components.SettingsScreen
 import io.github.beacon.app.ui.components.copyToClipboard
+import io.github.beacon.app.ui.components.showFeedback
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -174,6 +174,7 @@ BeaconMessageTransition(
                         },
                         onSelectionChange = { ui.selectedKeys = it },
                         onSelectionHint = { ui.selectionHint = it },
+                        onRequestDelete = { ui.pendingDelete = it },
                         onCopyText = { text, body ->
                             copyToClipboard(
                                 context,
@@ -225,13 +226,7 @@ BeaconMessageTransition(
                             },
                             onOperationDetails = { ui.operationDetails = it },
                             onFeedback = { message ->
-                                uiScope.launch {
-                                    snackbar.currentSnackbarData?.dismiss()
-                                    snackbar.showSnackbar(
-                                        message,
-                                        duration = SnackbarDuration.Short,
-                                    )
-                                }
+                                uiScope.launch { snackbar.showFeedback(message) }
                             },
                             onRequestNotificationPermission =
                                 onRequestNotificationPermission,

@@ -68,7 +68,7 @@ internal class RuntimeConnection(
                                         version == BuildConfig.VERSION_CODE &&
                                         process == app.packageName + ":runtime"
                                 )
-                                "接收服务已连接：$process · PID $pid · 版本 $version"
+                                "接收服务已连接"
                             }
                         },
                         onResult = {

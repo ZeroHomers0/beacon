@@ -248,7 +248,7 @@ class RuntimeProbeService : Service() {
         val notice =
             android.app.Notification.Builder(this, FOREGROUND_CHANNEL)
                 .setSmallIcon(io.github.beacon.app.R.drawable.ic_notification)
-                .setContentTitle("Beacon 自动接收")
+                .setContentTitle(getString(io.github.beacon.app.R.string.runtime_notification_title))
                 .setContentText(text)
                 .setContentIntent(open)
                 .setOngoing(true)
@@ -1101,7 +1101,7 @@ class RuntimeProbeService : Service() {
                                         when (error) {
                                             is io.github.beacon.app.data.remote.DeviceRevocationRejected ->
                                                 if (error.status == 404)
-                                                    "服务器暂不支持完整解绑，请升级至 0.3.9；本机配置保留"
+                                                    "服务器暂不支持完整解绑，请先升级服务器；本机配置保留"
                                                 else "服务端未确认撤销；本机配置保留，请核对设备凭证后重试"
                                             is IllegalArgumentException ->
                                                 "当前配置缺少绑定设备身份；请在服务端撤销，或仅清除本机配置"
