@@ -182,6 +182,13 @@ async function request(path, { method = "GET", token, body, idempotencyKey } = {
     if (error?.name === "AbortError") {
       return { transportError: `请求超时（${CONFIG.timeoutMs}ms）：${CONFIG.baseUrl}${path}` };
     }
+    if (/ByteString/i.test(error?.message ?? "")) {
+      return {
+        transportError:
+          "凭据或请求头包含非 ASCII 字符（Bearer 头只能承载 ASCII）。" +
+          "通常是配置里保留了占位符或粘贴不完整，请重新复制凭据后再试。",
+      };
+    }
     return { transportError: `无法连接服务端：${error?.message ?? error}` };
   } finally {
     clearTimeout(timer);
@@ -280,6 +287,13 @@ async function pushNotification(args) {
       ]
         .filter((line) => line !== "")
         .join("\n"),
+    );
+  }
+
+  if (CONFIG.pushKey && /[^\x20-\x7e]/.test(CONFIG.pushKey)) {
+    return fail(
+      "推送密钥包含非 ASCII 字符，通常是粘贴了占位符或复制不完整；" +
+        "请在 App 的连接设置中重新复制推送密钥并更新配置（Bearer 头只能承载 ASCII）。",
     );
   }
 
