@@ -37,6 +37,19 @@ internal fun beaconTagContainer(label: String, slot: Int): Color {
     val hue = Color(Hues[tagToneIndex(label, slot)])
     // A dark surface already carries the contrast, so the same wash would read as a highlight;
     // both modes therefore share the hue list and differ only in how much of it is laid down.
-    val alpha = if (darker) .085f else .10f
+    // The first pass was a whisper at 10%; a chip has to be identifiable across the room to be
+    // worth tinting at all, so this is about twice that, still short of a saturated badge.
+    val alpha = if (darker) .16f else .19f
     return hue.copy(alpha = alpha).compositeOver(scheme.surfaceContainerLow)
 }
+
+/**
+ * Text on a tinted chip. The neutral tone code used `onSurfaceVariant`, which drops under 4.5:1
+ * once a hue sits behind 10sp text; a tinted chip therefore switches to `onSurface` and keeps the
+ * label legible instead of turning it into decoration.
+ */
+@Composable
+@ReadOnlyComposable
+internal fun beaconTagContent(toneSlot: Int): Color =
+    if (toneSlot < 0) MaterialTheme.colorScheme.onSurfaceVariant
+    else MaterialTheme.colorScheme.onSurface.copy(alpha = .82f)

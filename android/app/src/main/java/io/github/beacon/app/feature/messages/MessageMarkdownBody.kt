@@ -63,11 +63,18 @@ private data class RenderedBody(
  */
 @Composable
 internal fun MessageMarkdownBody(body: String, raw: Boolean, modifier: Modifier = Modifier) {
+    // One style for the rendered body, the source body and the failed fallback: switching between
+    // them must not change the size of the text, or the screen jumps on every toggle.
+    val bodyStyle =
+        MaterialTheme.typography.bodyLarge.copy(
+            fontSize = BeaconDetailText.BodySize,
+            lineHeight = BeaconDetailText.BodyLineHeight,
+        )
     if (body.isBlank()) {
         BeaconText(
             stringResource(R.string.msg_detail_no_body_hint),
             modifier,
-            style = MaterialTheme.typography.bodyLarge,
+            style = bodyStyle,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         return
@@ -168,20 +175,20 @@ internal fun MessageMarkdownBody(body: String, raw: Boolean, modifier: Modifier 
                     BeaconText(stringResource(R.string.message_markdown_failed))
                 }
                 SelectionContainer {
-                    BeaconText(body, style = MaterialTheme.typography.bodyLarge)
+                    BeaconText(body, style = bodyStyle)
                 }
             }
 
             result == null -> SelectionContainer {
-                BeaconText(body, style = MaterialTheme.typography.bodyLarge)
+                BeaconText(body, style = bodyStyle)
             }
 
             else -> {
                 val textColor = scheme.onSurface.toArgb()
                 val linkColor = scheme.primary.toArgb()
-                val textSize = with(LocalDensity.current) {
-                    MaterialTheme.typography.bodyLarge.fontSize.toPx()
-                }
+                val density = LocalDensity.current
+                val textSize = with(density) { BeaconDetailText.BodySize.toPx() }
+                val lineHeight = with(density) { BeaconDetailText.BodyLineHeight.toPx() }
                 AndroidView(
                     modifier = Modifier.fillMaxWidth(),
                     factory = { TextView(it).apply { setTextIsSelectable(true); setPadding(0, 0, 0, 0) } },
@@ -189,7 +196,12 @@ internal fun MessageMarkdownBody(body: String, raw: Boolean, modifier: Modifier 
                         view.setTextColor(textColor)
                         view.setLinkTextColor(linkColor)
                         view.setTextSize(TypedValue.COMPLEX_UNIT_PX, textSize)
-                        view.setLineSpacing(0f, BeaconDetailText.BodyLineMultiplier)
+                        // A TextView has no line-height property, only extra leading on top of the
+                        // font's own metrics, so the wanted height is turned into a lead at the
+                        // current size. Doing it here — rather than with a multiplier — keeps the
+                        // rhythm [BeaconDetailText.BodyLineHeight] promises whatever the font is.
+                        val metrics = view.paint.fontMetrics
+                        view.setLineSpacing(lineHeight - (metrics.descent - metrics.ascent), 1f)
                         if (view.tag !== result.text) {
                             markwon.setParsedMarkdown(view, result.text)
                             view.tag = result.text

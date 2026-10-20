@@ -11,9 +11,10 @@ import androidx.compose.ui.unit.sp
  * [TitleSize] and the subtitle to [SubtitleSize], which is what actually separates it from the
  * preview it came from: 16sp subtitle next to 16sp body was the reason the two read as one block.
  *
- * The body keeps its 16sp — it is prose, and prose under 16sp is uncomfortable on a phone — but
- * gains [BodyLineMultiplier] of line spacing, because a 64 KiB push body at default line spacing is
- * a wall.
+ * The body runs a step under the theme as well. 16sp is the comfortable floor for short prose, but
+ * these bodies are digests: fifteen numbered lines plus a tip, and on a phone the line count is what
+ * costs the reader, not the glyph size. [BodySize] buys back roughly a screen and a half of scroll
+ * across a full digest while staying above the 14sp where CJK starts to smear.
  */
 internal object BeaconDetailText {
     val TitleSize = 20.sp
@@ -21,12 +22,11 @@ internal object BeaconDetailText {
     val SubtitleSize = 14.sp
     val SubtitleLineHeight = 20.sp
 
-    /** Push bodies arrive as one paragraph after another; 1.18 is looser without looking airy. */
-    const val BodyLineMultiplier = 1.18f
+    val BodySize = 15.sp
+    val BodyLineHeight = 22.sp
 
-    /** Code renders a step below prose; at 16sp CJK code spans read as bold body text. */
+    /** Code renders a step below prose; at body size CJK code spans read as bold body text. */
     val CodeSize = 13.sp
-    val CodeLineHeight = 20.sp
 
     /**
      * Markdown heading multipliers, replacing Markwon's HTML-spec defaults
@@ -38,9 +38,6 @@ internal object BeaconDetailText {
     /** Markwon's default block margin is 24dp, which also indents lists and quotes far too deeply. */
     val BlockMargin = 14.dp
     val QuoteWidth = 3.dp
-
-    /** Hairline between the message and its metadata, so the tags read as a footer, not as content. */
-    val DividerThickness = 1.dp
 
     /** The scroll container ends on the system gesture area; 12dp there reads as clipped. */
     val PageBottom = 24.dp

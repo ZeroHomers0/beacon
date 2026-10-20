@@ -634,7 +634,7 @@ internal fun MessageFilterTag(
                 if (compact)
                     MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 14.sp)
                 else MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = beaconTagContent(toneSlot),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )

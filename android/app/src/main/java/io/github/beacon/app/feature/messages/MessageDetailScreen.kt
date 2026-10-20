@@ -140,12 +140,10 @@ fun MessageDetailScreen(
                         )
                     }
                     val canToggle = message.body.isNotBlank()
-                    MessageMarkdownBody(message.body, raw)
+                    // Metadata sits above the body: the application and the group say what the
+                    // message is before the reader commits to a wall of text, and the render/source
+                    // switch has to be reachable without scrolling to the end of a 64 KiB body.
                     if (message.group.isNotBlank() || message.applicationId.isNotBlank() || canToggle) {
-                        HorizontalDivider(
-                            thickness = BeaconDetailText.DividerThickness,
-                            color = MaterialTheme.colorScheme.outlineVariant,
-                        )
                         MessageMetadataRow(hasAction = canToggle) {
                             if (message.applicationId.isNotBlank()) {
                                 MessageFilterTag(
@@ -173,6 +171,7 @@ fun MessageDetailScreen(
                             }
                         }
                     }
+                    MessageMarkdownBody(message.body, raw)
                     BeaconText(
                         stringResource(R.string.msg_detail_sent_time_label) + " · " +
                             detailTime(message.createdAtMs, missing),
