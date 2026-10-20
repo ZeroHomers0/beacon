@@ -453,14 +453,18 @@ fun MessageItem(
             ),
     ) {
         BeaconListCardColumn(verticalInset = BeaconUiMetrics.MessageCardVerticalInset) {
+            // Top-aligned, and the trailing controls are pinned to the height of one title line:
+            // the action belongs to the first line of the title, so it must not travel down when
+            // the title wraps to two.
             Row(
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6),
             ) {
                 if (selectionMode)
                     BeaconCheckbox(
                         selected,
                         onSelect,
+                        modifier = Modifier.align(Alignment.CenterVertically),
                         enabled = !busy,
                         contentDescription = message.title,
                     )
@@ -482,57 +486,61 @@ fun MessageItem(
                     )
                 }
                 if (!message.isRead)
-                    Box(
-                        Modifier.size(6.dp)
-                            .background(
-                                MaterialTheme.colorScheme.primary,
-                                androidx.compose.foundation.shape.CircleShape,
-                            )
-                            .semantics { contentDescription = unreadLabel }
-                    )
+                    FirstLineSlot(BeaconListText.TitleLineHeight) {
+                        Box(
+                            Modifier.size(BeaconUiMetrics.UnreadDotSize)
+                                .background(
+                                    MaterialTheme.colorScheme.primary,
+                                    androidx.compose.foundation.shape.CircleShape,
+                                )
+                                .semantics { contentDescription = unreadLabel }
+                        )
+                    }
                 if (!selectionMode)
-                    Box {
-                        BeaconIconButton(
-                            enabled = !busy,
-                            modifier = Modifier.size(BeaconUiMetrics.MessageCardActionSize),
-                            onClick = { menu = true },
-                        ) {
-                            Icon(
-                                BeaconIcons.MoreHoriz,
-                                stringResource(R.string.ui_message_more_action),
-                                Modifier.size(BeaconUiMetrics.MessageCardActionIconSize),
-                            )
-                        }
-                        BeaconDropdownMenu(menu && !busy, { menu = false }) {
-                            MessageMenuItems(
-                                message.isRead,
-                                onShare =
-                                    onShare?.let { action ->
-                                        {
-                                            menu = false
-                                            action()
-                                        }
+                    FirstLineSlot(BeaconListText.TitleLineHeight) {
+                        Box {
+                            BeaconIconButton(
+                                enabled = !busy,
+                                modifier = Modifier.size(BeaconUiMetrics.MessageCardActionSize),
+                                onClick = { menu = true },
+                            ) {
+                                Icon(
+                                    BeaconIcons.More,
+                                    stringResource(R.string.ui_message_more_action),
+                                    Modifier.size(BeaconUiMetrics.MessageCardActionIconSize),
+                                )
+                            }
+                            BeaconDropdownMenu(menu && !busy, { menu = false }) {
+                                MessageMenuItems(
+                                    message.isRead,
+                                    onShare =
+                                        onShare?.let { action ->
+                                            {
+                                                menu = false
+                                                action()
+                                            }
+                                        },
+                                    onRemind =
+                                        onRemind?.let { action ->
+                                            {
+                                                menu = false
+                                                action()
+                                            }
+                                        },
+                                    onToggleRead = {
+                                        menu = false
+                                        onToggleRead()
                                     },
-                                onRemind =
-                                    onRemind?.let { action ->
-                                        {
-                                            menu = false
-                                            action()
-                                        }
+                                    onCopy = { body ->
+                                        menu = false
+                                        onCopy(body)
                                     },
-                                onToggleRead = {
-                                    menu = false
-                                    onToggleRead()
-                                },
-                                onCopy = { body ->
-                                    menu = false
-                                    onCopy(body)
-                                },
-                                onDelete = {
-                                    menu = false
-                                    onDelete()
-                                },
-                            )
+                                    onDelete = {
+                                        menu = false
+                                        onDelete()
+                                    },
+                                )
+                            }
                         }
                     }
             }

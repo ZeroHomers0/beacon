@@ -20,6 +20,22 @@ import io.github.beacon.app.ui.components.*
 import io.github.beacon.app.ui.icons.BeaconIcons
 import java.time.ZoneId
 
+/**
+ * A rule between the header, its metadata, and the body.
+ *
+ * Deliberately not a plain [HorizontalDivider] at the call site: the colour and thickness are a
+ * typographic decision that belongs with the rest of the detail page's scale, and every rule on the
+ * screen has to match. `outlineVariant` is the theme's lowest-contrast line, so one pixel reads as a
+ * pause rather than a second card edge.
+ */
+@Composable
+private fun DetailRule() {
+    HorizontalDivider(
+        thickness = BeaconDetailText.DividerThickness,
+        color = MaterialTheme.colorScheme.outlineVariant,
+    )
+}
+
 internal fun detailTime(
     time: Long,
     missing: String,
@@ -70,9 +86,9 @@ fun MessageDetailScreen(
                     Modifier.padding(BeaconUiMetrics.CardInset),
                     verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap10),
                 ) {
-                    // Title, then subtitle, then prose: the three levels of the message in the order
-                    // they are read. Metadata moves below the body — a stack of tags above the first
-                    // sentence used to push the content itself off a phone screen.
+                    // Title, then metadata, then prose. The action is held inside the first title
+                    // line rather than centred on the row, so a two-line title does not push it
+                    // down; the divider closes the header so the body reads as its own block.
                     Row(verticalAlignment = Alignment.Top) {
                         SelectionContainer(Modifier.weight(1f)) {
                             BeaconText(
@@ -87,44 +103,55 @@ fun MessageDetailScreen(
                                     ),
                             )
                         }
-                        Box {
-                            BeaconActionIcon(
-                                BeaconIcons.MoreHoriz,
-                                stringResource(R.string.msg_detail_more_action),
-                                enabled = !busy,
-                            ) {
-                                menu = true
-                            }
-                            BeaconDropdownMenu(menu && !busy, { menu = false }) {
-                                MessageMenuItems(
-                                    message.isRead,
-                                    onToggleRead = {
-                                        menu = false
-                                        onToggleRead()
-                                    },
-                                    onCopy = { body ->
-                                        menu = false
-                                        onCopy(body)
-                                    },
-                                    onShare =
-                                        onShare?.let { action ->
-                                            {
-                                                menu = false
-                                                shareFailed = runCatching { action() }.isFailure
-                                            }
+                        FirstLineSlot(BeaconDetailText.TitleLineHeight) {
+                            Box {
+                                BeaconIconButton(
+                                    enabled = !busy,
+                                    modifier = Modifier.size(BeaconUiMetrics.MessageCardActionSize),
+                                    onClick = { menu = true },
+                                ) {
+                                    Icon(
+                                        BeaconIcons.More,
+                                        stringResource(R.string.msg_detail_more_action),
+                                        Modifier.size(BeaconUiMetrics.MessageCardActionIconSize),
+                                        tint =
+                                            MaterialTheme.colorScheme.onSurface.copy(
+                                                alpha = if (busy) 0.38f else 1f
+                                            ),
+                                    )
+                                }
+                                BeaconDropdownMenu(menu && !busy, { menu = false }) {
+                                    MessageMenuItems(
+                                        message.isRead,
+                                        onToggleRead = {
+                                            menu = false
+                                            onToggleRead()
                                         },
-                                    onRemind =
-                                        onRemind?.let { action ->
-                                            {
-                                                menu = false
-                                                action()
-                                            }
+                                        onCopy = { body ->
+                                            menu = false
+                                            onCopy(body)
                                         },
-                                    onDelete = {
-                                        menu = false
-                                        onDelete()
-                                    },
-                                )
+                                        onShare =
+                                            onShare?.let { action ->
+                                                {
+                                                    menu = false
+                                                    shareFailed =
+                                                        runCatching { action() }.isFailure
+                                                }
+                                            },
+                                        onRemind =
+                                            onRemind?.let { action ->
+                                                {
+                                                    menu = false
+                                                    action()
+                                                }
+                                            },
+                                        onDelete = {
+                                            menu = false
+                                            onDelete()
+                                        },
+                                    )
+                                }
                             }
                         }
                     }
@@ -140,10 +167,17 @@ fun MessageDetailScreen(
                         )
                     }
                     val canToggle = message.body.isNotBlank()
-                    // Metadata sits above the body: the application and the group say what the
-                    // message is before the reader commits to a wall of text, and the render/source
-                    // switch has to be reachable without scrolling to the end of a 64 KiB body.
-                    if (message.group.isNotBlank() || message.applicationId.isNotBlank() || canToggle) {
+                    val hasMetadata =
+                        message.group.isNotBlank() ||
+                            message.applicationId.isNotBlank() ||
+                            canToggle
+                    // One rule closes the header, another closes the tag row, and the body follows.
+                    // Metadata stays above the body because the application and the group say what
+                    // the message is before the reader commits to a wall of text, and because the
+                    // render/source switch has to be reachable without scrolling to the end of a
+                    // 64 KiB body.
+                    DetailRule()
+                    if (hasMetadata) {
                         MessageMetadataRow(hasAction = canToggle) {
                             if (message.applicationId.isNotBlank()) {
                                 MessageFilterTag(
@@ -170,6 +204,7 @@ fun MessageDetailScreen(
                                 )
                             }
                         }
+                        DetailRule()
                     }
                     MessageMarkdownBody(message.body, raw)
                     BeaconText(

@@ -51,6 +51,9 @@ object BeaconUiMetrics {
     /** The glyph shrinks; the button keeps its 32dp hit area rather than following it down. */
     val MessageCardActionSize = 32.dp
     val MessageCardActionIconSize = 20.dp
+
+    /** The unread marker, sized to sit centred on the title's first line. */
+    val UnreadDotSize = 6.dp
     val CardRadius = 16.dp
 
     /** Two-line label/detail status rows keep a stable height while their detail text changes. */

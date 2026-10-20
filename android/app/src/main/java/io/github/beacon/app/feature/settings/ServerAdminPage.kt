@@ -854,7 +854,7 @@ private fun AdminListCard(
             Box {
                 BeaconIconButton(onClick = { menuOpen = true }, enabled = enabled) {
                     androidx.compose.material3.Icon(
-                        BeaconIcons.MoreHoriz,
+                        BeaconIcons.More,
                         stringResource(R.string.admin_more_actions),
                     )
                 }

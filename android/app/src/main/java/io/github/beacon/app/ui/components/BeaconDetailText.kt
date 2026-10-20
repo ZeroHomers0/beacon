@@ -39,6 +39,15 @@ internal object BeaconDetailText {
     val BlockMargin = 14.dp
     val QuoteWidth = 3.dp
 
+    /**
+     * Hairline under the metadata row, separating the header from the body.
+     *
+     * One pixel is enough because it never carries a border colour: it is drawn in the theme's
+     * `outlineVariant`, which is already a low-contrast rule (0xFFE9EDF2 on white). A heavier line
+     * would read as a second card edge.
+     */
+    val DividerThickness = 1.dp
+
     /** The scroll container ends on the system gesture area; 12dp there reads as clipped. */
     val PageBottom = 24.dp
 }
