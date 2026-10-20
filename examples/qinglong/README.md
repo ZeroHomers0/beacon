@@ -1,0 +1,85 @@
+# 60s 新闻 → Beacon（青龙面板定时任务）
+
+每天定时拉取 [60s API](https://docs.60s-api.viki.moe/) 的「每天 60 秒读懂世界」，整理成一条 Markdown 消息推送到 [Beacon](../..)。
+
+- 只用 Python 标准库，青龙镜像无需 `pip install`
+- 纯 HTTP 实现（`urllib`），服务器没有 Node.js 也能跑
+- 次日自动去重：同一天只推一次，配合 `Idempotency-Key` 让服务端也认得出重复
+- 拉取和推送都带重试；429 会读 `Retry-After` 再重试
+
+## 1. 脚本
+
+[60s_to_beacon.py](60s_to_beacon.py)
+
+## 2. 部署到青龙
+
+### 方式 A：直接放脚本（最简单）
+
+```bash
+docker cp 60s_to_beacon.py qinglong:/ql/data/scripts/60s_to_beacon.py
+```
+
+然后在青龙面板「定时任务」里新建：
+
+| 字段 | 值 |
+| --- | --- |
+| 名称 | 60s 新闻 |
+| 命令 | `task 60s_to_beacon.py` |
+| 定时规则 | `30 7 * * *` |
+
+定时规则是标准 5 段 cron（分 时 日 月 周），时区为容器时区，青龙官方镜像默认 `Asia/Shanghai`。
+
+### 方式 B：放仓库里用订阅
+
+把脚本提交到自己的脚本仓库，在青龙「订阅管理」里指向该仓库（白名单填 `60s_to_beacon.py`），青龙会定时拉取、按需执行。定时任务命令同样是 `task 60s_to_beacon.py`。
+
+## 3. 环境变量
+
+在青龙「环境变量」页面添加（值 `$` 开头的变量名青龙默认不注入任务，注意别被面板的变量名规则拦住）：
+
+| 变量 | 必填 | 说明 |
+| --- | --- | --- |
+| `BEACON_BASE_URL` | 是 | Beacon 服务地址，如 `https://push.gzautobot.top` |
+| `BEACON_PUSH_KEY` | 是 | 设备推送密钥。App →「服务器管理」→ 连接设置 → 复制推送密钥 |
+| `SIXTY_API_BASE` | 否 | 60s API 地址，默认 `https://60s.gzautobot.top` |
+| `BEACON_GROUP` | 否 | 消息分组，默认 `60s`；手机上可按分组筛选 |
+| `BEACON_PRIORITY` | 否 | 优先级 0–10，默认 `5`（普通通知）。`0–1` 只存不响，`2–3` 静默，`8–10` 重要 |
+| `BEACON_TTL` | 否 | 投递有效期（秒），默认 `86400`；`0` 用服务端默认七天 |
+| `NEWS_LIMIT` | 否 | 只推前 N 条，`0` = 全部（默认） |
+| `INCLUDE_IMAGE` | 否 | `1` 时正文附带当日长图（默认关闭，图在手机端需点击加载） |
+| `INCLUDE_BUTTON` | 否 | `1`/`0`，是否带「看原文」按钮，默认开启 |
+| `FORCE_PUSH` | 否 | `1` 忽略本地去重，强制重推 |
+| `DRY_RUN` | 否 | `1` 只打印将要发送的 JSON，不实际推送 |
+| `STATE_FILE` | 否 | 去重状态文件路径，默认脚本同目录 `.60s_to_beacon_state.json` |
+
+## 4. 手工验证
+
+```bash
+# 只渲染、不推送，检查环境和内容
+docker exec -e BEACON_BASE_URL=https://push.gzautobot.top -e DRY_RUN=1 qinglong \
+  python3 /ql/data/scripts/60s_to_beacon.py
+
+# 真推一条
+docker exec -e BEACON_BASE_URL=https://push.gzautobot.top -e BEACON_PUSH_KEY=你的密钥 qinglong \
+  python3 /ql/data/scripts/60s_to_beacon.py
+```
+
+也可以在青龙任务详情页点「运行」看日志。
+
+## 5. 行为说明
+
+- **去重**：脚本把 `date` 写进状态文件；同一天第二次运行直接跳过（退出码 0），日志会说明原因。删掉状态文件或设 `FORCE_PUSH=1` 可重推。
+- **服务端幂等**：推送时带 `Idempotency-Key: 60s-<日期>`，七天内同键同内容不会被服务端重复保存，返回 409 也按成功处理。
+- **退出码**：`0` 成功或已跳过，`1` 配置错误，`2` 拉取 60s 失败，`3` 推送失败。青龙按非 0 标记任务失败，方便配通知。
+- **重试**：网络错误与 5xx 最多重试 2 次（间隔 2s、4s）；429 按 `Retry-After` 等待。4xx（除 429）不重试。
+- **内容格式**：标题用日期，正文为编号列表 + 微语，服务端与 App 都支持 Markdown 渲染。
+
+## 6. 常见问题
+
+| 现象 | 原因与处理 |
+| --- | --- |
+| `缺少环境变量 BEACON_BASE_URL` | 青龙环境变量没加，或任务没勾选「环境变量生效」 |
+| `HTTP 401 unauthorized` | 推送密钥无效或已撤销，重新从 App 复制；注意别把管理令牌当成推送密钥 |
+| `HTTP 429` | 推送太频繁，脚本会自动退避重试；仍失败可减少运行次数 |
+| 拉取失败 `HTTP 5xx` | 自建 60s 实例异常，可换 `SIXTY_API_BASE` 或稍后重跑 |
+| 手机没有立刻响 | Beacon 服务端返回成功只代表已排队投递；省电接收模式下由系统调度，可能有分钟级延迟 |

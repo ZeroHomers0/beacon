@@ -175,6 +175,10 @@ curl -X POST 'https://push.example.com/api/v1/push' \
 
 工具包括 `push_notification`（推送）、`beacon_status`（只读能力查询）和 `beacon_apps`（只读管理概况）；后两项分别需要额外的设备接收凭据与管理令牌。完整配置、参数与验证方式见 [MCP README](mcp/README.md)。
 
+### 定时任务示例
+
+[examples/qinglong](examples/qinglong/README.md) 提供一个青龙面板脚本：定时拉取「60s API」的每日新闻，整理成 Markdown 推送到本服务。脚本只用 Python 标准库，按日期去重，并附带 `Idempotency-Key`，可直接照着改成其他数据源的定时推送。
+
 ## 6. 支持的 API
 
 Go 和 Cloudflare Workers 两种服务端均支持以下接口。先在 App 中绑定服务器，再在连接设置中点击「复制推送密钥」。下面示例中的 `https://push.example.com` 替换为自己的服务地址，`YOUR_PUSH_KEY` 替换为设备推送密钥。推送密钥允许向对应设备发送消息，请勿公开；绑定码和管理令牌不能代替它。App 的连接设置也提供可直接复制的推送示例。
