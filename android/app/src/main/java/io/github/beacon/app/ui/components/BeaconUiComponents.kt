@@ -30,6 +30,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.beacon.app.R
@@ -158,12 +159,13 @@ internal fun BeaconListCard(
 @Composable
 internal fun BeaconListCardColumn(
     modifier: Modifier = Modifier,
+    verticalInset: Dp = BeaconUiMetrics.SectionGap,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
         modifier.padding(
             horizontal = BeaconUiMetrics.CardInset,
-            vertical = BeaconUiMetrics.SectionGap,
+            vertical = verticalInset,
         ),
         verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap4),
         content = content,
@@ -450,7 +452,7 @@ fun MessageItem(
                     else MaterialTheme.colorScheme.surfaceContainerLow
             ),
     ) {
-        BeaconListCardColumn {
+        BeaconListCardColumn(verticalInset = BeaconUiMetrics.MessageCardVerticalInset) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6),
@@ -470,8 +472,11 @@ fun MessageItem(
                         message.title.ifBlank { stringResource(R.string.msg_untitled_message) },
                         style =
                             MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                                fontSize = BeaconListText.TitleSize,
+                                lineHeight = BeaconListText.TitleLineHeight,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                             ),
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -489,10 +494,14 @@ fun MessageItem(
                     Box {
                         BeaconIconButton(
                             enabled = !busy,
-                            modifier = Modifier.size(32.dp),
+                            modifier = Modifier.size(BeaconUiMetrics.MessageCardActionSize),
                             onClick = { menu = true },
                         ) {
-                            Icon(BeaconIcons.More, stringResource(R.string.ui_message_more_action))
+                            Icon(
+                                BeaconIcons.MoreHoriz,
+                                stringResource(R.string.ui_message_more_action),
+                                Modifier.size(BeaconUiMetrics.MessageCardActionIconSize),
+                            )
                         }
                         BeaconDropdownMenu(menu && !busy, { menu = false }) {
                             MessageMenuItems(
@@ -530,7 +539,15 @@ fun MessageItem(
             if (message.subtitle.isNotBlank())
                 BeaconText(
                     message.subtitle,
-                    style = MaterialTheme.typography.titleSmall,
+                    style =
+                        MaterialTheme.typography.titleSmall.copy(
+                            fontSize = BeaconListText.SubtitleSize,
+                            lineHeight = BeaconListText.SubtitleLineHeight,
+                        ),
+                    color =
+                        MaterialTheme.colorScheme.onSurface.copy(
+                            alpha = BeaconListText.SubtitleAlpha
+                        ),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -538,9 +555,13 @@ fun MessageItem(
                 remember(message.body) {
                     io.github.beacon.app.domain.policy.MessageMarkdown.summary(message.body)
                 },
-                style = MaterialTheme.typography.bodyMedium,
+                style =
+                    MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = BeaconListText.PreviewSize,
+                        lineHeight = BeaconListText.PreviewLineHeight,
+                    ),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 3,
+                maxLines = BeaconListText.PreviewLines,
                 overflow = TextOverflow.Ellipsis,
             )
             MessageCardFooter(

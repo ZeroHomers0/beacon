@@ -27,9 +27,30 @@ object BeaconUiMetrics {
     val FieldMinHeight = 56.dp
     val FieldVerticalInset = 12.dp
 
-    /** List search field: 40dp keeps the header slim without crowding the hint text. */
-    val SearchFieldMinHeight = 40.dp
-    val SearchFieldVerticalInset = 8.dp
+    /** List search field: 36dp pairs with the 14sp search text so the pill is not mostly padding. */
+    val SearchFieldMinHeight = 36.dp
+    val SearchFieldVerticalInset = 6.dp
+    val SearchFieldLeadingInset = 14.dp
+    val SearchFieldIconGap = 10.dp
+    val SearchFieldIconSize = 18.dp
+    /**
+     * The clear button fills the field's height so the whole rounded cap is tappable; a smaller
+     * circle inside a 36dp pill would leave the reachable area below the accessibility minimum.
+     */
+    val SearchFieldClearSize = 36.dp
+    val SearchFieldClearInset = 9.dp
+
+    /**
+     * Message cards were spaced like settings sections, so a row of them read as a stack of panels.
+     * The list is a stream of equal items, so its shell is tighter than a section and the space
+     * between cards barely exceeds the inset inside one.
+     */
+    val MessageCardVerticalInset = 10.dp
+    val MessageCardGap = 8.dp
+
+    /** The glyph shrinks; the button keeps its 32dp hit area rather than following it down. */
+    val MessageCardActionSize = 32.dp
+    val MessageCardActionIconSize = 20.dp
     val CardRadius = 16.dp
 
     /** Two-line label/detail status rows keep a stable height while their detail text changes. */

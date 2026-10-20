@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
@@ -16,11 +17,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
@@ -50,7 +53,11 @@ fun BeaconSearchBox(
         onValueChange,
         singleLine = true,
         textStyle =
-            MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+            MaterialTheme.typography.bodyLarge.copy(
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = BeaconListText.SearchSize,
+                lineHeight = BeaconListText.SearchLineHeight,
+            ),
         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
         keyboardActions = KeyboardActions(onSearch = { onSearch() }),
@@ -66,7 +73,12 @@ fun BeaconSearchBox(
                 Icon(
                     BeaconIcons.Search,
                     null,
-                    Modifier.padding(start = 16.dp, end = 12.dp).size(22.dp),
+                    Modifier
+                        .padding(
+                            start = BeaconUiMetrics.SearchFieldLeadingInset,
+                            end = BeaconUiMetrics.SearchFieldIconGap,
+                        )
+                        .size(BeaconUiMetrics.SearchFieldIconSize),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Box(
@@ -76,6 +88,11 @@ fun BeaconSearchBox(
                     if (value.isEmpty())
                         BeaconText(
                             hint,
+                            style =
+                                MaterialTheme.typography.bodyLarge.copy(
+                                    fontSize = BeaconListText.SearchSize,
+                                    lineHeight = BeaconListText.SearchLineHeight,
+                                ),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -83,10 +100,17 @@ fun BeaconSearchBox(
                     field()
                 }
                 if (value.isNotEmpty())
-                    BeaconIconButton(onClick = { onValueChange("") }) {
-                        Icon(BeaconIcons.Close, stringResource(R.string.ui_clear_search_action))
-                    }
-                else Spacer(Modifier.width(16.dp))
+                    Icon(
+                        BeaconIcons.Close,
+                        stringResource(R.string.ui_clear_search_action),
+                        Modifier
+                            .size(BeaconUiMetrics.SearchFieldClearSize)
+                            .clip(CircleShape)
+                            .clickable(role = Role.Button, onClick = { onValueChange("") })
+                            .padding(BeaconUiMetrics.SearchFieldClearInset),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                else Spacer(Modifier.width(BeaconUiMetrics.SearchFieldLeadingInset))
             }
         },
     )

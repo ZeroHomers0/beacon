@@ -338,7 +338,7 @@ private fun MessagesContent(
                         top = BeaconUiMetrics.Gap4,
                         bottom = padding.calculateBottomPadding(),
                     ),
-                verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
+                verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.MessageCardGap),
             ) {
                 if (selectionHint.isNotBlank())
                     item(key = "selection-hint", contentType = "hint") {
@@ -447,7 +447,9 @@ private fun MessagesContent(
                                 },
                                 Modifier.padding(start = BeaconUiMetrics.Gap4, top = BeaconUiMetrics.Gap4)
                                 .semantics { heading() },
-                                style = MaterialTheme.typography.labelLarge,
+                                // A date is a divider, not a heading competing with the cards under
+                                // it; at labelLarge it read as loudly as a message title.
+                                style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
