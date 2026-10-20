@@ -84,7 +84,7 @@ internal fun MessageMarkdownBody(
             runCatching {
                 val document = messageMarkdownDocuments.get(body)
                 RenderedBody(
-                    markwon.render(document.node), document.pictures,
+                    document.render { markwon.render(it) }, document.pictures,
                     document.links, document.bareLinks,
                 )
             }.getOrElse { RenderedBody(SpannableString(body), emptyList(), emptyList(), emptyList(), failed = true) }

@@ -54,4 +54,49 @@ class MessageMarkdownDocumentsTest {
         cache.clear()
         assertNotSame(first, cache.get("message"))
     }
+
+    /**
+     * Markwon's list-item visitor advances `OrderedList.startNumber` while rendering, exactly
+     * as simulated here. Rendering a cached document twice must restart at the parsed number
+     * instead of continuing past the previous visit.
+     */
+    @Test fun renderingTheSameDocumentTwiceRestartsOrderedListNumbering() {
+        val cache = MessageMarkdownDocuments()
+        val document = cache.get("1. 一\n2. 二\n3. 三\n\n4. 四\n5. 五")
+
+        fun renderNumbers(): List<Int> = document.render { root ->
+            val numbers = mutableListOf<Int>()
+            var item = root.firstChild
+            while (item != null) {
+                val list = item
+                if (list is org.commonmark.node.OrderedList) {
+                    var child = list.firstChild
+                    while (child != null) {
+                        numbers += list.startNumber
+                        list.startNumber = list.startNumber + 1
+                        child = child.next
+                    }
+                }
+                item = item.next
+            }
+            numbers
+        }
+
+        assertEquals(listOf(1, 2, 3, 4, 5), renderNumbers())
+        assertEquals(listOf(1, 2, 3, 4, 5), renderNumbers())
+        assertSame(document, cache.get("1. 一\n2. 二\n3. 三\n\n4. 四\n5. 五"))
+    }
+
+    @Test fun explicitStartNumberSurvivesRepeatedRendering() {
+        val cache = MessageMarkdownDocuments()
+        val document = cache.get("7. 七\n8. 八")
+
+        fun firstNumber(): Int = document.render { root ->
+            val list = root.firstChild as org.commonmark.node.OrderedList
+            list.startNumber.also { list.startNumber = it + 1 }
+        }
+
+        assertEquals(7, firstNumber())
+        assertEquals(7, firstNumber())
+    }
 }
