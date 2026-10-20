@@ -467,8 +467,6 @@
     <string name="message_markdown_rendered">显示排版</string>
     <string name="message_markdown_loading">正在排版…</string>
     <string name="message_markdown_failed">排版失败，已显示原文</string>
-    <string name="message_markdown_load_image">加载图片：%1$s</string>
-    <string name="message_markdown_image_number">图片 %1$d</string>
     <string name="msg_empty_unconfigured">连接服务器，开始接收消息</string>
     <string name="msg_empty_unconfigured_hint">使用服务器地址和一次性绑定码绑定设备。</string>
     <string name="msg_empty_no_messages">还没有消息</string>

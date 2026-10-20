@@ -10,8 +10,6 @@ object MessageMarkdown {
     private val whitespace = Regex("\\s+")
     private val webLinks = Regex("""https?://[^\s<>"\u0000-\u001f]+""", RegexOption.IGNORE_CASE)
 
-    data class Picture(val url: String, val description: String)
-
     fun parse(body: String): Node = parser.parse(body)
 
     // Iterative traversal also handles deeply nested input without overflowing our call stack.
@@ -73,29 +71,17 @@ object MessageMarkdown {
         return text.substring(0, text.offsetByCodePoints(0, count)) + if (truncated) "…" else ""
     }
 
-    fun webUrl(raw: String, httpsOnly: Boolean = false): String? = raw.takeIf {
+    /** A link the app is willing to hand to a browser: bounded, web, and free of credentials. */
+    fun webUrl(raw: String): String? = raw.takeIf {
         it.length <= 2048 &&
             runCatching {
                     val uri = URI(it)
-                    (uri.scheme.equals("https", true) ||
-                        (!httpsOnly && uri.scheme.equals("http", true))) &&
+                    (uri.scheme.equals("https", true) || uri.scheme.equals("http", true)) &&
                         !uri.host.isNullOrEmpty() &&
                         uri.rawUserInfo == null &&
                         uri.port in -1..65535
                 }
                 .getOrDefault(false)
-    }
-
-    fun pictures(root: Node): List<Picture> {
-        val result = linkedMapOf<String, Picture>()
-        walk(root) { node, exiting ->
-            if (!exiting && node is Image && result.size < 5) {
-                webUrl(node.destination, httpsOnly = true)?.let {
-                    result.putIfAbsent(it, Picture(it, plainText(node).trim()))
-                }
-            }
-        }
-        return result.values.toList()
     }
 
     fun links(body: String): List<String> = links(parse(body))

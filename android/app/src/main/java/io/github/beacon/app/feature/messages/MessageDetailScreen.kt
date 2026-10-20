@@ -1,8 +1,4 @@
-@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
-
 package io.github.beacon.app.feature.messages
-
-import io.github.beacon.app.ui.components.BeaconUiMetrics
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -15,10 +11,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.IncomingMessage
 import io.github.beacon.app.domain.model.MessageKey
+import io.github.beacon.app.domain.policy.TAG_SLOT_APPLICATION
+import io.github.beacon.app.domain.policy.TAG_SLOT_GROUP
 import io.github.beacon.app.ui.components.*
 import io.github.beacon.app.ui.icons.BeaconIcons
 import java.time.ZoneId
@@ -44,6 +41,7 @@ fun MessageDetailScreen(
     onRemind: (() -> Unit)? = null,
 ) {
     key(MessageKey(message.server, message.id)) {
+        var raw by rememberSaveable { mutableStateOf(false) }
         var rawInfo by rememberSaveable { mutableStateOf(false) }
         var menu by remember { mutableStateOf(false) }
         var shareFailed by remember { mutableStateOf(false) }
@@ -51,7 +49,14 @@ fun MessageDetailScreen(
         Column(
             modifier
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = BeaconUiMetrics.PageInset, vertical = BeaconUiMetrics.SectionGap),
+                .padding(
+                    PaddingValues(
+                        start = BeaconUiMetrics.PageInset,
+                        end = BeaconUiMetrics.PageInset,
+                        top = BeaconUiMetrics.SectionGap,
+                        bottom = BeaconDetailText.PageBottom,
+                    )
+                ),
             verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
         ) {
             BeaconCard(
@@ -61,7 +66,13 @@ fun MessageDetailScreen(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                     ),
             ) {
-                Column(Modifier.padding(BeaconUiMetrics.CardInset), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap)) {
+                Column(
+                    Modifier.padding(BeaconUiMetrics.CardInset),
+                    verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap10),
+                ) {
+                    // Title, then subtitle, then prose: the three levels of the message in the order
+                    // they are read. Metadata moves below the body — a stack of tags above the first
+                    // sentence used to push the content itself off a phone screen.
                     Row(verticalAlignment = Alignment.Top) {
                         SelectionContainer(Modifier.weight(1f)) {
                             BeaconText(
@@ -70,13 +81,15 @@ fun MessageDetailScreen(
                                 },
                                 style =
                                     MaterialTheme.typography.headlineSmall.copy(
-                                        fontWeight = FontWeight.SemiBold
+                                        fontSize = BeaconDetailText.TitleSize,
+                                        lineHeight = BeaconDetailText.TitleLineHeight,
+                                        fontWeight = FontWeight.SemiBold,
                                     ),
                             )
                         }
                         Box {
                             BeaconActionIcon(
-                                BeaconIcons.More,
+                                BeaconIcons.MoreHoriz,
                                 stringResource(R.string.msg_detail_more_action),
                                 enabled = !busy,
                             ) {
@@ -115,10 +128,26 @@ fun MessageDetailScreen(
                             }
                         }
                     }
-                    MessageMarkdownBody(message.body) { canToggle, raw, toggle ->
-                    if (message.group.isNotBlank() || message.applicationId.isNotBlank() || canToggle)
+                    if (message.subtitle.isNotBlank()) SelectionContainer {
+                        BeaconText(
+                            message.subtitle,
+                            style =
+                                MaterialTheme.typography.titleSmall.copy(
+                                    fontSize = BeaconDetailText.SubtitleSize,
+                                    lineHeight = BeaconDetailText.SubtitleLineHeight,
+                                ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    val canToggle = message.body.isNotBlank()
+                    MessageMarkdownBody(message.body, raw)
+                    if (message.group.isNotBlank() || message.applicationId.isNotBlank() || canToggle) {
+                        HorizontalDivider(
+                            thickness = BeaconDetailText.DividerThickness,
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                        )
                         MessageMetadataRow(hasAction = canToggle) {
-                            if (message.applicationId.isNotBlank())
+                            if (message.applicationId.isNotBlank()) {
                                 MessageFilterTag(
                                     message.applicationName.ifBlank {
                                         stringResource(
@@ -126,51 +155,46 @@ fun MessageDetailScreen(
                                             message.applicationId.take(8),
                                         )
                                     },
+                                    toneSlot = TAG_SLOT_APPLICATION,
                                 )
-                            if (message.group.isNotBlank()) MessageFilterTag(
-                                message.group,
-                            )
-                            if (canToggle) MessageFilterTag(
-                                stringResource(if (raw) R.string.message_markdown_rendered else R.string.message_markdown_source),
-                                outlined = true,
-                                onClick = toggle,
-                            )
-                        }
-                    if (message.subtitle.isNotBlank())
-                        SelectionContainer {
-                            BeaconText(
-                                message.subtitle,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                            }
+                            if (message.group.isNotBlank()) {
+                                MessageFilterTag(message.group, toneSlot = TAG_SLOT_GROUP)
+                            }
+                            if (canToggle) {
+                                MessageFilterTag(
+                                    stringResource(
+                                        if (raw) R.string.message_markdown_rendered
+                                        else R.string.message_markdown_source
+                                    ),
+                                    outlined = true,
+                                    onClick = { raw = !raw },
+                                )
+                            }
                         }
                     }
-                    val hasMedia = remember(message.bark) {
-                        runCatching { org.json.JSONObject(message.bark) }.getOrNull()?.let {
-                            it.optString("image").isNotBlank() || it.optString("icon").isNotBlank()
-                        } == true
-                    }
-                    if (hasMedia) {
-                        MessageMediaPanel(message.bark)
-                    }
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        BeaconText(
-                            stringResource(R.string.msg_detail_sent_time_label) + " · " + detailTime(message.createdAtMs, missing),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                    BeaconText(
+                        stringResource(R.string.msg_detail_sent_time_label) + " · " +
+                            detailTime(message.createdAtMs, missing),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
-            if (shareFailed)
+            val hasMedia = remember(message.bark) {
+                runCatching { org.json.JSONObject(message.bark) }.getOrNull()?.let {
+                    it.optString("image").isNotBlank() || it.optString("icon").isNotBlank()
+                } == true
+            }
+            if (hasMedia) {
+                MessageMediaPanel(message.bark)
+            }
+            if (shareFailed) {
                 BeaconText(
                     stringResource(R.string.message_share_failed),
                     color = MaterialTheme.colorScheme.error,
                 )
+            }
             val barkUrl = runCatching {
                 org.json.JSONObject(message.bark).optString("url")
             }

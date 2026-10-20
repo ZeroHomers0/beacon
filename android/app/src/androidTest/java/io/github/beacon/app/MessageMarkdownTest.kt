@@ -64,7 +64,15 @@ class MessageMarkdownTest {
                 BeaconTheme(style, mode) {
                     Surface(Modifier.fillMaxSize()) {
                     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)) {
-                        MessageMarkdownBody(body)
+                        val raw = androidx.compose.runtime.remember {
+                            androidx.compose.runtime.mutableStateOf(false)
+                        }
+                        MessageMarkdownBody(body, raw.value)
+                        androidx.compose.material3.TextButton(
+                            onClick = { raw.value = !raw.value }
+                        ) {
+                            androidx.compose.material3.Text(if (raw.value) "显示排版" else "查看原文")
+                        }
                     }
                     }
                 }
@@ -87,7 +95,8 @@ class MessageMarkdownTest {
         }
         rule.onNodeWithText("https://example.com/report").assertIsDisplayed()
         rule.onNodeWithText(rule.activity.getString(R.string.action_cancel)).performClick()
-        rule.onNodeWithText("加载图片：任务截图").performScrollTo().assertIsDisplayed()
+        // Pictures are inline now, so a body picture is no longer followed by a "load image" button.
+        rule.onNodeWithText("加载图片：任务截图").assertDoesNotExist()
         rule.mainClock.advanceTimeBy(1000)
         rule.waitForIdle()
         // Capture the actual AndroidView as well as Compose content.

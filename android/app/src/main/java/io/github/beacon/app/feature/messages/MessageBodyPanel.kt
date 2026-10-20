@@ -67,7 +67,7 @@ internal fun MessageLinkDialog(link: String, onDismiss: () -> Unit) {
 }
 
 @Composable
-fun MessageMediaPanel(metadata: String, description: String? = null) {
+fun MessageMediaPanel(metadata: String) {
     val iconPixels = with(androidx.compose.ui.platform.LocalDensity.current) { 48.dp.roundToPx() }
     val values = remember(metadata) { runCatching { JSONObject(metadata) }.getOrNull() }
     val image = values?.optString("image").orEmpty()
@@ -92,10 +92,7 @@ fun MessageMediaPanel(metadata: String, description: String? = null) {
                 onClick = { requested = true; load = true },
                 enabled = !load,
             ) {
-                BeaconText(
-                    if (description == null) stringResource(R.string.msg_media_load)
-                    else stringResource(R.string.message_markdown_load_image, description)
-                )
+                BeaconText(stringResource(R.string.msg_media_load))
             }
         LaunchedEffect(load, metadata) {
             if (load) {
@@ -130,7 +127,7 @@ fun MessageMediaPanel(metadata: String, description: String? = null) {
                 bitmap?.let {
                     Image(
                         it.asImageBitmap(),
-                        description ?: stringResource(R.string.msg_media_image_description),
+                        stringResource(R.string.msg_media_image_description),
                         Modifier.fillMaxSize(),
                         contentScale = androidx.compose.ui.layout.ContentScale.Fit,
                     )

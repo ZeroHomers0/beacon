@@ -32,15 +32,17 @@ class MessageMarkdownTest {
         assertTrue(MessageMarkdown.links("[执行](javascript:alert(1))").isEmpty())
     }
 
-    @Test fun picturesRequireHttpsAndAreDeduplicatedAndBounded() {
-        val body = "![描述](https://example.com/a.png) ![重复](https://example.com/a.png) " +
-            "![无效](http://example.com/b.png) " +
-            (1..10).joinToString(" ") { "![](https://example.com/$it.png)" }
-        val pictures = MessageMarkdown.pictures(MessageMarkdown.parse(body))
-        assertEquals(5, pictures.size)
-        assertEquals(MessageMarkdown.Picture("https://example.com/a.png", "描述"), pictures.first())
-        assertEquals(5, pictures.map { it.url }.distinct().size)
-        // A literal code example must not trigger an image download control.
-        assertTrue(MessageMarkdown.pictures(MessageMarkdown.parse("`![a](https://example.com/a.png)`")).isEmpty())
+    @Test fun inlineImagesAreNeitherListedAsLinksNorStrippedFromTheBody() {
+        // Pictures render where the author wrote them, so they are not a separate list any more, and
+        // an image destination must not show up a second time in the link panel or in the copyable
+        // body text.
+        val body = "![描述](https://example.com/a.png) [报告](https://example.com/report)"
+        val document = MessageMarkdownDocuments().get(body)
+        assertEquals(listOf("https://example.com/report"), document.links)
+        assertEquals("描述 报告", MessageMarkdown.plainText(document.node).trim())
+        assertTrue(MessageMarkdown.links("![](https://example.com/a.png)").isEmpty())
+        // A literal code example is text, not a picture.
+        assertEquals("![a](https://example.com/a.png)",
+            MessageMarkdown.plainText(MessageMarkdown.parse("`![a](https://example.com/a.png)`")).trim())
     }
 }

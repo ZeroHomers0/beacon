@@ -18,7 +18,6 @@ internal class MessageMarkdownDocuments(
 ) {
     data class Document(
         val node: Node,
-        val pictures: List<MessageMarkdown.Picture>,
         val links: List<String>,
         val bareLinks: List<String>,
     ) {
@@ -65,7 +64,7 @@ internal class MessageMarkdownDocuments(
             }
             val node = MessageMarkdown.parse(body)
             val result = Document(
-                node, MessageMarkdown.pictures(node), MessageMarkdown.links(node),
+                node, MessageMarkdown.links(node),
                 MessageMarkdown.links(node, includeExplicit = false),
             )
             synchronized(this) {
