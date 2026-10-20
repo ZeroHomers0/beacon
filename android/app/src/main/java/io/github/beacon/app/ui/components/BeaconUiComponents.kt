@@ -575,7 +575,14 @@ fun MessageItem(
     }
 }
 
-/** Metadata chips; compact mode is reserved for the list footer. */
+/**
+ * Metadata chips; compact mode is reserved for the list footer.
+ *
+ * [toneSlot] selects which of the tinted hues this label draws from: the application and the group
+ * are seeded with different slots so the two chips on one card are told apart even when the names
+ * collide, while the same application keeps its colour on every message. `-1` (the default) keeps
+ * the neutral chip used for controls that are not metadata (the render/source toggle).
+ */
 @Composable
 internal fun MessageFilterTag(
     label: String,
@@ -583,6 +590,7 @@ internal fun MessageFilterTag(
     compact: Boolean = false,
     enabled: Boolean = true,
     outlined: Boolean = false,
+    toneSlot: Int = -1,
     onClick: (() -> Unit)? = null,
 ) {
     Box(
@@ -590,8 +598,10 @@ internal fun MessageFilterTag(
             .semantics { if (compact) contentDescription = label }
             .clip(RoundedCornerShape(BeaconUiMetrics.BadgeRadius))
             .background(
-                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
-                    .compositeOver(MaterialTheme.colorScheme.surfaceContainerLow)
+                if (toneSlot < 0)
+                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
+                        .compositeOver(MaterialTheme.colorScheme.surfaceContainerLow)
+                else beaconTagContainer(label, toneSlot)
             )
             .then(
                 if (!outlined) Modifier

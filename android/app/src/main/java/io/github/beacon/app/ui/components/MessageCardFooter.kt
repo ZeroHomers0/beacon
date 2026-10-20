@@ -11,6 +11,8 @@ import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.IncomingMessage
 import io.github.beacon.app.domain.policy.DisplayTime
+import io.github.beacon.app.domain.policy.TAG_SLOT_APPLICATION
+import io.github.beacon.app.domain.policy.TAG_SLOT_GROUP
 
 @Composable
 internal fun MessageCardFooter(
@@ -43,12 +45,14 @@ internal fun MessageCardFooter(
                 label = message.applicationName.ifBlank { stringResource(R.string.message_application_short, message.applicationId.take(8)) },
                 compact = true,
                 enabled = !busy && !selectionMode && onFilterApplication != null,
+                toneSlot = TAG_SLOT_APPLICATION,
                 onClick = { onFilterApplication?.invoke() },
             )
             if (message.group.isNotBlank()) MessageFilterTag(
                 label = message.group,
                 compact = true,
                 enabled = !busy && !selectionMode && onFilterGroup != null,
+                toneSlot = TAG_SLOT_GROUP,
                 onClick = { onFilterGroup?.invoke() },
             )
         }
