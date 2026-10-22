@@ -17,6 +17,7 @@ import io.github.beacon.app.ui.icons.BeaconIcons
 @Composable
 fun NotificationChannelsPanel() {
     val context = LocalContext.current
+    val resources = androidx.compose.ui.platform.LocalResources.current
     var failed by remember { mutableStateOf(false) }
     var revision by remember { mutableStateOf(0) }
     androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
@@ -68,7 +69,7 @@ fun NotificationChannelsPanel() {
                         val important = kind == NotificationChannelKind.IMPORTANT
                         manager.createNotificationChannel(android.app.NotificationChannel(kind.id, title,
                             if (important) NotificationManager.IMPORTANCE_HIGH else NotificationManager.IMPORTANCE_DEFAULT).apply {
-                            description = context.getString(if (important) R.string.channel_important_desc else R.string.channel_fresh_desc)
+                            description = resources.getString(if (important) R.string.channel_important_desc else R.string.channel_fresh_desc)
                         })
                         revision++
                     }

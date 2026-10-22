@@ -201,7 +201,7 @@ fun OperationResultPanel(title: String, result: String, failed: Boolean? = null)
 fun SettingsStatusDetail(title: String, details: String, error: Boolean = false) {
     val detailsStyle = MaterialTheme.typography.bodySmall
     val density = LocalDensity.current
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
+    Box(Modifier.fillMaxWidth()) {
         Column(
             Modifier.fillMaxWidth()
                 .heightIn(min = BeaconUiMetrics.StatusDetailMinHeight)
