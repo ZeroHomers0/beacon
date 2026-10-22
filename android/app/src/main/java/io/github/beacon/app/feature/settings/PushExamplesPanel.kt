@@ -61,7 +61,8 @@ fun PushExamplesPanel(
             }
         },
         confirmButton = {
-            BeaconButton(enabled = enabled, onClick = {
+            SettingsToolAction(stringResource(R.string.settings_example_copy), BeaconIcons.Copy,
+                enabled = enabled, completed = copied, onClick = {
                 actions.copyPushKey { key ->
                     val address = endpoint.trimEnd('/') + "/" + key
                     val example = runCatching {
@@ -73,9 +74,7 @@ fun PushExamplesPanel(
                         if (copied) onFeedback(resources.getString(R.string.settings_copied_hint))
                     }
                 }
-            }) {
-                BeaconText(stringResource(if (copied) R.string.settings_copied_hint else R.string.settings_example_copy))
-            }
+            })
         },
         dismissButton = { BeaconTextButton(onClick = { expanded = false }) { BeaconText(stringResource(R.string.action_close)) } },
     )

@@ -26,19 +26,17 @@ fun SettingsActions(content: @Composable FlowRowScope.() -> Unit) {
 @Composable
 fun SettingsTextAction(
     label: String,
-    icon: ImageVector? = null,
+    icon: ImageVector,
     enabled: Boolean = true,
-    danger: Boolean = false,
     accessibilityLabel: String = label,
     onClick: () -> Unit,
 ) {
-    val tint = (if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
-        .copy(alpha = if (enabled) 1f else .38f)
+    val tint = MaterialTheme.colorScheme.primary.copy(alpha = if (enabled) 1f else .38f)
     BeaconTextButton(onClick, Modifier.named(accessibilityLabel), enabled = enabled) {
         Row(verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6)) {
-            if (icon != null) Icon(icon, null, Modifier.size(BeaconUiMetrics.IconInline), tint = tint)
-            BeaconText(label, color = tint)
+            Icon(icon, null, Modifier.size(BeaconUiMetrics.IconInline), tint = tint)
+            BeaconText(label, color = tint, style = MaterialTheme.typography.labelLarge)
         }
     }
 }
@@ -46,15 +44,30 @@ fun SettingsTextAction(
 @Composable
 fun SettingsPrimaryButton(
     label: String,
-    icon: ImageVector,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
-    BeaconButton(onClick, modifier, enabled) {
-        Icon(icon, null, Modifier.size(BeaconUiMetrics.IconInline))
-        Spacer(Modifier.width(BeaconUiMetrics.Gap6))
-        BeaconText(label)
+    BeaconButton(onClick, modifier, enabled) { BeaconText(label) }
+}
+
+/** Refresh, copy and overflow share one icon-only, labelled hit target. */
+@Composable
+fun SettingsToolAction(
+    description: String,
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    loading: Boolean = false,
+    completed: Boolean = false,
+    onClick: () -> Unit,
+) {
+    BeaconIconButton(onClick = onClick,
+        modifier = modifier.sizeIn(minWidth = BeaconUiMetrics.ControlMinHeight, minHeight = BeaconUiMetrics.ControlMinHeight),
+        enabled = enabled && !loading) {
+        BeaconLoadingIcon(if (completed) BeaconIcons.Check else icon, loading,
+            modifier = Modifier.size(BeaconUiMetrics.IconMedium), description = description,
+            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled || loading) 1f else .38f))
     }
 }
 

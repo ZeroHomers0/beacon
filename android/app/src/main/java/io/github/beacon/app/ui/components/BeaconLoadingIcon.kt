@@ -58,13 +58,8 @@ fun BeaconRefreshAction(
     loading: Boolean,
     onClick: () -> Unit,
 ) {
-    BeaconIconButton(onClick = onClick, enabled = enabled && !loading) {
-        BeaconLoadingIcon(
-            io.github.beacon.app.ui.icons.BeaconIcons.Sync,
-            loading,
-            description = description,
-        )
-    }
+    SettingsToolAction(description, io.github.beacon.app.ui.icons.BeaconIcons.Sync,
+        enabled = enabled, loading = loading, onClick = onClick)
 }
 
 @Composable

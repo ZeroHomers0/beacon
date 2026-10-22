@@ -33,7 +33,7 @@ internal fun AdminListFilters(
                 ids.indexOf(selectedDevice).coerceAtLeast(0)) { onDevice(ids[it]) }
         }
         if (query.isNotBlank() || status != 0 || selectedDevice.isNotBlank()) SettingsActions {
-            SettingsTextAction(stringResource(R.string.msg_clear_filters_action)) {
+            SettingsTextAction(stringResource(R.string.msg_clear_filters_action), io.github.beacon.app.ui.icons.BeaconIcons.Close) {
                 onQuery(""); onStatus(0); onDevice?.invoke("")
             }
         }

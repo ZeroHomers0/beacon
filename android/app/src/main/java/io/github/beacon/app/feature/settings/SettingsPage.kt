@@ -189,7 +189,7 @@ fun SettingsPage(
                     io.github.beacon.app.ui.components.SettingsHint(
                         stringResource(R.string.settings_runtime_disconnected)
                     )
-                    io.github.beacon.app.ui.components.BeaconOutlinedButton(
+                    io.github.beacon.app.ui.components.BeaconButton(
                         onClick = { actions.start(context) },
                         modifier = Modifier.align(androidx.compose.ui.Alignment.End),
                     ) {
@@ -370,7 +370,7 @@ fun SettingsPage(
                             io.github.beacon.app.ui.components.SettingsHint(
                                 stringResource(R.string.settings_data_failed)
                             )
-                            io.github.beacon.app.ui.components.BeaconOutlinedButton(
+                            io.github.beacon.app.ui.components.BeaconButton(
                                 onClick = {
                                     if (notificationForm.loaded)
                                         notificationForm.saveRules(actions, quietHoursForm)

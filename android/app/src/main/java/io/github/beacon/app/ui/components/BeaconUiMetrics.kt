@@ -65,6 +65,9 @@ object BeaconUiMetrics {
 
     /** Filter pills use one shape value so the two chip sites cannot drift apart. */
     val PillShape = RoundedCornerShape(percent = 50)
+    val ActionMinWidth = 64.dp
+    val ActionRadius = 12.dp
+    val ActionShape = RoundedCornerShape(ActionRadius)
     val ControlMinHeight = 48.dp
 
     /** Inline spacing steps, smallest first. */

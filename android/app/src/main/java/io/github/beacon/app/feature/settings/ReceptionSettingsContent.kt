@@ -62,7 +62,11 @@ internal fun LazyListScope.receptionSettingsItems(
         }
     }
     item {
-        SettingsPreferences(stringResource(R.string.settings_receive_status_title)) {
+        SettingsSection(stringResource(R.string.settings_receive_status_title), action = {
+            io.github.beacon.app.ui.components.BeaconRefreshAction(stringResource(R.string.action_refresh_status),
+                !busy && runtimeState.runtimeConnected, false,
+                onClick = { actions.refreshPolling { actions.receivePlan() } })
+        }) {
             var showDetails by remember { mutableStateOf(false) }
             SettingsStatusDetail(
                 stringResource(R.string.reception_https_status),
@@ -88,9 +92,6 @@ internal fun LazyListScope.receptionSettingsItems(
                     runtimeState.configuredEndpoint.isNotBlank() && runtimeState.receivePlanLoaded &&
                     !runtimeState.transportBusy,
             )
-            io.github.beacon.app.ui.components.SettingsTextAction(
-                stringResource(R.string.settings_advanced_details),
-                io.github.beacon.app.ui.icons.BeaconIcons.Info) { showDetails = !showDetails }
             if (showDetails) {
                 SettingsStatusDetail(
                     stringResource(R.string.receive_realtime_status_title),
@@ -144,11 +145,8 @@ internal fun LazyListScope.receptionSettingsItems(
             io.github.beacon.app.ui.components.SettingsPreferenceActions {
                 io.github.beacon.app.ui.components.SettingsActions {
                     io.github.beacon.app.ui.components.SettingsTextAction(
-                        stringResource(R.string.action_refresh_status),
-                        io.github.beacon.app.ui.icons.BeaconIcons.Sync,
-                        enabled = !busy && runtimeState.runtimeConnected) {
-                        actions.refreshPolling { actions.receivePlan() }
-                    }
+                        stringResource(R.string.settings_advanced_details),
+                                io.github.beacon.app.ui.icons.BeaconIcons.Info) { showDetails = !showDetails }
                     BeaconButton(onClick = { actions.transport() }, enabled = !busy && runtimeState.runtimeConnected) {
                         if (runtimeState.transportBusy) {
                             io.github.beacon.app.ui.components.BeaconLoadingIcon(

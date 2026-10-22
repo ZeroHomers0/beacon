@@ -143,6 +143,9 @@ internal fun ServerAdminPage(
             confirmTest = false
         }
     }
+    LaunchedEffect(copiedValue) {
+        if (copiedValue != null) { kotlinx.coroutines.delay(1500); copiedValue = null }
+    }
     LaunchedEffect(state.secret) {
         copiedValue = null
         if (state.secret != null) model.dismissCreation()
@@ -195,16 +198,15 @@ internal fun ServerAdminPage(
             item {
                 SettingsSection(stringResource(R.string.admin_login_title)) {
                     SettingsHint(stringResource(state.restoreFailure!!))
-                    BeaconOutlinedButton(
+                    BeaconButton(
                         onClick = {
                             if (state.restoreFailure == R.string.admin_credentials_clear_failed) model.logout()
                             else model.restoreSession(activity)
                         },
                         modifier = Modifier.align(androidx.compose.ui.Alignment.End),
                     ) { BeaconText(stringResource(R.string.action_retry)) }
-                    BeaconTextButton(onClick = { model.logout() }) {
-                        BeaconText(stringResource(R.string.admin_clear_and_login))
-                    }
+                    SettingsCommandRow(stringResource(R.string.admin_clear_and_login),
+                        icon = BeaconIcons.Close, danger = true, onClick = { model.logout() })
                 }
             }
         } else if (!state.loggedIn) {
@@ -258,7 +260,7 @@ internal fun ServerAdminPage(
         } else if (tab == -1) {
             item {
                 SettingsSection(stringResource(R.string.admin_overview), action = {
-                    SettingsTextAction(stringResource(R.string.admin_logout), enabled = !state.busy) { logoutConfirm = true }
+                    SettingsTextAction(stringResource(R.string.admin_logout), BeaconIcons.Close, enabled = !state.busy) { logoutConfirm = true }
                 }) {
                     state.refreshFailure?.let { failure ->
                         SettingsNotice(
@@ -354,7 +356,6 @@ internal fun ServerAdminPage(
                                 if (defaultEndpoint.isBlank()) {
                                     SettingsPrimaryButton(
                                         stringResource(R.string.admin_use_binding),
-                                        BeaconIcons.Guide,
                                         Modifier.align(androidx.compose.ui.Alignment.End),
                                         canBindCurrent && !state.busy,
                                     ) {
@@ -527,7 +528,6 @@ internal fun ServerAdminPage(
                             SettingsActions {
                             SettingsPrimaryButton(
                                 stringResource(R.string.admin_send_test),
-                                BeaconIcons.Messages,
                                 Modifier,
                                 !state.busy &&
                                     deviceId.isNotBlank() &&
@@ -651,10 +651,8 @@ internal fun ServerAdminPage(
                                     DiagnosticRow(stringResource(secret.label), secret.value)
                                 }
                             }
-                            BeaconIconButton(onClick = { copy(secret.value) }) {
-                                androidx.compose.material3.Icon(if (copiedValue == secret.value) BeaconIcons.Check else BeaconIcons.Copy,
-                                    stringResource(R.string.admin_copy))
-                            }
+                            SettingsToolAction(stringResource(R.string.admin_copy), BeaconIcons.Copy,
+                                completed = copiedValue == secret.value, onClick = { copy(secret.value) })
                         }
                         if (secret.expiresAt > 0) {
                             DiagnosticRow(
@@ -669,27 +667,17 @@ internal fun ServerAdminPage(
                             else R.string.admin_secret_hint
                         )
                     )
-                    if (secret.expiresAt > 0 && defaultEndpoint.isBlank())
-                        BeaconOutlinedButton(
-                            onClick = {
-                                bindCurrent(state.endpoint, secret.value, bindingName)
-                                model.dismissSecret()
-                            },
-                            enabled = canBindCurrent && !state.busy,
-                        ) {
-                            BeaconText(stringResource(R.string.admin_use_binding))
-                        }
-                    if (secret.example.isNotEmpty())
-                        BeaconTextButton(
-                            onClick = { copy(secret.example) },
-                        ) {
-                            BeaconText(
-                                stringResource(
-                                    if (copiedValue == secret.example) R.string.admin_copied
-                                    else R.string.admin_copy_example
-                                )
-                            )
-                        }
+                    SettingsActions {
+                        if (secret.expiresAt > 0 && defaultEndpoint.isBlank())
+                            SettingsPrimaryButton(stringResource(R.string.admin_use_binding),
+                                enabled = canBindCurrent && !state.busy, onClick = {
+                                    bindCurrent(state.endpoint, secret.value, bindingName)
+                                    model.dismissSecret()
+                                })
+                        if (secret.example.isNotEmpty())
+                            SettingsToolAction(stringResource(R.string.admin_copy_example), BeaconIcons.Copy,
+                                completed = copiedValue == secret.example, onClick = { copy(secret.example) })
+                    }
                 }
             },
             confirmButton = {
@@ -872,12 +860,8 @@ private fun AdminListCard(
                 }
             }
             Box {
-                BeaconIconButton(onClick = { menuOpen = true }, enabled = enabled) {
-                    androidx.compose.material3.Icon(
-                        BeaconIcons.More,
-                        stringResource(R.string.admin_more_actions),
-                    )
-                }
+                SettingsToolAction(stringResource(R.string.admin_more_actions), BeaconIcons.More,
+                    enabled = enabled, onClick = { menuOpen = true })
                 BeaconDropdownMenu(menuOpen && enabled, { menuOpen = false }) {
                     BeaconDropdownMenuItem({ BeaconText(stringResource(R.string.settings_view_details)) }) {
                         menuOpen = false; showingDetails = true

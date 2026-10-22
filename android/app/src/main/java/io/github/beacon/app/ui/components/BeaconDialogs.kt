@@ -32,8 +32,10 @@ fun BeaconAlertDialog(
 ) {
     val actions: @Composable () -> Unit = {
         SettingsActions {
-            if (dismissButton != null) dismissButton()
-            confirmButton()
+            CompositionLocalProvider(LocalDialogPrimary provides false) {
+                if (dismissButton != null) dismissButton()
+            }
+            CompositionLocalProvider(LocalDialogPrimary provides true) { confirmButton() }
         }
     }
     if (miuix()) {
@@ -153,7 +155,7 @@ fun BeaconConfirmDialog(
             else BeaconButton(onConfirm, enabled = enabled) { BeaconText(confirmText) }
         },
         dismissButton = {
-            BeaconOutlinedButton(onDismiss, enabled = dismissEnabled) { BeaconText(dismissText) }
+            BeaconTextButton(onDismiss, enabled = dismissEnabled) { BeaconText(dismissText) }
         },
     )
 }
@@ -165,7 +167,7 @@ fun BeaconCancelButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    BeaconOutlinedButton(onClick, modifier, enabled) {
+    BeaconTextButton(onClick, modifier, enabled) {
         BeaconText(stringResource(R.string.action_cancel))
     }
 }
@@ -207,7 +209,9 @@ fun BeaconDropdownMenuItem(text: @Composable () -> Unit, onClick: () -> Unit) {
                 top.yukonga.miuix.kmp.theme.LocalContentColor provides
                     MaterialTheme.colorScheme.onSurface
             ) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) { text() }
+                androidx.compose.material3.ProvideTextStyle(MaterialTheme.typography.bodyLarge) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) { text() }
+                }
             }
         }
     else androidx.compose.material3.DropdownMenuItem(text, onClick)
