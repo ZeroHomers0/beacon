@@ -56,9 +56,6 @@ object BeaconUiMetrics {
     val UnreadDotSize = 6.dp
     val CardRadius = 16.dp
 
-    /** Two-line label/detail status rows keep a stable height while their detail text changes. */
-    val StatusDetailMinHeight = 64.dp
-
     /** Count badges are small pills; one radius and inset pair keeps them identical everywhere. */
     val BadgeRadius = 6.dp
     val BadgeVerticalInset = 3.dp

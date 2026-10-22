@@ -261,7 +261,7 @@ class ServerAdminPageTest {
     @Test fun miuixUnboundPhoneBindsInOneTap() = oneTapBinding(BeaconUiStyle.MIUIX)
 
     private fun refinedPages(style: BeaconUiStyle) {
-        val model = ServerAdminViewModel { _, _ -> FixtureAdmin() }
+        val model = ServerAdminViewModel { _, _ -> FixtureAdmin(includeApplications = true) }
         rule.runOnUiThread {
             // MainActivity may already own the production model; install this isolated fixture first.
             rule.activity.viewModelStore.clear()
@@ -319,7 +319,7 @@ class ServerAdminPageTest {
     @Test fun refinedMaterialPages() = refinedPages(BeaconUiStyle.MATERIAL3)
     @Test fun refinedMiuixPages() = refinedPages(BeaconUiStyle.MIUIX)
 
-    private class FixtureAdmin : ServerAdministration {
+    private class FixtureAdmin(private val includeApplications: Boolean = false) : ServerAdministration {
         var bindingCalls = 0
         override val endpoint = "https://example.invalid"
 
@@ -330,7 +330,11 @@ class ServerAdminPageTest {
             "devices":[{"device_id":"phone-1","name":"我的小米手机 · 日常消息接收设备","revoked":false}],"applications":[],
             "storage":{"messages":12,"pending":2,"database_allocated_bytes":4096}}
         """
-            )
+            ).apply {
+                if (includeApplications) put("applications", org.json.JSONArray().put(JSONObject()
+                    .put("id", "app-1").put("device_id", "phone-1").put("name", "工作消息")
+                    .put("default_priority", 5).put("revoked", false)))
+            }
 
         override fun binding(name: String): JSONObject {
             bindingCalls++

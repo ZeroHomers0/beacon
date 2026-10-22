@@ -18,13 +18,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 import io.github.beacon.app.ui.icons.BeaconIcons
@@ -59,11 +55,6 @@ fun SettingsStatusSummary(
     }
     val displayedTitle = if (loading) settledTitle else title
     val displayedDetails = if (loading) settledDetails else details
-    // The icon belongs to the title and detail lines only: the two texts are one optical group, so
-    // a caption (last check time, size, ...) sits below the row instead of dragging the icon down
-    // to the middle of three lines. The caption starts at the icon's edge, the way a footnote under
-    // the whole block reads, and stays inside the same clickable column so it keeps the
-    // "view details" affordance.
     Column(
         Modifier.fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
@@ -105,8 +96,6 @@ fun SettingsStatusSummary(
                     BeaconText(
                         label,
                         style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
                     )
                 }
                 if (displayedDetails.isNotBlank()) {
@@ -123,6 +112,9 @@ fun SettingsStatusSummary(
                         androidx.compose.foundation.text.selection.SelectionContainer { content() }
                     else content()
                 }
+                if (!caption.isNullOrBlank()) BeaconText(caption,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (interactive && displayedDetails.isNotBlank())
                 Icon(
@@ -131,15 +123,6 @@ fun SettingsStatusSummary(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
         }
-        if (caption != null)
-            BeaconText(
-                caption,
-                Modifier.padding(top = BeaconUiMetrics.Gap4),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
     }
     if (interactive && showingDetails)
         BeaconAlertDialog(
@@ -196,35 +179,16 @@ fun OperationResultPanel(title: String, result: String, failed: Boolean? = null)
             },
     )
 }
-/** Dynamic status rows reserve their detail lines so refresh feedback does not move later actions. */
+/** Compact metadata wraps naturally instead of reserving empty detail lines. */
 @Composable
 fun SettingsStatusDetail(title: String, details: String, error: Boolean = false) {
-    val detailsStyle = MaterialTheme.typography.bodySmall
-    val density = LocalDensity.current
-    Box(Modifier.fillMaxWidth()) {
-        Column(
-            Modifier.fillMaxWidth()
-                .heightIn(min = BeaconUiMetrics.StatusDetailMinHeight)
-                .padding(vertical = BeaconUiMetrics.Gap8),
-            verticalArrangement =
-                Arrangement.spacedBy(BeaconUiMetrics.Gap4, Alignment.CenterVertically),
-        ) {
-            BeaconText(
-                title,
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            BeaconText(
-                details,
-                modifier = Modifier.heightIn(min = with(density) { detailsStyle.lineHeight.toDp() * 2 }),
-                style = detailsStyle,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                color =
-                    if (error) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+    Column(
+        Modifier.fillMaxWidth().padding(vertical = BeaconUiMetrics.Gap4),
+        verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap2),
+    ) {
+        BeaconText(title, style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        BeaconText(details, style = MaterialTheme.typography.bodyMedium,
+            color = if (error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
     }
 }

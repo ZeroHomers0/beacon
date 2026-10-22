@@ -319,7 +319,7 @@ internal fun ServerAdminPage(
                     SettingsActionRow(
                         stringResource(R.string.admin_devices_title),
                         stringResource(R.string.admin_devices_description),
-                        BeaconIcons.Server,
+                        BeaconIcons.Device,
                         !state.busy,
                     ) {
                         onNavigate(SettingsScreen.SERVER_DEVICES)
@@ -327,7 +327,7 @@ internal fun ServerAdminPage(
                     SettingsActionRow(
                         stringResource(R.string.admin_applications_title),
                         stringResource(R.string.admin_applications_description),
-                        BeaconIcons.CredentialUpdate,
+                        BeaconIcons.Applications,
                         !state.busy,
                     ) {
                         onNavigate(SettingsScreen.SERVER_APPLICATIONS)
@@ -543,7 +543,7 @@ internal fun ServerAdminPage(
         if (state.loggedIn && tab == -1) item {
             SettingsGroup(stringResource(R.string.settings_danger_section_title)) {
                 SettingsCommandRow(stringResource(R.string.admin_clear_messages),
-                    stringResource(R.string.settings_cloud_scope), BeaconIcons.Delete,
+                    icon = BeaconIcons.Delete,
                     enabled = !state.busy, danger = true, onClick = { clearStage = 1 })
             }
         }
@@ -851,11 +851,13 @@ private fun AdminListCard(
                     val tone = if (revoked) androidx.compose.material3.MaterialTheme.colorScheme.error
                         else io.github.beacon.app.ui.theme.beaconSuccessColor()
                     androidx.compose.material3.Surface(color = tone.copy(alpha = .12f),
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(BeaconUiMetrics.BadgeRadius)) {
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(BeaconUiMetrics.BadgeRadius),
+                        modifier = Modifier.align(androidx.compose.ui.Alignment.CenterVertically)) {
                         BeaconText(status, Modifier.padding(horizontal = BeaconUiMetrics.Gap6, vertical = BeaconUiMetrics.BadgeVerticalInset),
                             color = tone, style = androidx.compose.material3.MaterialTheme.typography.labelMedium)
                     }
                     if (priority != null) BeaconText(stringResource(priorityShortLabel(priority)),
+                        modifier = Modifier.align(androidx.compose.ui.Alignment.CenterVertically),
                         style = androidx.compose.material3.MaterialTheme.typography.labelMedium)
                 }
             }

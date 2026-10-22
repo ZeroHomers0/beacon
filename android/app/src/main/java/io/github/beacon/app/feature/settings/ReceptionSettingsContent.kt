@@ -67,7 +67,6 @@ internal fun LazyListScope.receptionSettingsItems(
                 !busy && runtimeState.runtimeConnected, false,
                 onClick = { actions.refreshPolling { actions.receivePlan() } })
         }) {
-            var showDetails by remember { mutableStateOf(false) }
             SettingsStatusDetail(
                 stringResource(R.string.reception_https_status),
                 when {
@@ -92,10 +91,9 @@ internal fun LazyListScope.receptionSettingsItems(
                     runtimeState.configuredEndpoint.isNotBlank() && runtimeState.receivePlanLoaded &&
                     !runtimeState.transportBusy,
             )
-            if (showDetails) {
-                SettingsStatusDetail(
-                    stringResource(R.string.receive_realtime_status_title),
-                    when {
+            SettingsStatusDetail(
+                stringResource(R.string.receive_realtime_status_title),
+                when {
                     runtimeState.configuredEndpoint.isBlank() ->
                         stringResource(R.string.settings_receive_unbound)
                     !runtimeState.runtimeConnected ->
@@ -133,7 +131,6 @@ internal fun LazyListScope.receptionSettingsItems(
                             .first()
                 },
             )
-            }
             SettingsStatusDetail(
                 stringResource(R.string.settings_last_sync_success_desc) +
                     (polling.lastSuccessInserted?.let {
@@ -142,26 +139,17 @@ internal fun LazyListScope.receptionSettingsItems(
                 if (polling.lastSuccessMs > 0) formatMessageTime(polling.lastSuccessMs)
                 else stringResource(R.string.settings_sync_never),
             )
-            io.github.beacon.app.ui.components.SettingsPreferenceActions {
-                io.github.beacon.app.ui.components.SettingsActions {
-                    io.github.beacon.app.ui.components.SettingsTextAction(
-                        stringResource(R.string.settings_advanced_details),
-                                io.github.beacon.app.ui.icons.BeaconIcons.Info) { showDetails = !showDetails }
-                    BeaconButton(onClick = { actions.transport() }, enabled = !busy && runtimeState.runtimeConnected) {
-                        if (runtimeState.transportBusy) {
-                            io.github.beacon.app.ui.components.BeaconLoadingIcon(
-                                io.github.beacon.app.ui.icons.BeaconIcons.Sync, true,
-                                Modifier.size(BeaconUiMetrics.IconInline), tint = LocalContentColor.current)
-                            Spacer(Modifier.width(BeaconUiMetrics.Gap6))
-                        }
-                        BeaconText(stringResource(R.string.action_sync_now))
+            io.github.beacon.app.ui.components.SettingsActions {
+                BeaconButton(onClick = { actions.transport() }, enabled = !busy && runtimeState.runtimeConnected) {
+                    if (runtimeState.transportBusy) {
+                        io.github.beacon.app.ui.components.BeaconLoadingIcon(
+                            io.github.beacon.app.ui.icons.BeaconIcons.Sync, true,
+                            Modifier.size(BeaconUiMetrics.IconInline), tint = LocalContentColor.current)
+                        Spacer(Modifier.width(BeaconUiMetrics.Gap6))
                     }
+                    BeaconText(stringResource(R.string.action_sync_now))
                 }
             }
-
-            io.github.beacon.app.ui.components.SettingsHint(
-                stringResource(R.string.reception_actions_hint)
-            )
         }
     }
     if (receivePlan.mode == ReceiveMode.RULES) {

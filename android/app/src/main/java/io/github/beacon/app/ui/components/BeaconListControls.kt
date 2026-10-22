@@ -270,8 +270,8 @@ fun DiagnosticRow(label: String, value: String, reserveValueLines: Int = 0) {
         color = androidx.compose.ui.graphics.Color.Transparent,
     ) {
         BoxWithConstraints(
-            Modifier.heightIn(min = BeaconUiMetrics.FieldMinHeight)
-                .padding(vertical = BeaconUiMetrics.FieldVerticalInset),
+            Modifier.heightIn(min = BeaconUiMetrics.ControlMinHeight)
+                .padding(vertical = BeaconUiMetrics.Gap8),
             contentAlignment = Alignment.CenterStart,
         ) {
             val labelWidth = measurer.measure(label, labelStyle, maxLines = 1).size.width
@@ -373,6 +373,7 @@ fun SettingsMetricGrid(
                                     modifier = Modifier.fillMaxWidth(),
                                     style =
                                         MaterialTheme.typography.titleMedium.copy(
+                                            fontFeatureSettings = "tnum",
                                             textAlign = TextAlign.Center
                                         ),
                                     color = MaterialTheme.colorScheme.onSurface,

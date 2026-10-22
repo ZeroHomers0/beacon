@@ -73,7 +73,11 @@ fun BeaconTheme(
         }
     }
     val miuix =
-        if (dark) top.yukonga.miuix.kmp.theme.darkColorScheme()
+        if (dark) top.yukonga.miuix.kmp.theme.darkColorScheme().copy(
+            background = Color(0xFF111318),
+            surface = Color(0xFF1D2026),
+            surfaceContainer = Color(0xFF1D2026),
+        )
         else top.yukonga.miuix.kmp.theme.lightColorScheme()
     val bridge =
         if (style == BeaconUiStyle.MIUIX)

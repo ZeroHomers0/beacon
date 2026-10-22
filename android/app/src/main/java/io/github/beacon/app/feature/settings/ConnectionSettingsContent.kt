@@ -88,9 +88,13 @@ private fun ConnectionSummary(
             caption = stringResource(R.string.server_last_checked) + " · " + formatMessageTime(state.serverCheckedAtMs),
         )
         if (state.configuredEndpoint.isNotBlank()) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                androidx.compose.foundation.text.selection.SelectionContainer(Modifier.weight(1f)) {
-                    BeaconText(state.configuredEndpoint, style = MaterialTheme.typography.bodyMedium)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.Top) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap2)) {
+                    androidx.compose.foundation.text.selection.SelectionContainer {
+                        BeaconText(state.configuredEndpoint, style = MaterialTheme.typography.bodyMedium)
+                    }
+                    BeaconText(stringResource(R.string.binding_device_name) + " · " + form.deviceName,
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 SettingsToolAction(stringResource(R.string.binding_copy_push_address), BeaconIcons.Copy,
                     enabled = state.runtimeConnected && !busy, completed = copied, onClick = {
@@ -101,7 +105,6 @@ private fun ConnectionSummary(
                     }
                 })
             }
-            SettingsHint(stringResource(R.string.binding_device_name) + " · " + form.deviceName)
         }
         SettingsActions {
             if (state.configuredEndpoint.isBlank()) {

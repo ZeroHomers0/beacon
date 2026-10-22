@@ -2,7 +2,7 @@
     <string name="settings_admin_menu_description">管理设备、应用与测试发送</string>
     <string name="settings_storage_menu_description">查看消息占用，清理历史记录</string>
     <string name="settings_backup_menu_description">备份与恢复设置和消息</string>
-    <string name="admin_devices_description">管理绑定设备与接收权限</string>
-    <string name="admin_applications_description">管理推送应用及其访问密钥</string>
-    <string name="admin_test_description">发送测试消息，验证设备接收情况</string>
+    <string name="admin_devices_description">管理设备绑定</string>
+    <string name="admin_applications_description">管理应用与密钥</string>
+    <string name="admin_test_description">验证消息投递</string>
 </resources>

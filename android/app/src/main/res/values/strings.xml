@@ -352,7 +352,7 @@
     <string name="settings_cleanup_forever">永久</string>
     <string name="settings_cleanup_days">%1$d 天</string>
     <string name="settings_cleanup_count">%1$d 条</string>
-    <string name="settings_cleanup_all_title">清理所有本地消息</string>
+    <string name="settings_cleanup_all_title">清理本地消息</string>
     <string name="settings_cleanup_eligible">可清理</string>
     <string name="settings_cleanup_protected">受保护</string>
     <string name="settings_cleanup_planned">本次清理</string>

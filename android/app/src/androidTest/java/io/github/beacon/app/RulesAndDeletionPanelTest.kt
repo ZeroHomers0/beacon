@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.*
@@ -25,10 +24,8 @@ class RulesAndDeletionPanelTest {
     @get:Rule val rule = createAndroidComposeRule<MainActivity>()
 
     private fun verify(style: BeaconUiStyle) {
-        val saved = mutableStateOf<ReceivePlan?>(null)
         val repository = RuntimeRepository()
-        // The reception page saves through one button at the bottom, so the rules test drives the
-        // whole page rather than the rules section alone.
+        // Conditions edit the shared draft; saving belongs to the page toolbar.
         val form = ReceptionFormState()
         rule.runOnUiThread {
             form.reset(PollingState().config, ReceivePlan(ReceiveMode.RULES))
@@ -36,7 +33,7 @@ class RulesAndDeletionPanelTest {
                 BeaconTheme(style) {
                     LazyColumn(Modifier.testTag("reception-list")) {
                         receptionSettingsItems(
-                            RuntimeState(receivePlanLoaded = true),
+                            RuntimeState(receivePlanLoaded = true, runtimeConnected = true),
                             repository,
                             ReceivePlan(ReceiveMode.RULES),
                             form,
@@ -49,13 +46,18 @@ class RulesAndDeletionPanelTest {
                 }
             }
         }
-        rule.onNodeWithContentDescription("低电量时使用省电接收").performScrollTo().performClick()
-        rule.onNodeWithContentDescription("启用时间段").performScrollTo().performClick()
-        rule.onNodeWithTag("reception-list").performScrollToNode(hasText("保存"))
-        rule.onNodeWithText("保存").performClick()
-        assertTrue(requireNotNull(saved.value).lowBatteryEnabled)
-        assertTrue(requireNotNull(saved.value).scheduleEnabled)
-        rule.onNodeWithContentDescription("低电量时使用省电接收").performScrollTo()
+        val battery = rule.activity.getString(R.string.settings_rules_battery)
+        val schedule = rule.activity.getString(R.string.settings_rules_schedule)
+        rule.onNodeWithTag("reception-list").performScrollToNode(hasText(battery))
+        rule.onNodeWithContentDescription(battery).performClick()
+        rule.onNodeWithTag("reception-list").performScrollToNode(hasText(schedule))
+        rule.onNodeWithContentDescription(schedule).performClick()
+        rule.runOnIdle {
+            assertTrue(form.plan.lowBatteryEnabled)
+            assertTrue(form.plan.scheduleEnabled)
+            assertTrue(form.edited)
+        }
+        rule.onNodeWithTag("reception-list").performScrollToNode(hasText(battery))
         rule.waitForIdle()
         val screenshot =
             androidx.test.platform.app.InstrumentationRegistry.getInstrumentation()
@@ -94,13 +96,13 @@ class RulesAndDeletionPanelTest {
                     }
                 }
             }
-            rule.onAllNodesWithText("清理所有本地消息").onLast().performScrollTo().performClick()
+            rule.onAllNodesWithText("清理本地消息").onLast().performScrollTo().performClick()
             rule.onNodeWithText("继续").performClick()
             assertEquals(0, cleared)
             rule.onNodeWithText("最后确认").assertExists()
             rule.onNodeWithText("取消").performClick()
             assertEquals(0, cleared)
-            rule.onAllNodesWithText("清理所有本地消息").onLast().performScrollTo().performClick()
+            rule.onAllNodesWithText("清理本地消息").onLast().performScrollTo().performClick()
             rule.onNodeWithText("继续").performClick()
             rule.onNodeWithText("确认清理全部").performClick()
             assertEquals(1, cleared)

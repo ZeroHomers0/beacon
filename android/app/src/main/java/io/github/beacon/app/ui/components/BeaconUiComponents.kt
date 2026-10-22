@@ -103,7 +103,7 @@ fun SettingsSection(title: String, action: (@Composable () -> Unit)? = null, con
     SettingsGroup(title, action = action) {
         Column(
             Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),
-            verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
+            verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8),
             content = content,
         )
     }
@@ -339,7 +339,8 @@ fun SettingsRow(
                 .alpha(if (enabled) 1f else .38f)
                 .heightIn(
                     min =
-                        BeaconUiMetrics.NavigationMinHeight *
+                        (if (command && subtitle.isBlank()) BeaconUiMetrics.ControlMinHeight
+                        else BeaconUiMetrics.NavigationMinHeight) *
                             androidx.compose.ui.platform.LocalDensity.current.fontScale
                                 .coerceAtLeast(1f)
                 )

@@ -46,26 +46,31 @@ internal fun LazyListScope.notificationPermissionSettingsItems(
     item {
         SettingsSection(stringResource(R.string.settings_permission_status_heading)) {
             val allowed = notificationPermission == NotificationPermissionState.ALLOWED
-            SettingsStatusSummary(
-                title = stringResource(when (notificationPermission) {
-                    NotificationPermissionState.UNKNOWN -> R.string.diag_not_read_label
-                    NotificationPermissionState.ALLOWED -> R.string.settings_notifications_allowed_label
-                    NotificationPermissionState.DENIED -> R.string.settings_notifications_denied_label
-                }), details = "", icon = if (allowed) BeaconIcons.Check else BeaconIcons.Warning,
-                tint = if (allowed) io.github.beacon.app.ui.theme.beaconSuccessColor()
-                    else MaterialTheme.colorScheme.onSurfaceVariant, interactive = false)
-            SettingsActions {
-                SettingsTextAction(stringResource(R.string.settings_system_notification_title), BeaconIcons.OpenWeb) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    SettingsStatusSummary(
+                        title = stringResource(when (notificationPermission) {
+                            NotificationPermissionState.UNKNOWN -> R.string.diag_not_read_label
+                            NotificationPermissionState.ALLOWED -> R.string.settings_notifications_allowed_label
+                            NotificationPermissionState.DENIED -> R.string.settings_notifications_denied_label
+                        }), details = "", icon = if (allowed) BeaconIcons.Check else BeaconIcons.Warning,
+                        tint = if (allowed) io.github.beacon.app.ui.theme.beaconSuccessColor()
+                            else MaterialTheme.colorScheme.onSurfaceVariant, interactive = false)
+                }
+                SettingsToolAction(stringResource(R.string.settings_system_notification_title), BeaconIcons.OpenWeb) {
                     try {
                         context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                             .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName))
                     } catch (_: android.content.ActivityNotFoundException) { onNotificationSettingsUnavailable() }
                     catch (_: SecurityException) { onNotificationSettingsUnavailable() }
                 }
-                if (!allowed && notificationPermission != NotificationPermissionState.UNKNOWN && Build.VERSION.SDK_INT >= 33)
+            }
+            if (!allowed && notificationPermission != NotificationPermissionState.UNKNOWN && Build.VERSION.SDK_INT >= 33) {
+                SettingsActions {
                     BeaconButton(onClick = onRequestNotificationPermission) {
                         BeaconText(stringResource(R.string.settings_allow_notifications_action))
                     }
+                }
             }
         }
     }

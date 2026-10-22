@@ -111,7 +111,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                     preview?.databaseBytes?.let {
                         formatStorageSize(context, it)
                     } ?: BeaconUnknownValue,
-                    style = MaterialTheme.typography.headlineLarge,
+                    style = MaterialTheme.typography.headlineLarge.copy(fontFeatureSettings = "tnum"),
                 )
                 SettingsMetricGrid(
                     listOf(
@@ -234,7 +234,6 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
 
         SettingsGroup(stringResource(R.string.settings_danger_section_title)) {
             SettingsCommandRow(stringResource(R.string.settings_cleanup_all_title),
-                subtitle = stringResource(R.string.settings_local_scope),
                 icon = io.github.beacon.app.ui.icons.BeaconIcons.Delete,
                 enabled = state.runtimeConnected && !state.messageBusy, danger = true,
                 onClick = { clearAllStage = 1 })
