@@ -60,7 +60,7 @@ class GlobalPresentationTest {
                                     cleared++
                                 },
                                 onConnectionSettings = { configured++ },
-                                onEnterSelection = {}, onSelectionChange = {}, onSelectionHint = {}, onCopyText = { _, _ -> },
+                                onEnterSelection = {}, onSelectionChange = {}, onSelectionHint = {}, onRequestDelete = {}, onCopyText = { _, _ -> },
                             )
                         }
                     }

@@ -19,26 +19,13 @@ import io.github.beacon.app.ui.icons.BeaconIcons
 fun ClearConnectionPanel(state: RuntimeState, actions: RuntimeActions, form: ConnectionFormState) {
     var confirm by remember { mutableStateOf(false) }
     var revoke by remember { mutableStateOf(false) }
-    SettingsSection(stringResource(R.string.settings_danger_section_title)) {
-        BeaconDangerButton(
-            onClick = { revoke = true },
-            modifier = Modifier.fillMaxWidth(),
-            enabled =
-                !state.messageBusy &&
-                    state.runtimeConnected &&
-                    state.configuredEndpoint.isNotBlank(),
-        ) {
-            BeaconText(stringResource(R.string.device_revoke))
-        }
-
-        BeaconActionButton(
-            stringResource(R.string.connection_clear),
-            BeaconIcons.Delete,
-            Modifier.fillMaxWidth(),
-            !state.messageBusy && state.runtimeConnected && state.configuredEndpoint.isNotBlank(),
-        ) {
-            confirm = true
-        }
+    SettingsGroup(stringResource(R.string.settings_danger_section_title)) {
+        SettingsCommandRow(stringResource(R.string.device_revoke), icon = BeaconIcons.Close,
+            enabled = !state.messageBusy && state.runtimeConnected && state.configuredEndpoint.isNotBlank(),
+            danger = true, onClick = { revoke = true })
+        SettingsCommandRow(stringResource(R.string.connection_clear), icon = BeaconIcons.Delete,
+            enabled = !state.messageBusy && state.runtimeConnected && state.configuredEndpoint.isNotBlank(),
+            danger = true, onClick = { confirm = true })
     }
     if (revoke)
         DeviceRevocationDialog(state, { revoke = false }) {

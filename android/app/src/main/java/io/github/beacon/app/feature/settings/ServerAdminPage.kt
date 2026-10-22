@@ -98,7 +98,7 @@ internal fun ServerAdminPage(
     LaunchedEffect(defaultEndpoint) {
         if (bindingSubmitted && defaultEndpoint.isNotBlank()) model.refresh()
     }
-    val devices =
+    val allDevices =
         state.devices.sortedWith(
             compareBy<AdminDevice>(
                 { it.revoked },
@@ -106,7 +106,7 @@ internal fun ServerAdminPage(
                 { it.id },
             )
         )
-    val applications =
+    val allApplications =
         state.applications.sortedWith(
             compareBy<AdminApplication>(
                 { it.revoked },
@@ -114,7 +114,23 @@ internal fun ServerAdminPage(
                 { it.id },
             )
         )
-    val active = devices.filterNot { it.revoked }
+    val active = allDevices.filterNot { it.revoked }
+    var deviceQuery by rememberSaveable { mutableStateOf("") }
+    var applicationQuery by rememberSaveable { mutableStateOf("") }
+    var deviceStatus by rememberSaveable { mutableIntStateOf(0) }
+    var applicationStatus by rememberSaveable { mutableIntStateOf(0) }
+    var applicationDevice by rememberSaveable { mutableStateOf("") }
+    val devices = allDevices.filter { device ->
+        adminListMatches(deviceQuery, deviceStatus, device.revoked, device.name, device.id)
+    }
+    val applications = allApplications.filter { app ->
+        val owner = allDevices.find { it.id == app.deviceId }?.name.orEmpty()
+        adminListMatches(applicationQuery, applicationStatus, app.revoked, app.name, app.id, owner, app.deviceId) &&
+            (applicationDevice.isBlank() || app.deviceId == applicationDevice)
+    }
+    LaunchedEffect(state.devices) {
+        if (allDevices.none { it.id == applicationDevice }) applicationDevice = ""
+    }
     LaunchedEffect(state.loggedIn, state.devices) {
         if (active.none { it.id == deviceId }) deviceId = active.firstOrNull()?.id.orEmpty()
         if (!state.loggedIn) {
@@ -184,7 +200,7 @@ internal fun ServerAdminPage(
                             if (state.restoreFailure == R.string.admin_credentials_clear_failed) model.logout()
                             else model.restoreSession(activity)
                         },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.align(androidx.compose.ui.Alignment.End),
                     ) { BeaconText(stringResource(R.string.action_retry)) }
                     BeaconTextButton(onClick = { model.logout() }) {
                         BeaconText(stringResource(R.string.admin_clear_and_login))
@@ -195,11 +211,8 @@ internal fun ServerAdminPage(
             item {
                 SettingsSection(stringResource(R.string.admin_login_title)) {
                     SettingsHint(stringResource(R.string.admin_login_hint))
-                    BeaconOutlinedButton(
-                        onClick = { loginHelp = true },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        BeaconText(stringResource(R.string.settings_admin_token_location))
+                    SettingsActions {
+                        SettingsTextAction(stringResource(R.string.settings_admin_token_location), BeaconIcons.Info) { loginHelp = true }
                     }
                     AdminField(
                         endpoint,
@@ -244,7 +257,9 @@ internal fun ServerAdminPage(
             }
         } else if (tab == -1) {
             item {
-                SettingsPreferences(stringResource(R.string.admin_overview)) {
+                SettingsSection(stringResource(R.string.admin_overview), action = {
+                    SettingsTextAction(stringResource(R.string.admin_logout), enabled = !state.busy) { logoutConfirm = true }
+                }) {
                     state.refreshFailure?.let { failure ->
                         SettingsNotice(
                             stringResource(failure),
@@ -301,7 +316,7 @@ internal fun ServerAdminPage(
                 SettingsGroup(stringResource(R.string.admin_manage_section)) {
                     SettingsActionRow(
                         stringResource(R.string.admin_devices_title),
-                        "",
+                        stringResource(R.string.admin_devices_description),
                         BeaconIcons.Server,
                         !state.busy,
                     ) {
@@ -309,7 +324,7 @@ internal fun ServerAdminPage(
                     }
                     SettingsActionRow(
                         stringResource(R.string.admin_applications_title),
-                        "",
+                        stringResource(R.string.admin_applications_description),
                         BeaconIcons.CredentialUpdate,
                         !state.busy,
                     ) {
@@ -317,7 +332,7 @@ internal fun ServerAdminPage(
                     }
                     SettingsActionRow(
                         stringResource(R.string.admin_test_title_page),
-                        "",
+                        stringResource(R.string.admin_test_description),
                         BeaconIcons.Messages,
                         !state.busy,
                     ) {
@@ -329,14 +344,18 @@ internal fun ServerAdminPage(
         if (state.loggedIn)
             when (tab) {
                 0 -> {
+                    if (allDevices.size >= 6 || deviceQuery.isNotBlank() || deviceStatus != 0) item {
+                        AdminListFilters(deviceQuery, { deviceQuery = it }, deviceStatus, { deviceStatus = it },
+                            stringResource(R.string.settings_search_devices))
+                    }
                     if (defaultEndpoint.isBlank() || bindingSubmitted)
                         item {
                             SettingsSection(stringResource(R.string.admin_this_phone)) {
                                 if (defaultEndpoint.isBlank()) {
-                                    BeaconActionButton(
+                                    SettingsPrimaryButton(
                                         stringResource(R.string.admin_use_binding),
                                         BeaconIcons.Guide,
-                                        Modifier.fillMaxWidth(),
+                                        Modifier.align(androidx.compose.ui.Alignment.End),
                                         canBindCurrent && !state.busy,
                                     ) {
                                         model.bindThisPhone(
@@ -354,7 +373,7 @@ internal fun ServerAdminPage(
                         }
 
                     item {
-                        if (!state.listState(devices.isEmpty()).hasContent) {
+                        if (!state.listState(allDevices.isEmpty()).hasContent) {
                             if (state.busy) PageStateLoading()
                             else
                                 PageStateFailure(
@@ -365,7 +384,7 @@ internal fun ServerAdminPage(
                             BeaconEmptyState(
                                 BeaconIcons.Server,
                                 stringResource(R.string.admin_devices_title),
-                                stringResource(R.string.admin_no_devices),
+                                stringResource(if (allDevices.isEmpty()) R.string.admin_no_devices else R.string.settings_no_filter_results),
                             )
                         else
                             SettingsHint(
@@ -412,13 +431,17 @@ internal fun ServerAdminPage(
                                 }
                             },
                             modifier = Modifier.animateItem(),
+                            revoked = device.revoked,
                         )
                     }
                 }
                 1 -> {
-
+                    if (allApplications.size >= 6 || applicationQuery.isNotBlank() || applicationStatus != 0 || applicationDevice.isNotBlank()) item {
+                        AdminListFilters(applicationQuery, { applicationQuery = it }, applicationStatus, { applicationStatus = it },
+                            stringResource(R.string.settings_search_apps), allDevices, applicationDevice, { applicationDevice = it })
+                    }
                     item {
-                        if (!state.listState(applications.isEmpty()).hasContent) {
+                        if (!state.listState(allApplications.isEmpty()).hasContent) {
                             if (state.busy) PageStateLoading()
                             else
                                 PageStateFailure(
@@ -429,7 +452,7 @@ internal fun ServerAdminPage(
                             BeaconEmptyState(
                                 BeaconIcons.CredentialUpdate,
                                 stringResource(R.string.admin_applications_title),
-                                stringResource(R.string.admin_no_applications),
+                                stringResource(if (allApplications.isEmpty()) R.string.admin_no_applications else R.string.settings_no_filter_results),
                             )
                         else
                             SettingsHint(
@@ -450,9 +473,7 @@ internal fun ServerAdminPage(
                                     ?.name
                                     ?.takeIf { it.isNotBlank() } ?: app.deviceId,
                             ),
-                            stringResource(priorityLabel(app.priority), app.priority) +
-                                " · " +
-                                stringResource(
+                            stringResource(
                                     if (app.revoked) R.string.admin_revoked
                                     else R.string.admin_active
                                 ),
@@ -470,6 +491,7 @@ internal fun ServerAdminPage(
                                         }
                             ),
                             modifier = Modifier.animateItem(),
+                            revoked = app.revoked, priority = app.priority,
                         )
                     }
                 }
@@ -493,7 +515,7 @@ internal fun ServerAdminPage(
                             BeaconDropdownPreference(
                                 stringResource(R.string.admin_priority),
                                 PRIORITY_TIERS.map { value ->
-                                    stringResource(priorityLabel(value), value)
+                                    stringResource(priorityShortLabel(value))
                                 },
                                 PRIORITY_TIERS.indexOf(testPriority).coerceAtLeast(0),
                                 enabled = !state.busy,
@@ -502,10 +524,11 @@ internal fun ServerAdminPage(
                                 testPriority = PRIORITY_TIERS[it]
                             }
 
-                            BeaconActionButton(
+                            SettingsActions {
+                            SettingsPrimaryButton(
                                 stringResource(R.string.admin_send_test),
                                 BeaconIcons.Messages,
-                                Modifier.fillMaxWidth(),
+                                Modifier,
                                 !state.busy &&
                                     deviceId.isNotBlank() &&
                                     testTitle.isNotBlank() &&
@@ -513,34 +536,19 @@ internal fun ServerAdminPage(
                             ) {
                                 confirmTest = true
                             }
+                            }
                         }
                     }
             }
-        if (state.loggedIn && tab == -1)
-            item {
-                SettingsSection(stringResource(R.string.settings_danger_section_title)) {
-                    BeaconDangerButton(
-                        onClick = { clearStage = 1 },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !state.busy,
-                    ) {
-                        BeaconText(stringResource(R.string.admin_clear_messages))
-                    }
-                }
+        if (state.loggedIn && tab == -1) item {
+            SettingsGroup(stringResource(R.string.settings_danger_section_title)) {
+                SettingsCommandRow(stringResource(R.string.admin_clear_messages),
+                    stringResource(R.string.settings_cloud_scope), BeaconIcons.Delete,
+                    enabled = !state.busy, danger = true, onClick = { clearStage = 1 })
             }
-        if (state.loggedIn && tab == -1)
-            item {
-                SettingsSection(stringResource(R.string.settings_admin_session)) {
-                    BeaconOutlinedButton(
-                        onClick = { logoutConfirm = true },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !state.busy,
-                    ) {
-                        BeaconText(stringResource(R.string.admin_logout))
-                    }
-                }
-            }
+        }
     }
+
     if (logoutConfirm)
         BeaconConfirmDialog(
             title = stringResource(R.string.admin_logout),
@@ -594,7 +602,7 @@ internal fun ServerAdminPage(
                         BeaconDropdownPreference(
                             stringResource(R.string.admin_priority),
                             PRIORITY_TIERS.map { value ->
-                                stringResource(priorityLabel(value), value)
+                                stringResource(priorityShortLabel(value))
                             },
                             PRIORITY_TIERS.indexOf(priority).coerceAtLeast(0),
                             enabled = !state.busy,
@@ -637,7 +645,17 @@ internal fun ServerAdminPage(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12)) {
                     Column {
-                        DiagnosticRow(stringResource(secret.label), secret.value)
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                androidx.compose.foundation.text.selection.SelectionContainer {
+                                    DiagnosticRow(stringResource(secret.label), secret.value)
+                                }
+                            }
+                            BeaconIconButton(onClick = { copy(secret.value) }) {
+                                androidx.compose.material3.Icon(if (copiedValue == secret.value) BeaconIcons.Check else BeaconIcons.Copy,
+                                    stringResource(R.string.admin_copy))
+                            }
+                        }
                         if (secret.expiresAt > 0) {
                             DiagnosticRow(
                                 stringResource(R.string.admin_expires),
@@ -662,9 +680,8 @@ internal fun ServerAdminPage(
                             BeaconText(stringResource(R.string.admin_use_binding))
                         }
                     if (secret.example.isNotEmpty())
-                        BeaconOutlinedButton(
+                        BeaconTextButton(
                             onClick = { copy(secret.example) },
-                            modifier = Modifier.fillMaxWidth(),
                         ) {
                             BeaconText(
                                 stringResource(
@@ -675,19 +692,9 @@ internal fun ServerAdminPage(
                         }
                 }
             },
-            dismissButton = {
-                BeaconOutlinedButton(onClick = { copy(secret.value) }) {
-                    BeaconText(
-                        stringResource(
-                            if (copiedValue == secret.value) R.string.admin_copied
-                            else R.string.admin_copy
-                        )
-                    )
-                }
-            },
             confirmButton = {
-                BeaconButton(onClick = model::dismissSecret) {
-                    BeaconText(stringResource(R.string.action_close))
+                BeaconTextButton(onClick = model::dismissSecret) {
+                    BeaconText(stringResource(R.string.settings_complete))
                 }
             },
         )
@@ -823,7 +830,14 @@ private fun AdminListCard(
     enabled: Boolean,
     actions: List<Pair<Int, () -> Unit>>,
     modifier: Modifier = Modifier,
+    revoked: Boolean = false,
+    priority: Int? = null,
 ) {
+    var showingDetails by remember { mutableStateOf(false) }
+    if (showingDetails) BeaconAlertDialog(onDismissRequest = { showingDetails = false },
+        title = { BeaconText(title) }, text = {
+            androidx.compose.foundation.text.selection.SelectionContainer { BeaconText(subtitle) }
+        }, confirmButton = { BeaconTextButton(onClick = { showingDetails = false }) { BeaconText(stringResource(R.string.action_close)) } })
     var menuOpen by remember { mutableStateOf(false) }
     BeaconListCard(modifier) {
         Row(
@@ -839,17 +853,23 @@ private fun AdminListCard(
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 )
                 BeaconText(
-                    subtitle,
+                    if (subtitle.length > 40) subtitle.take(36) + "…" else subtitle,
                     style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
                     color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 )
-                BeaconText(
-                    status,
-                    style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
-                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                ActionFlow {
+                    val tone = if (revoked) androidx.compose.material3.MaterialTheme.colorScheme.error
+                        else io.github.beacon.app.ui.theme.beaconSuccessColor()
+                    androidx.compose.material3.Surface(color = tone.copy(alpha = .12f),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(BeaconUiMetrics.BadgeRadius)) {
+                        BeaconText(status, Modifier.padding(horizontal = BeaconUiMetrics.Gap6, vertical = BeaconUiMetrics.BadgeVerticalInset),
+                            color = tone, style = androidx.compose.material3.MaterialTheme.typography.labelMedium)
+                    }
+                    if (priority != null) BeaconText(stringResource(priorityShortLabel(priority)),
+                        style = androidx.compose.material3.MaterialTheme.typography.labelMedium)
+                }
             }
             Box {
                 BeaconIconButton(onClick = { menuOpen = true }, enabled = enabled) {
@@ -859,8 +879,15 @@ private fun AdminListCard(
                     )
                 }
                 BeaconDropdownMenu(menuOpen && enabled, { menuOpen = false }) {
+                    BeaconDropdownMenuItem({ BeaconText(stringResource(R.string.settings_view_details)) }) {
+                        menuOpen = false; showingDetails = true
+                    }
                     actions.forEach { (label, action) ->
-                        BeaconDropdownMenuItem({ BeaconText(stringResource(label)) }) {
+                        BeaconDropdownMenuItem({ BeaconText(stringResource(label), color =
+                            if (label in setOf(R.string.admin_delete_device, R.string.admin_revoke_device,
+                                R.string.admin_delete_application, R.string.admin_revoke_application))
+                                androidx.compose.material3.MaterialTheme.colorScheme.error
+                            else androidx.compose.material3.MaterialTheme.colorScheme.onSurface) }) {
                             menuOpen = false
                             action()
                         }

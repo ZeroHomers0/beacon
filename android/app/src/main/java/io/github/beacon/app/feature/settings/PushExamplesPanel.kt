@@ -30,67 +30,53 @@ fun PushExamplesPanel(
     val resources = androidx.compose.ui.platform.LocalResources.current
     val context = LocalContext.current
     var expanded by rememberSaveable { mutableStateOf(false) }
-    SettingsGroup(stringResource(R.string.settings_api_heading)) {
-        SettingsRow(
-            stringResource(R.string.push_examples_title),
-            stringResource(R.string.ui_v2_examples_formats),
-            BeaconIcons.Code,
-        ) {
-            expanded = true
-        }
+    var powershell by rememberSaveable { mutableStateOf(false) }
+    var json by rememberSaveable { mutableStateOf(false) }
+    var copied by androidx.compose.runtime.remember { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(copied, powershell, json) {
+        if (copied) { kotlinx.coroutines.delay(1500); copied = false }
     }
-    if (expanded)
-        BeaconAlertDialog(
-            onDismissRequest = { expanded = false },
-            title = { BeaconText(stringResource(R.string.push_examples_title)) },
-            text = {
-                Column(
-                    Modifier.fillMaxWidth()
-                        .heightIn(max = 360.dp)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8),
-                ) {
-                    listOf(false to false, true to false, false to true, true to true).forEach {
-                        (powershell, json) ->
-                        BeaconActionButton(
-                            stringResource(
-                                if (json && powershell) R.string.push_example_json_powershell
-                                else if (json) R.string.push_example_json_curl
-                                else if (powershell) R.string.push_example_powershell
-                                else R.string.push_example_curl
-                            ),
-                            BeaconIcons.Copy,
-                            Modifier.fillMaxWidth(),
-                            enabled,
-                        ) {
-                            actions.copyPushKey { key ->
-                                val address = endpoint.trimEnd('/') + "/" + key
-                                val example = runCatching {
-                                    if (json) PushExamples.json(address, powershell)
-                                    else PushExamples.create(address, powershell)
-                                }
-                                    .getOrNull()
-                                if (
-                                    example != null &&
-                                        copyToClipboard(
-                                            context,
-                                            resources.getString(
-                                                R.string.settings_clipboard_push_example
-                                            ),
-                                            example,
-                                            sensitive = true,
-                                        )
-                                )
-                                    onFeedback(resources.getString(R.string.settings_copied_hint))
-                            }
-                        }
+    SettingsGroup(stringResource(R.string.settings_api_heading)) {
+        SettingsRow(stringResource(R.string.push_examples_title), stringResource(R.string.ui_v2_examples_formats),
+            BeaconIcons.Code, iconTint = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
+            selection = true, onClick = { expanded = true })
+    }
+    if (expanded) BeaconAlertDialog(
+        onDismissRequest = { expanded = false },
+        title = { BeaconText(stringResource(R.string.push_examples_title)) },
+        text = {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap)) {
+                BeaconDropdownPreference(stringResource(R.string.settings_example_shell),
+                    listOf("cURL", "PowerShell"), if (powershell) 1 else 0) { powershell = it == 1; copied = false }
+                BeaconDropdownPreference(stringResource(R.string.settings_example_format),
+                    listOf("URL", "JSON"), if (json) 1 else 0) { json = it == 1; copied = false }
+                val preview = runCatching {
+                    val address = endpoint.trimEnd('/') + "/YOUR_PUSH_KEY"
+                    if (json) PushExamples.json(address, powershell) else PushExamples.create(address, powershell)
+                }.getOrDefault("")
+                androidx.compose.foundation.text.selection.SelectionContainer {
+                    BeaconText(preview, style = androidx.compose.material3.MaterialTheme.typography.bodySmall.copy(
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace))
+                }
+            }
+        },
+        confirmButton = {
+            BeaconButton(enabled = enabled, onClick = {
+                actions.copyPushKey { key ->
+                    val address = endpoint.trimEnd('/') + "/" + key
+                    val example = runCatching {
+                        if (json) PushExamples.json(address, powershell) else PushExamples.create(address, powershell)
+                    }.getOrNull()
+                    if (example != null) {
+                        copied = copyToClipboard(context, resources.getString(R.string.settings_clipboard_push_example),
+                            example, sensitive = true)
+                        if (copied) onFeedback(resources.getString(R.string.settings_copied_hint))
                     }
                 }
-            },
-            confirmButton = {
-                BeaconButton(onClick = { expanded = false }) {
-                    BeaconText(stringResource(R.string.action_close))
-                }
-            },
-        )
+            }) {
+                BeaconText(stringResource(if (copied) R.string.settings_copied_hint else R.string.settings_example_copy))
+            }
+        },
+        dismissButton = { BeaconTextButton(onClick = { expanded = false }) { BeaconText(stringResource(R.string.action_close)) } },
+    )
 }

@@ -191,7 +191,7 @@ fun SettingsPage(
                     )
                     io.github.beacon.app.ui.components.BeaconOutlinedButton(
                         onClick = { actions.start(context) },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.align(androidx.compose.ui.Alignment.End),
                     ) {
                         io.github.beacon.app.ui.components.BeaconText(
                             stringResource(R.string.action_retry)
@@ -201,12 +201,6 @@ fun SettingsPage(
             }
         }
         if (screen in setOf(SettingsScreen.NOTIFICATION_RULES, SettingsScreen.QUIET_HOURS)) {
-            if (notificationForm.rulesSaving)
-                item {
-                    io.github.beacon.app.ui.components.SettingsHint(
-                        stringResource(R.string.settings_saving)
-                    )
-                }
             notificationForm.rulesFailure?.let { failure ->
                 item {
                     io.github.beacon.app.ui.components.SettingsNotice(stringResource(failure))
@@ -383,7 +377,7 @@ fun SettingsPage(
                                     else notificationForm.attempt++
                                 },
                                 enabled = runtimeState.runtimeConnected,
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.align(androidx.compose.ui.Alignment.End),
                             ) {
                                 io.github.beacon.app.ui.components.BeaconText(
                                     stringResource(R.string.action_retry)
@@ -412,9 +406,9 @@ fun SettingsPage(
                         val backupBusy =
                             busy || runtimeState.transportBusy || !runtimeState.runtimeConnected
                         SettingsBackupPanel(actions, backupBusy, grouped = false)
-                        HistoryArchivePanel(actions, backupBusy, grouped = false)
                     }
                 }
+                item { HistoryArchivePanel(actions, busy || runtimeState.transportBusy || !runtimeState.runtimeConnected) }
             }
             SettingsScreen.RECEPTION -> {
                 receptionSettingsItems(
@@ -469,7 +463,14 @@ fun SettingsPage(
                         onRetrySave = { notificationForm.saveRules(actions, quietHoursForm) },
                     )
                 }
-                item { NotificationSoundPanel() }
+                item {
+                    SettingsGroup(stringResource(R.string.settings_sound_title)) {
+                        SettingsRow(stringResource(R.string.settings_open_channels),
+                            stringResource(R.string.settings_open_channels_hint), BeaconIcons.Messages) {
+                            onNavigate(SettingsScreen.NOTIFICATIONS)
+                        }
+                    }
+                }
             }
             SettingsScreen.NOTIFICATIONS -> {
                 notificationPermissionSettingsItems(

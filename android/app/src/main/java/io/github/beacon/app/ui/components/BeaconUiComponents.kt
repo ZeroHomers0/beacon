@@ -99,8 +99,8 @@ fun UiSection(title: String, content: @Composable ColumnScope.() -> Unit) {
 
 /** Settings use a common outside title and inset content, distinct from message sections. */
 @Composable
-fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
-    SettingsGroup(title) {
+fun SettingsSection(title: String, action: (@Composable () -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
+    SettingsGroup(title, action = action) {
         Column(
             Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),
             verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
@@ -241,8 +241,8 @@ fun SettingsPrimaryAction(
         modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8),
     ) {
-        BeaconButton(onClick = onClick, modifier = Modifier.fillMaxWidth(), enabled = enabled) {
-            BeaconText(label)
+        SettingsActions {
+            BeaconButton(onClick = onClick, enabled = enabled) { BeaconText(label) }
         }
         if (!enabled && disabledReason != null)
             BeaconText(
@@ -268,9 +268,13 @@ fun SettingsLabel(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun SettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
+fun SettingsGroup(title: String, action: (@Composable () -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.GroupTitleGap)) {
-        SettingsLabel(title)
+        if (action == null) SettingsLabel(title)
+        else Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            SettingsLabel(title, Modifier.weight(1f))
+            action()
+        }
         BeaconCard(
             Modifier.fillMaxWidth().animateContentSize(animationSpec = MotionResize),
             colors =
@@ -324,6 +328,10 @@ fun SettingsRow(
     badge: Boolean = false,
     enabled: Boolean = true,
     expanded: Boolean? = null,
+    selection: Boolean = false,
+    command: Boolean = false,
+    danger: Boolean = false,
+    external: Boolean = false,
 ) {
     Surface(onClick = onClick, enabled = enabled, color = Color.Transparent) {
         Row(
@@ -344,7 +352,8 @@ fun SettingsRow(
         ) {
             BadgedIcon(icon, iconTint, badge)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap2)) {
-                BeaconText(title, style = MaterialTheme.typography.bodyLarge)
+                BeaconText(title, style = MaterialTheme.typography.bodyLarge,
+                    color = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
                 if (subtitle.isNotBlank())
                     BeaconText(
                         subtitle,
@@ -352,8 +361,8 @@ fun SettingsRow(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
             }
-            Icon(
-                BeaconIcons.Arrow,
+            if (!command) Icon(
+                if (external) BeaconIcons.OpenWeb else if (selection) BeaconIcons.Select else BeaconIcons.Arrow,
                 if (expanded == null) null
                 else
                     stringResource(

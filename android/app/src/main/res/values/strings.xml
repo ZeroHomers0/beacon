@@ -314,7 +314,7 @@
     <string name="settings_backup_export_done">设置备份已导出</string>
     <string name="settings_backup_export_failed">文件保存失败，请重新导出</string>
     <string name="settings_backup_invalid_file">文件无法导入，请选择有效的 Beacon 设置备份</string>
-    <string name="settings_backup_settings_title">数据备份</string>
+    <string name="settings_backup_settings_title">应用设置</string>
     <string name="settings_backup_export_failed_connection">导出失败，请检查接收服务连接</string>
     <string name="settings_backup_export">导出设置</string>
     <string name="settings_backup_import">导入设置</string>
@@ -324,7 +324,7 @@
     <string name="settings_backup_invalid_values">格式或设置值无效，请重新选择备份文件</string>
     <string name="settings_backup_import_unconfirmed">导入未确认，请检查当前设置</string>
     <string name="settings_backup_import_done">已导入设置，已绑定设备自动接收，自动清理已关闭。</string>
-    <string name="settings_backup_import_apply">导入并暂停</string>
+    <string name="settings_backup_import_apply">导入设置</string>
     <string name="settings_clipboard_push_key">Beacon 推送密钥</string>
     <string name="settings_reminders_send">补发待通知</string>
     <string name="settings_reminders_pending">%1$d 条待通知</string>

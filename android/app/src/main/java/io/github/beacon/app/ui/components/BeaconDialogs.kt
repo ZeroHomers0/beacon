@@ -19,9 +19,8 @@ import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 
 /**
- * Single-action dialogs pass no [dismissButton]; the confirm button then spans the full width
- * instead of sharing a row with an invisible button. Use one only for an acknowledgement — a dialog
- * that changes state keeps both actions.
+ * Dialog actions share the same content-width, wrapping layout as settings cards.
+ * Body content scrolls independently so actions remain reachable with a keyboard or large text.
  */
 @Composable
 fun BeaconAlertDialog(
@@ -32,9 +31,10 @@ fun BeaconAlertDialog(
     dismissButton: (@Composable () -> Unit)? = null,
 ) {
     val actions: @Composable () -> Unit = {
-        if (dismissButton == null)
-            CompositionLocalProvider(LocalDialogAction provides true) { confirmButton() }
-        else BeaconActionPair(dismissButton, confirmButton)
+        SettingsActions {
+            if (dismissButton != null) dismissButton()
+            confirmButton()
+        }
     }
     if (miuix()) {
         val show = remember { mutableStateOf(true) }
@@ -57,7 +57,9 @@ fun BeaconAlertDialog(
             onDismissRequest,
             confirmButton = actions,
             title = title,
-            text = text,
+            text = {
+                Box(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) { text() }
+            },
         )
 }
 

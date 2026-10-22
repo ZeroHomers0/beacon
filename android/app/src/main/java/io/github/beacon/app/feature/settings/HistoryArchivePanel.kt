@@ -69,10 +69,14 @@ fun HistoryArchivePanel(actions: RuntimeActions, busy: Boolean, grouped: Boolean
     val open =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { run(it, true) }
     val content: @Composable () -> Unit = {
-        SettingsActionRow(
-            stringResource(R.string.settings_archive_export),
-            stringResource(R.string.ui_v2_export_history_hint),
+        Column(Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),
+            verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap)) {
+        SettingsHint(stringResource(R.string.ui_v2_export_history_hint))
+        SettingsActions {
+        SettingsTextAction(
+            stringResource(R.string.settings_export),
             io.github.beacon.app.ui.icons.BeaconIcons.Backup,
+            accessibilityLabel = stringResource(R.string.settings_archive_export),
             enabled = !busy,
             onClick = {
                 operation = false
@@ -81,10 +85,10 @@ fun HistoryArchivePanel(actions: RuntimeActions, busy: Boolean, grouped: Boolean
                 encrypted = true
             },
         )
-        SettingsActionRow(
-            stringResource(R.string.settings_archive_import),
-            stringResource(R.string.ui_v2_import_history_hint),
+        SettingsTextAction(
+            stringResource(R.string.settings_import),
             io.github.beacon.app.ui.icons.BeaconIcons.History,
+            accessibilityLabel = stringResource(R.string.settings_archive_import),
             enabled = !busy,
             onClick = {
                 operation = true
@@ -93,9 +97,12 @@ fun HistoryArchivePanel(actions: RuntimeActions, busy: Boolean, grouped: Boolean
                 encrypted = true
             },
         )
+        }
         if (hint.isNotEmpty())
             OperationResultPanel(stringResource(R.string.settings_archive_title), hint, failed)
-    }
+
+        }
+}
     if (grouped) SettingsGroup(stringResource(R.string.settings_archive_title)) { content() }
     else content()
     if (operation != null)
@@ -131,6 +138,7 @@ fun HistoryArchivePanel(actions: RuntimeActions, busy: Boolean, grouped: Boolean
                                 BeaconText(stringResource(R.string.settings_archive_password))
                             },
                             labelText = resources.getString(R.string.settings_archive_password),
+                            singleLine = true,
                             visualTransformation = PasswordVisualTransformation(),
                         )
                         if (operation == false)
@@ -147,14 +155,15 @@ fun HistoryArchivePanel(actions: RuntimeActions, busy: Boolean, grouped: Boolean
                                 },
                                 labelText =
                                     resources.getString(R.string.settings_archive_password_repeat),
-                                visualTransformation = PasswordVisualTransformation(),
+                                singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
                             )
                         SettingsHint(stringResource(R.string.settings_archive_password_hint))
                         val archiveReason =
                             when {
-                                password.length < 8 ->
+                                password.isNotEmpty() && password.length < 8 ->
                                     stringResource(R.string.settings_archive_password_too_short)
-                                operation != true && password != confirmPassword ->
+                                operation != true && confirmPassword.isNotEmpty() && password != confirmPassword ->
                                     stringResource(R.string.settings_archive_password_mismatch)
                                 else -> null
                             }

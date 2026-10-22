@@ -162,6 +162,7 @@ fun BeaconDropdownPreference(
                 icon ?: BeaconIcons.Settings,
                 iconTint = MaterialTheme.colorScheme.onSurface,
                 enabled = enabled,
+                selection = true,
                 onClick = { expanded = true },
             )
         } else
@@ -236,7 +237,7 @@ fun BeaconDropdownPreference(
                         )
                     }
                     androidx.compose.material3.Icon(
-                        BeaconIcons.Arrow,
+                        BeaconIcons.Select,
                         stringResource(R.string.ui_expand_options_action),
                         Modifier.size(18.dp),
                     )

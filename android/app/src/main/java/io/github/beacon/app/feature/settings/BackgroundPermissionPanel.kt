@@ -89,59 +89,29 @@ fun BackgroundPermissionPanel() {
         Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SettingsGroupGap),
     ) {
-        SettingsSection(stringResource(R.string.background_autostart_title)) {
-            BeaconText(
-                stringResource(R.string.background_manual_status),
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            BeaconOutlinedButton(onClick = { appDetails() }, modifier = Modifier.fillMaxWidth()) {
-                BeaconText(stringResource(R.string.background_open_app_settings))
-            }
+        SettingsGroup(stringResource(R.string.settings_background_permissions_title)) {
+            SettingsRow(stringResource(R.string.background_autostart_title),
+                stringResource(R.string.background_manual_status), io.github.beacon.app.ui.icons.BeaconIcons.BackgroundTasks,
+                iconTint = MaterialTheme.colorScheme.onSurface, external = true, onClick = { appDetails() })
+            SettingsRow(stringResource(R.string.background_system_restriction),
+                stringResource(when (restricted) {
+                    true -> R.string.background_restricted
+                    false -> R.string.background_not_restricted
+                    null -> R.string.background_unknown
+                }), io.github.beacon.app.ui.icons.BeaconIcons.Diagnostics,
+                iconTint = MaterialTheme.colorScheme.onSurface, external = true, onClick = { appDetails() })
+            SettingsRow(stringResource(R.string.background_battery_optimization),
+                stringResource(when (exempt) {
+                    true -> R.string.background_exempt
+                    false -> R.string.background_optimized
+                    null -> R.string.background_unknown
+                }), io.github.beacon.app.ui.icons.BeaconIcons.PowerSaving,
+                iconTint = MaterialTheme.colorScheme.onSurface, external = true,
+                onClick = { openSettings(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) })
         }
-        SettingsPreferences(stringResource(R.string.background_restriction_title)) {
-            SettingsFieldGroup(
-                {
-                    DiagnosticRow(
-                        stringResource(R.string.background_system_restriction),
-                        stringResource(
-                            when (restricted) {
-                                true -> R.string.background_restricted
-                                false -> R.string.background_not_restricted
-                                null -> R.string.background_unknown
-                            }
-                        ),
-                    )
-                },
-                {
-                    DiagnosticRow(
-                        stringResource(R.string.background_battery_optimization),
-                        stringResource(
-                            when (exempt) {
-                                true -> R.string.background_exempt
-                                false -> R.string.background_optimized
-                                null -> R.string.background_unknown
-                            }
-                        ),
-                    )
-                },
-            )
-
-            SettingsPreferenceActions {
-                BeaconOutlinedButton(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = {
-                        openSettings(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
-                    },
-                ) {
-                    BeaconText(stringResource(R.string.background_open_battery_settings))
-                }
-            }
-        }
-        // Every block on this page is a titled card; a lone button in the page flow broke that.
-        SettingsSection(stringResource(R.string.background_help_title)) {
-            BeaconOutlinedButton(onClick = { help = true }, modifier = Modifier.fillMaxWidth()) {
-                BeaconText(stringResource(R.string.settings_background_help))
-            }
+        SettingsActions {
+            SettingsTextAction(stringResource(R.string.settings_background_help),
+                io.github.beacon.app.ui.icons.BeaconIcons.Info) { help = true }
         }
         if (unavailable) SettingsNotice(stringResource(R.string.background_settings_unavailable))
     }

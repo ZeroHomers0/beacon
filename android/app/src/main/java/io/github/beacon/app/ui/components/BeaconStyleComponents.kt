@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.dp
 import io.github.beacon.app.domain.model.BeaconUiStyle
 import io.github.beacon.app.ui.theme.LocalBeaconUiStyle
 
+internal val LocalCompactActions = staticCompositionLocalOf { false }
+
 internal val LocalDialogAction = staticCompositionLocalOf { false }
 
 /**
@@ -201,16 +203,17 @@ fun BeaconIconButton(
     enabled: Boolean = true,
     content: @Composable () -> Unit,
 ) {
+    val actionModifier = if (LocalCompactActions.current) modifier.width(44.dp) else modifier
     if (miuix())
         top.yukonga.miuix.kmp.basic.IconButton(
             onClick,
-            modifier.semantics(mergeDescendants = true) { if (!enabled) disabled() },
+            actionModifier.semantics(mergeDescendants = true) { if (!enabled) disabled() },
             enabled,
             minHeight = 48.dp,
-            minWidth = 48.dp,
+            minWidth = if (LocalCompactActions.current) 44.dp else 48.dp,
             content = content,
         )
-    else androidx.compose.material3.IconButton(onClick, modifier, enabled, content = content)
+    else androidx.compose.material3.IconButton(onClick, actionModifier, enabled, content = content)
 }
 
 /** A control drawn beside its label owns no text, so the caller supplies the accessible name. */

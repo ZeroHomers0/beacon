@@ -50,7 +50,7 @@ class MessageRefreshLayoutTest {
                             onEnterSelection = {},
                             onSelectionChange = {},
                             onSelectionHint = {},
-                            onCopyText = { _, _ -> },
+                            onRequestDelete = {}, onCopyText = { _, _ -> },
                         )
                     }
                 }

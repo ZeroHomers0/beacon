@@ -145,13 +145,12 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                     }
                 },
                 {
-                    DiagnosticRow(
-                        stringResource(R.string.storage_last_result_label),
-                        io.github.beacon.app.domain.policy.CleanupResultPresentation.compact(
-                            settings.lastResult
-                        ).ifBlank { BeaconUnknownValue },
-                        reserveValueLines = 2,
-                    )
+                    val result = io.github.beacon.app.domain.policy.CleanupResultPresentation.compact(settings.lastResult)
+                    if (settings.automatic) DiagnosticRow(
+                        stringResource(R.string.storage_last_result_label), result.ifBlank { BeaconUnknownValue },
+                        reserveValueLines = 2)
+                    else if (result.isNotBlank()) SettingsHint(result)
+
                 },
             )
         }
@@ -191,18 +190,17 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                     }
                 },
             )
-            SettingsPreferenceActions {
-                BeaconActionButton(
-                    stringResource(R.string.storage_custom),
-                    io.github.beacon.app.ui.icons.BeaconIcons.Tune,
-                    Modifier.fillMaxWidth(),
-                    editable,
-                ) {
-                    custom = true
-                }
+            SettingsActions {
+                SettingsTextAction(stringResource(R.string.storage_custom),
+                    io.github.beacon.app.ui.icons.BeaconIcons.Tune, enabled = editable) { custom = true }
             }
+            SettingsHint(stringResource(R.string.settings_saved_automatically))
         }
-        SettingsSection(stringResource(R.string.storage_preview_title)) {
+
+        SettingsSection(stringResource(R.string.storage_preview_title), action = {
+            BeaconRefreshAction(stringResource(R.string.storage_preview_refresh), state.runtimeConnected && !state.messageBusy,
+                state.messageBusy, onClick = { actions.previewCleanup(policy) })
+        }) {
             SettingsMetricGrid(
                 listOf(
                     stringResource(R.string.settings_cleanup_eligible) to
@@ -218,47 +216,31 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                 stringResource(
                     when {
                         !state.runtimeConnected -> R.string.settings_runtime_disconnected
-                        state.messageBusy || (!settingsLoaded && !loadFailed) ->
+                        preview == null && (state.messageBusy || (!settingsLoaded && !loadFailed)) ->
                             R.string.settings_data_loading
-                        preview == null || !state.cleanupPreviewFresh -> R.string.settings_preview_unavailable
+                        preview == null -> R.string.settings_preview_unavailable
                         preview.planned <= 0 -> R.string.settings_preview_empty
                         else -> R.string.settings_preview_ready
                     }
                 )
             )
-            BeaconActionPair(
-                {
-                    BeaconOutlinedButton(
-                        onClick = { actions.previewCleanup(policy) },
-                        enabled = !state.messageBusy && state.runtimeConnected,
-                    ) {
-                        BeaconText(stringResource(R.string.storage_preview_refresh))
-                    }
-                },
-                {
-                    BeaconButton(
-                        onClick = { confirmation = preview },
-                        enabled =
-                            state.runtimeConnected &&
-                                !state.messageBusy &&
-                                state.cleanupPreviewFresh &&
-                                (preview?.planned ?: 0) > 0,
-                    ) {
-                        BeaconText(stringResource(R.string.storage_clean_action))
-                    }
-                },
-            )
-        }
-        SettingsSection(stringResource(R.string.settings_danger_section_title)) {
-            BeaconDangerButton(
-                onClick = { clearAllStage = 1 },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = state.runtimeConnected && !state.messageBusy,
-            ) {
-                BeaconText(stringResource(R.string.settings_cleanup_all_title))
+            SettingsActions {
+                BeaconButton(onClick = { confirmation = preview }, enabled = state.runtimeConnected &&
+                    !state.messageBusy && state.cleanupPreviewFresh && (preview?.planned ?: 0) > 0) {
+                    BeaconText(stringResource(R.string.storage_clean_action))
+                }
             }
         }
+
+        SettingsGroup(stringResource(R.string.settings_danger_section_title)) {
+            SettingsCommandRow(stringResource(R.string.settings_cleanup_all_title),
+                subtitle = stringResource(R.string.settings_local_scope),
+                icon = io.github.beacon.app.ui.icons.BeaconIcons.Delete,
+                enabled = state.runtimeConnected && !state.messageBusy, danger = true,
+                onClick = { clearAllStage = 1 })
+        }
     }
+
     if (clearAllStage > 0)
         BeaconAlertDialog(
             onDismissRequest = { clearAllStage = 0 },

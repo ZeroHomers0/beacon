@@ -94,6 +94,10 @@ class UiV2LayoutTest {
             bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)
         }
         bitmap.recycle()
+        val command = "cp ${directory.absolutePath}/$name.png /data/local/tmp/beacon-$name.png"
+        androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand(command).use {
+            android.os.ParcelFileDescriptor.AutoCloseInputStream(it).readBytes()
+        }
     }
 
     private fun matrix(style: BeaconUiStyle, mode: BeaconThemeMode) {
@@ -126,6 +130,7 @@ class UiV2LayoutTest {
             rule.onNode(hasText("MIUIX") and hasClickAction()).performClick()
             rule.runOnIdle { assertEquals(BeaconUiStyle.MIUIX, selectedStyle.value) }
             rule.runOnIdle { current.value = SettingsScreen.NOTIFICATION_RULES }
+            rule.runOnIdle { quiet.draft = quiet.draft.copy(enabled = true) }
             rule.onNode(hasText(rule.activity.getString(R.string.quiet_schedule)) and hasClickAction())
                 .performScrollTo().performClick()
             rule.runOnIdle {
@@ -146,6 +151,23 @@ class UiV2LayoutTest {
         } finally { rule.runOnUiThread { repository.close() } }
     }
 
+    @Test fun connectionEditorCancelsWithoutChangingTheSummary() {
+        val repository = RuntimeRepository()
+        try {
+            rule.runOnUiThread { current.value = SettingsScreen.CONNECTION; mount(actions(repository), 1f) }
+            rule.onAllNodes(hasSetTextAction()).assertCountEquals(0)
+            rule.onNodeWithText(rule.activity.getString(R.string.settings_edit_connection)).performScrollTo().performClick()
+            rule.onAllNodes(hasSetTextAction()).assertCountEquals(3)
+            rule.onAllNodes(hasSetTextAction())[0].performTextReplacement("https://edited.invalid")
+            rule.onNodeWithText(rule.activity.getString(R.string.action_cancel)).performClick()
+            rule.onNodeWithText(rule.activity.getString(R.string.settings_discard_connection)).assertIsDisplayed()
+            rule.onNodeWithText(rule.activity.getString(R.string.action_confirm)).performClick()
+            rule.onAllNodes(hasSetTextAction()).assertCountEquals(0)
+            rule.onNodeWithText("https://example.invalid").assertExists()
+            rule.onNodeWithText("https://edited.invalid").assertDoesNotExist()
+        } finally { rule.runOnUiThread { repository.close() } }
+    }
+
     @Test fun aboutPageShowsVersionProjectLinksAndNotices() {
         val repository = RuntimeRepository()
         try {
@@ -158,8 +180,6 @@ class UiV2LayoutTest {
                 .performScrollTo().assertIsDisplayed()
             // The notices still ship inside the APK even though no dialog renders them.
             assertTrue(rule.activity.assets.list("third-party").orEmpty().contains("Apache-2.0.txt"))
-            rule.onNodeWithText(rule.activity.getString(R.string.settings_diagnostics_row))
-                .performScrollTo().assertIsDisplayed()
             val page = rule.onNodeWithTag("ui-v2-page").captureToImage().asAndroidBitmap()
             java.io.File(rule.activity.getExternalFilesDir(null), "about-page.png").outputStream().use {
                 page.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it)

@@ -58,17 +58,29 @@ fun NotificationChannelsPanel() {
                     NotificationChannelKind.RUNTIME -> BeaconIcons.Realtime
                     NotificationChannelKind.IMPORTANT -> BeaconIcons.Messages
                 },
-            ) {
-                val intent =
-                    if (channel == null)
+                iconTint = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
+                external = true,
+                onClick = {
+                failed = runCatching {
+                    val manager = context.getSystemService(NotificationManager::class.java)
+                    if (manager.getNotificationChannel(kind.id) == null &&
+                        kind in setOf(NotificationChannelKind.FRESH, NotificationChannelKind.IMPORTANT)) {
+                        val important = kind == NotificationChannelKind.IMPORTANT
+                        manager.createNotificationChannel(android.app.NotificationChannel(kind.id, title,
+                            if (important) NotificationManager.IMPORTANCE_HIGH else NotificationManager.IMPORTANCE_DEFAULT).apply {
+                            description = context.getString(if (important) R.string.channel_important_desc else R.string.channel_fresh_desc)
+                        })
+                        revision++
+                    }
+                    val intent = if (manager.getNotificationChannel(kind.id) == null)
                         Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                             .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                    else
-                        Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
-                            .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                            .putExtra(Settings.EXTRA_CHANNEL_ID, kind.id)
-                failed = runCatching { context.startActivity(intent) }.isFailure
-            }
+                    else Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+                        .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                        .putExtra(Settings.EXTRA_CHANNEL_ID, kind.id)
+                    context.startActivity(intent)
+                }.isFailure
+            })
         }
         if (failed)
             BeaconText(

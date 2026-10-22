@@ -109,10 +109,14 @@ fun SettingsBackupPanel(actions: RuntimeActions, busy: Boolean, grouped: Boolean
                 }
         }
     val content: @Composable () -> Unit = {
-        SettingsActionRow(
-            stringResource(R.string.settings_backup_export),
-            stringResource(R.string.ui_v2_export_settings_hint),
+        Column(Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),
+            verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap)) {
+        SettingsHint(stringResource(R.string.ui_v2_export_settings_hint))
+        SettingsActions {
+        SettingsTextAction(
+            stringResource(R.string.settings_export),
             io.github.beacon.app.ui.icons.BeaconIcons.Backup,
+            accessibilityLabel = stringResource(R.string.settings_backup_export),
             enabled = !busy && !fileBusy,
             onClick = {
                 actions.settingsBackup(
@@ -127,10 +131,10 @@ fun SettingsBackupPanel(actions: RuntimeActions, busy: Boolean, grouped: Boolean
                 }
             },
         )
-        SettingsActionRow(
-            stringResource(R.string.settings_backup_import),
-            stringResource(R.string.ui_v2_import_settings_hint),
+        SettingsTextAction(
+            stringResource(R.string.settings_import),
             io.github.beacon.app.ui.icons.BeaconIcons.History,
+            accessibilityLabel = stringResource(R.string.settings_backup_import),
             enabled = !busy && !fileBusy,
             onClick = {
                 importFile.launch(
@@ -138,9 +142,12 @@ fun SettingsBackupPanel(actions: RuntimeActions, busy: Boolean, grouped: Boolean
                 )
             },
         )
+        }
         if (!importing && hint.isNotEmpty())
             OperationResultPanel(stringResource(R.string.settings_backup_title), hint, failed)
-    }
+
+        }
+}
     if (grouped)
         SettingsGroup(stringResource(R.string.settings_backup_settings_title)) { content() }
     else content()

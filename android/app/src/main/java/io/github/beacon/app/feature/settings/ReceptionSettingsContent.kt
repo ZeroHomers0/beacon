@@ -5,6 +5,7 @@ package io.github.beacon.app.feature.settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -55,12 +56,14 @@ internal fun LazyListScope.receptionSettingsItems(
                 receiveModeIcon(receivePlan.mode),
                 iconTint = io.github.beacon.app.ui.components.receiveModeColor(receivePlan.mode),
                 onClick = onShowReceiveModes,
+                selection = true,
                 enabled = runtimeState.runtimeConnected && runtimeState.receivePlanLoaded && !busy,
             )
         }
     }
     item {
         SettingsPreferences(stringResource(R.string.settings_receive_status_title)) {
+            var showDetails by remember { mutableStateOf(false) }
             SettingsStatusDetail(
                 stringResource(R.string.reception_https_status),
                 when {
@@ -85,6 +88,10 @@ internal fun LazyListScope.receptionSettingsItems(
                     runtimeState.configuredEndpoint.isNotBlank() && runtimeState.receivePlanLoaded &&
                     !runtimeState.transportBusy,
             )
+            io.github.beacon.app.ui.components.SettingsTextAction(
+                stringResource(R.string.settings_advanced_details),
+                io.github.beacon.app.ui.icons.BeaconIcons.Info) { showDetails = !showDetails }
+            if (showDetails) {
                 SettingsStatusDetail(
                     stringResource(R.string.receive_realtime_status_title),
                     when {
@@ -125,6 +132,7 @@ internal fun LazyListScope.receptionSettingsItems(
                             .first()
                 },
             )
+            }
             SettingsStatusDetail(
                 stringResource(R.string.settings_last_sync_success_desc) +
                     (polling.lastSuccessInserted?.let {
@@ -134,40 +142,25 @@ internal fun LazyListScope.receptionSettingsItems(
                 else stringResource(R.string.settings_sync_never),
             )
             io.github.beacon.app.ui.components.SettingsPreferenceActions {
-                io.github.beacon.app.ui.components.BeaconActionPair(
-                    dismiss = {
-                        io.github.beacon.app.ui.components.BeaconOutlinedButton(
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !busy && runtimeState.runtimeConnected,
-                            onClick = {
-                                actions.refreshPolling {
-                                    actions.receivePlan()
-                                }
-                            },
-                        ) {
-                            BeaconText(stringResource(R.string.action_refresh_status))
+                io.github.beacon.app.ui.components.SettingsActions {
+                    io.github.beacon.app.ui.components.SettingsTextAction(
+                        stringResource(R.string.action_refresh_status),
+                        io.github.beacon.app.ui.icons.BeaconIcons.Sync,
+                        enabled = !busy && runtimeState.runtimeConnected) {
+                        actions.refreshPolling { actions.receivePlan() }
+                    }
+                    BeaconButton(onClick = { actions.transport() }, enabled = !busy && runtimeState.runtimeConnected) {
+                        if (runtimeState.transportBusy) {
+                            io.github.beacon.app.ui.components.BeaconLoadingIcon(
+                                io.github.beacon.app.ui.icons.BeaconIcons.Sync, true,
+                                Modifier.size(BeaconUiMetrics.IconInline), tint = LocalContentColor.current)
+                            Spacer(Modifier.width(BeaconUiMetrics.Gap6))
                         }
-                    },
-                    confirm = {
-                        BeaconButton(
-                            onClick = { actions.transport() },
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !busy && runtimeState.runtimeConnected,
-                        ) {
-                            if (runtimeState.transportBusy) {
-                                io.github.beacon.app.ui.components.BeaconLoadingIcon(
-                                    io.github.beacon.app.ui.icons.BeaconIcons.Sync,
-                                    loading = true,
-                                    modifier = Modifier.size(18.dp),
-                                    tint = LocalContentColor.current,
-                                )
-                                Spacer(Modifier.width(8.dp))
-                            }
-                            BeaconText(stringResource(R.string.action_sync_now))
-                        }
-                    },
-                )
+                        BeaconText(stringResource(R.string.action_sync_now))
+                    }
+                }
             }
+
             io.github.beacon.app.ui.components.SettingsHint(
                 stringResource(R.string.reception_actions_hint)
             )
@@ -215,10 +208,11 @@ private fun ConnectionPreferences(
             {
                 BeaconDropdownPreference(
                     stringResource(R.string.receive_heartbeat_interval),
-                    RealtimeHeartbeat.options.map {
+                    if (receptionForm.plan.adaptiveHeartbeat) listOf(stringResource(R.string.settings_auto_adjusting))
+                    else RealtimeHeartbeat.options.map {
                         stringResource(R.string.receive_heartbeat_seconds, it)
                     },
-                    RealtimeHeartbeat.options.indexOf(receptionForm.plan.heartbeatSeconds),
+                    if (receptionForm.plan.adaptiveHeartbeat) 0 else RealtimeHeartbeat.options.indexOf(receptionForm.plan.heartbeatSeconds),
                     !busy &&
                         runtimeState.runtimeConnected &&
                         runtimeState.receivePlanLoaded &&

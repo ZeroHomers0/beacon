@@ -69,7 +69,7 @@ internal fun QuietHoursPanel(
                                 }
                             },
                             {
-                                BeaconDropdownPreference(
+                                if (draft.enabled) BeaconDropdownPreference(
                                     stringResource(R.string.quiet_behavior),
                                     listOf(
                                         stringResource(R.string.quiet_silent),
@@ -82,7 +82,7 @@ internal fun QuietHoursPanel(
                                 }
                             },
                         )
-                        if (onSchedule != null) {
+                        if (onSchedule != null && draft.enabled) {
                             androidx.compose.material3.Surface(
                                 onClick = onSchedule,
                                 enabled = editable,
@@ -114,7 +114,18 @@ internal fun QuietHoursPanel(
                     onStartChange = { start = it },
                     onEndChange = { end = it },
                 )
+                var customDays by remember { mutableStateOf(draft.weekdays != 127 && draft.weekdays != 31) }
                 ActionFlow {
+                    BeaconFilterChip(draft.weekdays == 127 && !customDays,
+                        { draft = draft.copy(weekdays = 127); customDays = false },
+                        { BeaconText(stringResource(R.string.settings_every_day)) }, enabled = editable)
+                    BeaconFilterChip(draft.weekdays == 31 && !customDays,
+                        { draft = draft.copy(weekdays = 31); customDays = false },
+                        { BeaconText(stringResource(R.string.settings_work_days)) }, enabled = editable)
+                    BeaconFilterChip(customDays, { customDays = true },
+                        { BeaconText(stringResource(R.string.settings_custom_days)) }, enabled = editable)
+                }
+                if (customDays) ActionFlow {
                     labels.forEachIndexed { index, label ->
                         val bit = 1 shl index
                         BeaconFilterChip(
@@ -133,19 +144,14 @@ internal fun QuietHoursPanel(
             }
             if (scheduleOnly || onSchedule == null) {
                 SettingsSection(stringResource(R.string.settings_time_range_heading)) {
-                    if (awaitingContent && scheduleOnly) PageStateLoading() else scheduleContent()
-                }
-            }
-            if (scheduleOnly) {
-                SettingsSection(stringResource(R.string.ui_v2_quiet_effect)) {
-                    BeaconText(
-                        stringResource(
-                            if (draft.behavior == QuietHoursBehavior.SILENT) R.string.quiet_silent
-                            else R.string.quiet_save_only
-                        ),
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    SettingsHint(stringResource(R.string.ui_v2_quiet_scope_short))
+                    if (awaitingContent && scheduleOnly) PageStateLoading() else {
+                        scheduleContent()
+                        if (scheduleOnly) {
+                            SettingsHint(stringResource(if (draft.behavior == QuietHoursBehavior.SILENT)
+                                R.string.quiet_silent else R.string.quiet_save_only) + " · " +
+                                stringResource(R.string.ui_v2_quiet_scope_short))
+                        }
+                    }
                 }
             }
             if (failed) {

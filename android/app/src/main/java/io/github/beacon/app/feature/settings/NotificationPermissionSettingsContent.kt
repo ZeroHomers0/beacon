@@ -17,6 +17,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 import io.github.beacon.app.ipc.RuntimeActions
+import io.github.beacon.app.ui.components.*
 import io.github.beacon.app.ui.components.BeaconActionButton
 import io.github.beacon.app.ui.components.BeaconButton
 import io.github.beacon.app.ui.components.BeaconText
@@ -43,72 +44,27 @@ internal fun LazyListScope.notificationPermissionSettingsItems(
     onRetry: () -> Unit,
 ) {
     item {
-        // Same status header as the connection card: icon tile, title, optional detail.
         SettingsSection(stringResource(R.string.settings_permission_status_heading)) {
-            Column(Modifier.fillMaxWidth()) {
-                val allowed = notificationPermission == NotificationPermissionState.ALLOWED
-                SettingsStatusSummary(
-                    title =
-                        if (notificationPermission == NotificationPermissionState.UNKNOWN)
-                            stringResource(R.string.diag_not_read_label)
-                        else if (allowed) stringResource(R.string.settings_notifications_allowed_label)
-                        else stringResource(R.string.settings_notifications_denied_label),
-                    details = "",
-                    icon = if (allowed) BeaconIcons.Check else BeaconIcons.Warning,
-                    tint =
-                        if (allowed) io.github.beacon.app.ui.theme.beaconSuccessColor()
-                        else if (notificationPermission == NotificationPermissionState.DENIED)
-                            MaterialTheme.colorScheme.error
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                    interactive = false,
-                )
-                if (notificationPermission == NotificationPermissionState.DENIED)
-                    BeaconButton(
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = {
-                            if (Build.VERSION.SDK_INT >= 33) onRequestNotificationPermission()
-                            else {
-                                try {
-                                    context.startActivity(
-                                        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                                            .putExtra(
-                                                Settings.EXTRA_APP_PACKAGE,
-                                                context.packageName,
-                                            )
-                                    )
-                                } catch (_: android.content.ActivityNotFoundException) {
-                                    onNotificationSettingsUnavailable()
-                                } catch (_: SecurityException) {
-                                    onNotificationSettingsUnavailable()
-                                }
-                            }
-                        },
-                    ) {
-                        BeaconText(
-                            stringResource(
-                                if (Build.VERSION.SDK_INT >= 33)
-                                    R.string.settings_allow_notifications_action
-                                else R.string.settings_system_notification_title
-                            )
-                        )
+            val allowed = notificationPermission == NotificationPermissionState.ALLOWED
+            SettingsStatusSummary(
+                title = stringResource(when (notificationPermission) {
+                    NotificationPermissionState.UNKNOWN -> R.string.diag_not_read_label
+                    NotificationPermissionState.ALLOWED -> R.string.settings_notifications_allowed_label
+                    NotificationPermissionState.DENIED -> R.string.settings_notifications_denied_label
+                }), details = "", icon = if (allowed) BeaconIcons.Check else BeaconIcons.Warning,
+                tint = if (allowed) io.github.beacon.app.ui.theme.beaconSuccessColor()
+                    else MaterialTheme.colorScheme.onSurfaceVariant, interactive = false)
+            SettingsActions {
+                if (!allowed && notificationPermission != NotificationPermissionState.UNKNOWN && Build.VERSION.SDK_INT >= 33)
+                    BeaconButton(onClick = onRequestNotificationPermission) {
+                        BeaconText(stringResource(R.string.settings_allow_notifications_action))
                     }
-            }
-        }
-    }
-    item {
-        SettingsGroup(stringResource(R.string.settings_notification_settings_title)) {
-            SettingsRow(
-                stringResource(R.string.settings_system_notification_title),
-                stringResource(R.string.settings_notification_channels_desc),
-                BeaconIcons.Settings,
-            ) {
-                try {
-                    context.startActivity(
-                        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                            .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                    )
-                } catch (_: android.content.ActivityNotFoundException) {
-                    onNotificationSettingsUnavailable()
+                SettingsTextAction(stringResource(R.string.settings_system_notification_title), BeaconIcons.OpenWeb) {
+                    try {
+                        context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                            .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName))
+                    } catch (_: android.content.ActivityNotFoundException) { onNotificationSettingsUnavailable() }
+                    catch (_: SecurityException) { onNotificationSettingsUnavailable() }
                 }
             }
         }
@@ -130,23 +86,15 @@ internal fun LazyListScope.notificationPermissionSettingsItems(
                         }
                     ))
             )
-            if (loadFailed)
-                BeaconActionButton(
-                    stringResource(R.string.action_retry),
-                    BeaconIcons.Sync,
-                    Modifier.fillMaxWidth(),
-                    connected && !busy,
-                    onRetry,
-                )
-            BeaconActionButton(
-                stringResource(R.string.settings_reminders_send),
-                BeaconIcons.DoneAll,
-                Modifier.fillMaxWidth(),
-                connected && !busy && (pendingReminderCount ?: 0) > 0,
-            ) {
-                actions.transport(notifyOnly = true)
+            SettingsActions {
+                if (loadFailed) SettingsTextAction(stringResource(R.string.action_retry), BeaconIcons.Sync,
+                    enabled = connected && !busy, onClick = onRetry)
+                if ((pendingReminderCount ?: 0) > 0) SettingsTextAction(
+                    stringResource(R.string.settings_reminders_send), BeaconIcons.DoneAll,
+                    enabled = connected && !busy) { actions.transport(notifyOnly = true) }
             }
         }
     }
+
     item { NotificationChannelsPanel() }
 }

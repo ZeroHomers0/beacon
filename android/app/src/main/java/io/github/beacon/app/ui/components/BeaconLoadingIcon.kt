@@ -1,10 +1,6 @@
 package io.github.beacon.app.ui.components
 
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -24,25 +20,35 @@ fun BeaconLoadingIcon(
     description: String? = null,
     tint: Color = MaterialTheme.colorScheme.onSurface,
 ) {
-    // A busy indicator is decoration: with system animations disabled it holds still instead of
-    // spinning forever, which also keeps the frame loop off in power-save mode.
-    val animate = loading && rememberSystemAnimationsEnabled()
-    val animatedModifier =
-        if (animate) {
-            val transition = rememberInfiniteTransition(label = "busy-icon")
-            val angle by transition.animateFloat(
-                initialValue = 0f,
-                targetValue = -360f,
-                animationSpec =
-                    infiniteRepeatable(
-                        tween(BeaconMotion.PulseMs, easing = LinearEasing),
-                        RepeatMode.Restart,
-                    ),
-                label = "busy-icon-rotation",
-            )
-            modifier.rotate(angle)
-        } else modifier
-    Icon(icon, description, animatedModifier, tint = tint)
+    val animationsEnabled = rememberSystemAnimationsEnabled()
+    val angle = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(0f) }
+    androidx.compose.runtime.LaunchedEffect(loading, animationsEnabled) {
+        if (!animationsEnabled) {
+            angle.snapTo(0f)
+        } else if (loading) {
+            while (true) {
+                angle.animateTo(angle.value - 360f, tween(BeaconMotion.PulseMs, easing = LinearEasing))
+                angle.snapTo(angle.value % 360f)
+            }
+        } else {
+            // Continue in the same direction to the next full turn before becoming static.
+            val remaining = ((angle.value % 360f) + 360f) % 360f
+            if (remaining > .01f) {
+                angle.animateTo(angle.value - remaining,
+                    tween((BeaconMotion.PulseMs * remaining / 360f).toInt().coerceAtLeast(1), easing = LinearEasing))
+            }
+            angle.snapTo(0f)
+        }
+    }
+    androidx.compose.animation.Crossfade(
+        targetState = icon,
+        animationSpec = tween(BeaconMotion.StandardMs),
+        label = "busy-icon-shape",
+    ) { displayed ->
+        Icon(displayed, description,
+            if (displayed == io.github.beacon.app.ui.icons.BeaconIcons.Sync) modifier.rotate(angle.value) else modifier,
+            tint = tint)
+    }
 }
 
 @Composable

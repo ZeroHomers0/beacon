@@ -7,6 +7,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import io.github.beacon.app.ui.components.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -45,184 +49,147 @@ internal fun LazyListScope.connectionSettingsItems(
     bindingFormatHint: String,
     onFeedback: (String) -> Unit,
 ) {
-    item {
-        // SettingsSection already provides the card inset and the section gap this block used to
-        // rebuild by hand.
-        SettingsSection(stringResource(R.string.settings_connection_status_heading)) {
-            val label =
-                if (runtimeState.serverReachable == true)
-                    resources.getString(R.string.connection_status_connected)
-                else connectionStatusLabel(runtimeState)
-            val details =
-                when {
-                    runtimeState.serverReachable == true ->
-                        resources.getString(R.string.server_status_protocols)
-                    runtimeState.serverReachable == false ->
-                        runtimeState.serverCheckResult.substringAfter(
-                            " · ",
-                            runtimeState.serverCheckResult,
-                        )
-                    else -> ""
-                }
-            SettingsStatusSummary(
-                label,
-                details,
-                icon =
-                    when {
-                        runtimeState.serverChecking -> BeaconIcons.Sync
-                        runtimeState.serverReachable == false -> BeaconIcons.Warning
-                        else -> BeaconIcons.Cloud
-                    },
-                tint =
-                    if (runtimeState.serverReachable == false) MaterialTheme.colorScheme.error
-                    else if (runtimeState.serverReachable == true)
-                        io.github.beacon.app.ui.theme.beaconSuccessColor()
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                loading = runtimeState.serverChecking,
-                interactive = false,
-                // The check time belongs to the two lines above, not to the card: it shares their
-                // column, so it lines up with the title instead of floating under a centred row.
-                caption =
-                    stringResource(R.string.server_last_checked) +
-                        " · " +
-                        formatMessageTime(runtimeState.serverCheckedAtMs),
-            )
-            io.github.beacon.app.ui.components.BeaconCheckConnectionButton(
-                stringResource(
-                    if (runtimeState.serverChecking) R.string.server_checking
-                    else R.string.server_check_action
-                ),
-                runtimeState.serverChecking,
-                runtimeState.runtimeConnected &&
-                    runtimeState.configuredEndpoint.isNotBlank(),
-                actions::checkServer,
-            )
-        }
-    }
-    item {
-        SettingsSection(stringResource(R.string.settings_connection_section_title)) {
-            BeaconTextField(
-                connectionForm.endpoint,
-                {
-                    connectionForm.endpoint = it
-                    connectionForm.connectionEdited = true
-                    connectionForm.connectionError = ""
-                },
-                Modifier.fillMaxWidth(),
-                label = { BeaconText(stringResource(R.string.connection_endpoint)) },
-                labelText = stringResource(R.string.connection_endpoint),
-                singleLine = true,
-                enabled = !busy,
-            )
-            BeaconTextField(
-                connectionForm.deviceName,
-                {
-                    connectionForm.deviceName = it
-                    connectionForm.connectionEdited = true
-                },
-                Modifier.fillMaxWidth(),
-                label = { BeaconText(stringResource(R.string.binding_device_name)) },
-                labelText = stringResource(R.string.binding_device_name),
-                singleLine = true,
-                enabled = !busy,
-            )
-            BeaconTextField(
-                connectionForm.bindingCode,
-                {
-                    connectionForm.bindingCode = it
-                    connectionForm.connectionEdited = true
-                    connectionForm.connectionError = ""
-                },
-                Modifier.fillMaxWidth(),
-                label = { BeaconText(stringResource(R.string.binding_code)) },
-                labelText = stringResource(R.string.binding_code),
-                placeholder = stringResource(R.string.binding_code_placeholder),
-                singleLine = true,
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                enabled = !busy,
-            )
-            BeaconText(
-                stringResource(R.string.binding_hint),
-                style = MaterialTheme.typography.bodySmall,
-            )
-            if (connectionForm.connectionError.isNotBlank())
-                BeaconText(
-                    connectionForm.connectionError,
-                    color = MaterialTheme.colorScheme.error,
-                )
-            val bindEnabled =
-                !busy &&
-                    connectionDirty &&
-                    connectionForm.endpoint.isNotBlank() &&
-                    connectionForm.bindingCode.isNotBlank()
-            SettingsPrimaryAction(
-                label = stringResource(R.string.binding_action),
-                enabled = bindEnabled,
-                disabledReason =
-                    when {
-                        busy || bindEnabled -> null
-                        connectionForm.endpoint.isBlank() ->
-                            stringResource(
-                                R.string.form_missing_field_hint,
-                                stringResource(R.string.connection_endpoint),
-                            )
-                        connectionForm.bindingCode.isBlank() ->
-                            stringResource(
-                                R.string.form_missing_field_hint,
-                                stringResource(R.string.binding_code),
-                            )
-                        else -> null
-                    },
-                onClick = {
-                    val request =
-                        BindingRequest(
-                            connectionForm.endpoint.trim(),
-                            connectionForm.bindingCode.trim().lowercase(java.util.Locale.ROOT),
-                            connectionForm.deviceName.trim(),
-                        )
-                    try {
-                        request.validate(BuildConfig.DEBUG)
-                        focus.clearFocus()
-                        actions.bindDevice(request) {
-                            resetFirstUseGuideProgress(context)
-                            connectionForm.endpoint = request.endpoint
-                            connectionForm.bindingCode = ""
-                            connectionForm.connectionEdited = false
-                            connectionForm.connectionError = ""
-                        }
-                    } catch (_: Exception) {
-                        connectionForm.connectionError = bindingFormatHint
-                    }
-                },
-            )
+    item { ConnectionSummary(runtimeState, actions, connectionForm, busy, onFeedback) }
+    item { PushExamplesPanel(actions, !busy && runtimeState.configuredEndpoint.isNotBlank(),
+        runtimeState.configuredEndpoint, onFeedback) }
+    item { ClearConnectionPanel(runtimeState, actions, connectionForm) }
+}
 
-            BeaconActionButton(
-                stringResource(R.string.binding_copy_push_address),
-                BeaconIcons.Copy,
-                Modifier.fillMaxWidth(),
-                !busy && runtimeState.configuredEndpoint.isNotBlank(),
-            ) {
-                actions.copyPushKey { address ->
-                    val copied =
-                        copyToClipboard(
-                            context,
-                            resources.getString(R.string.settings_clipboard_push_key),
-                            address,
-                            sensitive = true,
-                        )
-                    if (copied) onFeedback(resources.getString(R.string.settings_copied_hint))
+@Composable
+private fun ConnectionSummary(
+    state: RuntimeState, actions: RuntimeActions, form: ConnectionFormState,
+    busy: Boolean, onFeedback: (String) -> Unit,
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val resources = androidx.compose.ui.platform.LocalResources.current
+    var editing by remember { mutableStateOf(false) }
+    var copied by remember { mutableStateOf(false) }
+    LaunchedEffect(copied) { if (copied) { kotlinx.coroutines.delay(1500); copied = false } }
+    SettingsSection(stringResource(R.string.settings_connection_status_heading)) {
+        SettingsStatusSummary(
+            title = if (state.serverReachable == true) stringResource(R.string.connection_status_connected)
+                else connectionStatusLabel(state),
+            details = if (state.serverReachable == false) state.serverCheckResult else "",
+            icon = when {
+                state.serverChecking -> BeaconIcons.Sync
+                state.serverReachable == false -> BeaconIcons.Warning
+                else -> BeaconIcons.Cloud
+            },
+            tint = when (state.serverReachable) {
+                true -> io.github.beacon.app.ui.theme.beaconSuccessColor()
+                false -> MaterialTheme.colorScheme.error
+                null -> MaterialTheme.colorScheme.onSurfaceVariant
+            },
+            loading = state.serverChecking, interactive = false,
+            caption = stringResource(R.string.server_last_checked) + " · " + formatMessageTime(state.serverCheckedAtMs),
+        )
+        if (state.configuredEndpoint.isNotBlank()) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                androidx.compose.foundation.text.selection.SelectionContainer(Modifier.weight(1f)) {
+                    BeaconText(state.configuredEndpoint, style = MaterialTheme.typography.bodyMedium)
                 }
+                BeaconIconButton(onClick = {
+                    actions.copyPushKey { address ->
+                        copied = copyToClipboard(context, resources.getString(R.string.settings_clipboard_push_key),
+                            address, sensitive = true)
+                        if (copied) onFeedback(resources.getString(R.string.settings_copied_hint))
+                    }
+                }, enabled = state.runtimeConnected && !busy) {
+                    Icon(if (copied) BeaconIcons.Check else BeaconIcons.Copy,
+                        stringResource(R.string.binding_copy_push_address))
+                }
+            }
+            SettingsHint(stringResource(R.string.binding_device_name) + " · " + form.deviceName)
+        }
+        SettingsActions {
+            if (state.configuredEndpoint.isNotBlank()) {
+                BeaconTextButton(onClick = actions::checkServer,
+                    enabled = state.runtimeConnected && !busy && !state.serverChecking) {
+                    BeaconLoadingIcon(BeaconIcons.Sync, state.serverChecking, Modifier.size(BeaconUiMetrics.IconInline))
+                    Spacer(Modifier.width(BeaconUiMetrics.Gap6))
+                    BeaconText(stringResource(if (state.serverChecking) R.string.server_checking else R.string.server_check_action))
+                }
+            }
+            BeaconOutlinedButton(onClick = { editing = true }, enabled = state.runtimeConnected && !busy) {
+                BeaconText(stringResource(if (state.configuredEndpoint.isBlank()) R.string.settings_configure_connection
+                    else R.string.settings_edit_connection))
             }
         }
     }
-    item {
-        PushExamplesPanel(
-            actions,
-            !busy && runtimeState.configuredEndpoint.isNotBlank(),
-            runtimeState.configuredEndpoint,
-            onFeedback,
-        )
+    if (editing) ConnectionEditor(state, actions, form, busy, onDismiss = { editing = false })
+}
+
+@Composable
+private fun ConnectionEditor(
+    state: RuntimeState, actions: RuntimeActions, form: ConnectionFormState,
+    busy: Boolean, onDismiss: () -> Unit,
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val focus = androidx.compose.ui.platform.LocalFocusManager.current
+    val initialEndpoint = remember { state.configuredEndpoint.ifBlank { form.endpoint } }
+    val initialName = remember { form.deviceName }
+    var endpoint by remember { mutableStateOf(initialEndpoint) }
+    var name by remember { mutableStateOf(initialName) }
+    // Secrets remain only in this composition, never in saved instance state.
+    var code by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf("") }
+    var discard by remember { mutableStateOf(false) }
+    var submitted by remember { mutableStateOf(false) }
+    val formatError = stringResource(R.string.binding_format_hint)
+    fun close() {
+        if (busy || submitted) return
+        if (endpoint != initialEndpoint || name != initialName || code.isNotBlank()) discard = true
+        else onDismiss()
     }
-    item { ClearConnectionPanel(runtimeState, actions, connectionForm) }
+    LaunchedEffect(busy) { if (!busy && submitted) { submitted = false; error = state.status.text } }
+    BeaconAlertDialog(
+        onDismissRequest = ::close,
+        title = { BeaconText(stringResource(R.string.settings_connection_section_title)) },
+        text = {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap)) {
+                BeaconTextField(endpoint, { endpoint = it; error = "" }, Modifier.fillMaxWidth(),
+                    label = { BeaconText(stringResource(R.string.connection_endpoint)) },
+                    labelText = stringResource(R.string.connection_endpoint), singleLine = true, enabled = !busy && !submitted,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri))
+                BeaconTextField(name, { name = it }, Modifier.fillMaxWidth(),
+                    label = { BeaconText(stringResource(R.string.binding_device_name)) },
+                    labelText = stringResource(R.string.binding_device_name), singleLine = true, enabled = !busy && !submitted)
+                BeaconTextField(code, { code = it; error = "" }, Modifier.fillMaxWidth(),
+                    label = { BeaconText(stringResource(R.string.binding_code)) },
+                    labelText = stringResource(R.string.binding_code), singleLine = true, enabled = !busy && !submitted,
+                    placeholder = stringResource(R.string.binding_code_placeholder),
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password))
+                SettingsHint(stringResource(R.string.binding_hint))
+                if (error.isNotBlank()) BeaconText(error, color = MaterialTheme.colorScheme.error)
+                if (submitted || busy) SettingsHint(state.status.text)
+            }
+        },
+        confirmButton = {
+            BeaconButton(enabled = !busy && !submitted && endpoint.isNotBlank() && code.isNotBlank(), onClick = {
+                val request = BindingRequest(endpoint.trim(), code.trim().lowercase(java.util.Locale.ROOT), name.trim())
+                if (runCatching { request.validate(BuildConfig.DEBUG) }.isFailure) error = formatError
+                else {
+                    focus.clearFocus()
+                    submitted = true
+                    actions.bindDevice(request) {
+                        resetFirstUseGuideProgress(context)
+                        form.endpoint = request.endpoint
+                        form.deviceName = request.deviceName
+                        form.bindingCode = ""
+                        form.connectionEdited = false
+                        form.connectionError = ""
+                        code = ""
+                        onDismiss()
+                    }
+                }
+            }) { BeaconText(stringResource(R.string.binding_action)) }
+        },
+        dismissButton = { BeaconCancelButton(onClick = ::close, enabled = !busy && !submitted) },
+    )
+    if (discard) BeaconConfirmDialog(
+        title = stringResource(R.string.settings_discard_connection),
+        description = stringResource(R.string.settings_discard_connection_hint), danger = false,
+        onDismiss = { discard = false }, onConfirm = { code = ""; onDismiss() },
+    )
 }

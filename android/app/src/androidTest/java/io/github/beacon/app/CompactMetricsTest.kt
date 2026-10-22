@@ -37,17 +37,23 @@ class CompactMetricsTest {
         }
         rule.waitForIdle()
         fun bounds(label: String) = rule.onNodeWithText(label).getUnclippedBoundsInRoot()
-        val first = bounds("数据库")
-        assertEquals(first.top.value, bounds("消息").top.value, 1f)
-        assertEquals(first.top.value, bounds("未读").top.value, 1f)
-        assertTrue(first.right < bounds("消息").left)
-        assertTrue(bounds("消息").right < bounds("未读").left)
-        val second = bounds("待回传")
-        assertEquals(second.top.value, bounds("临时日志").top.value, 1f)
-        assertTrue(second.top > first.bottom)
-        val preview = bounds("可清理")
-        assertEquals(preview.top.value, bounds("待回传保留").top.value, 1f)
-        assertEquals(preview.top.value, bounds("通知保留").top.value, 1f)
+        fun verifyReadingOrder(labels: List<String>) {
+            labels.zipWithNext().forEach { (first, next) ->
+                val a = bounds(first)
+                val b = bounds(next)
+                if (kotlin.math.abs(a.top.value - b.top.value) < 1f) {
+                    assertTrue("Adjacent metrics must not overlap", a.right < b.left)
+                } else {
+                    assertTrue("Wrapped metrics must preserve reading order", b.top > a.bottom)
+                }
+            }
+        }
+        verifyReadingOrder(listOf("数据库", "消息", "未读", "待回传", "待通知", "临时日志"))
+        verifyReadingOrder(listOf("可清理", "待回传保留", "通知保留"))
+        // Large text is allowed to reduce column count; forcing three columns clips labels.
+        if (scale == 1f) {
+            assertEquals(bounds("数据库").top.value, bounds("未读").top.value, 1f)
+        }
         rule.onRoot().captureToImage().asAndroidBitmap().let { bitmap ->
             val file = java.io.File(rule.activity.getExternalFilesDir(null), "metrics-${style.name}-$scale.png")
             file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }

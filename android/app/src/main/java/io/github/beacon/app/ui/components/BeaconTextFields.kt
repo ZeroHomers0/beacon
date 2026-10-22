@@ -54,6 +54,7 @@ fun BeaconTextField(
     enabled: Boolean = true,
     placeholder: String = "",
     isError: Boolean = false,
+    compact: Boolean = singleLine,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
@@ -69,7 +70,38 @@ fun BeaconTextField(
     }
     val fieldModifier =
         Modifier.bringIntoViewRequester(requester).onFocusChanged { focused = it.isFocused }
-    if (miuix())
+    if (compact) {
+        Column(modifier, verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6)) {
+            label()
+            androidx.compose.foundation.text.BasicTextField(
+                value = value, onValueChange = onValueChange,
+                modifier = Modifier.fillMaxWidth().named(labelText).then(fieldModifier),
+                singleLine = singleLine, enabled = enabled,
+                textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                visualTransformation = visualTransformation,
+                keyboardOptions = keyboardOptions, keyboardActions = keyboardActions,
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary),
+                decorationBox = { inner ->
+                    androidx.compose.material3.Surface(
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        border = androidx.compose.foundation.BorderStroke(1.dp,
+                            if (isError) MaterialTheme.colorScheme.error
+                            else if (focused) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.outline),
+                    ) {
+                        Box(Modifier.heightIn(min = BeaconUiMetrics.ControlMinHeight)
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                            contentAlignment = androidx.compose.ui.Alignment.CenterStart) {
+                            if (value.isEmpty() && placeholder.isNotEmpty())
+                                BeaconText(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            inner()
+                        }
+                    }
+                },
+            )
+        }
+    } else if (miuix())
         Column(modifier, verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6)) {
             label()
             // MIUIX draws the label above the field, so the field needs its own accessible name;

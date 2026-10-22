@@ -4,6 +4,11 @@ import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
@@ -39,7 +44,8 @@ internal fun UpdateCheckDialog(
         onDismissRequest = onDismiss,
         title = { BeaconText(stringResource(R.string.settings_update_available, release.version)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
+            Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
                 if (release.sizeBytes > 0) {
                     BeaconText(
                         stringResource(

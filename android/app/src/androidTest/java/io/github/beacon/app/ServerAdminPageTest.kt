@@ -260,6 +260,65 @@ class ServerAdminPageTest {
 
     @Test fun miuixUnboundPhoneBindsInOneTap() = oneTapBinding(BeaconUiStyle.MIUIX)
 
+    private fun refinedPages(style: BeaconUiStyle) {
+        val model = ServerAdminViewModel { _, _ -> FixtureAdmin() }
+        rule.runOnUiThread {
+            // MainActivity may already own the production model; install this isolated fixture first.
+            rule.activity.viewModelStore.clear()
+            androidx.lifecycle.ViewModelProvider(rule.activity,
+                object : androidx.lifecycle.ViewModelProvider.Factory {
+                    @Suppress("UNCHECKED_CAST")
+                    override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T = model as T
+                })[ServerAdminViewModel::class.java]
+            model.restoreSession(rule.activity)
+            rule.activity.setContent {
+                val density = LocalDensity.current
+                CompositionLocalProvider(LocalDensity provides Density(density.density, 1.5f)) {
+                    BeaconTheme(style) {
+                        ServerAdminPage("", rememberLazyListState(), Modifier, PaddingValues(16.dp),
+                            { _, _, _ -> }, {}, screen = screen.value, onNavigate = { screen.value = it })
+                    }
+                }
+            }
+        }
+        rule.waitUntil(5000) { !model.state.value.restoring }
+        rule.runOnIdle { model.login("https://example.invalid", "a".repeat(64)) }
+        rule.waitUntil(5000) { model.state.value.loggedIn && !model.state.value.busy }
+        val screens = listOf(io.github.beacon.app.ui.components.SettingsScreen.SERVER_ADMIN,
+            io.github.beacon.app.ui.components.SettingsScreen.SERVER_DEVICES,
+            io.github.beacon.app.ui.components.SettingsScreen.SERVER_APPLICATIONS,
+            io.github.beacon.app.ui.components.SettingsScreen.SERVER_TEST)
+        screens.forEach { target ->
+            rule.runOnIdle { screen.value = target }
+            rule.waitForIdle()
+            rule.onNodeWithTag("server-admin-list").assertIsDisplayed()
+            if (target == io.github.beacon.app.ui.components.SettingsScreen.SERVER_TEST) {
+                rule.onAllNodes(hasSetTextAction()).assertCountEquals(2)
+                rule.onNodeWithText(rule.activity.getString(R.string.admin_send_test)).performScrollTo().assertIsNotEnabled()
+            }
+            val shot = rule.onRoot().captureToImage().asAndroidBitmap()
+            val file = java.io.File(rule.activity.getExternalFilesDir(null), "refined-$style-$target.png")
+            file.outputStream().use { shot.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+            androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation
+                .executeShellCommand("cp ${file.absolutePath} /data/local/tmp/${file.name}").use {
+                    android.os.ParcelFileDescriptor.AutoCloseInputStream(it).readBytes()
+                }
+        }
+        rule.runOnIdle { screen.value = io.github.beacon.app.ui.components.SettingsScreen.SERVER_DEVICES }
+        rule.waitForIdle()
+        rule.runOnIdle { model.showCreation() }
+        rule.onAllNodes(hasSetTextAction())[0].performTextReplacement("Synthetic phone")
+        rule.onAllNodes(hasSetTextAction())[0].performImeAction()
+        rule.onNode(hasText(rule.activity.getString(R.string.admin_create_binding)) and hasClickAction()).performClick()
+        rule.waitUntil(5000) { model.state.value.secret != null }
+        rule.onNodeWithContentDescription(rule.activity.getString(R.string.admin_copy)).assertIsDisplayed()
+        rule.onNodeWithText(rule.activity.getString(R.string.settings_complete)).performClick()
+        rule.waitUntil(5000) { model.state.value.secret == null }
+    }
+
+    @Test fun refinedMaterialPages() = refinedPages(BeaconUiStyle.MATERIAL3)
+    @Test fun refinedMiuixPages() = refinedPages(BeaconUiStyle.MIUIX)
+
     private class FixtureAdmin : ServerAdministration {
         var bindingCalls = 0
         override val endpoint = "https://example.invalid"

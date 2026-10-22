@@ -196,36 +196,12 @@ fun OperationResultPanel(title: String, result: String, failed: Boolean? = null)
             },
     )
 }
-/**
- * A label with a detail line, as used by the receive status card. The detail only reserves the
- * lines it actually wraps to: the values change on every poll, and a fixed two-line slot left a
- * blank line under every one-line status, which added up to a visibly hollow card. The height is
- * measured for the current width, so a row does not jump between identical polls, and the card's
- * own animateContentSize handles the rare case where the text grows to two lines.
- */
+/** Dynamic status rows reserve their detail lines so refresh feedback does not move later actions. */
 @Composable
 fun SettingsStatusDetail(title: String, details: String, error: Boolean = false) {
     val detailsStyle = MaterialTheme.typography.bodySmall
-    val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
     BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val widthPx = constraints.maxWidth
-        val detailLines =
-            remember(details, widthPx, detailsStyle) {
-                if (widthPx == Constraints.Infinity) {
-                    1
-                } else {
-                    measurer
-                        .measure(
-                            text = AnnotatedString(details),
-                            style = detailsStyle,
-                            maxLines = 2,
-                            constraints = Constraints(maxWidth = widthPx),
-                        )
-                        .lineCount
-                        .coerceIn(1, 2)
-                }
-            }
         Column(
             Modifier.fillMaxWidth()
                 .heightIn(min = BeaconUiMetrics.StatusDetailMinHeight)
@@ -241,7 +217,7 @@ fun SettingsStatusDetail(title: String, details: String, error: Boolean = false)
             )
             BeaconText(
                 details,
-                modifier = Modifier.heightIn(min = with(density) { detailsStyle.lineHeight.toDp() * detailLines }),
+                modifier = Modifier.heightIn(min = with(density) { detailsStyle.lineHeight.toDp() * 2 }),
                 style = detailsStyle,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,

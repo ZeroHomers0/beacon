@@ -27,7 +27,7 @@ internal fun LazyListScope.aboutSettingsItems(
 ) {
     item {
         Column(
-            Modifier.fillMaxWidth().padding(vertical = 24.dp),
+            Modifier.fillMaxWidth().padding(vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
         ) {
@@ -43,11 +43,13 @@ internal fun LazyListScope.aboutSettingsItems(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            androidx.compose.foundation.text.selection.SelectionContainer {
             BeaconText(
                 stringResource(R.string.settings_version_label, BuildConfig.VERSION_NAME),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            }
         }
     }
     item { AboutLinks(resources, context, onOperationDetails) }
@@ -69,11 +71,13 @@ private fun AboutLinks(
         }
     }
     SettingsGroup(stringResource(R.string.settings_about_links_heading)) {
-        SettingsRow(stringResource(R.string.settings_about_project), "", BeaconIcons.Cloud) {
+        SettingsRow(stringResource(R.string.settings_about_project), "", BeaconIcons.Cloud,
+            iconTint = MaterialTheme.colorScheme.onSurface, external = true, onClick = {
             open("https://github.com/ZeroHomers0/beacon")
-        }
-        SettingsRow(stringResource(R.string.ui_v2_docs), "", BeaconIcons.Guide) {
+        })
+        SettingsRow(stringResource(R.string.ui_v2_docs), "", BeaconIcons.Guide,
+            iconTint = MaterialTheme.colorScheme.onSurface, external = true, onClick = {
             open("https://github.com/ZeroHomers0/beacon/blob/main/README.md")
-        }
+        })
     }
 }

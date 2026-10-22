@@ -22,10 +22,10 @@ object BeaconUiMetrics {
     val SettingsGroupGap = 20.dp
     val GroupTitleGap = 8.dp
     val PreferenceInset = 4.dp
-    val NavigationMinHeight = 57.2.dp
-    val NavigationVerticalInset = 4.4.dp
-    val FieldMinHeight = 56.dp
-    val FieldVerticalInset = 12.dp
+    val NavigationMinHeight = 62.92.dp
+    val NavigationVerticalInset = 4.84.dp
+    val FieldMinHeight = 61.6.dp
+    val FieldVerticalInset = 13.2.dp
 
     /** List search field: 36dp pairs with the 14sp search text so the pill is not mostly padding. */
     val SearchFieldMinHeight = 36.dp

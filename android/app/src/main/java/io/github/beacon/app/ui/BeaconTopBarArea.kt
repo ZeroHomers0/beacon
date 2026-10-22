@@ -270,82 +270,84 @@ internal fun BeaconTopBarArea(
                                 } else ui.selectionHint = maxSelectionWarning
                             }
                         } else if (displayedDetail == null && barPage == 0) {
-                            BeaconActionIcon(
-                                BeaconIcons.ReadAll,
-                                stringResource(
-                                    R.string.ui_mark_all_read_action
-                                ),
-                                enabled =
-                                    runtimeState.runtimeConnected &&
-                                        runtimeState.messagesLoaded &&
-                                        !busy,
-                            ) {
-                                actions.markAllRead()
-                            }
-                            io.github.beacon.app.ui.components.BeaconRefreshAction(
-                                stringResource(R.string.action_sync_now),
-                                runtimeState.runtimeConnected && !busy,
-                                runtimeState.transportBusy,
-                            ) {
-                                actions.transport()
-                            }
-                            Box {
+                            androidx.compose.runtime.CompositionLocalProvider(io.github.beacon.app.ui.components.LocalCompactActions provides true) {
                                 BeaconActionIcon(
-                                    BeaconIcons.Filter,
+                                    BeaconIcons.ReadAll,
                                     stringResource(
-                                        R.string.ui_filter_messages_title
+                                        R.string.ui_mark_all_read_action
                                     ),
-                                    enabled = !busy,
+                                    enabled =
+                                        runtimeState.runtimeConnected &&
+                                            runtimeState.messagesLoaded &&
+                                            !busy,
                                 ) {
-                                    ui.filtersOpen = true
+                                    actions.markAllRead()
                                 }
-                                BeaconDropdownMenu(
-                                    ui.filtersOpen,
-                                    { ui.filtersOpen = false },
+                                io.github.beacon.app.ui.components.BeaconRefreshAction(
+                                    stringResource(R.string.action_sync_now),
+                                    runtimeState.runtimeConnected && !busy,
+                                    runtimeState.transportBusy,
                                 ) {
-                                    MessageReadFilter.entries.forEach { filter
-                                        ->
-                                        BeaconDropdownMenuItem(
-                                            text = {
-                                                BeaconSelectableRow(
-                                                    stringResource(
-                                                        when (filter) {
-                                                            MessageReadFilter
-                                                                .ALL ->
-                                                                R.string
-                                                                    .ui_filter_all_label
-                                                            MessageReadFilter
-                                                                .UNREAD ->
-                                                                R.string
-                                                                    .msg_unread_label
-                                                            MessageReadFilter
-                                                                .READ ->
-                                                                R.string
-                                                                    .msg_read_label
-                                                        }
-                                                    ),
-                                                    filter == ui.readFilter,
-                                                )
-                                            },
-                                            onClick = {
-                                                ui.filtersOpen = false
-                                                ui.applyFilter(
-                                                    actions,
-                                                    ui.search,
-                                                    filter,
-                                                )
-                                            },
-                                        )
+                                    actions.transport()
+                                }
+                                Box {
+                                    BeaconActionIcon(
+                                        BeaconIcons.Filter,
+                                        stringResource(
+                                            R.string.ui_filter_messages_title
+                                        ),
+                                        enabled = !busy,
+                                    ) {
+                                        ui.filtersOpen = true
+                                    }
+                                    BeaconDropdownMenu(
+                                        ui.filtersOpen,
+                                        { ui.filtersOpen = false },
+                                    ) {
+                                        MessageReadFilter.entries.forEach { filter
+                                            ->
+                                            BeaconDropdownMenuItem(
+                                                text = {
+                                                    BeaconSelectableRow(
+                                                        stringResource(
+                                                            when (filter) {
+                                                                MessageReadFilter
+                                                                    .ALL ->
+                                                                    R.string
+                                                                        .ui_filter_all_label
+                                                                MessageReadFilter
+                                                                    .UNREAD ->
+                                                                    R.string
+                                                                        .msg_unread_label
+                                                                MessageReadFilter
+                                                                    .READ ->
+                                                                    R.string
+                                                                        .msg_read_label
+                                                            }
+                                                        ),
+                                                        filter == ui.readFilter,
+                                                    )
+                                                },
+                                                onClick = {
+                                                    ui.filtersOpen = false
+                                                    ui.applyFilter(
+                                                        actions,
+                                                        ui.search,
+                                                        filter,
+                                                    )
+                                                },
+                                            )
+                                        }
                                     }
                                 }
-                            }
-                            BeaconActionIcon(
-                                BeaconIcons.Settings,
-                                stringResource(R.string.ui_nav_settings_title),
-                                showBadge = updateState.hasUnreadUpdate,
-                            ) {
-                                ui.navigateSettings(SettingsScreen.HOME)
-                                navigate(1)
+                                BeaconActionIcon(
+                                    BeaconIcons.Settings,
+                                    stringResource(R.string.ui_nav_settings_title),
+                                    showBadge = updateState.hasUnreadUpdate,
+                                ) {
+                                    ui.navigateSettings(SettingsScreen.HOME)
+                                    navigate(1)
+                                }
                             }
                         } else if (
                             displayedDetail == null &&

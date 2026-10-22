@@ -66,100 +66,74 @@ fun FirstUseGuidePanel(
                 .apply()
     }
     val busy = !state.runtimeConnected || state.transportBusy || state.messageBusy
-    SettingsSection(stringResource(R.string.settings_guide_title)) {
-        GuideStep(
-            resources.getString(R.string.settings_guide_server),
-            if (state.configuredEndpoint.isBlank())
-                resources.getString(R.string.settings_guide_unbound)
-            else resources.getString(R.string.settings_guide_bound),
-        )
-        BeaconOutlinedButton(
-            onClick = { onNavigate(SettingsScreen.CONNECTION) },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            BeaconText(stringResource(R.string.settings_guide_configure))
+    var receiveReviewed by remember(endpoint) { mutableStateOf(sameBinding && preferences.getBoolean("receive_reviewed", false)) }
+    val connected = endpoint.isNotBlank()
+    val done = listOf(connected, notificationsAllowed, receiveReviewed, testSent && received)
+    val currentStep = done.indexOfFirst { !it }.let { if (it < 0) 4 else it }
+    SettingsGroup(stringResource(R.string.settings_guide_steps)) {
+        Column(Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset)) {
+            SettingsHint(stringResource(R.string.settings_guide_progress, done.count { it }, 4))
         }
-        GuideStep(
-            resources.getString(R.string.settings_guide_notifications),
-            if (notificationsAllowed)
-                resources.getString(R.string.settings_guide_notifications_allowed)
-            else resources.getString(R.string.settings_guide_notifications_denied),
-        )
-        BeaconOutlinedButton(
-            onClick = { onNavigate(SettingsScreen.NOTIFICATIONS) },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            BeaconText(stringResource(R.string.settings_guide_check_notifications))
-        }
-        GuideStep(
-            stringResource(R.string.settings_guide_receive_title),
-            stringResource(R.string.settings_guide_receive_hint),
-        )
-        BeaconOutlinedButton(
-            onClick = { onNavigate(SettingsScreen.RECEPTION) },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            BeaconText(stringResource(R.string.settings_guide_receive_action))
-        }
-        GuideStep(
-            stringResource(R.string.settings_guide_test_title),
-            stringResource(R.string.settings_guide_test_hint),
-        )
-        BeaconButton(
-            enabled = !busy && state.configuredEndpoint.isNotBlank(),
-            onClick = { testConfirmation = true },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            BeaconText(stringResource(R.string.settings_guide_test_action))
-        }
-        if (result.isNotEmpty())
-            OperationResultPanel(
-                stringResource(R.string.settings_guide_test_action),
-                result,
-                testFailed,
-            )
-        if (testSent)
-            Row(
-                Modifier.fillMaxWidth().heightIn(min = BeaconUiMetrics.FieldMinHeight),
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-            ) {
-                BeaconCheckbox(
-                    received,
-                    { received = it },
-                    enabled = !busy,
-                    contentDescription = stringResource(R.string.settings_guide_received),
-                )
-                BeaconText(
-                    stringResource(R.string.settings_guide_received),
-                    Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-        SettingsHint(
-            stringResource(
-                when {
-                    state.configuredEndpoint.isBlank() -> R.string.settings_guide_next_bind
-                    !notificationsAllowed -> R.string.settings_guide_next_permission
-                    !testSent -> R.string.settings_guide_next_test
-                    !received -> R.string.settings_guide_next_confirm
-                    else -> R.string.settings_guide_ready
+        val titles = listOf(R.string.settings_guide_server, R.string.settings_guide_notifications,
+            R.string.settings_guide_receive_title, R.string.settings_guide_test_title)
+        titles.forEachIndexed { index, title ->
+            SettingsRow(stringResource(if (index == 3) R.string.settings_guide_test_action else title),
+                if (done[index]) stringResource(R.string.settings_complete)
+                else if (index == 2) stringResource(receiveModeTitle(state.receivePlan.mode))
+                else stringResource(when (index) {
+                    0 -> R.string.settings_guide_unbound
+                    1 -> R.string.settings_guide_notifications_denied
+                    else -> R.string.settings_guide_test_pending
+                }),
+                if (done[index]) io.github.beacon.app.ui.icons.BeaconIcons.Check else when (index) {
+                    0 -> io.github.beacon.app.ui.icons.BeaconIcons.Server
+                    1 -> io.github.beacon.app.ui.icons.BeaconIcons.Messages
+                    2 -> io.github.beacon.app.ui.icons.BeaconIcons.ReceiveRules
+                    else -> io.github.beacon.app.ui.icons.BeaconIcons.Diagnostics
+                }, iconTint = if (done[index]) io.github.beacon.app.ui.theme.beaconSuccessColor()
+                    else MaterialTheme.colorScheme.onSurface,
+                command = index == 3, onClick = {
+                    when (index) {
+                        0 -> onNavigate(SettingsScreen.CONNECTION)
+                        1 -> onNavigate(SettingsScreen.NOTIFICATIONS)
+                        2 -> {
+                            receiveReviewed = true
+                            preferences.edit().putBoolean("receive_reviewed", true).apply()
+                            onNavigate(SettingsScreen.RECEPTION)
+                        }
+                        else -> if (!busy && connected) testConfirmation = true
+                    }
+                })
+            if (index == currentStep || (index == 3 && testSent && !received)) {
+                Column(Modifier.fillMaxWidth().padding(horizontal = BeaconUiMetrics.CardInset),
+                    verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
+                    if (index == 3) {
+                        if (result.isNotEmpty()) OperationResultPanel(
+                            stringResource(R.string.settings_guide_test_action), result, testFailed)
+                        if (testSent) Row(Modifier.fillMaxWidth(),
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                            BeaconCheckbox(received, { received = it }, enabled = !busy,
+                                contentDescription = stringResource(R.string.settings_guide_received))
+                            BeaconText(stringResource(R.string.settings_guide_received), Modifier.weight(1f))
+                        }
+                    }
+                    SettingsHint(stringResource(when (index) {
+                        0 -> R.string.settings_guide_next_bind
+                        1 -> R.string.settings_guide_next_permission
+                        2 -> R.string.settings_guide_receive_hint
+                        else -> if (testSent) R.string.settings_guide_next_confirm else R.string.settings_guide_next_test
+                    }))
+                    Spacer(Modifier.height(BeaconUiMetrics.Gap8))
                 }
-            )
-        )
-        BeaconOutlinedButton(
-            enabled =
-                testSent &&
-                    received &&
-                    notificationsAllowed &&
-                    !busy &&
-                    state.configuredEndpoint.isNotBlank(),
-            onClick = {
-                preferences.edit().putBoolean("completed", true).apply()
-                onNavigate(SettingsScreen.HOME)
-            },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            BeaconText(stringResource(R.string.settings_guide_done))
+            }
+        }
+        if (done.all { it }) Column(Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset)) {
+            SettingsActions {
+                BeaconButton(enabled = !busy, onClick = {
+                    preferences.edit().putBoolean("completed", true).apply()
+                    onNavigate(SettingsScreen.HOME)
+                }) { BeaconText(stringResource(R.string.settings_guide_done)) }
+            }
         }
     }
     if (testConfirmation)
@@ -198,18 +172,6 @@ fun FirstUseGuidePanel(
                 BeaconCancelButton(onClick = { testConfirmation = false })
             },
         )
-}
-
-@Composable
-private fun GuideStep(title: String, description: String) {
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap4)) {
-        BeaconText(title, style = MaterialTheme.typography.titleMedium)
-        BeaconText(
-            description,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
 }
 
 internal fun resetFirstUseGuideProgress(context: android.content.Context) {

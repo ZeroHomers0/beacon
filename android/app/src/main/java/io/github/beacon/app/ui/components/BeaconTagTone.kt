@@ -9,7 +9,7 @@ import androidx.compose.ui.graphics.luminance
 import io.github.beacon.app.domain.policy.tagToneIndex
 
 /**
- * Card metadata is a background texture, never a highlight: every tag has to sit next to a title
+ * Card metadata uses a tinted background: every tag has to sit next to a title
  * that owns the row, so the hues carry enough chroma to be told apart at a glance without ever
  * competing with the text.
  *
@@ -37,12 +37,8 @@ internal fun beaconTagContainer(label: String, slot: Int): Color {
     val scheme = MaterialTheme.colorScheme
     val darker = scheme.surface.luminance() < .5f
     val hue = Color(Hues[tagToneIndex(label, slot)])
-    // A dark surface already carries the contrast, so the same wash would read as a highlight;
-    // both modes therefore share the hue list and differ only in how much of it is laid down.
-    // Two earlier passes were too timid to be worth tinting at all; this is about three times the
-    // first. Measured label contrast after compositing: 6.0:1 or better in light mode and 6.7:1 or
-    // better in dark, against the 4.5:1 small-text floor.
-    val alpha = if (darker) .24f else .28f
+    // A stronger wash makes neighbouring tag hues easier to distinguish in both themes.
+    val alpha = if (darker) .38f else .40f
     return hue.copy(alpha = alpha).compositeOver(scheme.surfaceContainerLow)
 }
 
@@ -55,4 +51,4 @@ internal fun beaconTagContainer(label: String, slot: Int): Color {
 @ReadOnlyComposable
 internal fun beaconTagContent(toneSlot: Int): Color =
     if (toneSlot < 0) MaterialTheme.colorScheme.onSurfaceVariant
-    else MaterialTheme.colorScheme.onSurface.copy(alpha = .82f)
+    else MaterialTheme.colorScheme.onSurface
