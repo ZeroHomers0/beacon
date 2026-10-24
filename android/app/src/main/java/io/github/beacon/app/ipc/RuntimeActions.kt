@@ -42,7 +42,11 @@ interface RuntimeActions {
      */
     fun autoCheckServer()
 
-    fun barkEncryption(key: String, iv: String, onComplete: (String) -> Unit)
+    /** Returns only whether a local key exists, never the key or IV. Null means read failed. */
+    fun barkEncryptionConfigured(onComplete: (Boolean?) -> Unit)
+
+    /** Empty key and IV together remove the local Bark secret. */
+    fun barkEncryption(key: String, iv: String, onFailure: (String) -> Unit = {}, onComplete: (String) -> Unit)
 
     fun testDelivery(onFailure: (String) -> Unit = {}, onComplete: (String) -> Unit)
 

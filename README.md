@@ -287,7 +287,8 @@ curl -X POST 'https://push.example.com/push' \
 - 支持 `title`、`subtitle`、`body`，文本长度限制与原生接口一致。
 - `level=passive` 或 `sound=none` 对应优先级 2；`level=timeSensitive`、`level=critical` 对应优先级 8；其余默认使用 5。Android 通知效果仍受系统通知权限和通知渠道设置影响。
 - 接收 `image`、`icon`、`url`、`sound` 扩展字段；链接字段仅保留有效的 HTTPS 地址。Bark 的 iOS 铃声和 critical alert 权限不等同于 Android 上的效果。
-- 接收 `ciphertext`、`iv` 加密字段，解密需要在接收端配置匹配的 Bark 加密密钥；服务端不接收 AES 密钥。
+- 接收 `ciphertext`、`iv` 加密字段。在 Android「设置 → 服务器配置 → Bark 消息解密」配置与发送方一致的 AES 加密密钥和默认 IV；先完成服务器绑定。AES-CBC 密钥需为16、24或32个 UTF-8 字节，默认 IV 为16字节，均按原始文本输入，不是十六进制/Base64解码输入。消息自带 IV 时优先使用消息中的值。
+- 密钥仅通过 Android Keystore 加密保存在手机，不上传服务端、不回显；服务器只转发密文。保存配置后自动尝试解密尚未解密的历史消息。可替换密钥，或通过「移除解密配置」停止后续自动解密；移除保留服务器绑定和已解密的历史正文。重新绑定服务器或清除本机配置后需重新配置解密密钥。
 - 支持 `group` 与 `ttl`；Beacon 的 `ttl` 单位为秒，范围与原生接口一致，JSON 可使用整数或整数字符串，表单/查询参数使用整数字符串。
 - Bark 接口也支持 `Idempotency-Key` 请求头，作用域、有效窗口与原生接口相同。
 - `badge`、`action` 等未实现参数会被忽略，不影响正常文本推送。

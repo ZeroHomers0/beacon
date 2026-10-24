@@ -118,6 +118,13 @@ class TransportSecretStore(
         seal(unseal().put("bark_key", key).put("bark_iv", iv))
     }
 
+    fun clearBarkSecret() {
+        val body = unseal()
+        body.remove("bark_key")
+        body.remove("bark_iv")
+        seal(body)
+    }
+
     fun barkSecret(): Pair<String, String>? {
         val body = unseal()
         return if (body.has("bark_key")) body.getString("bark_key") to body.getString("bark_iv")

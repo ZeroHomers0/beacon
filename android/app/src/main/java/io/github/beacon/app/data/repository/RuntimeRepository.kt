@@ -128,9 +128,19 @@ class RuntimeRepository : RuntimeActions {
 
     override fun start(context: Context) = connection.start(context)
 
-    override fun barkEncryption(key: String, iv: String, onComplete: (String) -> Unit) {
+    override fun barkEncryptionConfigured(onComplete: (Boolean?) -> Unit) {
+        if (!ready()) { onComplete(null); return }
+        connection.execute({ RuntimeControlClient(it).barkEncryptionConfigured() },
+            { onComplete(it) }, { onComplete(null) })
+    }
+
+    override fun barkEncryption(key: String, iv: String, onFailure: (String) -> Unit, onComplete: (String) -> Unit) {
         if (!ready() || state.value.transportBusy) {
-            onComplete("请等待接收服务就绪")
+            onFailure("请等待接收服务就绪")
+            return
+        }
+        if (!(key.isEmpty() && iv.isEmpty()) && !io.github.beacon.app.domain.policy.BarkEncryptionValidation.valid(key, iv)) {
+            onFailure("密钥需为16、24或32字节，默认IV需为16字节")
             return
         }
         mutableState.update { it.copy(transportBusy = true) }
@@ -143,7 +153,7 @@ class RuntimeRepository : RuntimeActions {
             },
             {
                 mutableState.update { state -> state.copy(transportBusy = false) }
-                onComplete("保存未确认，请检查配置后重试")
+                onFailure("保存未确认，请检查配置后重试")
             },
         )
     }

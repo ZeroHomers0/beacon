@@ -552,4 +552,20 @@
 <string name="admin_topic_cleared">主题状态已清空</string>
 <string name="ui_nav_states_title">数据</string>
     <string name="admin_topic_clear">清空当前状态</string>
+    <string name="bark_decryption_title">Bark 消息解密</string>
+    <string name="bark_decryption_configure">配置解密密钥</string>
+    <string name="bark_decryption_bind_first">请先完成服务器绑定</string>
+    <string name="bark_decryption_read_failed">读取失败，请重试</string>
+    <string name="bark_decryption_loading">正在读取配置</string>
+    <string name="bark_decryption_configured">已配置，可重新设置</string>
+    <string name="bark_decryption_not_configured">未配置</string>
+    <string name="bark_decryption_description">用于解密 Bark 加密消息。密钥仅加密保存在本机，不上传服务器；与设备推送密钥不同。</string>
+    <string name="bark_decryption_edit_hint">输入与发送方一致的 AES-CBC 密钥和默认 IV。消息自带 IV 时优先使用消息中的值。保存后自动尝试解密历史消息；已保存的密钥不回显。</string>
+    <string name="bark_decryption_key">AES 加密密钥</string>
+    <string name="bark_decryption_iv">默认 IV</string>
+    <string name="bark_decryption_key_length">UTF-8 需为16、24或32字节，当前%1$d字节</string>
+    <string name="bark_decryption_iv_length">UTF-8 需为16字节，当前%1$d字节</string>
+    <string name="bark_decryption_remove">移除解密配置</string>
+    <string name="bark_decryption_remove_confirm">移除</string>
+    <string name="bark_decryption_remove_hint">停止自动解密后续 Bark 加密消息。已解密的历史正文会保留，不会重新加密或删除；服务器绑定不受影响。</string>
 </resources>

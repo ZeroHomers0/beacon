@@ -18,6 +18,9 @@ internal data class RuntimeControlReply(
 )
 
 internal class RuntimeControlClient(private val binder: IBinder) {
+    fun barkEncryptionConfigured(): Boolean =
+        binder.request(RuntimeProtocol.BARK_ENCRYPTION_STATUS) { it.readInt() == 1 }
+
     fun barkEncryption(key: String, iv: String): String =
         binder.request(
             RuntimeProtocol.BARK_ENCRYPTION,

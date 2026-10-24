@@ -51,6 +51,7 @@ internal fun LazyListScope.connectionSettingsItems(
     item { ConnectionSummary(runtimeState, actions, connectionForm, busy) }
     item { PushExamplesPanel(actions, runtimeState.runtimeConnected && !busy && runtimeState.configuredEndpoint.isNotBlank(),
         runtimeState.configuredEndpoint, onFeedback) }
+    item { BarkEncryptionPanel(runtimeState, actions, onFeedback) }
     item { ClearConnectionPanel(runtimeState, actions, connectionForm) }
 }
 

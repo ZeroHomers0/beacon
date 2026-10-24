@@ -486,6 +486,7 @@ class RuntimeProbeService : Service() {
                             io.github.beacon.app.ipc.RuntimeProtocol.IMPORT_SETTINGS,
                             io.github.beacon.app.ipc.RuntimeProtocol.CLEAR_ALL_MESSAGES,
                             io.github.beacon.app.ipc.RuntimeProtocol.BARK_ENCRYPTION,
+                            io.github.beacon.app.ipc.RuntimeProtocol.BARK_ENCRYPTION_STATUS,
                             io.github.beacon.app.ipc.RuntimeProtocol.TEST_DELIVERY,
                             io.github.beacon.app.ipc.RuntimeProtocol.HISTORY_ARCHIVE,
                             io.github.beacon.app.ipc.RuntimeProtocol.PENDING_REMINDERS,
@@ -545,6 +546,15 @@ class RuntimeProbeService : Service() {
                     }
                     return true
                 }
+                if (code == io.github.beacon.app.ipc.RuntimeProtocol.BARK_ENCRYPTION_STATUS) {
+                    require(data.dataAvail() == 0)
+                    val configured = worker.submit<Boolean> {
+                        val secrets = TransportSecretStore(this@RuntimeProbeService)
+                        secrets.isConfigured() && secrets.barkSecret() != null
+                    }.get(10, java.util.concurrent.TimeUnit.SECONDS)
+                    requireNotNull(reply).apply { writeNoException(); writeInt(if (configured) 1 else 0) }
+                    return true
+                }
                 if (code == io.github.beacon.app.ipc.RuntimeProtocol.BARK_ENCRYPTION) {
                     require(data.dataAvail() <= 1024)
                     val key = requireNotNull(data.readString()).also { require(it.length <= 64) }
@@ -553,10 +563,15 @@ class RuntimeProbeService : Service() {
                     val result =
                         worker
                             .submit<String> {
-                                TransportSecretStore(this@RuntimeProbeService)
-                                    .saveBarkSecret(key, iv)
-                                val count = store.decryptHistory(key to iv)
-                                "推送解密配置已保存，解密 $count 条历史消息"
+                                val secrets = TransportSecretStore(this@RuntimeProbeService)
+                                if (key.isEmpty() && iv.isEmpty()) {
+                                    secrets.clearBarkSecret()
+                                    "Bark 解密配置已移除，已解密的历史消息保留"
+                                } else {
+                                    secrets.saveBarkSecret(key, iv)
+                                    val count = store.decryptHistory(key to iv)
+                                    "Bark 解密配置已保存，解密 $count 条历史消息"
+                                }
                             }
                             .get(30, java.util.concurrent.TimeUnit.SECONDS)
                     requireNotNull(reply).apply {

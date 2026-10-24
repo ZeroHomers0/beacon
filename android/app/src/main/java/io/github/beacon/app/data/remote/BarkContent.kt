@@ -16,7 +16,7 @@ object BarkContent {
         validate(metadata)
         if (!metadata.has("ciphertext")) return message
         if (secret == null)
-            return message.copy(title = "加密消息", body = "请在服务器设置中配置推送解密密钥", priority = 2)
+            return message.copy(title = "加密消息", body = "请在设置 → 服务器配置 → Bark 消息解密中配置密钥", priority = 2)
         return runCatching {
             val key = secret.first.toByteArray(Charsets.UTF_8)
             val iv = metadata.optString("iv").ifEmpty { secret.second }.toByteArray(Charsets.UTF_8)
@@ -50,7 +50,7 @@ object BarkContent {
             ReceiveMessageValidation.validate(result)
             result
         }
-            .getOrElse { message.copy(title = "加密消息", body = "解密失败，请检查推送密钥与初始向量", priority = 2) }
+            .getOrElse { message.copy(title = "加密消息", body = "解密失败，请检查 Bark 加密密钥与默认 IV", priority = 2) }
     }
 
     fun validate(metadata: JSONObject) {
