@@ -1094,6 +1094,10 @@ class RuntimeProbeService : Service() {
                                 recordEvent(RuntimeEventKind.DEVICE_REVOKED)
                                 // Clear last: a partial cleanup can retry the idempotent remote
                                 // request.
+                                val stateSource=store.stateCache.preference("source-for:"+device.settings.endpoint)
+                                if(stateSource.isNotEmpty())store.stateCache.forget(stateSource)
+                                io.github.beacon.app.widget.BeaconStateWidget.refresh(this@RuntimeProbeService)
+                                io.github.beacon.app.widget.StateNotifications.refresh(this@RuntimeProbeService)
                                 secrets.clear()
                                 SyncReport(SyncOutcome.OK, "当前设备已撤销并清除本机配置；历史消息保留，旧推送地址已失效")
                             } catch (error: Exception) {
@@ -1719,6 +1723,7 @@ class RuntimeProbeService : Service() {
         reply.writeString(
             io.github.beacon.app.data.remote.MessageActionsCodec.encode(message.actions)
         )
+        reply.writeString(message.structuredBlocks)
     }
 
     override fun onDestroy() {

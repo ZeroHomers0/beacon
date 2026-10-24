@@ -66,6 +66,7 @@ internal fun Parcel.readMessage() =
             io.github.beacon.app.data.remote.MessageActionsCodec.decode(
                 requireNotNull(readString())
             ),
+        structuredBlocks = requireNotNull(readString()).also { require(it.toByteArray(Charsets.UTF_8).size <= 32768) },
     )
 
 internal fun Parcel.readUndo(): DeleteUndo? {

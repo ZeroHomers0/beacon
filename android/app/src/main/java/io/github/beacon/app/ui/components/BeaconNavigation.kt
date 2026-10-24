@@ -68,7 +68,7 @@ fun BeaconNavigation(
     rail: Boolean = false,
     onNavigate: (Int) -> Unit,
 ) {
-    val icons = listOf(BeaconIcons.Messages, BeaconIcons.Settings)
+    val icons = listOf(BeaconIcons.Messages, BeaconIcons.Settings, BeaconIcons.Messages)
     if (rail) {
         if (miuix()) {
             val railColor = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surface
@@ -85,7 +85,8 @@ fun BeaconNavigation(
                             )
                         ),
             ) {
-                titleRes.forEachIndexed { index, res ->
+                titleRes.indices.sortedBy{when(it){0->0;2->1;else->2}}.forEach { index ->
+                val res=titleRes[index]
                     top.yukonga.miuix.kmp.basic.NavigationRailItem(
                         page == index,
                         { onNavigate(index) },
@@ -107,7 +108,8 @@ fun BeaconNavigation(
                 )
         ) {
             Spacer(Modifier.height(24.dp))
-            titleRes.forEachIndexed { index, res ->
+            titleRes.indices.sortedBy{when(it){0->0;2->1;else->2}}.forEach { index ->
+                val res=titleRes[index]
                 androidx.compose.material3.NavigationRailItem(
                     selected = page == index,
                     onClick = { onNavigate(index) },
@@ -120,7 +122,8 @@ fun BeaconNavigation(
     }
     if (miuix())
         top.yukonga.miuix.kmp.basic.NavigationBar {
-            titleRes.forEachIndexed { index, res ->
+            titleRes.indices.sortedBy{when(it){0->0;2->1;else->2}}.forEach { index ->
+                val res=titleRes[index]
                 MiuixNavigationItem(
                     page == index,
                     { onNavigate(index) },
@@ -131,7 +134,8 @@ fun BeaconNavigation(
         }
     else
         androidx.compose.material3.NavigationBar {
-            titleRes.forEachIndexed { index, res ->
+            titleRes.indices.sortedBy{when(it){0->0;2->1;else->2}}.forEach { index ->
+                val res=titleRes[index]
                 MaterialNavigationItem(
                     page == index,
                     onClick = { onNavigate(index) },

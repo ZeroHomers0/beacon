@@ -221,6 +221,21 @@ async function pushNotification(args) {
   }
 
   const payload = { body };
+  if (args.blocks !== undefined) {
+    const kinds = new Set(["progress","metric","kv","list","countdown","timeline","pipeline","alert","sparkline","segments"]);
+    if(!Array.isArray(args.blocks)||args.blocks.length>16||bytes(JSON.stringify(args.blocks))>32768||args.blocks.some(b=>!b||typeof b!=="object"||!kinds.has(b.kind)||typeof b.id!=="string"))return fail("blocks 必须是至多 16 项、32 KiB 的已知结构块。");
+    payload.schema_version=1;payload.blocks=args.blocks;
+  }
+  if(args.mode!==undefined&&args.mode!=="event"&&args.mode!=="state")return fail("mode 必须为 event 或 state。");
+  if(args.mode==="state"){
+    if(typeof args.topic_key!=="string"||!args.topic_key||bytes(args.topic_key)>128||/\p{Cc}/u.test(args.topic_key)||!Number.isSafeInteger(args.revision)||args.revision<1)return fail("状态需要有效 topic_key 和递增 revision。");
+    payload.mode="state";payload.schema_version=1;payload.topic_key=args.topic_key;payload.revision=args.revision;
+    if(args.state_type!==undefined&&!['persistent','task'].includes(args.state_type))return fail("state_type 无效。");
+    if(args.state_type==='task'&&!['running','paused','completed','failed','cancelled'].includes(args.status))return fail("任务状态无效。");
+    for(const field of ['observed_at_ms','fresh_for_seconds'])if(args[field]!==undefined&&(!Number.isSafeInteger(args[field])||args[field]<0))return fail(field+" 必须为非负安全整数。");
+    for(const field of ['observed_at_ms','fresh_for_seconds','state_type','status'])if(args[field]!==undefined)payload[field]=args[field];
+  }
+
   if (typeof args.title === "string" && args.title !== "") {
     if (bytes(args.title) > MAX_TITLE_BYTES) {
       return fail(`title 超过上限：${bytes(args.title)} > ${MAX_TITLE_BYTES} UTF-8 字节。`);
@@ -313,6 +328,7 @@ async function pushNotification(args) {
     return reportFailure(result, "推送");
   }
   const data = result.data ?? {};
+  if(payload.mode==="state")return ok(`状态已保存：${data.topic_key ?? payload.topic_key} · revision ${data.revision ?? payload.revision}。手机恢复连接后同步最新状态；这不是用户已读确认。`);
   return ok(
     [
       "已提交到 Beacon 服务端。",
@@ -413,6 +429,14 @@ const TOOLS = [
       type: "object",
       additionalProperties: false,
       properties: {
+        mode: {type:"string",enum:["event","state"],description:"默认事件。持续更新必须使用 state，不要每秒新增事件。"},
+        topic_key: {type:"string",description:"状态主题稳定标识，不含凭据。"},
+        revision: {type:"integer",minimum:1,maximum:9007199254740991,description:"同主题单调递增版本，重试沿用原版本。"},
+        state_type: {type:"string",enum:["persistent","task"]},
+        status: {type:"string",enum:["running","paused","completed","failed","cancelled"]},
+        observed_at_ms: {type:"integer",minimum:0},
+        fresh_for_seconds: {type:"integer",minimum:1,maximum:604800},
+        blocks: {type:"array",maxItems:16,items:{type:"object"},description:"通用结构块，最多 32 KiB；最终按服务端 schema 校验。"},
         body: {
           type: "string",
           description: "通知正文，必填（除非提供 body_file）。支持 Markdown，最多 65536 UTF-8 字节。",

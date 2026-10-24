@@ -30,6 +30,9 @@ class RuntimeMessageStore(
         android.os.StatFs(context.filesDir.absolutePath).availableBytes
     },
 ) : SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION), SyncStore, NotificationIntentStore {
+    val stateCache = StateCache(context.applicationContext)
+    val stateContext = context.applicationContext
+    override fun close(){stateCache.close();super.close()}
     init {
         // A server ACK must not outlive a durable local commit after power loss.
         // OpenParams configures every pooled connection; a raw PRAGMA changes only one.
@@ -100,7 +103,7 @@ class RuntimeMessageStore(
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
-            "CREATE TABLE messages(server TEXT NOT NULL, id TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL, received INTEGER NOT NULL, source_created INTEGER NOT NULL DEFAULT 0, is_read INTEGER NOT NULL DEFAULT 0, delete_token TEXT NOT NULL DEFAULT '', subtitle TEXT NOT NULL DEFAULT '', priority INTEGER NOT NULL DEFAULT 5, bark TEXT NOT NULL DEFAULT '', application_id TEXT NOT NULL DEFAULT '', application_name TEXT NOT NULL DEFAULT '', message_group TEXT NOT NULL DEFAULT '', expires_at INTEGER NOT NULL DEFAULT 0, actions TEXT NOT NULL DEFAULT '[]', PRIMARY KEY(server,id))"
+            "CREATE TABLE messages(server TEXT NOT NULL, id TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL, received INTEGER NOT NULL, source_created INTEGER NOT NULL DEFAULT 0, is_read INTEGER NOT NULL DEFAULT 0, delete_token TEXT NOT NULL DEFAULT '', subtitle TEXT NOT NULL DEFAULT '', priority INTEGER NOT NULL DEFAULT 5, bark TEXT NOT NULL DEFAULT '', application_id TEXT NOT NULL DEFAULT '', application_name TEXT NOT NULL DEFAULT '', message_group TEXT NOT NULL DEFAULT '', expires_at INTEGER NOT NULL DEFAULT 0, actions TEXT NOT NULL DEFAULT '[]', blocks TEXT NOT NULL DEFAULT '[]', PRIMARY KEY(server,id))"
         )
         db.execSQL("CREATE INDEX messages_received ON messages(received DESC)")
         db.execSQL(
@@ -148,6 +151,7 @@ class RuntimeMessageStore(
         if (oldVersion < 14)
             db.execSQL("ALTER TABLE messages ADD COLUMN actions TEXT NOT NULL DEFAULT '[]'")
         if (oldVersion < 15) createMessageFilterIndexes(db)
+        if (oldVersion < 16) db.execSQL("ALTER TABLE messages ADD COLUMN blocks TEXT NOT NULL DEFAULT '[]'")
         // Idempotent repairs that have always run on every upgrade; they must follow the column
         // additions above because they read `delete_token` and `source_created`.
         repairLegacyTables(db)
@@ -277,6 +281,6 @@ class RuntimeMessageStore(
     companion object {
         const val DATABASE_NAME = "beacon-messages.db"
         // Bump this and add the matching step in onUpgrade; nothing else names the version.
-        const val DATABASE_VERSION = 15
+        const val DATABASE_VERSION = 16
     }
 }

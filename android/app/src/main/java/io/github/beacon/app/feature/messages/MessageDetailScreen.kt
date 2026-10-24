@@ -207,6 +207,7 @@ fun MessageDetailScreen(
                         DetailRule()
                     }
                     MessageMarkdownBody(message.body, raw)
+                    StructuredBlocksPanel(message.structuredBlocks)
                     BeaconText(
                         stringResource(R.string.msg_detail_sent_time_label) + " · " +
                             detailTime(message.createdAtMs, missing),

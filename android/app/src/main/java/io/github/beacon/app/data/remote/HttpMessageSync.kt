@@ -60,7 +60,13 @@ class HttpMessageSync(
         call.timeout().timeout((deadline - nowMs()).coerceAtLeast(1), TimeUnit.MILLISECONDS)
         call.execute().use { response ->
             val status = response.code
-            if (status == 401 || status == 403) throw SyncAuthenticationException(status, stage)
+            if (status == 401 || status == 403) {
+                (store as? io.github.beacon.app.data.local.RuntimeMessageStore)?.let { local ->
+                    val source=local.stateCache.preference("source-for:"+settings.endpoint)
+                    if(source.isNotEmpty()){local.stateCache.forget(source);io.github.beacon.app.widget.BeaconStateWidget.refresh(local.stateContext);io.github.beacon.app.widget.StateNotifications.refresh(local.stateContext)}
+                }
+                throw SyncAuthenticationException(status, stage)
+            }
             if (status == 429 || status in 500..599)
                 throw HttpTransientException(
                     status,
@@ -230,6 +236,45 @@ class HttpMessageSync(
         }
     }
 
+    private fun syncStates(namespace: String, server: String) {
+        val local = store as? io.github.beacon.app.data.local.RuntimeMessageStore ?: return
+        val previousSource=local.stateCache.preference("source-for:"+settings.endpoint)
+        if(previousSource.isNotEmpty()&&previousSource!=namespace)local.stateCache.forget(previousSource)
+        local.stateCache.preference("source-for:"+settings.endpoint,namespace)
+        var initialCursor = local.stateCache.cursor(namespace)
+        var cursor = initialCursor
+        var snapshot = ""
+        var pageCursor = ""
+        var replace = cursor.isEmpty()
+        val records = mutableListOf<JSONObject>()
+        var snapshotBytes=0L
+        fun encoded(value: String) = java.net.URLEncoder.encode(value, "UTF-8")
+        for (page in 0 until 100) {
+            checkRunning()
+            val query = when {
+                cursor.isNotEmpty() -> "?limit=100&cursor=" + encoded(cursor)
+                snapshot.isNotEmpty() -> "?limit=100&snapshot_token=" + encoded(snapshot) + "&page_cursor=" + encoded(pageCursor)
+                else -> "?limit=100"
+            }
+            val reply = try { request("/api/v1/states$query") } catch (e: HttpRejectedException) {
+                if (e.statusCode == 410) { cursor="";snapshot="";pageCursor="";records.clear();snapshotBytes=0;initialCursor=local.stateCache.cursor(namespace);replace=true;continue } else throw e
+            }
+            require(reply.getString("server_id") == server)
+            val rows=reply.getJSONArray("states");require(rows.length()<=100)
+            for(i in 0 until rows.length()){val record=rows.getJSONObject(i);records.add(record);if(replace)snapshotBytes+=record.toString().toByteArray().size}
+            require(!replace||(records.size<=500&&snapshotBytes<=8*1024*1024))
+            if(!reply.getBoolean("has_more")) {
+                checkRunning()
+                local.stateCache.apply(namespace,records,reply.getString("next_cursor"),replace,initialCursor)
+                io.github.beacon.app.widget.BeaconStateWidget.refresh(local.stateContext)
+                io.github.beacon.app.widget.StateNotifications.refresh(local.stateContext)
+                return
+            }
+            if(reply.has("snapshot_token")) {snapshot=reply.getString("snapshot_token");pageCursor=reply.getString("page_cursor")} else {checkRunning();val next=reply.getString("next_cursor");local.stateCache.apply(namespace,records,next,false,initialCursor);records.clear();cursor=next;initialCursor=next}
+        }
+        throw SyncResponseException(SyncStage.MESSAGES)
+    }
+
     fun run(): String {
         insertedCount = 0
         settings.validate(BuildConfig.DEBUG)
@@ -246,6 +291,7 @@ class HttpMessageSync(
         check(server.matches(Regex("[0-9a-f]{64}")) && device.matches(Regex("[0-9a-f]{64}")))
         // Local identity separates both server and device when credentials change.
         val namespace = MessageIdentity.namespace(server, device)
+        (store as? io.github.beacon.app.data.local.RuntimeMessageStore)?.stateCache?.preference("supports:"+settings.endpoint,if(capabilities.optInt("state_protocol")==1)"1"else "0")
         val retentionCutoff =
             try {
                 DeliveryRetentionDecoder.cutoff(capabilities)
@@ -307,8 +353,13 @@ class HttpMessageSync(
                 if (!decoded.hasMore) break
             }
         }
+        var stateNote=""
+        if(capabilities.optInt("state_protocol")==1)try{syncStates(namespace,server)}catch(error:Exception){
+            if(error is SyncAuthenticationException||error is SyncCancelledException)throw error
+            stateNote="；状态同步未完成，稍后重试（普通消息已按原流程处理）"
+        }
         val pendingCount = store.pendingIds(namespace).size
-        return "本轮同步：新增 $inserted 条" +
+        return "本轮同步：新增 $inserted 条" + stateNote +
             (if (pendingCount > 0) "；待回传接收结果 $pendingCount 条（自动重试）" else "") +
             (if (retired > 0) "；已退役过期确认 $retired 条" else "") +
             (if (unavailable > 0) "；服务器已无对应记录，停止重试 $unavailable 条（本地消息保留）" else "") +

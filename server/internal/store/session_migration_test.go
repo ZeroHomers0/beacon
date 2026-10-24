@@ -33,7 +33,7 @@ func TestLegacySessionQueueMigrationPreservesIdentityAndHistory(t *testing.T) {
 		t.Fatal("identity changed")
 	}
 	var version, count, legacy int
-	if err = repository.db.QueryRow("PRAGMA user_version").Scan(&version); err != nil || version != 11 {
+	if err = repository.db.QueryRow("PRAGMA user_version").Scan(&version); err != nil || version != messageSchemaVersion {
 		t.Fatal(version, err)
 	}
 	if err = repository.db.QueryRow("SELECT count(*) FROM session_disconnects").Scan(&count); err != nil || count != 1 {

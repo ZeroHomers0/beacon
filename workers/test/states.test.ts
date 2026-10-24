@@ -1,0 +1,22 @@
+import { env } from "cloudflare:workers";
+import { reset } from "cloudflare:test";
+import { afterEach, expect, it } from "vitest";
+import worker,{ type Env } from "../src/index";
+afterEach(reset);
+const admin="test-only-admin-token-32-characters";
+const call=(path:string,key:string,p?:unknown)=>worker.fetch(new Request(`https://beacon.test${path}`,{method:p===undefined?"GET":"POST",headers:{Authorization:`Bearer ${key}`,"Content-Type":"application/json"},body:p===undefined?undefined:JSON.stringify(p)}),env as unknown as Env);
+it("updates state without creating events and synchronizes deletion",async()=>{
+ const code=await(await call("/api/admin/binding",admin,{name:"state"})).json<any>();const d=await(await call("/api/v1/bind","",{binding_code:code.binding_code})).json<any>();
+ const p={mode:"state",schema_version:1,topic_key:"download:1",revision:1,state_type:"task",status:"running",body:"40%"};
+ expect((await call("/api/v1/push",d.push_key,p)).status).toBe(200);
+ expect((await(await call("/api/v1/push",d.push_key,p)).json<any>()).unchanged).toBe(true);
+ const snapshot=await(await call("/api/v1/states",d.receive_token)).json<any>();expect(snapshot.states).toHaveLength(1);
+ const conflict=await call("/api/v1/push",d.push_key,{...p,body:"41%"});expect(conflict.status).toBe(409);await conflict.text();
+ expect((await call("/api/v1/push",d.push_key,{...p,revision:2,status:"completed"})).status).toBe(200);
+ const changes=await(await call(`/api/v1/states?cursor=${snapshot.next_cursor}`,d.receive_token)).json<any>();expect(changes.states[0].status).toBe("completed");
+ const regression=await call("/api/v1/push",d.push_key,{...p,revision:3});expect(regression.status).toBe(409);await regression.text();
+ expect((await call("/api/v1/push",d.push_key,{mode:"state",schema_version:1,operation:"delete",topic_key:p.topic_key,revision:3})).status).toBe(200);
+ expect((await(await call("/api/v1/states",d.receive_token)).json<any>()).states).toHaveLength(0);
+ expect((await(await call("/api/v1/messages",d.receive_token)).json<any>()).messages).toHaveLength(0);
+ const denied=await call("/api/v1/states",d.push_key);expect(denied.status).toBe(401);await denied.text();
+});

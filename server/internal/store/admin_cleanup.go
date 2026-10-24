@@ -45,7 +45,7 @@ func (a *Store) ClearMessages(device string, deleteDevice bool) (int64, error) {
 		return 0, err
 	}
 	if deleteDevice {
-		for _, table := range []string{"applications", "session_disconnects"} {
+		for _, table := range []string{"current_states", "state_changes", "state_snapshots", "applications", "session_disconnects"} {
 			if _, err = tx.Exec("DELETE FROM "+table+" WHERE device=?", device); err != nil {
 				return 0, err
 			}

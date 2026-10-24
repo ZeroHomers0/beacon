@@ -9,6 +9,9 @@ export interface Credentials {
 }
 export interface Repository {
   readonly serverID: string;
+  saveState(credential:string,p:Record<string,unknown>,digest:string,now:number):import("./states").StateRecord;
+  statePage(device:string,q:URLSearchParams,now:number):Record<string,unknown>;
+  stateMeta(credential:string,topic:string):Record<string,unknown>;
   receiver(hash: string, active?: boolean): string;
   sender(hash: string, applications?: boolean): Sender;
   active(device: string): void;
@@ -69,6 +72,7 @@ export interface Repository {
   stats(): Record<string, unknown>;
 }
 export interface Transport {
+  stateChanged?(device:string):void;
   // Arm durable recovery BEFORE a mutation; immediate delivery is an optimization.
   arm(): Promise<void>;
   deliver(device?: string): void;

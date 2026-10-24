@@ -1,3 +1,20 @@
+export interface StructuredBlock {
+  kind: "progress" | "metric" | "kv" | "list" | "countdown" | "timeline" | "pipeline" | "alert" | "sparkline" | "segments";
+  items?: {id:string;label?:string;text?:string;tone?:string;status?:string;at_ms?:number;value?:number}[];
+  points?: {at_ms:number;value:number}[];
+  bands?: {until:number;tone:string}[];
+  text?:string;target_at_ms?:number;total?:number;
+  id: string;
+  label?: string;
+  value?: number;
+  min?: number;
+  max?: number;
+  unit?: string;
+  tone?: "normal" | "warning" | "critical";
+  trend?: "up" | "down" | "flat";
+  indeterminate?: boolean;
+}
+
 export const VERSION = "1.3.0-workers";
 export const DAY = 86_400_000;
 export const PENDING = 7 * DAY;
@@ -18,6 +35,8 @@ export interface PushOptions {
   group: string;
   ttl: number;
   actions?: MessageAction[];
+  blocks?: StructuredBlock[];
+  schema_version?: number;
 }
 export function pushOptions(
   group: unknown,
@@ -118,6 +137,8 @@ export interface Message {
   application_id?: string;
   bark?: string;
   actions?: MessageAction[];
+  blocks?: StructuredBlock[];
+  schema_version?: number;
 }
 export interface Sender {
   device: string;
@@ -129,6 +150,7 @@ export interface Attachment {
   device: string;
   hash: string;
   control?: boolean;
+  state?:boolean;
   batch?: boolean;
   dirty?: boolean;
 }
@@ -210,6 +232,8 @@ export function message(row: Row): Message {
     ...(row.actions
       ? { actions: JSON.parse(String(row.actions)) as MessageAction[] }
       : {}),
+    ...(row.blocks ? { blocks: JSON.parse(String(row.blocks)) as StructuredBlock[] } : {}),
+    ...(row.schema_version ? { schema_version: Number(row.schema_version) } : {}),
     ...(row.bark ? { bark: String(row.bark) } : {}),
   };
 }

@@ -133,6 +133,7 @@ BeaconMessageTransition(
             overscrollEffect = null,
         ) { visiblePage ->
             when (visiblePage) {
+                2 -> io.github.beacon.app.feature.messages.StatesPage(Modifier.fillMaxSize().padding(insets))
                 0 ->
                     MessagesPage(
                         messageScroll,

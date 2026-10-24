@@ -109,6 +109,7 @@ internal class MessageQueryStore(private val helper: SQLiteOpenHelper) {
                         cursor.getString(12),
                         cursor.getLong(13),
                         cursor.getString(14),
+                        structuredBlocks = cursor.getString(16),
                         actions =
                             io.github.beacon.app.data.remote.MessageActionsCodec.decode(
                                 cursor.getString(15)

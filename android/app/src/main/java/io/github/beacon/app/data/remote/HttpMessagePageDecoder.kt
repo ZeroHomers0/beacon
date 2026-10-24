@@ -60,6 +60,7 @@ internal object HttpMessagePageDecoder {
                             subtitle = if (subtitle is String) subtitle else "",
                             priority = MessagePriorityDecoder.decode(row),
                             actions = MessageActionsCodec.decode(row),
+            structuredBlocks = StructuredBlocksCodec.decode(row),
                             applicationId = MessageMetadataDecoder.application(row),
                             applicationName = MessageMetadataDecoder.name(row),
                             group = MessageMetadataDecoder.group(row),

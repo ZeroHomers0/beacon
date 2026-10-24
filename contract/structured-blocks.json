@@ -1,0 +1,315 @@
+[
+  {
+    "name": "progress",
+    "version": 1,
+    "blocks": [
+      {
+        "kind": "progress",
+        "id": "download",
+        "value": 40,
+        "max": 100
+      }
+    ],
+    "valid": true
+  },
+  {
+    "name": "unknown progress",
+    "version": 1,
+    "blocks": [
+      {
+        "kind": "progress",
+        "id": "download",
+        "indeterminate": true
+      }
+    ],
+    "valid": true
+  },
+  {
+    "name": "negative metric",
+    "version": 1,
+    "blocks": [
+      {
+        "kind": "metric",
+        "id": "temperature",
+        "value": -10,
+        "unit": "C"
+      }
+    ],
+    "valid": true
+  },
+  {
+    "name": "missing version",
+    "version": 0,
+    "blocks": [
+      {
+        "kind": "metric",
+        "id": "x",
+        "value": 1
+      }
+    ],
+    "valid": false
+  },
+  {
+    "name": "future version",
+    "version": 2,
+    "blocks": [],
+    "valid": false
+  },
+  {
+    "name": "over range",
+    "version": 1,
+    "blocks": [
+      {
+        "kind": "progress",
+        "id": "x",
+        "value": 101,
+        "max": 100
+      }
+    ],
+    "valid": false
+  },
+  {
+    "name": "zero max",
+    "version": 1,
+    "blocks": [
+      {
+        "kind": "progress",
+        "id": "x",
+        "value": 0,
+        "max": 0
+      }
+    ],
+    "valid": false
+  },
+  {
+    "name": "duplicate id",
+    "version": 1,
+    "blocks": [
+      {
+        "kind": "metric",
+        "id": "x",
+        "value": 1
+      },
+      {
+        "kind": "metric",
+        "id": "x",
+        "value": 2
+      }
+    ],
+    "valid": false
+  },
+  {
+    "name": "unknown kind",
+    "version": 1,
+    "blocks": [
+      {
+        "kind": "html",
+        "id": "x"
+      }
+    ],
+    "valid": false
+  },
+  {
+    "name": "extra field",
+    "version": 1,
+    "blocks": [
+      {
+        "kind": "metric",
+        "id": "x",
+        "value": 1,
+        "url": "https://example.com"
+      }
+    ],
+    "valid": false
+  },
+  {
+    "name": "unpaired range",
+    "version": 1,
+    "blocks": [
+      {
+        "kind": "metric",
+        "id": "x",
+        "value": 1,
+        "min": 0
+      }
+    ],
+    "valid": false
+  },
+  {
+    "name": "kv",
+    "version": 1,
+    "blocks": [
+      {
+        "kind": "kv",
+        "id": "kv",
+        "items": [
+          {
+            "id": "size",
+            "label": "体积",
+            "text": "12 GB"
+          }
+        ]
+      }
+    ],
+    "valid": true
+  },
+  {
+    "name": "list",
+    "version": 1,
+    "blocks": [
+      {
+        "kind": "list",
+        "id": "list",
+        "items": [
+          {
+            "id": "file",
+            "text": "main.kt"
+          }
+        ]
+      }
+    ],
+    "valid": true
+  },
+  {
+    "name": "countdown",
+    "version": 1,
+    "blocks": [
+      {
+        "kind": "countdown",
+        "id": "countdown",
+        "target_at_ms": 1792800000000
+      }
+    ],
+    "valid": true
+  },
+  {
+    "name": "timeline",
+    "version": 1,
+    "blocks": [
+      {
+        "kind": "timeline",
+        "id": "timeline",
+        "items": [
+          {
+            "id": "run",
+            "label": "执行",
+            "at_ms": 1792800000000,
+            "status": "active"
+          }
+        ]
+      }
+    ],
+    "valid": true
+  },
+  {
+    "name": "pipeline",
+    "version": 1,
+    "blocks": [
+      {
+        "kind": "pipeline",
+        "id": "pipeline",
+        "items": [
+          {
+            "id": "build",
+            "label": "构建",
+            "status": "running"
+          }
+        ]
+      }
+    ],
+    "valid": true
+  },
+  {
+    "name": "alert",
+    "version": 1,
+    "blocks": [
+      {
+        "kind": "alert",
+        "id": "alert",
+        "text": "磁盘使用率过高",
+        "tone": "critical"
+      }
+    ],
+    "valid": true
+  },
+  {
+    "name": "sparkline",
+    "version": 1,
+    "blocks": [
+      {
+        "kind": "sparkline",
+        "id": "sparkline",
+        "points": [
+          {
+            "at_ms": 1,
+            "value": 10
+          },
+          {
+            "at_ms": 2,
+            "value": 12
+          }
+        ]
+      }
+    ],
+    "valid": true
+  },
+  {
+    "name": "segments",
+    "version": 1,
+    "blocks": [
+      {
+        "kind": "segments",
+        "id": "segments",
+        "total": 100,
+        "items": [
+          {
+            "id": "video",
+            "label": "视频",
+            "value": 40
+          }
+        ]
+      }
+    ],
+    "valid": true
+  },
+  {
+    "name": "segments overflow",
+    "version": 1,
+    "blocks": [
+      {
+        "kind": "segments",
+        "id": "disk",
+        "total": 100,
+        "items": [
+          {
+            "id": "a",
+            "label": "a",
+            "value": 101
+          }
+        ]
+      }
+    ],
+    "valid": false
+  },
+  {
+    "name": "sparkline reversed",
+    "version": 1,
+    "blocks": [
+      {
+        "kind": "sparkline",
+        "id": "trend",
+        "points": [
+          {
+            "at_ms": 2,
+            "value": 1
+          },
+          {
+            "at_ms": 1,
+            "value": 2
+          }
+        ]
+      }
+    ],
+    "valid": false
+  }
+]

@@ -1,3 +1,4 @@
+import { StateStore } from "../states";
 import {
   BATCH,
   MAX_TITLE,
@@ -19,6 +20,10 @@ import { IdentityStore } from "./identity";
 import type { Repository } from "../ports";
 
 export class MessageStore extends IdentityStore implements Repository {
+ saveState(credential:string,p:Record<string,unknown>,digest:string,now:number){return this.storage.transactionSync(()=>new StateStore(this.storage,this.serverID).save(this.sender(credential),p,digest,now))}
+ statePage(device:string,q:URLSearchParams,now:number){this.active(device);return new StateStore(this.storage,this.serverID).page(device,q,now)}
+ stateMeta(credential:string,topic:string){return new StateStore(this.storage,this.serverID).meta(this.sender(credential),topic)}
+
   expiredCount(device: string): number {
     return Number(
       this.first(
@@ -45,6 +50,7 @@ export class MessageStore extends IdentityStore implements Repository {
       bytes(bark) > MAX_BARK
     )
       reject(400, "invalid_message");
+    const blockJSON = options?.blocks?.length ? JSON.stringify(options.blocks) : "";
     const actionJSON = options?.actions?.length ? JSON.stringify(options.actions) : "";
     return this.storage.transactionSync(() => {
       this.active(sender.device);
@@ -91,7 +97,7 @@ export class MessageStore extends IdentityStore implements Repository {
       const live = this.first("SELECT messages FROM usage WHERE singleton=1")!;
       if (
         Number(usage.pending_count) >= 10000 ||
-        Number(usage.pending_bytes) + bytes(title + subtitle + body + bark + actionJSON) >
+        Number(usage.pending_bytes) + bytes(title + subtitle + body + bark + actionJSON + blockJSON) >
           64 * 1024 * 1024 ||
         Number(live.messages) >= 100000 ||
         this.storage.sql.databaseSize + 512 * 1024 > 256 * 1024 * 1024
@@ -99,8 +105,8 @@ export class MessageStore extends IdentityStore implements Repository {
         reject(507, "storage_capacity_reached");
       const id = token();
       const row = this.first(
-        `INSERT INTO messages(id,device,title,subtitle,body,priority,application_id,bark,created,message_group,expires_at,application_name,actions)
-        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING *`,
+        `INSERT INTO messages(id,device,title,subtitle,body,priority,application_id,bark,created,message_group,expires_at,application_name,actions,blocks,schema_version)
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING *`,
         id,
         sender.device,
         title,
@@ -114,6 +120,8 @@ export class MessageStore extends IdentityStore implements Repository {
         expires,
         sender.name ?? "",
         actionJSON,
+        blockJSON,
+        options?.schema_version ?? 0,
       )!;
       this.rows(
         "INSERT INTO publish_outbox(message_seq,next_attempt) VALUES(?,?)",
@@ -239,6 +247,7 @@ export class MessageStore extends IdentityStore implements Repository {
       if (deleteDevice) {
         for (const table of ["applications", "session_disconnects"])
           this.rows("DELETE FROM " + table + " WHERE device=?", device);
+        for(const table of ["current_states","state_changes","state_snapshots"])this.rows(`DELETE FROM ${table} WHERE device=?`,device);
         this.rows("DELETE FROM devices WHERE id=?", device);
         this.rows("DELETE FROM rate_buckets WHERE key=?", `device:${device}`);
       }
@@ -252,6 +261,7 @@ export class MessageStore extends IdentityStore implements Repository {
       coalesce(min(CASE WHEN acked=1 THEN created END),0) AS oldest_confirmed_created_ms FROM messages`)!;
     return {
       ...counts,
+      ...this.first("SELECT coalesce(sum(deleted=0),0) AS states,coalesce(sum(length(CAST(payload AS BLOB))*(deleted=0)),0) AS state_bytes,count(*) AS state_watermarks FROM current_states"),
       devices: this.first("SELECT count(*) AS n FROM devices")!.n,
       cleanup_confirmation_receipts: this.first(
         "SELECT count(*) AS n FROM confirmed_receipts",

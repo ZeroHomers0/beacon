@@ -13,6 +13,9 @@ func (a *Store) StorageStats() (domain.StorageStats, error) {
 	}
 	defer tx.Rollback()
 	var stats domain.StorageStats
+	if err = tx.QueryRow("SELECT coalesce(sum(deleted=0),0),coalesce(sum(length(CAST(payload AS BLOB))*(deleted=0)),0),count(*) FROM current_states").Scan(&stats.States, &stats.StateBytes, &stats.StateWatermarks); err != nil {
+		return stats, err
+	}
 	if err = tx.QueryRow("SELECT coalesce(min(CASE WHEN acked=0 THEN created END),0),coalesce(min(CASE WHEN acked=1 THEN created END),0) FROM messages").Scan(&stats.OldestPendingMS, &stats.OldestConfirmedMS); err != nil {
 		return domain.StorageStats{}, err
 	}

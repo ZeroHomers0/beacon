@@ -1,18 +1,22 @@
+import { stateSchema } from "../states";
 import { token } from "../domain";
 
 // Workers keeps its own schema version, independent of the Go server database.
 export function migrate(storage: DurableObjectStorage): void {
   storage.transactionSync(() => {
     const sql = storage.sql;
+    stateSchema(sql);
     sql.exec(
       "CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL)",
     );
     const version = [
       ...sql.exec("SELECT value FROM metadata WHERE key='schema_version'"),
     ][0];
-    if (version?.value === "3") return;
+    if (version?.value === "4") return;
+    if (version?.value === "3") { upgradeBlocks(sql); return; }
     if (version?.value === "2") {
       upgradeActions(sql);
+      upgradeBlocks(sql);
       return;
     }
     if (version && version.value !== "1")
@@ -20,6 +24,7 @@ export function migrate(storage: DurableObjectStorage): void {
     if (version) {
       upgrade(sql);
       upgradeActions(sql);
+      upgradeBlocks(sql);
       return;
     }
     sql.exec(`CREATE TABLE devices(id TEXT PRIMARY KEY,name TEXT NOT NULL,receive_hash TEXT UNIQUE NOT NULL,
@@ -81,6 +86,7 @@ export function migrate(storage: DurableObjectStorage): void {
     );
     upgrade(sql);
     upgradeActions(sql);
+    upgradeBlocks(sql);
   });
 }
 
@@ -125,4 +131,17 @@ function upgradeActions(sql: SqlStorage): void {
       pending_bytes=pending_bytes+((NEW.acked=0)-(OLD.acked=0))*(${size}) WHERE id=NEW.device;
     END`);
   sql.exec("UPDATE metadata SET value='3' WHERE key='schema_version'");
+}
+
+function upgradeBlocks(sql: SqlStorage): void {
+ const columns = new Set([...sql.exec("PRAGMA table_info(messages)")].map(row=>String(row.name)));
+ if (!columns.has("blocks")) sql.exec("ALTER TABLE messages ADD COLUMN blocks TEXT NOT NULL DEFAULT ''");
+ if (!columns.has("schema_version")) sql.exec("ALTER TABLE messages ADD COLUMN schema_version INTEGER NOT NULL DEFAULT 0");
+ for (const name of ["messages_insert","messages_delete","messages_ack"]) {
+  const trigger = [...sql.exec("SELECT sql FROM sqlite_master WHERE type='trigger' AND name=?",name)][0];
+  if (!trigger) throw new Error("missing message accounting trigger");
+  const updated = String(trigger.sql).replaceAll("length(CAST(NEW.actions AS BLOB))", "length(CAST(NEW.actions AS BLOB))+length(CAST(NEW.blocks AS BLOB))").replaceAll("length(CAST(OLD.actions AS BLOB))", "length(CAST(OLD.actions AS BLOB))+length(CAST(OLD.blocks AS BLOB))");
+  sql.exec(`DROP TRIGGER ${name}`); sql.exec(updated);
+ }
+ sql.exec("UPDATE metadata SET value='4' WHERE key='schema_version'");
 }

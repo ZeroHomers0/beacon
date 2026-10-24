@@ -112,6 +112,9 @@ func (a *Store) DeleteApplication(id string) (int64, error) {
 	if _, err = tx.Exec("DELETE FROM push_requests WHERE credential=?", tokenHash); err != nil {
 		return 0, err
 	}
+	if err = deleteApplicationStates(tx, id); err != nil {
+		return 0, err
+	}
 	if _, err = tx.Exec("DELETE FROM applications WHERE id=?", id); err != nil {
 		return 0, err
 	}

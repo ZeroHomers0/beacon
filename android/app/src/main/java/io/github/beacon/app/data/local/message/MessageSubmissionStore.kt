@@ -76,6 +76,7 @@ internal class MessageSubmissionStore(
                     "actions",
                     io.github.beacon.app.data.remote.MessageActionsCodec.encode(message.actions),
                 )
+                put("blocks", message.structuredBlocks)
                 put("message_group", message.group)
                 put("expires_at", message.expiresAtMs)
             }

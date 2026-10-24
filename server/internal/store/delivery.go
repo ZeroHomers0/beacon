@@ -23,7 +23,7 @@ func (a *Store) ClaimPublish(now int64, limit int) ([]domain.PublishTask, error)
 		return nil, err
 	}
 	defer tx.Rollback()
-	rows, err := tx.Query(`SELECT m.device,m.id,m.seq,m.title,m.body,m.created,m.subtitle,o.attempts,m.priority,m.application_id,m.bark,m.message_group,m.expires_at,m.application_name,m.actions
+	rows, err := tx.Query(`SELECT m.device,m.id,m.seq,m.title,m.body,m.created,m.subtitle,o.attempts,m.priority,m.application_id,m.bark,m.message_group,m.expires_at,m.application_name,m.actions,m.blocks,m.schema_version
 		FROM publish_outbox o JOIN messages m ON m.seq=o.message_seq JOIN devices d ON d.id=m.device
 		WHERE o.next_attempt<=? AND o.lease_until<=? AND m.acked=0 AND d.revoked=0
 		AND m.expires_at>?
@@ -33,13 +33,19 @@ func (a *Store) ClaimPublish(now int64, limit int) ([]domain.PublishTask, error)
 	}
 	tasks := make([]domain.PublishTask, 0, limit)
 	for rows.Next() {
-		var actions string
+		var actions, blocks string
 		task := domain.PublishTask{ServerID: a.serverID, LeaseToken: lease, LeaseUntil: now + domain.PublishLease.Milliseconds()}
 		if err = rows.Scan(&task.DeviceID, &task.Message.ID, &task.Message.Sequence,
 			&task.Message.Title, &task.Message.Body, &task.Message.CreatedAt,
-			&task.Message.Subtitle, &task.Attempts, &task.Message.Priority, &task.Message.ApplicationID, &task.Message.Bark, &task.Message.Group, &task.Message.ExpiresAt, &task.Message.ApplicationName, &actions); err != nil {
+			&task.Message.Subtitle, &task.Attempts, &task.Message.Priority, &task.Message.ApplicationID, &task.Message.Bark, &task.Message.Group, &task.Message.ExpiresAt, &task.Message.ApplicationName, &actions, &blocks, &task.Message.SchemaVersion); err != nil {
 			rows.Close()
 			return nil, err
+		}
+		if blocks != "" {
+			if err := json.Unmarshal([]byte(blocks), &task.Message.Blocks); err != nil {
+				rows.Close()
+				return nil, err
+			}
 		}
 		if actions != "" {
 			if err := json.Unmarshal([]byte(actions), &task.Message.Actions); err != nil {

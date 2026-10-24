@@ -59,6 +59,7 @@ class RealtimeMessageDecoder(
             subtitle = subtitle,
             priority = MessagePriorityDecoder.decode(row),
             actions = MessageActionsCodec.decode(row),
+            structuredBlocks = StructuredBlocksCodec.decode(row),
             applicationId = MessageMetadataDecoder.application(row),
             applicationName = MessageMetadataDecoder.name(row),
             group = MessageMetadataDecoder.group(row),

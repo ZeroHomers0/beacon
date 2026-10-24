@@ -544,4 +544,6 @@
     <string name="shortcut_messages_long">查看消息</string>
     <string name="shortcut_settings_short">设置</string>
     <string name="shortcut_settings_long">打开设置</string>
+<string name="state_widget_title">Beacon 状态</string>
+<string name="ui_nav_states_title">状态</string>
 </resources>

@@ -56,7 +56,7 @@ func TestVersionOneUpgradeKeepsIdentityCredentialsAndMessages(t *testing.T) {
 	if err = repository.db.QueryRow("SELECT acked FROM messages WHERE id='old'").Scan(&acked); err != nil || acked != 1 {
 		t.Fatal("confirmation lost")
 	}
-	if err = repository.db.QueryRow("PRAGMA user_version").Scan(&version); err != nil || version != 11 {
+	if err = repository.db.QueryRow("PRAGMA user_version").Scan(&version); err != nil || version != messageSchemaVersion {
 		t.Fatal("wrong version")
 	}
 	code, err := repository.CreateBindingCode("new", time.Minute)

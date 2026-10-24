@@ -31,7 +31,7 @@ object MessageQuerySql {
     const val DETAIL =
         "SELECT server,id,title,body,source_created,received,is_read,subtitle,priority," +
             "EXISTS(SELECT 1 FROM notification_intents n WHERE n.server=messages.server AND n.id=messages.id)," +
-            "bark,application_id,message_group,expires_at,application_name,actions" +
+            "bark,application_id,message_group,expires_at,application_name,actions,blocks" +
             " FROM messages WHERE server=? AND id=? AND delete_token=''"
 
     /** The predicate for [query] and the values it binds, in one pass. */

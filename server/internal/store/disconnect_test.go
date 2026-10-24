@@ -1,6 +1,7 @@
 package store
 
 import (
+	"fmt"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -185,7 +186,7 @@ func TestVersionFourUpgradePreservesCompletedPublication(t *testing.T) {
 	if _, err := repository.RotateDevice(device.DeviceID); err != nil {
 		t.Fatal("new queue unavailable after upgrade")
 	}
-	if _, err := repository.db.Exec("PRAGMA user_version=12"); err != nil {
+	if _, err := repository.db.Exec(fmt.Sprintf("PRAGMA user_version=%d", messageSchemaVersion+1)); err != nil {
 		t.Fatal(err)
 	}
 	repository.Close()

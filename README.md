@@ -22,6 +22,8 @@ Beacon 是一个自托管的 Android 消息推送应用。手机安装 App，服
 
 ## 3. 技术架构
 
+结构化消息、实时状态与桌面小组件已接入；开发规格、API、视觉原型及验收记录维护在[独立文档仓库](https://github.com/ZeroHomers0/beacon-docs/tree/main/docs/design)。数据库升级前请备份；小米最新系统仍待真机验收。
+
 ```mermaid
 flowchart LR
     Sender[脚本 / CI / NAS / Bark 兼容软件] -->|HTTP 推送| API[Beacon 原生 API / Bark 兼容 API]

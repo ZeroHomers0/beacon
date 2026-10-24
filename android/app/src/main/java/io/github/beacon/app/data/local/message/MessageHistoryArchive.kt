@@ -22,7 +22,7 @@ internal class MessageHistoryArchive(
             val rows = org.json.JSONArray()
             var estimatedBytes = 256L
             db.rawQuery(
-                    "SELECT server,id,title,body,source_created,received,is_read,subtitle,priority,bark,application_id,message_group,expires_at,application_name,actions FROM messages WHERE delete_token='' ORDER BY rowid",
+                    "SELECT server,id,title,body,source_created,received,is_read,subtitle,priority,bark,application_id,message_group,expires_at,application_name,actions,blocks FROM messages WHERE delete_token='' ORDER BY rowid",
                     null,
                 )
                 .use { cursor ->
@@ -45,7 +45,9 @@ internal class MessageHistoryArchive(
                                 .put("group", cursor.getString(11))
                                 .put("expires_at_ms", cursor.getLong(12))
                                 .put("application_name", cursor.getString(13))
-                                .put("actions", org.json.JSONArray(cursor.getString(14))))
+                                .put("actions", org.json.JSONArray(cursor.getString(14)))
+                                .put("schema_version", 1)
+                                .put("blocks", org.json.JSONArray(cursor.getString(15))))
                         estimatedBytes += row.toString().toByteArray(Charsets.UTF_8).size + 1
                         require(estimatedBytes <= maxBytes - 53)
                         rows.put(row)
@@ -89,7 +91,7 @@ internal class MessageHistoryArchive(
         val messages =
             (0 until rows.length()).map { index ->
                 val row = rows.getJSONObject(index)
-                require(row.length() in 9..15 && row.get("read") is Boolean)
+                require(row.length() in 9..17 && row.get("read") is Boolean)
                 require(
                     row.keys().asSequence().all {
                         it in
@@ -106,6 +108,8 @@ internal class MessageHistoryArchive(
                                 "bark",
                                 "application_id",
                                 "application_name",
+                                "schema_version",
+                                "blocks",
                                 "actions",
                                 "group",
                                 "expires_at_ms",
@@ -132,6 +136,7 @@ internal class MessageHistoryArchive(
                         row.getInt("priority"),
                         bark = row.optString("bark"),
                         actions = io.github.beacon.app.data.remote.MessageActionsCodec.decode(row),
+                        structuredBlocks = io.github.beacon.app.data.remote.StructuredBlocksCodec.decode(row),
                         applicationId =
                             io.github.beacon.app.data.remote.MessageMetadataDecoder.application(
                                 row
@@ -187,6 +192,7 @@ internal class MessageHistoryArchive(
                                 message.actions
                             ),
                         )
+                        put("blocks", message.structuredBlocks)
                         put("message_group", message.group)
                         put("expires_at", message.expiresAtMs)
                     }

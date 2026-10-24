@@ -34,6 +34,7 @@ class BeaconUiState(
         listOf(
             R.string.ui_nav_messages_title,
             R.string.ui_nav_settings_title,
+            R.string.ui_nav_states_title,
         )
 
     val storageSettings = io.github.beacon.app.feature.settings.StorageSettingsState()
@@ -105,7 +106,7 @@ class BeaconUiState(
     var restoreReadingPosition by mutableStateOf(false)
 
     init {
-        handle["page"] = (handle.get<Int>("page") ?: 0).coerceIn(0, 1)
+        handle["page"] = (handle.get<Int>("page") ?: 0).coerceIn(0, 2)
     }
 
     var page: Int by savedState(handle, "page", 0)

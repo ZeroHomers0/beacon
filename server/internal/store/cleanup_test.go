@@ -161,7 +161,7 @@ func TestVersionTwoUpgradeKeepsHistoryAndIdentity(t *testing.T) {
 		t.Fatal("upgrade changed history")
 	}
 	var version int
-	if err = repository.db.QueryRow("PRAGMA user_version").Scan(&version); err != nil || version != 11 {
+	if err = repository.db.QueryRow("PRAGMA user_version").Scan(&version); err != nil || version != messageSchemaVersion {
 		t.Fatal("upgrade did not install schema v9")
 	}
 }

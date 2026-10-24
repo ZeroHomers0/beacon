@@ -51,6 +51,9 @@ var (
 )
 
 type StorageStats struct {
+	States            int64 `json:"states"`
+	StateBytes        int64 `json:"state_bytes"`
+	StateWatermarks   int64 `json:"state_watermarks"`
 	Messages          int64 `json:"messages"`
 	Pending           int64 `json:"pending"`
 	Confirmed         int64 `json:"confirmed"`
@@ -92,16 +95,18 @@ type DeviceCredentials struct {
 }
 
 type PushOptions struct {
-	Key     string          `json:"-"`
-	Group   string          `json:"group"`
-	TTL     int64           `json:"ttl"`
-	Actions []MessageAction `json:"actions,omitempty"`
+	SchemaVersion int               `json:"schema_version,omitempty"`
+	Blocks        []StructuredBlock `json:"blocks,omitempty"`
+	Key           string            `json:"-"`
+	Group         string            `json:"group"`
+	TTL           int64             `json:"ttl"`
+	Actions       []MessageAction   `json:"actions,omitempty"`
 }
 
 var ErrIdempotencyConflict = errors.New("idempotency_conflict")
 
 func (o PushOptions) Valid() bool {
-	if !ValidMessageActions(o.Actions) {
+	if !ValidStructuredBlocks(o.SchemaVersion, o.Blocks) || !ValidMessageActions(o.Actions) {
 		return false
 	}
 	if len(o.Key) > 128 || len(o.Group) > 128 || !utf8.ValidString(o.Group) || o.TTL < 0 || o.TTL > 604800 {
@@ -116,19 +121,21 @@ func (o PushOptions) Valid() bool {
 }
 
 type Message struct {
-	Actions         []MessageAction `json:"actions,omitempty"`
-	ApplicationName string          `json:"application_name,omitempty"`
-	Group           string          `json:"group,omitempty"`
-	ExpiresAt       int64           `json:"expires_at_ms"`
-	Bark            string          `json:"bark,omitempty"`
-	ID              string          `json:"id"`
-	Sequence        int64           `json:"sequence"`
-	Title           string          `json:"title"`
-	Body            string          `json:"body"`
-	CreatedAt       int64           `json:"created_at_ms"`
-	Subtitle        string          `json:"subtitle"`
-	Priority        int             `json:"priority"`
-	ApplicationID   string          `json:"application_id,omitempty"`
+	SchemaVersion   int               `json:"schema_version,omitempty"`
+	Blocks          []StructuredBlock `json:"blocks,omitempty"`
+	Actions         []MessageAction   `json:"actions,omitempty"`
+	ApplicationName string            `json:"application_name,omitempty"`
+	Group           string            `json:"group,omitempty"`
+	ExpiresAt       int64             `json:"expires_at_ms"`
+	Bark            string            `json:"bark,omitempty"`
+	ID              string            `json:"id"`
+	Sequence        int64             `json:"sequence"`
+	Title           string            `json:"title"`
+	Body            string            `json:"body"`
+	CreatedAt       int64             `json:"created_at_ms"`
+	Subtitle        string            `json:"subtitle"`
+	Priority        int               `json:"priority"`
+	ApplicationID   string            `json:"application_id,omitempty"`
 }
 
 type MessagePage struct {

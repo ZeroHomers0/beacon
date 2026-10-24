@@ -63,6 +63,7 @@ internal class RealtimeRuntimeController(
     @Volatile private var destroyed = false
     private val main = Handler(Looper.getMainLooper())
     private var receiptTask: Runnable? = null
+    private var stateRecovery: Runnable? = null
     private var notificationTask: Runnable? = null
     private var receivedInBatch = 0
     private var insertedInBatch = 0
@@ -321,7 +322,21 @@ internal class RealtimeRuntimeController(
         reconcile()
     }
 
+    private fun scheduleStateRecovery(settings:TransportSettings,valid:()->Boolean){
+        stateRecovery?.let(main::removeCallbacks)
+        val task=object:Runnable{
+            override fun run(){runCatching{worker.execute{
+                if(stateRecovery!==this||!valid()||!running)return@execute
+                if(store.stateCache.preference("supports:"+settings.endpoint)=="1")catchUp()
+                main.postDelayed(this,60000)
+            }}}
+        }
+        stateRecovery=task
+        main.postDelayed(task,60000)
+    }
+
     fun reset() {
+        stateRecovery?.let(main::removeCallbacks);stateRecovery=null
         receiptTask?.let { main.removeCallbacks(it) }
         receiptTask = null
         receivedInBatch = 0
@@ -528,6 +543,7 @@ internal class RealtimeRuntimeController(
                         runCatching {
                             worker.execute {
                                 if (!valid()) return@execute
+                                if(store.stateCache.preference("supports:"+settings.endpoint)=="1")catchUp()
                                 receiptTask?.let { task ->
                                     main.removeCallbacks(task)
                                     task.run()
@@ -561,6 +577,7 @@ internal class RealtimeRuntimeController(
                             worker.execute {
                                 if (epoch.get() != capture) return@execute
                                 running = value == RealtimeClient.State.CONNECTED
+                                if(running)scheduleStateRecovery(settings,::valid)else{stateRecovery?.let(main::removeCallbacks);stateRecovery=null}
                                 // A fresh connection is its own proof of life; the first heartbeat
                                 // may still be an interval away.
                                 if (running) {

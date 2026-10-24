@@ -6,6 +6,10 @@ __pycache__/
 *.pyc
 # Local documentation repository: kept beside the code, never committed here.
 /docs-repo/
+# Local design drafts are published through the separate documentation repository.
+/docs/design/structured-messages-and-state-widgets.md
+/docs/design/structured-state-api.md
+/docs/design/structured-ui/
 /dist/
 android/.gradle/
 android/.kotlin/

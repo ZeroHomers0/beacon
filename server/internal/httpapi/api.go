@@ -130,6 +130,9 @@ func (a *API) Handler() http.Handler {
 	v1.Any("/bind", gin.WrapF(a.bind))
 	v1.Any("/device/revoke", gin.WrapF(a.revokeSelf))
 	v1.Any("/push", gin.WrapF(a.push))
+	v1.Any("/push-capabilities", gin.WrapF(a.pushCapabilities))
+	v1.Any("/states", gin.WrapF(a.states))
+	v1.Any("/states/meta", gin.WrapF(a.stateMeta))
 	v1.Any("/messages", gin.WrapF(a.messages))
 	v1.Any("/messages/ack", gin.WrapF(a.ack))
 	// Bark splits the original escaped RequestURI, preserving encoded separators.
@@ -174,6 +177,10 @@ func (a *API) capabilities(w http.ResponseWriter, r *http.Request) {
 		"push_apis":                   []string{"beacon", "bark_text"},
 		"message_fields":              []string{"title", "subtitle", "body", "priority", "group", "ttl", "application_id", "application_name", "expires_at_ms", "actions"},
 		"max_message_actions":         1,
+		"structured_schema_versions":  []int{1},
+		"state_protocol":              1,
+		"state_sync":                  true,
+		"block_kinds":                 domain.BlockKinds,
 		"push_idempotency":            true,
 		"max_ttl_seconds":             604800,
 		"max_page_size":               domain.MaxPageSize,
@@ -197,20 +204,87 @@ func (a *API) push(w http.ResponseWriter, r *http.Request) {
 		apiError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
+	var rawPayload bytes.Buffer
+	originalBody := r.Body
+	r.Body = struct {
+		io.Reader
+		io.Closer
+	}{io.TeeReader(originalBody, &rawPayload), originalBody}
 	var payload struct {
-		Title    string                `json:"title"`
-		Body     string                `json:"body"`
-		Subtitle string                `json:"subtitle"`
-		Priority *int                  `json:"priority"`
-		Group    string                `json:"group"`
-		TTL      int64                 `json:"ttl"`
-		Actions  domain.MessageActions `json:"actions"`
+		Mode          string                  `json:"mode"`
+		Operation     string                  `json:"operation"`
+		TopicKey      string                  `json:"topic_key"`
+		Revision      int64                   `json:"revision"`
+		ObservedAt    int64                   `json:"observed_at_ms"`
+		FreshFor      int64                   `json:"fresh_for_seconds"`
+		StateType     string                  `json:"state_type"`
+		Status        string                  `json:"status"`
+		Title         string                  `json:"title"`
+		Body          string                  `json:"body"`
+		Subtitle      string                  `json:"subtitle"`
+		Priority      *int                    `json:"priority"`
+		Group         string                  `json:"group"`
+		TTL           int64                   `json:"ttl"`
+		Actions       domain.MessageActions   `json:"actions"`
+		SchemaVersion int                     `json:"schema_version"`
+		Blocks        domain.StructuredBlocks `json:"blocks"`
 	}
 	if decodeJSON(w, r, &payload) != nil {
 		apiError(w, http.StatusBadRequest, "invalid_message")
 		return
 	}
-	m, err := a.service.PushWithOptions(token, payload.Title, payload.Subtitle, payload.Body, payload.Priority, domain.PushOptions{Key: r.Header.Get("Idempotency-Key"), Group: payload.Group, TTL: payload.TTL, Actions: payload.Actions})
+	var present map[string]json.RawMessage
+	if err := json.Unmarshal(rawPayload.Bytes(), &present); err != nil {
+		stateError(w, domain.ErrInvalidMessage)
+		return
+	}
+	for _, field := range []string{"mode", "schema_version", "operation", "topic_key", "revision", "observed_at_ms", "fresh_for_seconds", "state_type", "status"} {
+		if value, ok := present[field]; ok && bytes.Equal(bytes.TrimSpace(value), []byte("null")) {
+			stateError(w, domain.ErrInvalidMessage)
+			return
+		}
+	}
+	if payload.Mode == "state" && payload.Operation == "delete" {
+		for field := range present {
+			if field != "mode" && field != "schema_version" && field != "operation" && field != "topic_key" && field != "revision" {
+				stateError(w, domain.ErrInvalidMessage)
+				return
+			}
+		}
+	}
+	if payload.Mode != "state" {
+		for _, field := range []string{"operation", "topic_key", "revision", "observed_at_ms", "fresh_for_seconds", "state_type", "status"} {
+			if _, ok := present[field]; ok {
+				stateError(w, domain.ErrInvalidMessage)
+				return
+			}
+		}
+	}
+	if payload.Mode == "state" {
+		var semantic any
+		if err := json.Unmarshal(rawPayload.Bytes(), &semantic); err != nil {
+			stateError(w, domain.ErrInvalidMessage)
+			return
+		}
+		canonical, _ := json.Marshal(semantic)
+		result, err := a.service.SaveState(token, domain.StatePayload{DigestInput: canonical, Mode: payload.Mode, SchemaVersion: payload.SchemaVersion, Operation: payload.Operation, TopicKey: payload.TopicKey, Revision: payload.Revision, ObservedAt: payload.ObservedAt, FreshFor: payload.FreshFor, StateType: payload.StateType, Status: payload.Status, Title: payload.Title, Subtitle: payload.Subtitle, Body: payload.Body, Priority: payload.Priority, Group: payload.Group, TTL: payload.TTL, Actions: payload.Actions, Blocks: payload.Blocks})
+		if err != nil {
+			stateError(w, err)
+			return
+		}
+		if a.stream != nil && !result.Unchanged {
+			if device, err := a.service.StateDevice(token); err == nil {
+				a.stream.StateChanged(device)
+			}
+		}
+		writeJSON(w, 200, result)
+		return
+	}
+	if payload.Mode != "" && payload.Mode != "event" || payload.TopicKey != "" || payload.Revision != 0 || payload.Operation != "" || payload.StateType != "" || payload.Status != "" || payload.FreshFor != 0 || payload.ObservedAt != 0 {
+		stateError(w, domain.ErrInvalidMessage)
+		return
+	}
+	m, err := a.service.PushWithOptions(token, payload.Title, payload.Subtitle, payload.Body, payload.Priority, domain.PushOptions{Key: r.Header.Get("Idempotency-Key"), Group: payload.Group, TTL: payload.TTL, Actions: payload.Actions, SchemaVersion: payload.SchemaVersion, Blocks: payload.Blocks})
 	if err != nil {
 		if errors.Is(err, domain.ErrIdempotencyConflict) {
 			apiError(w, http.StatusConflict, "idempotency_conflict")

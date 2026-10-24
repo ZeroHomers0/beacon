@@ -13,3 +13,5 @@ export const STREAM_PATH = "/api/v1/realtime/stream";
 // The client is expected to accept a range, not an exact match: these are the
 // bounds this Worker implements, advertised for forward-compatible clients.
 export const SUPPORTED_HTTP_PROTOCOLS = { min: 1, max: HTTP_PROTOCOL };
+
+export const STATE_PROTOCOL = 1;

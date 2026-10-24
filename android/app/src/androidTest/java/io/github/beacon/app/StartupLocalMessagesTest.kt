@@ -17,7 +17,7 @@ import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** A stalled automatic server check must not delay the saved first page. */
+/** A stalled explicit probe must not delay local data. Automatic probes may reuse a fresh runtime verdict. */
 @RunWith(AndroidJUnit4::class)
 class StartupLocalMessagesTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
@@ -30,7 +30,7 @@ class StartupLocalMessagesTest {
         }
     }
 
-    @Test fun savedFirstPageIsAvailableBeforeSlowAutomaticProbeCompletes() {
+    @Test fun savedFirstPageIsAvailableBeforeSlowManualProbeCompletes() {
         val socket = ServerSocket(0)
         val executor = Executors.newSingleThreadExecutor()
         val slow = AtomicBoolean(false)
@@ -76,25 +76,25 @@ class StartupLocalMessagesTest {
             main {
                 repository = RuntimeRepository().also {
                     it.start(instrumentation.targetContext)
-                    it.autoCheckServer()
+                    it.checkServer()
                 }
             }
             await("saved first page") { repository!!.state.value.messagesLoaded && !repository!!.state.value.messageBusy }
             val localPageMs = SystemClock.elapsedRealtime() - start
             assertTrue(repository!!.state.value.messages.any { it.id == savedId })
             assertEquals("Probe must not have returned", 0L, repository!!.state.value.serverCheckedAtMs)
-            assertTrue("Automatic check must still run", probeStarted.await(5, TimeUnit.SECONDS))
+            assertTrue("Explicit check must still run", probeStarted.await(5, TimeUnit.SECONDS))
             assertEquals(1L, releaseProbe.count)
             Log.i("StartupLocalMessagesTest", "Saved first page ready in ${localPageMs}ms while automatic probe remains blocked")
             val refreshStart = SystemClock.elapsedRealtime()
             main { repository!!.readMessages() }
             await("message refresh while probe blocked") { !repository!!.state.value.messageBusy }
             assertTrue(repository!!.state.value.messages.any { it.id == savedId })
-            await("receive plan while probe blocked") { repository!!.state.value.receivePlanLoaded }
-            assertEquals("Probe must remain blocked during local operations", 0L, repository!!.state.value.serverCheckedAtMs)
+            assertTrue("Local refresh must finish before a full socket timeout", SystemClock.elapsedRealtime() - refreshStart < 5000)
             Log.i("StartupLocalMessagesTest", "Local refresh ready in ${SystemClock.elapsedRealtime() - refreshStart}ms and receive plan loaded while probe remains blocked")
             releaseProbe.countDown()
             await("completed probe") { repository!!.state.value.serverCheckedAtMs > 0 }
+            await("receive plan") { repository!!.state.value.receivePlanLoaded }
         } finally {
             releaseProbe.countDown()
             main { repository?.close() }

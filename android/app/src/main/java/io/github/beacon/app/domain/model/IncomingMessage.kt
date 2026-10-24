@@ -16,5 +16,6 @@ data class IncomingMessage(
     val group: String = "",
     val expiresAtMs: Long = 0,
     val applicationName: String = "",
+    val structuredBlocks: String = "[]",
     val actions: List<MessageLinkAction> = emptyList(),
 )

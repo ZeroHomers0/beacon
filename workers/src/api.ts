@@ -1,3 +1,4 @@
+import { BLOCK_KINDS, validateBlocks } from "./blocks";
 import {
   validateMessageActions,
   PENDING,
@@ -13,6 +14,7 @@ import {
 import { bark, presentation } from "./bark";
 import { bearer, body, ids, integer, json, method, text } from "./http";
 import {
+  STATE_PROTOCOL,
   ADMIN_PROTOCOL,
   DELIVERY_RETENTION_PROTOCOL,
   HTTP_PROTOCOL,
@@ -86,12 +88,18 @@ export class API {
       const credential = bearer(request);
       const payload = await body(
         request,
-        ["title", "subtitle", "body", "priority", "group", "ttl", "actions"],
+        ["title", "subtitle", "body", "priority", "group", "ttl", "actions", "schema_version", "blocks", "mode", "operation", "topic_key", "revision", "observed_at_ms", "fresh_for_seconds", "state_type", "status"],
         "invalid_message",
       );
       const credentialHash = await hash(credential);
       await this.transport.arm();
       const sender = this.store.sender(credentialHash);
+      if(payload.mode==="state") {
+       if(payload.operation!=="delete") { pushOptions(payload.group,payload.ttl,"",credentialHash,"");validateMessageActions(payload.actions);priority(payload.priority,sender.priority); }
+       const canonical=(v:unknown):unknown=>Array.isArray(v)?v.map(canonical):v&&typeof v==="object"?Object.fromEntries(Object.entries(v).sort(([a],[b])=>a<b?-1:a>b?1:0).map(([k,v])=>[k,canonical(v)])):v;
+       const result=this.store.saveState(credentialHash,payload,await hash(JSON.stringify(canonical(payload))),Date.now());if(!result.unchanged)this.transport.stateChanged?.(sender.device);return json(result);
+      }
+      if(payload.mode!==undefined&&payload.mode!=="event"||["operation","topic_key","revision","observed_at_ms","fresh_for_seconds","state_type","status"].some(k=>payload[k]!==undefined))reject(400,"invalid_message");
       const selected = priority(payload.priority, sender.priority);
       const options = pushOptions(
         payload.group,
@@ -101,6 +109,8 @@ export class API {
         "",
       );
       options.actions = validateMessageActions(payload.actions);
+      options.blocks = validateBlocks(payload.schema_version, payload.blocks);
+      options.schema_version = payload.schema_version === 1 ? 1 : 0;
       options.fingerprint = await hash(
         JSON.stringify([
           text(payload.title),
@@ -112,6 +122,7 @@ export class API {
           options.group,
           options.ttl,
           ...(options.actions.length ? [options.actions] : []),
+          ...(options.schema_version || options.blocks.length ? [options.schema_version, options.blocks] : []),
         ]),
       );
       const m = this.store.save(
@@ -157,7 +168,10 @@ export class API {
         device_id: device,
       });
     }
+    if(path==="/api/v1/push-capabilities"){method(request,"GET");this.store.sender(await hash(bearer(request)));return json({state_protocol:STATE_PROTOCOL,structured_schema_versions:[1],block_kinds:BLOCK_KINDS,state_limits:{topics:500,bytes:8388608,per_application_per_minute:120,per_device_per_minute:300}})}
+    if(path==="/api/v1/states/meta") {method(request,"GET");return json(this.store.stateMeta(await hash(bearer(request)),url.searchParams.get("topic_key")??""))}
     const receivePaths = [
+      "/api/v1/states",
       "/api/v1/capabilities",
       "/api/v1/messages",
       "/api/v1/messages/ack",
@@ -183,6 +197,7 @@ export class API {
       if (path.endsWith("/ack")) await this.transport.arm();
       const device = this.store.receiver(credentialHash);
       const now = Date.now();
+      if(path==="/api/v1/states")return json(this.store.statePage(device,url.searchParams,Date.now()));
       if (path.endsWith("/capabilities"))
         return json({
           protocol: HTTP_PROTOCOL,
@@ -203,6 +218,10 @@ export class API {
             "expires_at_ms",
             "actions",
           ],
+          structured_schema_versions: [1],
+          state_protocol: STATE_PROTOCOL,
+          state_sync: true,
+          block_kinds: BLOCK_KINDS,
           push_idempotency: true,
           max_ttl_seconds: 604800,
           max_page_size: 100,

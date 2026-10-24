@@ -204,6 +204,10 @@ export class IdentityStore {
       );
       this.rows("DELETE FROM messages WHERE application_id=?", id);
       this.rows("DELETE FROM push_requests WHERE credential=?", row.token_hash);
+      for(const state of this.rows("SELECT device,topic,payload FROM current_states WHERE application=? AND deleted=0",id)){
+       const record={...JSON.parse(String(state.payload)),deleted:true,blocks:[],body:"",title:""};this.rows("INSERT INTO state_changes(device,application,topic,payload,created) VALUES(?,?,?,?,?)",state.device,id,state.topic,JSON.stringify(record),Date.now());
+      }
+      this.rows("DELETE FROM current_states WHERE application=?",id);
       this.rows("DELETE FROM applications WHERE id=?", id);
       return count;
     });

@@ -136,7 +136,7 @@ fun BeaconApp(
     }
 
     BeaconTheme(ui.uiStyle, ui.themeMode) {
-        val pager = rememberPagerState(initialPage = ui.page) { 2 }
+        val pager = rememberPagerState(initialPage = ui.page) { 3 }
         val pageNavigationMotion =
             spring<Float>(
                 stiffness = 322.2f,

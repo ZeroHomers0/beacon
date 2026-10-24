@@ -10,7 +10,7 @@ import (
 
 // messageSchemaVersion is the PRAGMA user_version this binary produces and the highest
 // one it accepts. Every migration step below adds exactly one to it.
-const messageSchemaVersion = 11
+const messageSchemaVersion = 13
 
 func migrateMessageSchema(db *sql.DB) error {
 	tx, err := db.Begin()
@@ -206,6 +206,22 @@ func migrateMessageSchema(db *sql.DB) error {
 				return err
 			}
 		}
+	}
+	if version < 12 {
+		for _, col := range []struct{ name, definition string }{{"blocks", "TEXT NOT NULL DEFAULT ''"}, {"schema_version", "INTEGER NOT NULL DEFAULT 0"}} {
+			var present int
+			if err = tx.QueryRow("SELECT count(*) FROM pragma_table_info('messages') WHERE name=?", col.name).Scan(&present); err != nil {
+				return err
+			}
+			if present == 0 {
+				if _, err = tx.Exec("ALTER TABLE messages ADD COLUMN " + col.name + " " + col.definition); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	if err = createStateSchema(tx); err != nil {
+		return err
 	}
 	if _, err = tx.Exec("PRAGMA user_version=" + strconv.Itoa(messageSchemaVersion)); err != nil {
 		return err

@@ -157,6 +157,11 @@ class MessageNotifications(
                 .setPublicVersion(public)
                 .setLocalOnly(true)
                 .setCategory(Notification.CATEGORY_MESSAGE)
+                .apply {
+                    val blocks=runCatching{org.json.JSONArray(message?.structuredBlocks?:"[]")}.getOrElse{org.json.JSONArray()}
+                    val block=(0 until blocks.length()).mapNotNull{blocks.optJSONObject(it)}.firstOrNull{it.optString("kind")=="progress"}
+                    if(block!=null){if(block.optBoolean("indeterminate"))setProgress(0,0,true)else{val min=block.optDouble("min",0.0);val max=block.optDouble("max");val value=block.optDouble("value");if(max>min&&value.isFinite())setProgress(10000,(((value-min)/(max-min))*10000).toInt().coerceIn(0,10000),false)}}
+                }
                 .setNumber(batch.count)
                 .build()
         // Media is resolved only for a card that can actually alert. A silent batch — the
