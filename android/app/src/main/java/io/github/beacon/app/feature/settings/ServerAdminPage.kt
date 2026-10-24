@@ -196,6 +196,8 @@ internal fun ServerAdminPage(
             bottom = padding.calculateBottomPadding(),
         ) else padding,
         listTag = "server-admin-list",
+        itemSpacing = if (state.loggedIn && tab in 0..1) BeaconUiMetrics.MessageCardGap
+            else BeaconUiMetrics.SettingsGroupGap,
     ) {
         if (state.restoring) {
             item {
@@ -852,9 +854,15 @@ internal fun AdminListCard(
             horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
             Spacer(Modifier.weight(1f))
             MessageFilterTag(status, compact = true,
-                containerColor = BeaconTagPalette[if (revoked) 7 else 1])
+                containerColor = androidx.compose.ui.graphics.Color(if (revoked) 0xFFFF8F96 else 0xFF82E6A4))
             if (priority != null) MessageFilterTag(stringResource(priorityShortLabel(priority)),
-                modifier = Modifier.widthIn(max = 180.dp), compact = true, toneSlot = 0)
+                modifier = Modifier.widthIn(max = 180.dp), compact = true,
+                containerColor = androidx.compose.ui.graphics.Color(when {
+                    priority <= 1 -> 0xFFE8F3FF
+                    priority <= 3 -> 0xFFBEDDFF
+                    priority <= 7 -> 0xFF8FC5FF
+                    else -> 0xFF5AA7F2
+                }))
         }
     }
 }

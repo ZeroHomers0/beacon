@@ -294,13 +294,14 @@ fun BeaconSettingsList(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp),
     listTag: String = SETTINGS_LIST_TAG,
+    itemSpacing: Dp = BeaconUiMetrics.SettingsGroupGap,
     content: LazyListScope.() -> Unit,
 ) {
     LazyColumn(
         state = state,
         modifier = modifier.imePadding().testTag(listTag),
         contentPadding = contentPadding,
-        verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SettingsGroupGap),
+        verticalArrangement = Arrangement.spacedBy(itemSpacing),
         content = content,
     )
 }
