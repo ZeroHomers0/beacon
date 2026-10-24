@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.beacon.app.ui.icons.BeaconIcons
@@ -33,6 +34,9 @@ fun SettingsOverviewCard(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
+    val dark=scheme.background.luminance()<.5f
+    val healthyBackground=if(dark) Color(0xFF193927) else BeaconHealthyCardBackground
+    val healthyInk=if(dark) Color(0xFFE9EBEA) else BeaconHealthyCardInk
     val tone = when { healthy -> BeaconHealthyCardMark; error -> scheme.error; else -> scheme.onSurfaceVariant }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -40,7 +44,7 @@ fun SettingsOverviewCard(
             action?.invoke()
         }
         BeaconCard(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(
-            containerColor = if (healthy) BeaconHealthyCardBackground
+            containerColor = if (healthy) healthyBackground
                 else tone.copy(alpha = .06f).compositeOver(scheme.surfaceContainerLow))) {
             Box(Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large)) {
                 // A match-parent overlay never contributes to the measured height.
@@ -66,11 +70,11 @@ fun SettingsOverviewCard(
                     top = BeaconUiMetrics.CardInset, end = 80.dp, bottom = BeaconUiMetrics.CardInset),
                     verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap4)) {
                     BeaconFittedText(status, Modifier.fillMaxWidth(),
-                        color = if (healthy) BeaconHealthyCardInk else scheme.onSurface,
+                        color = if (healthy) healthyInk else scheme.onSurface,
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold))
                     BeaconFittedText(subtitle, Modifier.fillMaxWidth(),
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (healthy) BeaconHealthyCardInk else scheme.onSurfaceVariant,
+                        color = if (healthy) healthyInk else scheme.onSurfaceVariant,
                         inspectable = true, inspectTitle = title)
                 }
             }

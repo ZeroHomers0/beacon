@@ -70,6 +70,11 @@ internal fun StateWidgetEditor(id:Int, detail:Boolean, source:String?, identity:
     var baseline by rememberSaveable{mutableStateOf(initial)}
     val config=remember(draft){JSONObject(draft)}
     val row=rows.firstOrNull{it.optString("local_source")==config.optString("source")&&it.optString("local_identity")==config.optString("identity")}
+    var sourceFilter by rememberSaveable{mutableStateOf("*")}
+    val sourceIds=listOf("*")+rows.map{it.optString("application_id")}.distinct()
+    LaunchedEffect(sourceIds){if(sourceFilter !in sourceIds)sourceFilter="*"}
+    val sourceNames=sourceIds.map{key->if(key=="*")"全部来源"else if(key.isBlank())"默认来源"else rows.firstOrNull{it.optString("application_id")==key}?.optString("application_name").orEmpty().ifBlank{key}}
+    val choices=(rows.filter{sourceFilter=="*"||it.optString("application_id")==sourceFilter}+listOfNotNull(row)).distinctBy{it.optString("local_source")+":"+it.optString("local_identity")}
     var editing by rememberSaveable{mutableStateOf(!detail)}
     val defaultFormat=remember{requestedFormat?:WidgetInstances.format(context,id).name}
     val formatName=config.optString("format",defaultFormat)
@@ -78,6 +83,8 @@ internal fun StateWidgetEditor(id:Int, detail:Boolean, source:String?, identity:
     var previewSize by remember{mutableStateOf(WidgetInstances.previewSize(context,id,format))}
     var discard by remember{mutableStateOf(false)}
     var feedback by remember{mutableStateOf("")}
+    var pinToken by rememberSaveable{mutableStateOf("")}
+    LaunchedEffect(pinToken){if(pinToken.isNotBlank())while(true){kotlinx.coroutines.delay(500);if(cache.preference("pin-result:$pinToken").isNotBlank()){cache.preference("pin-result:$pinToken","");onSaved();break}}}
     val dirty=draft!=baseline
     fun update(change:(JSONObject)->Unit){draft=JSONObject(draft).apply(change).toString()}
     fun back(){if(editing&&dirty)discard=true else if(editing&&detail)editing=false else onExit()}
@@ -102,9 +109,10 @@ internal fun StateWidgetEditor(id:Int, detail:Boolean, source:String?, identity:
                     val manager=AppWidgetManager.getInstance(context)
                     if(!manager.isRequestPinAppWidgetSupported)feedback="请从桌面的小组件列表添加。"
                     else{
-                        val callback=Intent(context,PinStateWidgetReceiver::class.java).setData(android.net.Uri.parse("beacon://pin/"+java.util.UUID.randomUUID())).putExtra("config",saved.toString())
+                        val token=java.util.UUID.randomUUID().toString()
+                        val callback=Intent(context,PinStateWidgetReceiver::class.java).putExtra("pin_token",token).setData(android.net.Uri.parse("beacon://pin/"+java.util.UUID.randomUUID())).putExtra("config",saved.toString())
                         val pending=PendingIntent.getBroadcast(context,0,callback,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
-                        if(manager.requestPinAppWidget(format.component(context),null,pending))onSaved()else feedback="桌面未接受添加请求，请重试。"
+                        if(manager.requestPinAppWidget(format.component(context),null,pending)){pinToken=token;feedback="请在桌面弹窗中确认添加。确认后将自动返回。"}else feedback="桌面未接受添加请求，请重试。"
                     }
                 }
             }catch(_:Exception){feedback="保存失败，请重试。"}
@@ -121,11 +129,12 @@ internal fun StateWidgetEditor(id:Int, detail:Boolean, source:String?, identity:
     },bottomBar={}){padding->
         BeaconSettingsList(rememberLazyListState(),Modifier.fillMaxSize().padding(padding).nestedScroll(bar.connection(style)),contentPadding=PaddingValues(BeaconUiMetrics.PageInset)) {
             if(editing){
-                item { WidgetPreview(row,config,previewSize,existing,format,error) }
+                item { WidgetPreview(row,JSONObject(config.toString()).put("format",format.name),previewSize,existing,format,error) }
                 item { SettingsGroup("数据来源"){
                     if(!existing)BeaconDropdownPreference("组件规格",WidgetFormat.entries.map{it.label},format.ordinal,settingsRow=true,icon=BeaconIcons.Applications){index->update{it.put("format",WidgetFormat.entries[index].name)}}
-                    BeaconDropdownPreference("主题",rows.map{it.optString("title")+it.optString("application_name").let{name->if(name.isBlank())""else" · $name"}},rows.indexOf(row),enabled=rows.isNotEmpty(),settingsRow=true,icon=BeaconIcons.Messages){index->
-                        val selected=rows[index]
+                    BeaconDropdownPreference("来源（可选）",sourceNames,sourceIds.indexOf(sourceFilter).coerceAtLeast(0),settingsRow=true,icon=BeaconIcons.Applications){index->sourceFilter=sourceIds[index]}
+                    BeaconDropdownPreference("状态主题",choices.map{it.optString("title")+" · "+it.optString("application_name").ifBlank{if(it.optString("application_id").isBlank())"默认来源"else it.optString("application_id")}},choices.indexOf(row),enabled=choices.isNotEmpty(),settingsRow=true,icon=BeaconIcons.Messages){index->
+                        val selected=choices[index]
                         val next=JSONObject(draft).put("source",selected.optString("local_source")).put("identity",selected.optString("local_identity"))
                         next.remove("metrics")
                         next.put("metrics",JSONArray(WidgetConfigRules.selected(selected,next).take(4).map{it.optString("id")}))
@@ -139,13 +148,14 @@ internal fun StateWidgetEditor(id:Int, detail:Boolean, source:String?, identity:
                         SettingsHint("最多12个字符，桌面按实际宽度省略显示。")
                     }}}
                     item { WidgetTemplateSelector(row,config,previewSize){value->update{it.put("template",value)}} }
+                    item { WidgetColorSettings(row,config){next->draft=next.toString()} }
                     item { SettingsGroup("外观") {
-                        BeaconDropdownPreference("指标配色",listOf("固定配色","风险配色"),if(config.optString("color")=="semantic")1 else 0,settingsRow=true,icon=BeaconIcons.Palette){index->update{it.put("color",if(index==0)"fixed"else"semantic")}}
-                        BeaconDropdownPreference("卡片背景",listOf("跟随系统","浅色","深色","透明"),listOf("system","light","dark","transparent").indexOf(config.optString("background","system")),settingsRow=true,icon=BeaconIcons.ThemeMode){index->update{it.put("background",listOf("system","light","dark","transparent")[index])}}
+                        BeaconDropdownPreference("内容配色",listOf("自选颜色","按状态变色"),if(config.optString("color")=="semantic")1 else 0,settingsRow=true,icon=BeaconIcons.Palette){index->update{it.put("color",if(index==0)"fixed"else"semantic")}}
+                        BeaconDropdownPreference("卡片背景",listOf("跟随手机主题","浅色","深色","透明"),listOf("system","light","dark","transparent").indexOf(config.optString("background","system")),settingsRow=true,icon=BeaconIcons.ThemeMode){index->update{it.put("background",listOf("system","light","dark","transparent")[index])}}
                     }}
                     item { SettingsGroup("显示选项") { Column(Modifier.padding(horizontal=BeaconUiMetrics.CardInset)){
-                        BeaconPreferenceToggle("显示阈值色带","使用发送方提供的阈值",config.optBoolean("bands")){value->update{it.put("bands",value)}}
-                        BeaconPreferenceToggle("显示更新时间","紧凑尺寸下优先保证指标可读",config.optBoolean("updated",true)){value->update{it.put("updated",value)}}
+                        BeaconPreferenceToggle("显示分段提示颜色","按发送方设定的范围显示不同颜色",config.optBoolean("bands")){value->update{it.put("bands",value)}}
+                        BeaconPreferenceToggle("显示更新时间","紧凑尺寸下优先保证内容可读",config.optBoolean("updated",true)){value->update{it.put("updated",value)}}
                     }}}
                 }
             }else if(row!=null){
@@ -153,6 +163,6 @@ internal fun StateWidgetEditor(id:Int, detail:Boolean, source:String?, identity:
             }else item { SettingsGroup("状态已失效"){Column(Modifier.padding(BeaconUiMetrics.CardInset)){SettingsHint("原有配置保留，可返回设置重新选择数据。")}} }
         }
     }
-    if(feedback.isNotBlank())BeaconFailureDialog(feedback){feedback=""}
+    if(feedback.isNotBlank())BeaconAlertDialog(onDismissRequest={feedback=""},title={BeaconText("小组件")},text={BeaconText(feedback)},confirmButton={BeaconButton(onClick={feedback=""}){BeaconText("知道了")}})
     if(discard)BeaconConfirmDialog("放弃修改？","未保存的设置将不会应用到桌面。",onDismiss={discard=false},onConfirm={discard=false;draft=baseline;if(detail)editing=false else onExit()},confirmText="放弃修改",dismissText="继续编辑",danger=false)
 }

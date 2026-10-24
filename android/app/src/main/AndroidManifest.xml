@@ -30,6 +30,14 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/state_widget_info" />
         </receiver>
+        <receiver android:name=".widget.BeaconMediumStateWidget" android:label="Beacon 3×2" android:exported="false">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/state_widget_medium_info" />
+        </receiver>
+        <receiver android:name=".widget.BeaconLargeStateWidget" android:label="Beacon 4×4" android:exported="false">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/state_widget_large_info" />
+        </receiver>
         <receiver android:name=".widget.BeaconWideStateWidget" android:label="@string/state_widget_wide_title" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />

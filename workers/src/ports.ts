@@ -12,6 +12,9 @@ export interface Repository {
   saveState(credential:string,p:Record<string,unknown>,digest:string,now:number):import("./states").StateRecord;
   statePage(device:string,q:URLSearchParams,now:number):Record<string,unknown>;
   stateMeta(credential:string,topic:string):Record<string,unknown>;
+    adminStates(p:Record<string,unknown>,now:number):Record<string,unknown>;
+    adminState(p:Record<string,unknown>):Record<string,unknown>;
+    clearAdminState(p:Record<string,unknown>,now:number):Record<string,unknown>;
   receiver(hash: string, active?: boolean): string;
   sender(hash: string, applications?: boolean): Sender;
   active(device: string): void;

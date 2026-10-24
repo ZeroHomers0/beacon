@@ -33,6 +33,33 @@ export function stateSchema(sql:SqlStorage):void{
 export class StateStore {
  constructor(private storage:DurableObjectStorage,private server:string){}
  private rows(q:string,...args:SqlStorageValue[]){return [...this.storage.sql.exec(q,...args)]}
+ adminList(p:Record<string,unknown>,now:number){
+ const limit=p.limit===0?50:p.limit??50,offset=p.offset??0,device=p.device_id??"",search=p.search??"",state=p.state||"all",app=p.application_id;
+ if(!Number.isInteger(limit)||Number(limit)<1||Number(limit)>100||!Number.isInteger(offset)||Number(offset)<0||Number(offset)>1000000||typeof device!=="string"||typeof search!=="string"||[...search].length>128||app!==undefined&&app!==null&&typeof app!=="string"||!["all","active","stale","expired","deleted"].includes(String(state)))reject(400,"invalid_message");
+ const classify="CASE WHEN s.expires>0 AND s.expires<=? THEN 'expired' WHEN s.deleted=1 THEN 'deleted' WHEN coalesce(json_extract(s.payload,'$.stale_at_ms'),0)>0 AND json_extract(s.payload,'$.stale_at_ms')<=? THEN 'stale' ELSE 'active' END";
+ const where=" FROM current_states s JOIN devices d ON d.id=s.device LEFT JOIN applications a ON a.id=s.application WHERE (?='' OR s.device=?) AND (?=1 OR s.application=?) AND (?='' OR instr(lower(s.topic||' '||coalesce(json_extract(s.payload,'$.title'),'')||' '||coalesce(a.name,'')||' '||d.name),lower(?))>0) AND (?='all' OR ("+classify+")=?)";
+ const args:SqlStorageValue[]=[device,device,app==null?1:0,String(app??""),search,search,String(state),now,now,String(state)];
+ const total=Number(this.rows("SELECT count(*) AS n"+where,...args)[0].n);
+ const topics=this.rows("SELECT s.device,d.name AS device_name,s.application,coalesce(a.name,'') AS application_name,s.payload,("+classify+") AS state"+where+" ORDER BY s.device,s.application,s.topic LIMIT ? OFFSET ?",now,now,...args,Number(limit),Number(offset)).map(row=>{
+ const record=JSON.parse(String(row.payload));return {device_id:row.device,device_name:row.device_name,application_id:row.application,source_name:row.application?row.application_name||row.application:"默认来源",topic_key:record.topic_key,title:record.title??"",revision:record.revision,state:row.state,status:record.status??"",observed_at_ms:record.observed_at_ms??0,accepted_at_ms:record.accepted_at_ms,expires_at_ms:record.expires_at_ms};
+ });return {topics,total,has_more:Number(offset)+topics.length<total,next_offset:Number(offset)+topics.length};
+ }
+ adminDetail(p:Record<string,unknown>){
+ if(typeof p.device_id!=="string"||typeof p.topic_key!=="string"||p.application_id!==undefined&&p.application_id!==null&&typeof p.application_id!=="string")reject(400,"invalid_message");
+ const row=this.rows("SELECT s.payload,d.name FROM current_states s JOIN devices d ON d.id=s.device WHERE s.device=? AND s.application=? AND s.topic=?",p.device_id,String(p.application_id??""),p.topic_key)[0];
+ if(!row)reject(400,"invalid_message");return {device_id:p.device_id,device_name:row.name,state:JSON.parse(String(row.payload))};
+ }
+ adminClear(p:Record<string,unknown>,now:number){return this.storage.transactionSync(()=>{
+ if(!Number.isSafeInteger(p.revision)||Number(p.revision)<1)reject(400,"invalid_message");
+ const record=this.adminDetail(p).state;
+ if(record.revision!==p.revision)reject(409,"stale_state_revision");
+ if(!record.deleted){
+ const changed={...record,deleted:true,operation:"delete",title:"",subtitle:"",body:"",blocks:[],actions:[],expires_at_ms:0,stale_at_ms:0};
+ const encoded=JSON.stringify(changed);
+ this.rows("UPDATE current_states SET deleted=1,payload=?,expires=0 WHERE device=? AND application=? AND topic=?",encoded,String(p.device_id),String(p.application_id??""),String(p.topic_key));
+ this.change(String(p.device_id),String(p.application_id??""),String(p.topic_key),encoded,now);
+ }return {cleared:true,revision:record.revision};
+ });}
  private change(device:string,app:string,topic:string,payload:string,now:number){
  this.rows("INSERT INTO state_changes(device,application,topic,payload,created) VALUES(?,?,?,?,?)",device,app,topic,payload,now);
  this.rows("DELETE FROM state_changes WHERE device=? AND (created<? OR seq < coalesce((SELECT seq FROM state_changes WHERE device=? ORDER BY seq DESC LIMIT 1 OFFSET 9999),0))",device,now-86400000,device);

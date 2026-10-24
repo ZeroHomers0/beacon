@@ -45,6 +45,10 @@ internal fun ServerAdminPage(
     val state by model.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val resources = androidx.compose.ui.platform.LocalResources.current
+    if(screen==SettingsScreen.SERVER_TOPICS&&state.loggedIn){
+        AdminTopicsPage(state,model,scroll,modifier.padding(padding))
+        return
+    }
     var endpoint by rememberSaveable { mutableStateOf(defaultEndpoint) }
     // Never make administrator input saveable: Android saved instance state is not a secret store.
     var token by remember { mutableStateOf("") }
@@ -329,6 +333,7 @@ internal fun ServerAdminPage(
                     ) {
                         onNavigate(SettingsScreen.SERVER_APPLICATIONS)
                     }
+                    SettingsActionRow(stringResource(R.string.admin_topics_title),"查看默认来源与应用上报的状态主题",BeaconIcons.Messages,!state.busy){onNavigate(SettingsScreen.SERVER_TOPICS)}
                     SettingsActionRow(
                         stringResource(R.string.admin_test_title_page),
                         stringResource(R.string.admin_test_description),

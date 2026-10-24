@@ -108,7 +108,8 @@ class StructuredStateTest {
         for(template in WidgetRenderer.templates){
             val r=row();val ids=when(template){"single_ring"->listOf("short");"nested_rings"->listOf("short","long","monthly");else->listOf("short","long","monthly","yearly")}
             if(template=="segmented_ring")r.put("blocks",JSONArray("""[{"kind":"segments","id":"disk","label":"磁盘分布","total":100,"unit":"GB","items":[{"id":"images","label":"图片","value":30},{"id":"video","label":"视频","value":40},{"id":"other","label":"其他","value":10}]}]"""))
-            val config=JSONObject().put("template",template).put("metrics",JSONArray(if(template=="segmented_ring")listOf("disk")else ids))
+            if(template=="text_list")r.put("blocks",JSONArray("""[{"kind":"list","id":"news","label":"热搜","items":[{"id":"one","text":"第一条新闻"},{"id":"two","text":"第二条新闻"}]}]"""))
+            val config=JSONObject().put("template",template).put("metrics",JSONArray(if(template=="segmented_ring")listOf("disk")else if(template=="text_list")listOf("news")else ids))
             assertNull(template,WidgetConfigRules.error(r,config))
             for(dark in listOf(false,true))for(size in listOf(180 to 180,360 to 220,480 to 320)){
                 val bitmap=WidgetRenderer.render(r,config,size.first,size.second,dark)
@@ -116,6 +117,29 @@ class StructuredStateTest {
                 java.io.File(directory,"${template}_${size.first}_${size.second}_${if(dark)"dark"else"light"}.png").outputStream().use{bitmap.compress(Bitmap.CompressFormat.PNG,100,it)}
             }
         }
+    }
+    @Test fun colorsApplyGloballyAndCanBeOverriddenForOneContent(){
+        val config=JSONObject().put("template","horizontal_bars").put("metrics",JSONArray(listOf("short","long")))
+            .put("global_color","#E65B65").put("content_colors",JSONObject().put("long","#29B86A"))
+        val bitmap=WidgetRenderer.render(row(),config,360,180,false)
+        val pixels=IntArray(bitmap.width*bitmap.height);bitmap.getPixels(pixels,0,bitmap.width,0,0,bitmap.width,bitmap.height)
+        assertTrue("global red is rendered",pixels.count{it==0xFFE65B65.toInt()}>100)
+        assertTrue("individual green is rendered",pixels.count{it==0xFF29B86A.toInt()}>100)
+    }
+    @Test fun textTemplatesUseExistingBodyAndListsAcrossAllFourFormats(){
+        val r=row().put("body","这是一整段可以自动换行的文字。\n第二段文字保留换行，并且超长内容应当省略，不得画到更新时间上。".repeat(8))
+        r.put("blocks",JSONArray().put(JSONObject().put("kind","list").put("id","news").put("label","热搜榜").put("items",JSONArray((1..12).map{JSONObject().put("id","n$it").put("text","第 $it 条热搜新闻：这是一段很长的标题，不能超出卡片边界")}))))
+        val folder=requireNotNull(context.getExternalFilesDir("widget-qa"));folder.mkdirs()
+        for(template in listOf("text_list","text"))for(format in io.github.beacon.app.widget.WidgetFormat.entries)for(dark in listOf(false,true)){
+            val config=JSONObject().put("template",template).put("format",format.name).put("metrics",JSONArray(listOf("news"))).put("text_size",18).put("global_color","#29AEB6")
+            assertNull(WidgetConfigRules.layoutError(r,config,format.width,format.height))
+            val bitmap=WidgetRenderer.render(r,config,format.width,format.height,dark,2f)
+            assertEquals(0,android.graphics.Color.alpha(bitmap.getPixel(0,0)))
+            java.io.File(folder,"${template}_${format.name}_${dark}.png").outputStream().use{bitmap.compress(Bitmap.CompressFormat.PNG,100,it)}
+        }
+        assertNotNull(WidgetConfigRules.error(r,JSONObject().put("template","single_ring")))
+        assertNotNull(WidgetConfigRules.error(row(),JSONObject().put("template","text_list")))
+        assertNotNull(WidgetConfigRules.error(r.put("body",""),JSONObject().put("template","text")))
     }
     @Test fun stateCachePreservesVersionsAndAppliesSnapshotDeletion(){
         StateCache(context).use{cache->val source="test-state-source";cache.forget(source)

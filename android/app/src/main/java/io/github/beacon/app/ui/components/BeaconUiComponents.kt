@@ -59,6 +59,7 @@ enum class SettingsScreen(val titleRes: Int) {
     SERVER_TEST(R.string.admin_test_title_page),
     QUIET_HOURS(R.string.quiet_schedule),
     WIDGETS(R.string.settings_widgets_title),
+    SERVER_TOPICS(R.string.admin_topics_title),
 }
 
 /**
@@ -325,6 +326,7 @@ fun SettingsRow(
     command: Boolean = false,
     danger: Boolean = false,
     external: Boolean = false,
+    compact: Boolean = false,
 ) {
     Surface(onClick = onClick, enabled = enabled, color = Color.Transparent) {
         Row(
@@ -332,7 +334,7 @@ fun SettingsRow(
                 .alpha(if (enabled) 1f else .38f)
                 .heightIn(
                     min =
-                        (if (command && subtitle.isBlank()) BeaconUiMetrics.ControlMinHeight
+                        (if ((compact || command) && subtitle.isBlank()) BeaconUiMetrics.ControlMinHeight
                         else BeaconUiMetrics.NavigationMinHeight) *
                             androidx.compose.ui.platform.LocalDensity.current.fontScale
                                 .coerceAtLeast(1f)

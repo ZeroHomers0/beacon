@@ -34,6 +34,7 @@ open class BeaconStateWidget: AppWidgetProvider() {
                 val config=runCatching{JSONObject(cache.preference("widget:$id"))}.getOrElse{JSONObject()}
                 val row=rows.firstOrNull{it.optString("local_source")==config.optString("source")&&it.optString("local_identity")==config.optString("identity")}
                 val options=manager.getAppWidgetOptions(id);val format=WidgetInstances.format(context,id)
+                config.put("format",format.name)
                 val sizes=WidgetHostSizes.resolve(options,context.resources.configuration.orientation,format.width,format.height)
                 val dark=when(config.optString("background")){"light"->false;"dark"->true;else->context.resources.configuration.uiMode and 0x30 == 0x20}
                 val now=System.currentTimeMillis()
@@ -48,14 +49,12 @@ open class BeaconStateWidget: AppWidgetProvider() {
                 val last=cache.preference("widget-last:$id").toLongOrNull()?:0L
                 if(ids==null&&cache.preference("widget-signature:$id")==signature)continue
                 if(ids==null&&row!=null&&status !in listOf("completed","failed","cancelled")&&now-last<5000){schedule(context);continue}
-                val intent=Intent(context,StateWidgetActivity::class.java).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,id).putExtra("detail",false)
-                val pending=PendingIntent.getActivity(context,id,intent,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
                 fun render(size:android.util.SizeF):RemoteViews {
                     val bitmap=WidgetRenderer.render(row,config,size.width.toInt(),size.height.toInt(),dark,rasterDensity,pixelBudget.toInt())
                     return RemoteViews(context.packageName,R.layout.state_widget).apply{
                         setImageViewBitmap(R.id.widget_image,bitmap)
-                        setContentDescription(R.id.widget_image,row?.optString("body")?:"Beacon 状态，点击配置")
-                        setOnClickPendingIntent(R.id.widget_image,pending)
+                        setContentDescription(R.id.widget_image,row?.optString("body")?:"Beacon 状态，长按桌面组件编辑")
+                        setOnClickPendingIntent(R.id.widget_image,null)
                     }
                 }
                 val views=if(android.os.Build.VERSION.SDK_INT>=31&&sizes.size>1)RemoteViews(sizes.associateWith{render(it)})else render(sizes.first())
@@ -67,3 +66,5 @@ open class BeaconStateWidget: AppWidgetProvider() {
 }
 
 class BeaconWideStateWidget: BeaconStateWidget()
+class BeaconMediumStateWidget: BeaconStateWidget()
+class BeaconLargeStateWidget: BeaconStateWidget()

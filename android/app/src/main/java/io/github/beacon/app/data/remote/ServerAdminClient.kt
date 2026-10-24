@@ -30,6 +30,9 @@ interface ServerAdministration {
     fun revokeApplication(id: String): JSONObject
 
     fun deleteApplication(id: String): JSONObject = throw UnsupportedOperationException()
+    fun stateTopics(query:JSONObject):JSONObject=throw UnsupportedOperationException()
+    fun stateTopic(identity:JSONObject):JSONObject=throw UnsupportedOperationException()
+    fun clearStateTopic(identity:JSONObject):JSONObject=throw UnsupportedOperationException()
 }
 
 /** Independent administrator session. Never uses receive credentials or follows redirects. */
@@ -52,6 +55,9 @@ class ServerAdminClient(
         request("devices/delete", JSONObject().put("device_id", id))
 
     override fun overview(): JSONObject = request("overview")
+    override fun stateTopics(query:JSONObject):JSONObject=request("states/list",query)
+    override fun stateTopic(identity:JSONObject):JSONObject=request("states/detail",identity)
+    override fun clearStateTopic(identity:JSONObject):JSONObject=request("states/clear",identity)
 
     override fun binding(name: String): JSONObject =
         request("binding", JSONObject().put("name", name))

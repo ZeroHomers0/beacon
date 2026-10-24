@@ -134,6 +134,7 @@ fun SettingsPage(
                 SettingsScreen.SERVER_ADMIN,
                 SettingsScreen.SERVER_DEVICES,
                 SettingsScreen.SERVER_APPLICATIONS,
+                SettingsScreen.SERVER_TOPICS,
                 SettingsScreen.SERVER_TEST,
             )
     ) {
@@ -172,7 +173,7 @@ fun SettingsPage(
         return
     }
     if(screen==SettingsScreen.WIDGETS){
-        io.github.beacon.app.widget.WidgetManagerPage(modifier.padding(padding),scroll)
+        io.github.beacon.app.widget.WidgetManagerPage(modifier,scroll,padding)
         return
     }
     val needsRuntime = screen in setOf(SettingsScreen.CONNECTION, SettingsScreen.RECEPTION,
@@ -303,8 +304,13 @@ fun SettingsPage(
                         ) {
                             onNavigate(SettingsScreen.BACKUP)
                         }
+                    }
+                }
+                item {
+                    SettingsGroup("帮助与关于") {
                         SettingsRow(
                             title = stringResource(R.string.settings_update_title),
+                            compact = true,
                             subtitle = "",
                             icon = BeaconIcons.Update,
                             iconTint = MaterialTheme.colorScheme.onSurface,
@@ -324,19 +330,15 @@ fun SettingsPage(
                             badge = updateState.hasUnreadUpdate,
                         )
                         SettingsRow(
-                            stringResource(R.string.settings_about_title),
-                            "",
-                            BeaconIcons.Info,
-                        ) {
-                            onNavigate(SettingsScreen.ABOUT)
-                        }
+                            stringResource(R.string.settings_about_title), "", BeaconIcons.Info,
+                            iconTint=MaterialTheme.colorScheme.onSurface, compact=true,
+                            onClick={onNavigate(SettingsScreen.ABOUT)},
+                        )
                         SettingsRow(
-                            stringResource(R.string.settings_guide_title),
-                            "",
-                            BeaconIcons.Guide,
-                        ) {
-                            onNavigate(SettingsScreen.GUIDE)
-                        }
+                            stringResource(R.string.settings_guide_title), "", BeaconIcons.Guide,
+                            iconTint=MaterialTheme.colorScheme.onSurface, compact=true,
+                            onClick={onNavigate(SettingsScreen.GUIDE)},
+                        )
                     }
                 }
             }
@@ -365,6 +367,7 @@ fun SettingsPage(
             SettingsScreen.SERVER_ADMIN,
             SettingsScreen.SERVER_DEVICES,
             SettingsScreen.SERVER_APPLICATIONS,
+            SettingsScreen.SERVER_TOPICS,
             SettingsScreen.SERVER_TEST -> Unit
             SettingsScreen.GUIDE -> {
                 item {

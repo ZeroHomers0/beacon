@@ -14,7 +14,7 @@ class PinStateWidgetReceiver: BroadcastReceiver(){
         val raw=intent.getStringExtra("config")?:return
         if(id==AppWidgetManager.INVALID_APPWIDGET_ID||raw.toByteArray().size>32768)return
         val config=runCatching{JSONObject(raw)}.getOrNull()?:return
-        StateCache(context).use{it.preference("widget:$id",config.toString())}
+        StateCache(context).use{it.preference("widget:$id",config.toString());intent.getStringExtra("pin_token")?.let{token->it.preference("pin-result:$token",id.toString())}}
         BeaconStateWidget.refresh(context,intArrayOf(id))
     }
 }

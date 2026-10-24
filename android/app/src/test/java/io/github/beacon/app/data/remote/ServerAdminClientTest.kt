@@ -7,6 +7,21 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ServerAdminClientTest {
+    @Test fun topicAdministrationPreservesExplicitDefaultSourceAndRevision(){
+        MockWebServer().use{server->
+            repeat(3){server.enqueue(MockResponse().setBody("{}"))}
+            val client=ServerAdminClient(server.url("/").toString(),"a".repeat(64),http,allowLoopback=true)
+            val identity=org.json.JSONObject().put("device_id","phone").put("application_id","").put("topic_key","quota:a").put("revision",7)
+            client.stateTopics(org.json.JSONObject().put("application_id",""))
+            client.stateTopic(identity);client.clearStateTopic(identity)
+            for(path in listOf("list","detail","clear")){
+                val request=server.takeRequest();assertEquals("POST",request.method)
+                assertEquals("/api/admin/states/$path",request.path)
+                val data=org.json.JSONObject(request.body.readUtf8());assertTrue(data.has("application_id"));assertEquals("",data.getString("application_id"))
+                if(path!="list")assertEquals(7,data.getInt("revision"))
+            }
+        }
+    }
     private val token = "a".repeat(64)
     private val http =
         OkHttpClient.Builder().followRedirects(false).followSslRedirects(false).build()

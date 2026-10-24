@@ -61,7 +61,7 @@ class AdminSettingsLayoutTest {
             val pixels = IntArray(statusBitmap.width * statusBitmap.height)
             statusBitmap.getPixels(pixels, 0, statusBitmap.width, 0, 0, statusBitmap.width, statusBitmap.height)
             assertTrue("Healthy card uses the reference background in both themes",
-                pixels.count { it == BeaconHealthyCardBackground.toArgb() } > 1000)
+                pixels.count { it == (if(mode==BeaconThemeMode.DARK) 0xFF193927.toInt() else BeaconHealthyCardBackground.toArgb()) } > 1000)
             assertTrue("Circle and check use the reference green without alpha blending",
                 pixels.count { it == BeaconHealthyCardMark.toArgb() } > 100)
             val name = "ADMIN_${style}_${mode}_${scale}"

@@ -6,8 +6,9 @@ import android.content.Context
 import android.util.SizeF
 
 enum class WidgetFormat(val label: String, val width: Int, val height: Int) {
-    SQUARE("2×2", 180, 180), WIDE("4×2", 360, 180);
-    fun component(context: Context) = ComponentName(context, if(this==WIDE) BeaconWideStateWidget::class.java else BeaconStateWidget::class.java)
+    SQUARE("2×2", 180, 180), WIDE("4×2", 360, 180), MEDIUM("3×2", 270, 180), LARGE("4×4", 360, 360);
+    val description:String get()=when(this){SQUARE->"方卡";LARGE->"大方卡";else->"宽卡"}
+    fun component(context: Context) = ComponentName(context, when(this){ WIDE->BeaconWideStateWidget::class.java; MEDIUM->BeaconMediumStateWidget::class.java; LARGE->BeaconLargeStateWidget::class.java; SQUARE->BeaconStateWidget::class.java })
 }
 
 object WidgetInstances {
@@ -16,7 +17,7 @@ object WidgetInstances {
     }.distinct().toIntArray()
 
     fun format(context: Context, id: Int): WidgetFormat =
-        if(AppWidgetManager.getInstance(context).getAppWidgetInfo(id)?.provider?.className==BeaconWideStateWidget::class.java.name) WidgetFormat.WIDE else WidgetFormat.SQUARE
+        WidgetFormat.entries.firstOrNull { it.component(context)==AppWidgetManager.getInstance(context).getAppWidgetInfo(id)?.provider } ?: WidgetFormat.SQUARE
 
     fun previewSize(context: Context, id: Int, format: WidgetFormat): SizeF {
         val options=AppWidgetManager.getInstance(context).getAppWidgetOptions(id)

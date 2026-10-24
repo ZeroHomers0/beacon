@@ -47,6 +47,7 @@ enum class AdminAction {
     REVOKE_DEVICE,
     DELETE_APPLICATION,
     REVOKE_APPLICATION,
+    CLEAR_STATE,
 }
 
 data class AdminUiState(
@@ -70,6 +71,11 @@ data class AdminUiState(
     val applications: List<AdminApplication> = emptyList(),
     val secret: AdminSecret? = null,
     val testDeviceId: String = "",
+    val topics:List<JSONObject> = emptyList(),
+    val topicsTotal:Int = 0,
+    val topicsHasMore:Boolean = false,
+    val topicsQuery:String = "",
+    val topicDetail:JSONObject? = null,
 ) {
     fun listState(empty: Boolean) = io.github.beacon.app.domain.model.AsyncPageState.resolve(
         loaded = overviewLoaded,
@@ -223,6 +229,18 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
                     testDeviceId = mutable.value.testDeviceId,
                 )
         }
+    }
+
+    private fun topicsResult(client:ServerAdministration,query:JSONObject):AdminUiState {
+        val result=client.stateTopics(query);val rows=result.getJSONArray("topics")
+        return mutable.value.copy(topics=List(rows.length()){rows.getJSONObject(it)},topicsTotal=result.getInt("total"),topicsHasMore=result.optBoolean("has_more"),topicsQuery=query.toString())
+    }
+    fun loadTopics(query:JSONObject)=authenticated(null){client->topicsResult(client,query)}
+    fun loadTopic(identity:JSONObject)=authenticated(null){client->mutable.value.copy(topicDetail=client.stateTopic(identity).getJSONObject("state"))}
+    fun dismissTopic(){mutable.value=mutable.value.copy(topicDetail=null)}
+    fun clearTopic(identity:JSONObject,query:JSONObject,onSuccess:()->Unit){
+        val client=session?:return
+        run(R.string.admin_topic_cleared,AdminAction.CLEAR_STATE,onSuccess={onSuccess()}){client.clearStateTopic(identity);topicsResult(client,query).copy(topicDetail=null,awaiting=null,actionFailure=null)}
     }
 
     fun createBinding(name: String) =

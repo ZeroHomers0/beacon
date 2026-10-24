@@ -39,15 +39,22 @@ class StateWidgetEditorTest {
                     rule.onNodeWithText("导出状态快照").assertDoesNotExist()
                     rule.onNodeWithText("导入离线快照").assertDoesNotExist()
                     fun scrollTo(text:String){rule.onNodeWithTag("settings-list").performScrollToNode(hasText(text))}
-                    scrollTo("显示指标")
-                    rule.onNodeWithContentDescription("下移 短周期").performClick()
+                    scrollTo("来源（可选）")
+                    rule.onNodeWithText("来源（可选）").performClick()
+                    rule.onNodeWithText("默认来源",substring=false).performClick()
+                    rule.onNodeWithText("测试额度 · 默认来源").assertExists()
+                    scrollTo("显示内容")
+                    rule.onNodeWithContentDescription("上移 短周期").assertIsNotEnabled().performTouchInput{click()}
+                    rule.onNodeWithContentDescription("下移 短周期").assertIsEnabled().performClick()
+                    rule.onNodeWithContentDescription("下移 短周期").assertIsNotEnabled().performTouchInput{click()}
+                    rule.onNodeWithContentDescription("上移 短周期").assertIsEnabled()
                     assertTrue("metric order follows the move action",rule.onNodeWithText("长周期",substring=false).fetchSemanticsNode().boundsInRoot.top<rule.onNodeWithText("短周期",substring=false).fetchSemanticsNode().boundsInRoot.top)
-                    scrollTo("指标配色")
-                    val before=rule.onNodeWithText("指标配色").fetchSemanticsNode().boundsInRoot.height
-                    rule.onNodeWithText("指标配色").performClick()
-                    rule.onNodeWithText("风险配色").performClick()
-                    rule.onNodeWithText("风险配色").assertExists()
-                    val after=rule.onNodeWithText("指标配色").fetchSemanticsNode().boundsInRoot.height
+                    scrollTo("内容配色")
+                    val before=rule.onNodeWithText("内容配色").fetchSemanticsNode().boundsInRoot.height
+                    rule.onNodeWithText("内容配色").performClick()
+                    rule.onNodeWithText("按状态变色").performClick()
+                    rule.onNodeWithText("按状态变色").assertExists()
+                    val after=rule.onNodeWithText("内容配色").fetchSemanticsNode().boundsInRoot.height
                     assertEquals("selection must not change preference geometry",before,after,1f)
                     scrollTo("卡片背景")
                     rule.onNodeWithText("卡片背景").performClick()
@@ -64,7 +71,7 @@ class StateWidgetEditorTest {
                     java.io.File(folder,"widget_editor_${style.name}.png").outputStream().use{stream->rule.onRoot().captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG,100,stream)}
                     scrollTo("卡片背景")
                     rule.onNodeWithText("卡片背景").performClick()
-                    rule.onNodeWithText("跟随系统").performClick()
+                    rule.onNodeWithText("跟随手机主题").performClick()
                     scrollTo("模板样式")
                     java.io.File(folder,"widget_templates_${style.name}.png").outputStream().use{stream->rule.onRoot().captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG,100,stream)}
                     // Back uses the same unsaved-change dialog, never an inserted banner.
@@ -75,7 +82,7 @@ class StateWidgetEditorTest {
                 ActivityScenario.launch<StateWidgetActivity>(Intent(context,StateWidgetActivity::class.java).putExtra("source",source).putExtra("identity",":editor:test").putExtra("detail",true)).use{
                     rule.waitUntil(10000){rule.onAllNodesWithText("状态详情").fetchSemanticsNodes().isNotEmpty()}
                     rule.onNodeWithTag("settings-list").performScrollToNode(hasText("通知设置"))
-                    rule.onNodeWithText("通知主指标").assertExists()
+                    rule.onNodeWithText("通知主内容").assertExists()
                     val folder=requireNotNull(context.getExternalFilesDir("state-qa"));folder.mkdirs()
                     java.io.File(folder,"widget_detail_${style.name}.png").outputStream().use{stream->rule.onRoot().captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG,100,stream)}
                 }

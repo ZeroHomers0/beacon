@@ -23,6 +23,9 @@ export class MessageStore extends IdentityStore implements Repository {
  saveState(credential:string,p:Record<string,unknown>,digest:string,now:number){return this.storage.transactionSync(()=>new StateStore(this.storage,this.serverID).save(this.sender(credential),p,digest,now))}
  statePage(device:string,q:URLSearchParams,now:number){this.active(device);return new StateStore(this.storage,this.serverID).page(device,q,now)}
  stateMeta(credential:string,topic:string){return new StateStore(this.storage,this.serverID).meta(this.sender(credential),topic)}
+ adminStates(p:Record<string,unknown>,now:number){return new StateStore(this.storage,this.serverID).adminList(p,now)}
+ adminState(p:Record<string,unknown>){return new StateStore(this.storage,this.serverID).adminDetail(p)}
+ clearAdminState(p:Record<string,unknown>,now:number){return new StateStore(this.storage,this.serverID).adminClear(p,now)}
 
   expiredCount(device: string): number {
     return Number(

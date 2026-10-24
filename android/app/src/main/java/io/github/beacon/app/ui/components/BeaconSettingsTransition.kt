@@ -25,6 +25,7 @@ internal fun settingsPageDepth(screen: SettingsScreen): Int = when (screen) {
     SettingsScreen.SERVER_DEVICES,
     SettingsScreen.SERVER_APPLICATIONS,
     SettingsScreen.SERVER_TEST,
+    SettingsScreen.SERVER_TOPICS,
     SettingsScreen.QUIET_HOURS -> 2
     else -> 1
 }

@@ -28,22 +28,25 @@ class StateWidgetHostTest {
             instrumentation.runOnMainSync{host.startListening()}
             instrumentation.uiAutomation.adoptShellPermissionIdentity("android.permission.BIND_APPWIDGET")
             try{
-                for(metric in listOf("short","long")){
-                    val format=if(metric=="short")io.github.beacon.app.widget.WidgetFormat.SQUARE else io.github.beacon.app.widget.WidgetFormat.WIDE
-                    val width=if(metric=="short")180 else 360
+                for(format in io.github.beacon.app.widget.WidgetFormat.entries){
+                    val metric=if(format==io.github.beacon.app.widget.WidgetFormat.SQUARE)"short"else"long"
+                    val width=format.width;val height=format.height
                     val id=host.allocateAppWidgetId();ids.add(id)
-                    val options=Bundle().apply{putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH,width);putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH,width);putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT,180);putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT,180)}
-                    if(android.os.Build.VERSION.SDK_INT>=31)options.putParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES,arrayListOf(android.util.SizeF(width.toFloat(),180f)))
+                    val options=Bundle().apply{putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH,width);putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH,width);putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT,height);putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT,height)}
+                    if(android.os.Build.VERSION.SDK_INT>=31)options.putParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES,arrayListOf(android.util.SizeF(width.toFloat(),height.toFloat())))
                     assertTrue("bind actual AppWidgetHost",manager.bindAppWidgetIdIfAllowed(id,format.component(context),options))
                     assertEquals(0,manager.getAppWidgetInfo(id).resizeMode)
                     assertEquals(format,io.github.beacon.app.widget.WidgetInstances.format(context,id))
-                    assertEquals(android.util.SizeF(width.toFloat(),180f),io.github.beacon.app.widget.WidgetInstances.previewSize(context,id,format))
+                    assertEquals(android.util.SizeF(width.toFloat(),height.toFloat()),io.github.beacon.app.widget.WidgetInstances.previewSize(context,id,format))
                     val config=JSONObject().put("template","single_ring").put("source",source).put("identity",":host:test").put("metrics",JSONArray(listOf(metric)))
                     StateCache(context).use{it.preference("widget:$id",config.toString())}
                 }
             }finally{instrumentation.uiAutomation.dropShellPermissionIdentity()}
             val views=ids.map{id->var view:android.appwidget.AppWidgetHostView?=null;instrumentation.runOnMainSync{view=host.createView(context,id,manager.getAppWidgetInfo(id))};requireNotNull(view)}
             assertTrue(io.github.beacon.app.widget.WidgetInstances.ids(context).toList().containsAll(ids))
+            val callbackConfig=StateCache(context).use{it.preference("widget:${ids[0]}")}
+            io.github.beacon.app.widget.PinStateWidgetReceiver().onReceive(context,android.content.Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,ids[0]).putExtra("config",callbackConfig).putExtra("pin_token","host-test"))
+            StateCache(context).use{assertEquals(ids[0].toString(),it.preference("pin-result:host-test"));it.preference("pin-result:host-test","")}
             BeaconStateWidget.refresh(context)
             instrumentation.waitForIdleSync()
             val deadline=android.os.SystemClock.elapsedRealtime()+5000
@@ -57,11 +60,7 @@ class StateWidgetHostTest {
             val monitor=instrumentation.addMonitor(io.github.beacon.app.widget.StateWidgetActivity::class.java.name,null,false)
             try{
                 instrumentation.runOnMainSync{views[0].findViewById<ImageView>(R.id.widget_image).performClick()}
-                val editor=monitor.waitForActivityWithTimeout(5000)
-                assertNotNull("single widget tap opens configuration",editor)
-                assertFalse("widget click must start in edit mode",editor!!.intent.getBooleanExtra("detail",false))
-                assertEquals(ids[0],editor.intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,AppWidgetManager.INVALID_APPWIDGET_ID))
-                instrumentation.runOnMainSync{editor.finish()}
+                assertNull("single tap must not open the editor",monitor.waitForActivityWithTimeout(1000))
             }finally{instrumentation.removeMonitor(monitor)}
             host.deleteAppWidgetId(ids[0]);assertNotNull(manager.getAppWidgetInfo(ids[1]))
             StateCache(context).use{assertTrue(it.all().any{row->row.optString("local_source")==source})}

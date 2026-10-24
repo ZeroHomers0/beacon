@@ -17,6 +17,7 @@ Beacon 是一个自托管的 Android 消息推送应用。手机安装 App，服
 - **手机内管理**：在 App 中绑定设备、管理应用令牌、发送测试消息、查看存储概况和清理数据。
 - **通知与消息管理**：支持免打扰时段、过时消息提醒策略、锁屏预览、消息搜索与分组筛选、历史导入导出及设置备份。
 - **MCP 接入**：本机 stdio 服务可供支持 MCP 的 AI 客户端发送任务通知，详见 [MCP 文档](mcp/README.md)。
+- **实时状态与桌面小组件**：额度、下载进度、热搜列表和文字公告可以持续更新；支持多个独立小组件、四种尺寸、九种样式、内容排序及统一或单独配色，详见本文「实时状态与小组件」。
 
 即时接收需要允许 Android 后台运行，连接稳定性受系统和网络影响；定时补收可能延迟。服务端接收成功表示消息已保存，接收确认表示客户端已接收，均不代表用户已经阅读。
 
@@ -406,3 +407,94 @@ Beacon 项目本身以 [MIT License](LICENSE) 发布。
 | commonmark-java | Atlassian Pty Ltd | BSD-2-Clause |
 
 完整归属信息见 [第三方 NOTICE](android/app/src/main/assets/third-party/NOTICE.txt)，许可全文见 [Apache-2.0](android/app/src/main/assets/third-party/Apache-2.0.txt) 和 [BSD-2-Clause](android/app/src/main/assets/third-party/commonmark-BSD-2-Clause.txt)。这些声明与许可文件仍随 APK 分发。上述第三方许可与 [MIT License](LICENSE)（Beacon 项目自身）互相独立，各覆盖各自的部分。
+
+## 实时状态与小组件
+
+普通消息用于记录一次事件；`mode: "state"` 用于覆盖同一主题的最新数据。采集、凭据和定时任务放在外部脚本中；Beacon 负责接收、存储、同步与展示，不内置特定服务的查询逻辑。
+
+### 主题、应用与设备
+
+主题属于设备。应用只是可选的来源范围：绑定设备后，直接使用设备推送密钥就能上报默认来源的主题，不必创建应用。使用应用令牌时，主题归入该应用来源。主题身份由 **设备 + 来源 + topic_key** 共同确定，不同来源可使用相同的 `topic_key`。主题在首次有效上报时自动出现。
+
+手机「设置 → 服务器管理 → 状态主题」可按设备、来源、状态和关键词筛选，查看最新数据并清空当前状态。清空会同步到手机，保留版本水位，不能代替停止外部采集。持续主题被清空后，更高版本的上报仍可重新显示；任务类型沿用终态与删除限制。
+
+### 添加与编辑
+
+- 在「设置 → 小组件管理」选择 2×2、3×2、4×2 或 4×4，再选择主题、显示内容和样式，点击右上角加号后确认系统桌面弹窗。
+- 也可从系统桌面的小组件列表添加。每个实例独立绑定主题、顺序、颜色、字号和样式，可同时展示不同进度。
+- 单击桌面小组件不会进入编辑。修改设置请在桌面长按后选择编辑，或从 App 的小组件管理进入。
+- 编辑已有组件时按桌面返回的实际 dp 尺寸等比预览；尚未添加时使用规格默认尺寸。系统网格、屏幕密度和桌面设置决定最终占用，格数并非固定像素。
+- 不支持当前数据或空间不足的样式置灰，展示原因。数据以后发生变化而不再兼容时显示提示，保留原绑定配置。
+
+| 样式 | 数据与显示规则 |
+| --- | --- |
+| 纯数字、横向进度条 | 1–4 个数值内容 |
+| 纵向柱状图 | 2–6 个单位和范围一致的数值；窄卡限制数量 |
+| 单环 | 1 个有明确范围的数值 |
+| 嵌套环 | 2–3 个有明确范围的数值；4×2、4×4 显示右侧数值，2×2、3×2 仅显示圆环和中心短标题 |
+| 独立小环 | 2–4 个有明确范围的数值 |
+| 占比圆环 | 1 个 `segments` 数据块，最多 6 个组成部分 |
+| 文字列表 | 1 个 `list` 数据块，最多 12 条；2×2、3×2 一列，4×2、4×4 两列，先从上到下再到右列 |
+| 整段文字 | 使用主题 `body`，保留换行，自动换行，超长省略 |
+
+「显示内容」可以勾选和排序；首项上移、末项下移不可点击，箭头与勾选区域互不干扰。颜色提供自动及蓝、紫、绿、橙、红、青、粉预设，可统一应用，也可单独设置某项。文字列表与整段文字提供 12/14/16/18/20/24 字号。超出空间的内容会省略，完整内容在 App 中查看。
+
+「自选颜色」按颜色设置展示；「按状态变色」在未手动指定颜色时按发送方 `tone` 展示。「分段提示颜色」使用发送方 `bands`，需要发送方提供范围数据。背景可随手机主题，也可选择浅色、深色或透明。
+
+### 上报 API
+
+向 `POST /api/v1/push` 发送 JSON，在 `Authorization: Bearer <推送密钥>` 头中传递设备推送密钥或应用令牌。不要把接收凭据、管理令牌当作推送密钥。
+
+```json
+{
+  "mode": "state",
+  "schema_version": 1,
+  "topic_key": "quota/main",
+  "revision": 1,
+  "fresh_for_seconds": 600,
+  "title": "账户额度",
+  "body": "短周期剩余24%，长周期剩余62%",
+  "blocks": [
+    {"kind":"progress","id":"short","label":"短周期","value":24,"max":100,"unit":"%","tone":"critical"},
+    {"kind":"progress","id":"long","label":"长周期","value":62,"max":100,"unit":"%","tone":"normal"}
+  ]
+}
+```
+
+同一身份每次更新必须提高 `revision`（1–9007199254740991）；同版本相同内容可安全重试，不同内容返回 409。发送前可用 `GET /api/v1/states/meta?topic_key=quota%2Fmain` 查询当前版本。并发采集方应共享版本分配或使用不同主题。`fresh_for_seconds` 控制陈旧提示，`ttl` 控制有效期，`observed_at_ms` 可携带采样时间。
+
+热搜榜使用相同上报方式，将 `blocks` 换成如下数据，手机选中这组内容后选择「文字列表」：
+
+```json
+[
+  {"kind":"list","id":"news","label":"热搜榜","items":[
+    {"id":"news-1","text":"第一条新闻标题"},
+    {"id":"news-2","text":"第二条新闻标题"},
+    {"id":"news-3","text":"第三条新闻标题"}
+  ]}
+]
+```
+
+纯文字公告直接放在 `body` 中，选择「整段文字」即可，无需新增数据块。发送方决定文字内容；字体、颜色、模板和桌面实例绑定保存在手机端，不混入通用业务协议。
+
+下载任务可额外使用 `state_type: "task"` 和 `status: "running"`，状态支持 `running/paused/completed/failed/cancelled`。已结束或删除的任务不能重启，应使用新主题。删除主题使用更高版本的精简请求：
+
+```json
+{"mode":"state","schema_version":1,"topic_key":"quota/main","revision":2,"operation":"delete"}
+```
+
+| 接口 | 凭据与用途 |
+| --- | --- |
+| `POST /api/v1/push` | 推送密钥：上报事件或最新状态 |
+| `GET /api/v1/states/meta?topic_key=...` | 推送密钥：查询该来源的版本水位 |
+| `GET /api/v1/push-capabilities` | 推送密钥：协议、数据块与额度能力 |
+| `GET /api/v1/states` | 设备接收凭据：快照与游标增量同步，由客户端管理分页与游标 |
+| `POST /api/admin/states/list` | 管理令牌：筛选和分页，默认 50 条、最多 100 条 |
+| `POST /api/admin/states/detail` | 管理令牌：读取指定身份的最新内容 |
+| `POST /api/admin/states/clear` | 管理令牌：携带当前 revision 清空，版本变化返回 409 |
+
+管理接口使用 `Authorization: Bearer <管理令牌>`，不支持查询参数。`list` 请求体可含 `device_id`、`application_id`、`search`、`state`、`limit`、`offset`；省略 `application_id` 表示全部来源，空字符串表示默认来源。`state` 支持 `all/active/stale/expired/deleted`。返回 `topics/total/has_more/next_offset`。详情与清空请求体使用 `device_id/application_id/topic_key`，清空还必须包含 `revision`。这些接口在 Go 与 Workers 上保持一致。
+
+发送方持续通过 HTTP 上报，服务端通过 WebSocket 通知手机有更新，断线后通过 HTTP 补收。无需把上传改成 WebSocket。桌面更新会合并与限流（普通活动状态约 5 秒）；不适合每帧动画或保证每秒刷新。系统进度通知可展示一条主进度，多个进度的完整信息放在 App 和小组件。状态通知按主题开启，普通状态更新不应反复响铃；任务完成等事件可另发普通消息。
+
+可运行脚本见 [examples/structured](examples/structured)，完整开发规格与视觉验收记录见[文档仓库](https://github.com/ZeroHomers0/beacon-docs/tree/main/docs/design/structured-ui)。

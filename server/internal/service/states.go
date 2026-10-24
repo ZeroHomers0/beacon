@@ -2,6 +2,34 @@ package service
 
 import "beacon.local/server/internal/domain"
 
+type stateAdminRepository interface {
+	AdminStates(domain.StateAdminQuery) (map[string]any, error)
+	AdminState(domain.StateAdminIdentity) (map[string]any, error)
+	ClearAdminState(domain.StateAdminIdentity) (map[string]any, error)
+}
+
+func (s *Service) AdminStates(q domain.StateAdminQuery) (map[string]any, error) {
+	r, ok := s.repository.(stateAdminRepository)
+	if !ok {
+		return nil, domain.ErrRealtimeUnavailable
+	}
+	return r.AdminStates(q)
+}
+func (s *Service) AdminState(id domain.StateAdminIdentity) (map[string]any, error) {
+	r, ok := s.repository.(stateAdminRepository)
+	if !ok {
+		return nil, domain.ErrRealtimeUnavailable
+	}
+	return r.AdminState(id)
+}
+func (s *Service) ClearAdminState(id domain.StateAdminIdentity) (map[string]any, error) {
+	r, ok := s.repository.(stateAdminRepository)
+	if !ok {
+		return nil, domain.ErrRealtimeUnavailable
+	}
+	return r.ClearAdminState(id)
+}
+
 type stateRepository interface {
 	SaveState(string, domain.StatePayload) (domain.StateRecord, error)
 	StatePage(string, string, string, string, int) (map[string]any, error)

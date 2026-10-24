@@ -16,7 +16,7 @@ import io.github.beacon.app.ui.icons.BeaconIcons
 import org.json.JSONObject
 
 @Composable
-fun WidgetManagerPage(modifier:Modifier,scroll:LazyListState){
+fun WidgetManagerPage(modifier:Modifier,scroll:LazyListState,padding:PaddingValues=PaddingValues(BeaconUiMetrics.PageInset)){
     val context=LocalContext.current
     var ids by remember{mutableStateOf(WidgetInstances.ids(context).toList())}
     var rows by remember{mutableStateOf(emptyList<JSONObject>())}
@@ -29,9 +29,9 @@ fun WidgetManagerPage(modifier:Modifier,scroll:LazyListState){
         ids=current;rows=snapshot.first;configs=snapshot.second
         kotlinx.coroutines.delay(1500)
     }}
-    BeaconSettingsList(scroll,modifier,contentPadding=PaddingValues(BeaconUiMetrics.PageInset)){
+    BeaconSettingsList(scroll,modifier,contentPadding=padding){
         item { SettingsGroup("添加小组件"){
-            WidgetFormat.entries.forEach{format->SettingsRow("添加 ${format.label}",if(format==WidgetFormat.SQUARE)"方卡"else"宽卡",BeaconIcons.Add,onClick={context.startActivity(Intent(context,StateWidgetActivity::class.java).putExtra("format",format.name))})}
+            WidgetFormat.entries.forEach{format->SettingsRow("添加 ${format.label}",format.description,BeaconIcons.Add,onClick={context.startActivity(Intent(context,StateWidgetActivity::class.java).putExtra("format",format.name))})}
         }}
         if(ids.isEmpty())item { SettingsGroup("已有小组件"){
             Column(Modifier.padding(BeaconUiMetrics.CardInset)){SettingsHint("还没有添加小组件。可以在这里添加，也可以从桌面小组件列表添加。")}
@@ -42,11 +42,11 @@ fun WidgetManagerPage(modifier:Modifier,scroll:LazyListState){
                 val row=rows.firstOrNull{it.optString("local_source")==config.optString("source")&&it.optString("local_identity")==config.optString("identity")}
                 val format=WidgetInstances.format(context,id)
                 Box(Modifier.testTag("widget-instance:$id")){
-                SettingsGroup("${format.label} ${if(format==WidgetFormat.SQUARE)"方卡"else"宽卡"}"){
+                SettingsGroup("${format.label} ${format.description}"){
                     SettingsRow(config.optString("title").ifBlank{row?.optString("title")?:"等待配置"},
                         listOf(row?.optString("application_name").orEmpty(),WidgetRenderer.names.getOrElse(WidgetRenderer.templates.indexOf(config.optString("template"))){"待选择模板"}).filter{it.isNotBlank()}.joinToString(" · "),
                         BeaconIcons.Applications,onClick={context.startActivity(Intent(context,StateWidgetActivity::class.java).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,id))})
-                    WidgetManagerPreview(row,config,WidgetInstances.previewSize(context,id,format))
+                    WidgetManagerPreview(row,JSONObject(config.toString()).put("format",format.name),WidgetInstances.previewSize(context,id,format))
                 }
                 }
             }

@@ -58,6 +58,48 @@ func (a *API) registerAdmin(router *gin.Engine) {
 	admin.GET("/metrics", func(c *gin.Context) {
 		writeJSON(c.Writer, http.StatusOK, a.metrics.snapshot())
 	})
+	admin.POST("/states/list", func(c *gin.Context) {
+		var q domain.StateAdminQuery
+		if decodeJSON(c.Writer, c.Request, &q) != nil {
+			apiError(c.Writer, 400, "invalid_request")
+			return
+		}
+		result, err := a.service.AdminStates(q)
+		if err != nil {
+			stateError(c.Writer, err)
+			return
+		}
+		writeJSON(c.Writer, 200, result)
+	})
+	admin.POST("/states/detail", func(c *gin.Context) {
+		var id domain.StateAdminIdentity
+		if decodeJSON(c.Writer, c.Request, &id) != nil {
+			apiError(c.Writer, 400, "invalid_request")
+			return
+		}
+		result, err := a.service.AdminState(id)
+		if err != nil {
+			stateError(c.Writer, err)
+			return
+		}
+		writeJSON(c.Writer, 200, result)
+	})
+	admin.POST("/states/clear", func(c *gin.Context) {
+		var id domain.StateAdminIdentity
+		if decodeJSON(c.Writer, c.Request, &id) != nil {
+			apiError(c.Writer, 400, "invalid_request")
+			return
+		}
+		result, err := a.service.ClearAdminState(id)
+		if err != nil {
+			stateError(c.Writer, err)
+			return
+		}
+		if a.stream != nil {
+			a.stream.StateChanged(id.Device)
+		}
+		writeJSON(c.Writer, 200, result)
+	})
 	admin.POST("/binding", func(c *gin.Context) {
 		var body struct {
 			Name string `json:"name"`

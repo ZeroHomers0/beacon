@@ -385,10 +385,19 @@ export class API {
       "/api/admin/applications": ["device_id", "name", "default_priority"],
       "/api/admin/applications/revoke": ["id"],
       "/api/admin/applications/delete": ["id"],
+      "/api/admin/states/list": ["device_id","application_id","search","state","limit","offset"],
+      "/api/admin/states/detail": ["device_id","application_id","topic_key","revision"],
+      "/api/admin/states/clear": ["device_id","application_id","topic_key","revision"],
     };
     if (!routes[path]) reject(404, "not_found");
     method(request, "POST");
     const payload = await body(request, routes[path]);
+    if(path==="/api/admin/states/list")return json(this.store.adminStates(payload,Date.now()));
+    if(path==="/api/admin/states/detail")return json(this.store.adminState(payload));
+    if(path==="/api/admin/states/clear"){
+      await this.transport.arm();const result=this.store.clearAdminState(payload,Date.now());
+      this.transport.stateChanged?.(String(payload.device_id));return json(result);
+    }
     const credential = token();
     const credentialHash = await hash(
       path.endsWith("/binding") ? credential.slice(0, 32) : credential,

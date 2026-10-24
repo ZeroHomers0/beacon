@@ -5,6 +5,24 @@ import worker,{ type Env } from "../src/index";
 afterEach(reset);
 const admin="test-only-admin-token-32-characters";
 const call=(path:string,key:string,p?:unknown)=>worker.fetch(new Request(`https://beacon.test${path}`,{method:p===undefined?"GET":"POST",headers:{Authorization:`Bearer ${key}`,"Content-Type":"application/json"},body:p===undefined?undefined:JSON.stringify(p)}),env as unknown as Env);
+it("administers default-source topics without requiring applications and keeps namespaces isolated",async()=>{
+ const code=await(await call("/api/admin/binding",admin,{name:"phone"})).json<any>();const d=await(await call("/api/v1/bind","",{binding_code:code.binding_code})).json<any>();
+ const application=await(await call("/api/admin/applications",admin,{device_id:d.device_id,name:"monitor",default_priority:5})).json<any>();
+ const p={mode:"state",schema_version:1,topic_key:"quota:shared",revision:1,title:"quota",body:"24%"};
+ for(const key of [d.push_key,application.token])expect((await call("/api/v1/push",key,p)).status).toBe(200);
+ const listed=await(await call("/api/admin/states/list",admin,{application_id:""})).json<any>();expect(listed.total).toBe(1);expect(listed.topics[0].source_name).toBe("默认来源");
+ const id={device_id:d.device_id,application_id:"",topic_key:p.topic_key,revision:1};
+ const detail=await(await call("/api/admin/states/detail",admin,id)).json<any>();expect(detail.state.body).toBe("24%");
+ const denied=await call("/api/admin/states/list",d.push_key,{});expect(denied.status).toBe(401);await denied.text();
+ const conflict=await call("/api/admin/states/clear",admin,{...id,revision:2});expect(conflict.status).toBe(409);await conflict.text();
+ expect((await call("/api/admin/states/clear",admin,id)).status).toBe(200);
+ const retried=await(await call("/api/v1/push",d.push_key,p)).json<any>();expect(retried.deleted).toBe(true);expect(retried.unchanged).toBe(true);
+ const active=await(await call("/api/admin/states/list",admin,{state:"active"})).json<any>();expect(active.total).toBe(1);expect(active.topics[0].application_id).toBe(application.id);
+ const defaultDeleted=await(await call("/api/admin/states/list",admin,{application_id:"",state:"deleted"})).json<any>();expect(defaultDeleted.total).toBe(1);
+ const page=await(await call("/api/admin/states/list",admin,{limit:1})).json<any>();expect(page.has_more).toBe(true);
+ expect((await call("/api/v1/push",d.push_key,{...p,revision:2})).status).toBe(200);
+ const invalid=await call("/api/admin/states/list",admin,{limit:101});expect(invalid.status).toBe(400);await invalid.text();
+});
 it("updates state without creating events and synchronizes deletion",async()=>{
  const code=await(await call("/api/admin/binding",admin,{name:"state"})).json<any>();const d=await(await call("/api/v1/bind","",{binding_code:code.binding_code})).json<any>();
  const p={mode:"state",schema_version:1,topic_key:"download:1",revision:1,state_type:"task",status:"running",body:"40%"};
