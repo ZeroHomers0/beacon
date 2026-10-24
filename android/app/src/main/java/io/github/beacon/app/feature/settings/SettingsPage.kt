@@ -171,6 +171,10 @@ fun SettingsPage(
         )
         return
     }
+    if(screen==SettingsScreen.WIDGETS){
+        io.github.beacon.app.widget.WidgetManagerPage(modifier.padding(padding),scroll)
+        return
+    }
     val needsRuntime = screen in setOf(SettingsScreen.CONNECTION, SettingsScreen.RECEPTION,
         SettingsScreen.NOTIFICATIONS, SettingsScreen.NOTIFICATION_RULES, SettingsScreen.QUIET_HOURS,
         SettingsScreen.STORAGE, SettingsScreen.BACKUP, SettingsScreen.GUIDE)
@@ -248,6 +252,7 @@ fun SettingsPage(
                 }
                 item {
                     SettingsGroup(stringResource(R.string.settings_interface_section_title)) {
+                        SettingsRow(stringResource(R.string.settings_widgets_title),"查看与编辑已添加的桌面小组件",BeaconIcons.Applications){onNavigate(SettingsScreen.WIDGETS)}
                         BeaconDropdownPreference(
                             stringResource(R.string.appearance_style),
                             listOf(
@@ -463,6 +468,7 @@ fun SettingsPage(
             SettingsScreen.ABOUT -> {
                 aboutSettingsItems(resources, context, onOperationDetails)
             }
+            SettingsScreen.WIDGETS -> Unit
         }
     }
 }

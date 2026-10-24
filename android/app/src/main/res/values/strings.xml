@@ -545,5 +545,8 @@
     <string name="shortcut_settings_short">设置</string>
     <string name="shortcut_settings_long">打开设置</string>
 <string name="state_widget_title">Beacon 状态</string>
+<string name="state_widget_square_title">状态方卡 · 2×2</string>
+<string name="state_widget_wide_title">状态宽卡 · 4×2</string>
+<string name="settings_widgets_title">小组件管理</string>
 <string name="ui_nav_states_title">状态</string>
 </resources>

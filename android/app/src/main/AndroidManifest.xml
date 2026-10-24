@@ -23,12 +23,19 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
-        <receiver android:name=".widget.BeaconStateWidget" android:exported="false">
+        <receiver android:name=".widget.BeaconStateWidget" android:label="@string/state_widget_square_title" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/state_widget_info" />
+        </receiver>
+        <receiver android:name=".widget.BeaconWideStateWidget" android:label="@string/state_widget_wide_title" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/state_widget_wide_info" />
         </receiver>
         <receiver android:name=".widget.PinStateWidgetReceiver" android:exported="false" />
         <receiver android:name=".widget.StateDismissReceiver" android:exported="false" />

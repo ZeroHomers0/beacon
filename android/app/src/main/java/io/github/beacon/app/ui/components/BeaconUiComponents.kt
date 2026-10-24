@@ -58,6 +58,7 @@ enum class SettingsScreen(val titleRes: Int) {
     SERVER_APPLICATIONS(R.string.admin_applications_title),
     SERVER_TEST(R.string.admin_test_title_page),
     QUIET_HOURS(R.string.quiet_schedule),
+    WIDGETS(R.string.settings_widgets_title),
 }
 
 /**

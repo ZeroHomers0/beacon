@@ -12,11 +12,11 @@ import io.github.beacon.app.R
 import io.github.beacon.app.data.local.StateCache
 import org.json.JSONObject
 
-class BeaconStateWidget: AppWidgetProvider() {
+open class BeaconStateWidget: AppWidgetProvider() {
     override fun onReceive(context:Context,intent:Intent){
         if(intent.action==Intent.ACTION_MY_PACKAGE_REPLACED){
             val manager=AppWidgetManager.getInstance(context)
-            refresh(context,manager.getAppWidgetIds(ComponentName(context,BeaconStateWidget::class.java)))
+            refresh(context,manager.getAppWidgetIds(ComponentName(context,javaClass)))
         }else super.onReceive(context,intent)
     }
     override fun onUpdate(context:Context, manager:AppWidgetManager, ids:IntArray){refresh(context,ids)}
@@ -29,11 +29,12 @@ class BeaconStateWidget: AppWidgetProvider() {
         private fun schedule(context:Context){if(pending.compareAndSet(false,true))trailing.schedule({pending.set(false);refresh(context.applicationContext)},5,java.util.concurrent.TimeUnit.SECONDS)}
 
         fun refresh(context:Context, ids:IntArray?=null){
-            val manager=AppWidgetManager.getInstance(context);val targets=ids?:manager.getAppWidgetIds(ComponentName(context,BeaconStateWidget::class.java))
+            val manager=AppWidgetManager.getInstance(context);val targets=ids?:WidgetInstances.ids(context)
             StateCache(context).use{cache->val rows=cache.all();for(id in targets){
                 val config=runCatching{JSONObject(cache.preference("widget:$id"))}.getOrElse{JSONObject()}
                 val row=rows.firstOrNull{it.optString("local_source")==config.optString("source")&&it.optString("local_identity")==config.optString("identity")}
-                val options=manager.getAppWidgetOptions(id);val sizes=WidgetHostSizes.resolve(options,context.resources.configuration.orientation)
+                val options=manager.getAppWidgetOptions(id);val format=WidgetInstances.format(context,id)
+                val sizes=WidgetHostSizes.resolve(options,context.resources.configuration.orientation,format.width,format.height)
                 val dark=when(config.optString("background")){"light"->false;"dark"->true;else->context.resources.configuration.uiMode and 0x30 == 0x20}
                 val now=System.currentTimeMillis()
                 val status=row?.optString("status")?:""
@@ -64,3 +65,5 @@ class BeaconStateWidget: AppWidgetProvider() {
         }
     }
 }
+
+class BeaconWideStateWidget: BeaconStateWidget()

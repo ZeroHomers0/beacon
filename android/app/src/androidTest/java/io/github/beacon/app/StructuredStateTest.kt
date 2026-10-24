@@ -11,6 +11,18 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class StructuredStateTest {
+    @Test fun fixedFormatsRejectEmptyOrMissingMetricsWithoutMutatingBindings(){
+        val r=row()
+        val config=JSONObject().put("template","horizontal_bars").put("metrics",JSONArray())
+        assertTrue(WidgetConfigRules.selected(r,config).isEmpty())
+        assertNotNull(WidgetConfigRules.layoutError(r,config,180,180))
+        config.put("metrics",JSONArray(listOf("short","missing")))
+        assertNotNull(WidgetConfigRules.error(r,config))
+        assertEquals("missing",config.getJSONArray("metrics").getString(1))
+        config.put("metrics",JSONArray(listOf("short","long","monthly"))).put("template","nested_rings")
+        assertNull(WidgetConfigRules.layoutError(r,config,180,180))
+        assertNotNull(WidgetConfigRules.layoutError(r,config,110,110))
+    }
     @Test fun highDensityWidgetsRenderAtPhysicalResolutionWithoutChangingLayout(){
         val config=JSONObject().put("template","single_ring").put("metrics",JSONArray(listOf("short")))
         val low=WidgetRenderer.render(row(),config,180,180,false,1f)
@@ -79,6 +91,12 @@ class StructuredStateTest {
     }
     @Test fun nativeTemplatesRenderAcrossSizesAndThemes(){
         val directory=requireNotNull(context.getExternalFilesDir("widget-qa"));directory.mkdirs()
+        for((name,width,height) in listOf(Triple("2x2",180,180),Triple("4x2",360,180))){
+            val config=JSONObject().put("template",if(name=="2x2")"nested_rings"else"horizontal_bars").put("metrics",JSONArray(listOf("short","long")))
+            assertNull(WidgetConfigRules.layoutError(row(),config,width,height))
+            val bitmap=WidgetRenderer.render(row(),config,width,height,false,3f)
+            java.io.File(directory,"profile_$name.png").outputStream().use{bitmap.compress(Bitmap.CompressFormat.PNG,100,it)}
+        }
         for(count in 1..3)for(template in listOf("horizontal_bars","vertical_bars","nested_rings","ring_grid")){
             if(count==1&&template!="horizontal_bars")continue
             val ids=listOf("short","long","monthly").take(count)

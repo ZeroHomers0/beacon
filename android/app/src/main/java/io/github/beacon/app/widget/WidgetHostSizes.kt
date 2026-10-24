@@ -8,7 +8,7 @@ import android.util.SizeF
 
 /** Host dimensions are dp, not the pixel dimensions of Xiaomi's design assets. */
 object WidgetHostSizes {
-    fun resolve(options: Bundle, orientation: Int): List<SizeF> {
+    fun resolve(options: Bundle, orientation: Int, fallbackWidth: Int = 110, fallbackHeight: Int = 110): List<SizeF> {
         if (Build.VERSION.SDK_INT >= 31) {
             val sizes = options.getParcelableArrayList<SizeF>(AppWidgetManager.OPTION_APPWIDGET_SIZES)
                 .orEmpty().filter { it.width.isFinite() && it.height.isFinite() && it.width > 0 && it.height > 0 }
@@ -16,8 +16,8 @@ object WidgetHostSizes {
             if (sizes.isNotEmpty()) return sizes
         }
         val landscape = orientation == Configuration.ORIENTATION_LANDSCAPE
-        val width = options.getInt(if (landscape) AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH else AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 110)
-        val height = options.getInt(if (landscape) AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT else AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 110)
+        val width = options.getInt(if (landscape) AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH else AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, fallbackWidth)
+        val height = options.getInt(if (landscape) AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT else AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, fallbackHeight)
         return listOf(SizeF(width.coerceAtLeast(1).toFloat(), height.coerceAtLeast(1).toFloat()))
     }
 }

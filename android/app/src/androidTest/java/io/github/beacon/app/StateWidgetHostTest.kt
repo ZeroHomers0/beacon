@@ -29,16 +29,22 @@ class StateWidgetHostTest {
             instrumentation.uiAutomation.adoptShellPermissionIdentity("android.permission.BIND_APPWIDGET")
             try{
                 for(metric in listOf("short","long")){
+                    val format=if(metric=="short")io.github.beacon.app.widget.WidgetFormat.SQUARE else io.github.beacon.app.widget.WidgetFormat.WIDE
+                    val width=if(metric=="short")180 else 360
                     val id=host.allocateAppWidgetId();ids.add(id)
-                    val options=Bundle().apply{putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH,180);putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH,180);putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT,180);putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT,180)}
-                    if(android.os.Build.VERSION.SDK_INT>=31)options.putParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES,arrayListOf(android.util.SizeF(180f,180f),android.util.SizeF(300f,110f)))
-                    assertTrue("bind actual AppWidgetHost",manager.bindAppWidgetIdIfAllowed(id,ComponentName(context,BeaconStateWidget::class.java),options))
+                    val options=Bundle().apply{putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH,width);putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH,width);putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT,180);putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT,180)}
+                    if(android.os.Build.VERSION.SDK_INT>=31)options.putParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES,arrayListOf(android.util.SizeF(width.toFloat(),180f)))
+                    assertTrue("bind actual AppWidgetHost",manager.bindAppWidgetIdIfAllowed(id,format.component(context),options))
+                    assertEquals(0,manager.getAppWidgetInfo(id).resizeMode)
+                    assertEquals(format,io.github.beacon.app.widget.WidgetInstances.format(context,id))
+                    assertEquals(android.util.SizeF(width.toFloat(),180f),io.github.beacon.app.widget.WidgetInstances.previewSize(context,id,format))
                     val config=JSONObject().put("template","single_ring").put("source",source).put("identity",":host:test").put("metrics",JSONArray(listOf(metric)))
                     StateCache(context).use{it.preference("widget:$id",config.toString())}
                 }
             }finally{instrumentation.uiAutomation.dropShellPermissionIdentity()}
             val views=ids.map{id->var view:android.appwidget.AppWidgetHostView?=null;instrumentation.runOnMainSync{view=host.createView(context,id,manager.getAppWidgetInfo(id))};requireNotNull(view)}
-            BeaconStateWidget.refresh(context,ids.toIntArray())
+            assertTrue(io.github.beacon.app.widget.WidgetInstances.ids(context).toList().containsAll(ids))
+            BeaconStateWidget.refresh(context)
             instrumentation.waitForIdleSync()
             val deadline=android.os.SystemClock.elapsedRealtime()+5000
             while(views.any{it.findViewById<ImageView>(R.id.widget_image)?.drawable !is BitmapDrawable}&&android.os.SystemClock.elapsedRealtime()<deadline)Thread.sleep(20)
