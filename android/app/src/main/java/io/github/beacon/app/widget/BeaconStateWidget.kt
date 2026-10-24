@@ -47,7 +47,7 @@ class BeaconStateWidget: AppWidgetProvider() {
                 val last=cache.preference("widget-last:$id").toLongOrNull()?:0L
                 if(ids==null&&cache.preference("widget-signature:$id")==signature)continue
                 if(ids==null&&row!=null&&status !in listOf("completed","failed","cancelled")&&now-last<5000){schedule(context);continue}
-                val intent=Intent(context,StateWidgetActivity::class.java).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,id).putExtra("detail",row!=null)
+                val intent=Intent(context,StateWidgetActivity::class.java).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,id).putExtra("detail",false)
                 val pending=PendingIntent.getActivity(context,id,intent,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
                 fun render(size:android.util.SizeF):RemoteViews {
                     val bitmap=WidgetRenderer.render(row,config,size.width.toInt(),size.height.toInt(),dark,rasterDensity,pixelBudget.toInt())

@@ -48,6 +48,15 @@ class StateWidgetHostTest {
             bitmaps[0].getPixels(a,0,bitmaps[0].width,0,0,bitmaps[0].width,bitmaps[0].height)
             bitmaps[1].getPixels(b,0,bitmaps[1].width,0,0,bitmaps[1].width,bitmaps[1].height)
             assertFalse("each host must show its own metric",a.contentEquals(b))
+            val monitor=instrumentation.addMonitor(io.github.beacon.app.widget.StateWidgetActivity::class.java.name,null,false)
+            try{
+                instrumentation.runOnMainSync{views[0].findViewById<ImageView>(R.id.widget_image).performClick()}
+                val editor=monitor.waitForActivityWithTimeout(5000)
+                assertNotNull("single widget tap opens configuration",editor)
+                assertFalse("widget click must start in edit mode",editor!!.intent.getBooleanExtra("detail",false))
+                assertEquals(ids[0],editor.intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,AppWidgetManager.INVALID_APPWIDGET_ID))
+                instrumentation.runOnMainSync{editor.finish()}
+            }finally{instrumentation.removeMonitor(monitor)}
             host.deleteAppWidgetId(ids[0]);assertNotNull(manager.getAppWidgetInfo(ids[1]))
             StateCache(context).use{assertTrue(it.all().any{row->row.optString("local_source")==source})}
         }finally{

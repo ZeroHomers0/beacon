@@ -32,7 +32,7 @@ object WidgetRenderer {
             c.restore();p.textAlign=Paint.Align.LEFT
         }
 
-        p.color=if(config.optString("background")=="transparent") Color.argb(225,if(dark)25 else 248,if(dark)28 else 249,if(dark)34 else 250) else if(dark)Color.rgb(25,28,34)else Color.rgb(248,249,250)
+        p.color=if(config.optString("background")=="transparent") Color.TRANSPARENT else if(dark)Color.rgb(25,28,34)else Color.rgb(248,249,250)
         c.drawRoundRect(RectF(0f,0f,w.toFloat(),h.toFloat()),min(w,h)*.15f,min(w,h)*.15f,p)
         val template=config.optString("template","horizontal_bars")
         if((template=="ring_grid"&&(width<240||height<240))||(template=="nested_rings"&&width<240)) {text("请放大小组件",pad,h*.55f,16f,color=muted);return bitmap}
