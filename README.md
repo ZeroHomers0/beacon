@@ -17,7 +17,7 @@ Beacon 是一个自托管的 Android 消息推送应用。手机安装 App，服
 - **手机内管理**：在 App 中绑定设备、管理应用令牌、发送测试消息、查看存储概况和清理数据。
 - **通知与消息管理**：支持免打扰时段、过时消息提醒策略、锁屏预览、消息搜索与分组筛选、历史导入导出及设置备份。
 - **MCP 接入**：本机 stdio 服务可供支持 MCP 的 AI 客户端发送任务通知，详见 [MCP 文档](mcp/README.md)。
-- **实时状态与桌面小组件**：额度、下载进度、热搜列表和文字公告可以持续更新；支持多个独立小组件、四种尺寸、十种样式、内容排序及统一或单独配色，详见本文「实时状态与小组件」。
+- **实时状态与桌面小组件**：额度、下载进度、热搜列表和文字公告可以持续更新；支持多个独立小组件、四种尺寸、十种样式、内容排序及统一或单独配色，详见[小组件数据上报 API](#小组件数据上报-api)。
 
 即时接收需要允许 Android 后台运行，连接稳定性受系统和网络影响；定时补收可能延迟。服务端接收成功表示消息已保存，接收确认表示客户端已接收，均不代表用户已经阅读。
 
@@ -442,47 +442,222 @@ Beacon 项目本身以 [MIT License](LICENSE) 发布。
 
 「自选颜色」按颜色设置展示；「按状态变色」在未手动指定颜色时按发送方 `tone` 展示。「分段提示颜色」使用发送方 `bands`，需要发送方提供范围数据。背景可随手机主题，也可选择浅色、深色或透明。
 
-### 上报 API
+### 小组件数据上报 API
 
-向 `POST /api/v1/push` 发送 JSON，在 `Authorization: Bearer <推送密钥>` 头中传递设备推送密钥或应用令牌。不要把接收凭据、管理令牌当作推送密钥。
+小组件没有单独的上传地址。发送方把**数据主题的完整最新内容**提交到 `POST /api/v1/push`，手机收到后，再在小组件设置中选择展示内容与模板。仅发送普通通知不会自动生成小组件数据。
 
-```json
+接入顺序：绑定设备 → 获取设备推送密钥（或创建应用并获取应用令牌）→ 上报数据主题 → 手机同步 → 长按桌面添加 Beacon 小组件 → 选择该主题和模板。详见[字段说明](#上报字段)、[各类数据格式](#数据块格式与模板对应关系)、[更新与删除](#更新版本任务与删除)、[接口及错误](#同步管理与错误处理)。
+
+#### 可直接运行的 curl 示例
+
+以下使用 Bash / Linux / macOS；Windows PowerShell 请使用 `curl.exe`，把同样的 JSON 保存为 UTF-8 文件，再通过 `--data-binary @payload.json` 提交。
+
+```bash
+export BEACON_URL='https://push.example.com'
+export BEACON_PUSH_KEY='替换为设备推送密钥或应用令牌'
+
+# 先确认已部署的服务端支持数据主题协议。
+curl --fail-with-body "$BEACON_URL/api/v1/push-capabilities" \
+  -H "Authorization: Bearer $BEACON_PUSH_KEY"
+
+# 第一次使用 widget/demo-progress 时 revision=1；再次运行需提高版本。
+# 当前采样时间用于计算“数据陈旧”，必须随每次新数据一起更新。
+OBSERVED_AT_MS="$(($(date +%s) * 1000))"
+curl --fail-with-body -X POST "$BEACON_URL/api/v1/push" \
+  -H "Authorization: Bearer $BEACON_PUSH_KEY" \
+  -H 'Content-Type: application/json' \
+  --data-binary @- <<JSON
 {
   "mode": "state",
   "schema_version": 1,
-  "topic_key": "quota/main",
+  "topic_key": "widget/demo-progress",
   "revision": 1,
+  "observed_at_ms": $OBSERVED_AT_MS,
   "fresh_for_seconds": 600,
+  "ttl": 86400,
   "title": "账户额度",
   "body": "短周期剩余24%，长周期剩余62%",
   "blocks": [
-    {"kind":"progress","id":"short","label":"短周期","value":24,"max":100,"unit":"%","tone":"critical"},
-    {"kind":"progress","id":"long","label":"长周期","value":62,"max":100,"unit":"%","tone":"normal"}
+    {"kind":"progress","id":"short","label":"短周期剩余","value":24,"max":100,"unit":"%","tone":"critical"},
+    {"kind":"progress","id":"long","label":"长周期剩余","value":62,"max":100,"unit":"%","tone":"normal"}
+  ]
+}
+JSON
+```
+
+PowerShell 发送 UTF-8 `payload.json` 文件：
+
+```powershell
+$env:BEACON_URL = 'https://push.example.com'
+$env:BEACON_PUSH_KEY = '替换为设备推送密钥或应用令牌'
+curl.exe --fail-with-body -X POST "$env:BEACON_URL/api/v1/push" -H "Authorization: Bearer $env:BEACON_PUSH_KEY" -H 'Content-Type: application/json' --data-binary '@payload.json'
+```
+
+成功返回 HTTP 200，JSON 包含提交的内容和服务端生成的 `application_id`、`application_name`、`accepted_at_ms`、`expires_at_ms`、`stale_at_ms`、`deleted`、`unchanged`。这表示数据已接受，不代表桌面已经刷新；数据主题响应不含普通消息的 `id/sequence`。
+
+设备推送密钥上报的数据归入“未关联应用”；应用令牌上报的数据归入该应用。归属由凭据确定，不能在请求 JSON 中填写 `device_id` 或 `application_id` 改变它。接收凭据和管理令牌不能用于上报。
+
+#### 上报字段
+
+除删除请求外，字段如下。所有 `*_at_ms` 均为 Unix **毫秒**时间戳，`ttl` 和 `fresh_for_seconds` 使用**秒**。
+
+| 字段 | 必填 | 类型与含义 |
+| --- | --- | --- |
+| `mode` | 是 | 固定为 `"state"`；省略会走普通消息流程 |
+| `schema_version` | 是 | 整数，当前固定为 `1` |
+| `topic_key` | 是 | 同一来源内稳定的主题标识，UTF-8 1–128 字节，不含控制字符；例如 `nas/disk` |
+| `revision` | 是 | 1–9007199254740991 的整数；每次内容更新必须递增 |
+| `body` | 是 | 非空摘要或整段文字，最多 65536 UTF-8 字节；普通展示及降级使用 |
+| `title` / `subtitle` | 否 | 标题 / 副标题，各最多 1024 UTF-8 字节；桌面会按尺寸截断 |
+| `blocks` | 否 | 数据块数组，最多 16 块、序列化后最多 32 KiB；整段文字模板可省略 |
+| `operation` | 否 | 省略或 `"upsert"` 表示完整覆盖；`"delete"` 使用下文的精简格式 |
+| `state_type` | 否 | 省略或 `"persistent"` 表示持续主题；`"task"` 表示有终态的任务 |
+| `status` | 任务必填 | 任务使用 `running/paused/completed/failed/cancelled`；持续主题省略 |
+| `observed_at_ms` | 否 | 采样时间，非负整数，不得超前服务端时间超过 5 分钟；设置新鲜度时请同时传入实际采样时间 |
+| `fresh_for_seconds` | 否 | 0 表示不启用陈旧提示；正数不得超过有效 TTL。陈旧时间为 `observed_at_ms + fresh_for_seconds × 1000` |
+| `ttl` | 否 | 0 或省略为 604800 秒（7 天），最大 604800；从服务端接受时间计算，到期后同步移除数据 |
+| `priority` | 否 | 0–10，沿用通知优先级；不会提高桌面刷新频率 |
+| `group` | 否 | 消息分组，最多 128 UTF-8 字节 |
+| `actions` | 否 | 沿用普通消息格式，最多一个 `{"title":"查看","url":"https://example.com"}` HTTPS 操作；不是小组件模板参数 |
+
+每次上报是**完整快照，不是局部补丁**：没有再次提交的块会消失。`blocks[].id` 在同一主题内保持稳定，小组件据此保存选择与顺序；删除或改名后需重新选择。模板、字体、颜色及实例绑定在手机端配置，不要向上报 JSON 加入 `template`、`color` 等未支持字段。协议不接受早期设想中的 `data.type`、`fallback_text` 或 `collapse_key`；降级文案请用 `body`。
+
+#### 数据块格式与模板对应关系
+
+块通用字段：`kind` 为类型、`id` 为块内唯一标识（1–64 UTF-8 字节）、`label` 为显示名称（最多 128 字节）、`unit` 为单位（最多 32 字节）、`tone` 为 `normal/warning/critical`。未指定 `tone` 时由客户端采用默认配色，手动配色优先。数值必须有限且绝对值不超过 10^15。
+
+| 数据块 | 必需或关键字段 | 当前桌面模板 |
+| --- | --- | --- |
+| `progress` | `value`、`max`；`min` 默认 0，须满足 `min ≤ value ≤ max` 且 `max > min` | 横条、柱图、单环、嵌套环、独立小环、纯数字 |
+| 不确定进度 | `kind:"progress", indeterminate:true`，不要同时传 `value/min/max/trend` | 横向进度条或纯数字；需要百分比的环形不可选 |
+| `metric` | `value`；`min/max` 若提供必须成对；`trend` 可为 `up/down/flat` | 无范围可用纯数字/横条；有范围可用环形/柱图 |
+| `list` | `items` 1–12 项，每项有唯一 `id` 和非空 `text`，可带 `label/tone` | 文字列表：2×宽单列、4×宽双列，3×宽按可用空间展示 |
+| `segments` | 正数 `total`，`items` 1–6 项；每项 `id/label/value`，值非负且总和不超过 `total` | 占比圆环；未占满部分作为剩余空间 |
+| `sparkline` | `points` 1–120 项，每项 `at_ms/value`，时间非负且严格递增 | 迷你趋势图 |
+| `kv` | `items` 1–12 项，每项 `id/label/text` | App 详情渲染，不直接作为桌面数值块 |
+| `countdown` | `target_at_ms` 非负毫秒时间戳 | App 详情渲染，当前没有独立倒计时桌面模板 |
+| `timeline` | `items` 1–12 项：`id/label/at_ms/status`；状态为 `pending/active/completed/failed` | App 详情渲染 |
+| `pipeline` | `items` 1–12 项：`id/label/status`；状态为 `pending/running/completed/failed/skipped` | App 详情渲染 |
+| `alert` | 非空 `text`（最多 2048 UTF-8 字节），可带 `tone` | App 详情渲染 |
+| 整段文字 | 主题顶层 `body`，不需要新增块类型 | 整段文字 |
+
+文字列表的 `items[].text` 和其他条目说明最多 2048 UTF-8 字节；这是协议上限，桌面仍按宽度、字号和安全边距截断。单环选择 1 项、嵌套环 2–3 项、独立小环 2–4 项；柱图要求相同单位与范围。每种尺寸的数量和布局还有额外限制，手机会置灰不兼容模板并给出原因。
+
+以下均为**完整请求体**，可保存为 `payload.json` 后统一发送：
+
+```bash
+curl --fail-with-body -X POST "$BEACON_URL/api/v1/push" \
+  -H "Authorization: Bearer $BEACON_PUSH_KEY" \
+  -H 'Content-Type: application/json' \
+  --data-binary @payload.json
+```
+
+**纯数字 / 有范围的数值**：`balance` 无范围，适合纯数字；`cpu` 有范围，可单独选为圆环或进度条。
+
+```json
+{
+  "mode":"state", "schema_version":1, "topic_key":"widget/server", "revision":1,
+  "title":"服务器", "body":"CPU 24%，余额128.50元",
+  "blocks":[
+    {"kind":"metric","id":"cpu","label":"CPU","value":24,"min":0,"max":100,"unit":"%","trend":"up"},
+    {"kind":"metric","id":"balance","label":"余额","value":128.5,"unit":"元","trend":"down"}
   ]
 }
 ```
 
-同一身份每次更新必须提高 `revision`（1–9007199254740991）；同版本相同内容可安全重试，不同内容返回 409。发送前可用 `GET /api/v1/states/meta?topic_key=quota%2Fmain` 查询当前版本。并发采集方应共享版本分配或使用不同主题。`fresh_for_seconds` 控制陈旧提示，`ttl` 控制有效期，`observed_at_ms` 可携带采样时间。
-
-热搜榜使用相同上报方式，将 `blocks` 换成如下数据，手机选中这组内容后选择「文字列表」：
+**热搜榜 / 文字列表**：数组顺序就是原始排名；最多12条，超出时发送方先截取 Top N。
 
 ```json
-[
-  {"kind":"list","id":"news","label":"热搜榜","items":[
+{
+  "mode":"state", "schema_version":1, "topic_key":"widget/news", "revision":1,
+  "title":"今日热搜", "body":"今日热搜前三条",
+  "blocks":[{"kind":"list","id":"news","label":"热搜榜","items":[
     {"id":"news-1","text":"第一条新闻标题"},
     {"id":"news-2","text":"第二条新闻标题"},
     {"id":"news-3","text":"第三条新闻标题"}
-  ]}
+  ]}]
+}
+```
+
+**整段文字**：标题之外的内容放在 `body`，`\n` 表示换行；手机选择“整段文字”。
+
+```json
+{
+  "mode":"state", "schema_version":1, "topic_key":"widget/notice", "revision":1,
+  "title":"值班公告", "body":"今日值班：张三\n维护时间：22:00—23:00\n请提前保存工作。"
+}
+```
+
+**占比圆环**：一个环用不同颜色显示组成；这与多项独立进度的“嵌套环”不同。以下剩余20 GB由手机显示为剩余空间。
+
+```json
+{
+  "mode":"state", "schema_version":1, "topic_key":"widget/disk", "revision":1,
+  "title":"NAS 空间", "body":"总量100 GB，已用80 GB",
+  "blocks":[{"kind":"segments","id":"disk","label":"存储分布","total":100,"unit":"GB","items":[
+    {"id":"images","label":"图片","value":30},
+    {"id":"videos","label":"视频","value":40},
+    {"id":"other","label":"其他","value":10}
+  ]}]
+}
+```
+
+**迷你趋势图**：发送方提供历史点，Beacon 不会自动将历次上报拼成历史曲线。示例时间为占位历史采样时间，实际发送请使用自己的时间序列。
+
+```json
+{
+  "mode":"state", "schema_version":1, "topic_key":"widget/latency", "revision":1,
+  "title":"访问延迟", "body":"最近一次延迟42 ms",
+  "blocks":[{"kind":"sparkline","id":"latency","label":"延迟","unit":"ms","points":[
+    {"at_ms":1710000000000,"value":35},
+    {"at_ms":1710000060000,"value":51},
+    {"at_ms":1710000120000,"value":42}
+  ]}]
+}
+```
+
+**进度分段提示颜色**：替换进度示例中的一块。`bands` 最多5段，`until` 严格递增，最后一段必须等于 `max`。下例值越大风险越高；额度剩余越少风险越高时由发送方反向设置语义。
+
+```json
+[
+  {"kind":"progress","id":"disk-used","label":"已用空间","value":85,"max":100,"unit":"%",
+   "bands":[{"until":70,"tone":"normal"},{"until":90,"tone":"warning"},{"until":100,"tone":"critical"}]}
 ]
 ```
 
-纯文字公告直接放在 `body` 中，选择「整段文字」即可，无需新增数据块。发送方决定文字内容；字体、颜色、模板和桌面实例绑定保存在手机端，不混入通用业务协议。
+#### 更新版本、任务与删除
 
-下载任务可额外使用 `state_type: "task"` 和 `status: "running"`，状态支持 `running/paused/completed/failed/cancelled`。已结束或删除的任务不能重启，应使用新主题。删除主题使用更高版本的精简请求：
+固定 `topic_key` 和块 `id`，只提高 `revision` 并提交完整新内容。例如进度24变为25，使用相同主题、`revision:2`、`value:25`。若更换推送密钥为另一应用令牌，即使 `topic_key` 相同也属于另一主题，不会更新旧组件。
+
+```bash
+# 用与上报相同的密钥查询版本；不存在时 revision 为 0。
+curl --fail-with-body "$BEACON_URL/api/v1/states/meta?topic_key=widget%2Fdemo-progress" \
+  -H "Authorization: Bearer $BEACON_PUSH_KEY"
+```
+
+查询返回 `revision/deleted/status`。新写入使用更高版本；单一发送方可读取版本后加一，并持久化待重试的请求。**这不是原子版本申请**，多个发送方必须自行协调或使用不同主题。网络超时时原样重试同一版本和同一内容，包括原采样时间；同版本相同内容返回 `unchanged:true`，同版本不同内容返回409，旧版本也返回409。数据主题不使用普通事件的 `Idempotency-Key` 去重。
+
+下载等有生命周期的任务增加 `state_type:"task"`，`status` 支持 `running/paused/completed/failed/cancelled`：
 
 ```json
-{"mode":"state","schema_version":1,"topic_key":"quota/main","revision":2,"operation":"delete"}
+{
+  "mode":"state", "schema_version":1, "topic_key":"download/job-001", "revision":1,
+  "state_type":"task", "status":"running", "title":"镜像下载", "body":"已下载40%",
+  "blocks":[{"kind":"progress","id":"download","label":"下载进度","value":40,"max":100,"unit":"%"}]
+}
 ```
+
+完成时以更高版本上报 `status:"completed"` 和最终进度；需要完成提醒时另发普通消息。已完成、失败、取消或删除的任务不能重新回到运行态，下一次下载使用新 `topic_key`。持续主题和任务主题也不能在同一身份下相互转换。未知总大小时，把进度块改为 `{"kind":"progress","id":"download","label":"下载中","indeterminate":true}`。
+
+删除使用比当前水位更高的版本，并且**只能提交以下五个字段**，不要附加标题、正文或数据块，即使为空也不传：
+
+```json
+{"mode":"state","schema_version":1,"topic_key":"widget/demo-progress","revision":3,"operation":"delete"}
+```
+
+这里的3仅为示例，若当前版本已达到3或更高需继续递增。TTL 到期会移除数据，但不会遗忘版本水位；持续主题可用更高版本重新上报，旧版本重试不会复活它。`fresh_for_seconds` 过期只显示陈旧提示、保留最后数据，与 TTL 删除不同。
+
+#### 同步、管理与错误处理
 
 | 接口 | 凭据与用途 |
 | --- | --- |
@@ -496,9 +671,25 @@ Beacon 项目本身以 [MIT License](LICENSE) 发布。
 
 管理接口使用 `Authorization: Bearer <管理令牌>`，不支持查询参数。`list` 请求体可含 `device_id`、`application_id`、`search`、`state`、`limit`、`offset`；省略 `application_id` 表示全部来源，空字符串表示未关联应用。`state` 支持 `all/active/stale/expired/deleted`。返回 `topics/total/has_more/next_offset`。详情与清空请求体使用 `device_id/application_id/topic_key`，清空还必须包含 `revision`。这些接口在 Go 与 Workers 上保持一致。
 
-发送方持续通过 HTTP 上报，服务端通过 WebSocket 通知手机有更新，断线后通过 HTTP 补收。无需把上传改成 WebSocket。桌面更新会合并与限流（普通活动状态约 5 秒）；不适合每帧动画或保证每秒刷新。系统进度通知可展示一条主进度，多个进度的完整信息放在 App 和小组件。状态通知按主题开启，普通状态更新不应反复响铃；任务完成等事件可另发普通消息。
+能力探测应返回 `state_protocol:1`、`structured_schema_versions:[1]` 和支持的 `block_kinds`。旧服务端404或不支持时先升级服务端；普通 Bark 文本接口不能代替数据主题接口。
 
-可运行脚本见 [examples/structured](examples/structured)，完整开发规格与视觉验收记录见[文档仓库](https://github.com/ZeroHomers0/beacon-docs/tree/main/docs/design/structured-ui)。
+| HTTP / 错误码 | 处理方式 |
+| --- | --- |
+| 400 `invalid_message` | 核对必填正文、`schema_version`、类型/范围、块内唯一ID和未支持字段；数值不要传成字符串 |
+| 401 `unauthorized` | 使用有效的设备推送密钥或应用令牌，核对是否撤销；不要使用接收或管理凭据 |
+| 409 `stale_state_revision` | 查询元数据，避免旧采样覆盖较新数据，按实际需要生成更高版本 |
+| 409 `state_revision_conflict` | 同版本内容不同；确认是否有多个写入者或重试时修改了采样时间 |
+| 409 `invalid_state_transition` | 检查任务终态、删除后重启或任务/持续类型切换；新任务使用新主题 |
+| 429 `push_rate_limited` | 遵循 `Retry-After`，退避并合并为最新快照 |
+| 507 `storage_capacity_reached` | 检查主题数量、水位与存储容量，不要为每次采样创建一个新主题 |
+
+当前每设备最多500个主题水位（含已删除主题）、有效负载合计最多8 MiB；每应用每设备每分钟最多120次状态写入，每设备每分钟最多300次。桌面刷新不是上传频率保证；合并高频采样，进度通常按数秒节流。数据未变时也应按新鲜度和 TTL 计划定期续报，提高版本并使用新的采样时间。
+
+`GET /api/v1/states` 是客户端接收接口：首次无游标读取固定快照，分页使用返回的 `snapshot_token/page_cursor`，最后一页获得 `next_cursor` 后再用 `cursor` 增量同步；HTTP 410 `state_cursor_expired` 时重新读取快照。脚本通常只需上报和版本查询，不需要实现此接收流程。
+
+发送方持续通过 HTTP 上报，服务端通过 WebSocket 通知手机有更新，断线后通过 HTTP 补收。无需把上传改成 WebSocket。桌面更新会合并与限流（及时约5秒，均衡下任务约5秒、其他约15秒，省电约1分钟）；不适合每帧动画或保证每秒刷新。系统进度通知可展示一条主进度，多个进度的完整信息放在 App 和小组件。状态通知按主题开启，普通状态更新不应反复响铃；任务完成等事件可另发普通消息。
+
+可运行脚本见 [examples/structured](examples/structured)，详细[数据主题 API 文档](https://github.com/ZeroHomers0/beacon-docs/blob/main/docs/design/structured-state-api.md)、完整开发规格与视觉验收记录见[文档仓库](https://github.com/ZeroHomers0/beacon-docs/tree/main/docs/design/structured-ui)。
 
 ### 刷新、布局与功耗优化
 
