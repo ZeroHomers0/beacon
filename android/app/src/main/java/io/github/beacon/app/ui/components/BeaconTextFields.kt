@@ -6,6 +6,9 @@
 package io.github.beacon.app.ui.components
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -41,6 +44,26 @@ fun BeaconCheckbox(
             modifier.named(contentDescription),
             enabled = enabled,
         )
+}
+
+/** Replaces the overflow slot during multi-selection, without changing card geometry. */
+@Composable
+internal fun BeaconSelectionAction(checked: Boolean, onChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier, enabled: Boolean = true, description: String) {
+    Box(modifier.then(Modifier.named(description))
+        .then(Modifier.toggleable(checked, enabled = enabled,
+            role = androidx.compose.ui.semantics.Role.Checkbox, onValueChange = onChange)),
+        contentAlignment = androidx.compose.ui.Alignment.Center) {
+        Box(Modifier.size(BeaconUiMetrics.MessageCardActionIconSize)
+            .border(2.dp, if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                androidx.compose.foundation.shape.CircleShape)
+            .background(if (checked) MaterialTheme.colorScheme.primary else androidx.compose.ui.graphics.Color.Transparent,
+                androidx.compose.foundation.shape.CircleShape),
+            contentAlignment = androidx.compose.ui.Alignment.Center) {
+            if (checked) androidx.compose.material3.Icon(BeaconIcons.Check, null,
+                Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onPrimary)
+        }
+    }
 }
 
 @Composable

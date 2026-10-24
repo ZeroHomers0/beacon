@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
@@ -196,6 +197,7 @@ fun BeaconPreferenceToggle(
         Modifier.fillMaxWidth()
             .heightIn(min = BeaconUiMetrics.FieldMinHeight)
             .named(title)
+            .alpha(if (enabled) 1f else .38f)
             .toggleable(value = checked, enabled = enabled,
                 role = androidx.compose.ui.semantics.Role.Switch, onValueChange = onCheckedChange),
         verticalAlignment = Alignment.CenterVertically,
@@ -289,7 +291,8 @@ fun SettingsMetricGrid(
         val minimumCell = with(density) { (80.dp * density.fontScale.coerceAtLeast(1f)).roundToPx() }
         val gapWidth = with(density) { 8.dp.roundToPx() }
         val availableColumns = ((constraints.maxWidth + gapWidth) / (minimumCell + gapWidth)).coerceAtLeast(1)
-        val resolvedColumns = minOf(columns ?: 2, availableColumns)
+        val candidateColumns = minOf(columns ?: 2, availableColumns)
+        val resolvedColumns = if (metrics.size == 3 && candidateColumns == 2) 1 else candidateColumns
         Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
             metrics.chunked(resolvedColumns).forEach { pair ->
                 Row(

@@ -35,16 +35,25 @@ fun SettingsOverviewCard(
             action?.invoke()
         }
         BeaconCard(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(
-            containerColor = tone.copy(alpha = if (healthy) .06f else .03f).compositeOver(scheme.surfaceContainerLow))) {
+            containerColor = tone.copy(alpha = if (healthy) .16f else .06f).compositeOver(scheme.surfaceContainerLow))) {
             Box(Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large)) {
                 // A match-parent overlay never contributes to the measured height.
                 Box(Modifier.matchParentSize()) {
                     if (healthy) Box(
                         Modifier.align(Alignment.BottomEnd).offset(x = 16.dp, y = 20.dp)
-                            .size(88.dp).border(5.dp, tone.copy(alpha = .20f), CircleShape),
+                            .size(88.dp).border(8.dp, tone.copy(alpha = .85f), CircleShape),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(BeaconIcons.Check, null, Modifier.size(60.dp), tint = tone.copy(alpha = .20f))
+                        androidx.compose.foundation.Canvas(Modifier.size(60.dp)) {
+                            val stroke = 8.dp.toPx()
+                            val color = tone.copy(alpha = .85f)
+                            drawLine(color, androidx.compose.ui.geometry.Offset(size.width * .18f, size.height * .52f),
+                                androidx.compose.ui.geometry.Offset(size.width * .42f, size.height * .75f), stroke,
+                                cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                            drawLine(color, androidx.compose.ui.geometry.Offset(size.width * .42f, size.height * .75f),
+                                androidx.compose.ui.geometry.Offset(size.width * .84f, size.height * .28f), stroke,
+                                cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                        }
                     }
                 }
                 Column(Modifier.fillMaxWidth().padding(start = BeaconUiMetrics.CardInset,

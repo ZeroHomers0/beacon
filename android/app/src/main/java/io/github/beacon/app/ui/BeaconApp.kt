@@ -355,12 +355,11 @@ fun BeaconApp(
         // A short window folds the title into the search row; opening the IME preserves this
         // layout.
         val sharedTitleLabel = if (sharedTitleBar) stringResource(ui.pages[0]) else null
-        val barBehavior = rememberBeaconBarBehavior()
+        val barBehavior = androidx.compose.runtime.key(ui.page, ui.settingsScreen, detail != null) { rememberBeaconBarBehavior() }
         val compactBar =
             (sharedTitleBar && ui.page == 0) ||
                 (ui.page == 0 && ui.selectionMode) ||
-                detail != null ||
-                (ui.page == 1 && ui.settingsScreen != SettingsScreen.HOME)
+                detail != null
         Row(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f).fillMaxHeight()) {
                 BeaconScaffold(

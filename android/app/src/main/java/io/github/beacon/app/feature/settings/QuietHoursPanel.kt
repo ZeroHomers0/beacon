@@ -124,9 +124,9 @@ internal fun QuietHoursPanel(
                         val bit = 1 shl index
                         BeaconFilterChip(
                             draft.weekdays and bit != 0,
-                            { draft = draft.copy(weekdays = draft.weekdays xor bit) },
+                            { customDays = true; draft = draft.copy(weekdays = draft.weekdays xor bit) },
                             { BeaconText(label) },
-                            enabled = editable && customDays,
+                            enabled = editable,
                         )
                     }
                 }

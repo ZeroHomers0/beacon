@@ -481,7 +481,7 @@
     <string name="storage_save_failed_title">清理设置保存失败</string>
     <string name="settings_confirm">确定</string>
     <string name="settings_unsaved_title">尚未保存修改</string>
-    <string name="settings_unsaved_hint">右上角保存；离开或切换模式将丢弃修改。</string>
+    <string name="settings_unsaved_hint">修改后请保存</string>
     <string name="settings_continue_editing">继续编辑</string>
     <string name="settings_discard_changes">放弃修改</string>
     <string name="settings_receive_unbound">等待绑定设备</string>
@@ -506,7 +506,7 @@
     <string name="settings_guide_next_confirm">请确认手机已显示测试通知，发送成功不代表已收到。</string>
     <string name="settings_guide_ready">测试通知已确认，可以完成向导。</string>
     <string name="settings_inherited_receive_title">共用接收设置</string>
-    <string name="settings_inherited_receive_hint">规则模式沿用这些设置，右上角保存后生效。</string>
+    <string name="settings_inherited_receive_hint">修改后请点右上角保存</string>
     <string name="settings_background_help">后台权限设置说明</string>
     <string name="settings_archive_choose_import">选择备份文件</string>
     <string name="settings_archive_choose_export">选择保存位置</string>

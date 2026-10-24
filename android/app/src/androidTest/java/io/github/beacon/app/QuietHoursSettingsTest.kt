@@ -26,7 +26,7 @@ class QuietHoursSettingsTest {
 
     private fun verify(style: BeaconUiStyle) {
         val repository = RuntimeRepository()
-        var saved = QuietHours()
+        var saved = QuietHours(enabled = true)
         val form = io.github.beacon.app.feature.settings.QuietHoursFormState()
         val actions =
             object : RuntimeActions by repository {

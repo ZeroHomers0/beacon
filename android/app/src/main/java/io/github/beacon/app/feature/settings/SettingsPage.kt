@@ -65,6 +65,7 @@ fun SettingsPage(
     val polling = runtimeState.pollingState
     var pendingReminderCount by
         androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Long?>(null) }
+    var reminderLoading by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     var reminderFailed by
         androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     var reminderAttempt by
@@ -81,10 +82,12 @@ fun SettingsPage(
                 !runtimeState.messageBusy
         ) {
             reminderFailed = false
-            actions.pendingReminders(onFailure = { reminderFailed = true }) {
+            reminderLoading = true
+            actions.pendingReminders(onFailure = { reminderFailed = true; reminderLoading = false }) {
+                reminderLoading = false
                 pendingReminderCount = it
             }
-        } else if (!runtimeState.runtimeConnected) pendingReminderCount = null
+        } else if (!runtimeState.runtimeConnected) { pendingReminderCount = null; reminderLoading = false }
     }
     androidx.compose.runtime.LaunchedEffect(
         screen,
@@ -454,6 +457,7 @@ fun SettingsPage(
                     runtimeState.runtimeConnected,
                     reminderFailed,
                     onRetry = { reminderAttempt++ },
+                    loading = reminderLoading,
                 )
             }
             SettingsScreen.ABOUT -> {

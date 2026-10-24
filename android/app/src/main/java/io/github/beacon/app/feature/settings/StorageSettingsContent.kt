@@ -102,7 +102,7 @@ internal fun StorageSettingsPanel(
 
         SettingsMetricSection(stringResource(R.string.storage_local_database)) {
                 SettingsMetricGrid(
-                    listOf(stringResource(R.string.storage_local_database) to
+                    listOf(stringResource(R.string.storage_used_space) to
                         (preview?.databaseBytes?.let { formatStorageSize(context, it) } ?: BeaconUnknownValue)),
                     columns = 1,
                 )

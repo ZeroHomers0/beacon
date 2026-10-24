@@ -7,6 +7,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.*
@@ -68,11 +69,11 @@ class SettingsVisualQaTest {
                         rule.activity.setContent {
                             BeaconTheme(style, mode) {
                                 CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density, scale)) {
-                                    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                                        Column(Modifier.fillMaxSize().systemBarsPadding()) {
-                                            BeaconText(rule.activity.getString(screen.titleRes), Modifier.padding(16.dp),
-                                                style = MaterialTheme.typography.titleLarge)
-                                            SettingsPage(screen = screen, scroll = rememberLazyListState(), modifier = Modifier.weight(1f),
+                                    val behavior = key(screen, scale, mode) { rememberBeaconBarBehavior() }
+                                    BeaconScaffold(topBar = {
+                                        BeaconTopBar(rule.activity.getString(screen.titleRes), false, behavior, {}, {})
+                                    }, bottomBar = {}) { scaffoldPadding ->
+                                            SettingsPage(screen = screen, scroll = rememberLazyListState(), modifier = Modifier.fillMaxSize().padding(scaffoldPadding).nestedScroll(behavior.connection(style)),
                                                 padding = PaddingValues(16.dp), runtimeState = state, actions = actions,
                                                 connectionForm = remember { ConnectionFormState().apply { deviceName = "Xiaomi 17 Pro Max" } },
                                                 connectionDirty = false, notificationPermission = NotificationPermissionState.ALLOWED,
@@ -81,7 +82,6 @@ class SettingsVisualQaTest {
                                                 onSelectReceiveMode = {}, onUiStyleChange = {}, onThemeModeChange = {},
                                                 onOperationDetails = {}, onFeedback = {}, onRequestNotificationPermission = {},
                                                 onNotificationSettingsUnavailable = {}, updateState = remember { UpdateCheckState() }, onCheckUpdate = {})
-                                        }
                                     }
                                 }
                             }

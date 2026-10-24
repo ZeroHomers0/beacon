@@ -84,6 +84,7 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
     ViewModel() {
     constructor() : this({ endpoint, token -> ServerAdminClient(endpoint, token) })
 
+    internal val listFilters = AdminListFilterState()
     private val mutable = MutableStateFlow(AdminUiState(restoring = true))
     val state = mutable.asStateFlow()
     private val mutableCreating = MutableStateFlow(false)

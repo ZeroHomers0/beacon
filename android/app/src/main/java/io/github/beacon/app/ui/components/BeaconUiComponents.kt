@@ -462,14 +462,6 @@ fun MessageItem(
                 verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6),
             ) {
-                if (selectionMode)
-                    BeaconCheckbox(
-                        selected,
-                        onSelect,
-                        modifier = Modifier.align(Alignment.CenterVertically),
-                        enabled = !busy,
-                        contentDescription = message.title,
-                    )
                 Column(
                     Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap2),
@@ -497,6 +489,11 @@ fun MessageItem(
                                 )
                                 .semantics { contentDescription = unreadLabel }
                         )
+                    }
+                if (selectionMode)
+                    FirstLineSlot(BeaconListText.TitleLineHeight) {
+                        BeaconSelectionAction(selected, onSelect, Modifier.size(BeaconUiMetrics.MessageCardActionSize),
+                            enabled = !busy, description = message.title)
                     }
                 if (!selectionMode)
                     FirstLineSlot(BeaconListText.TitleLineHeight) {

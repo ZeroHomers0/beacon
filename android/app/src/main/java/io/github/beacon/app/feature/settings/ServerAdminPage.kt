@@ -8,9 +8,7 @@ import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
@@ -115,11 +113,11 @@ internal fun ServerAdminPage(
             )
         )
     val active = allDevices.filterNot { it.revoked }
-    var deviceQuery by rememberSaveable { mutableStateOf("") }
-    var applicationQuery by rememberSaveable { mutableStateOf("") }
-    var deviceStatus by rememberSaveable { mutableIntStateOf(0) }
-    var applicationStatus by rememberSaveable { mutableIntStateOf(0) }
-    var applicationDevice by rememberSaveable { mutableStateOf("") }
+    var deviceQuery by model.listFilters::deviceQuery
+    var applicationQuery by model.listFilters::applicationQuery
+    var deviceStatus by model.listFilters::deviceStatus
+    var applicationStatus by model.listFilters::applicationStatus
+    var applicationDevice by model.listFilters::applicationDevice
     val devices = allDevices.filter { device ->
         adminListMatches(deviceQuery, deviceStatus, device.revoked, device.name, device.id)
     }
@@ -171,9 +169,27 @@ internal fun ServerAdminPage(
     }
     SettingsOperationFeedback(stringResource(R.string.admin_refresh),
         state.refreshFailure?.takeIf { tab != -1 }?.let { stringResource(it) }.orEmpty(), failed = true)
+    Column(modifier) {
+        if (state.loggedIn && tab in 0..1) Box(Modifier.fillMaxWidth().padding(
+            start = padding.calculateLeftPadding(androidx.compose.ui.unit.LayoutDirection.Ltr),
+            end = padding.calculateRightPadding(androidx.compose.ui.unit.LayoutDirection.Ltr),
+            top = padding.calculateTopPadding(), bottom = BeaconUiMetrics.Gap8)) {
+            AdminListFilters(
+                if (tab == 0) deviceQuery else applicationQuery,
+                { if (tab == 0) deviceQuery = it else applicationQuery = it },
+                if (tab == 0) deviceStatus else applicationStatus,
+                { if (tab == 0) deviceStatus = it else applicationStatus = it },
+                stringResource(if (tab == 0) R.string.settings_search_devices else R.string.settings_search_apps),
+                allDevices, if (tab == 0) "" else applicationDevice,
+                if (tab == 0) null else { value: String -> applicationDevice = value },
+                total = if (tab == 0) allDevices.size else allApplications.size,
+                active = if (tab == 0) allDevices.count { !it.revoked } else allApplications.count { !it.revoked },
+                enabled = !state.busy,
+            )
+        }
     BeaconSettingsList(
         state = scroll,
-        modifier = modifier,
+        modifier = Modifier.fillMaxWidth().weight(1f),
         contentPadding = padding,
         listTag = "server-admin-list",
     ) {
@@ -321,10 +337,6 @@ internal fun ServerAdminPage(
         if (state.loggedIn)
             when (tab) {
                 0 -> {
-                    item {
-                        AdminListFilters(deviceQuery, { deviceQuery = it }, deviceStatus, { deviceStatus = it },
-                            stringResource(R.string.settings_search_devices))
-                    }
                     if (defaultEndpoint.isBlank() || bindingSubmitted)
                         item {
                             SettingsSection(stringResource(R.string.admin_this_phone)) {
@@ -358,14 +370,7 @@ internal fun ServerAdminPage(
                                 stringResource(R.string.admin_devices_title),
                                 stringResource(if (allDevices.isEmpty()) R.string.admin_no_devices else R.string.settings_no_filter_results),
                             )
-                        else
-                            SettingsHint(
-                                stringResource(
-                                    R.string.admin_list_summary,
-                                    devices.size,
-                                    devices.count { it.revoked },
-                                )
-                            )
+
                     }
                     items(devices, key = { "device-${it.id}" }) { device ->
                         AdminListCard(
@@ -408,10 +413,6 @@ internal fun ServerAdminPage(
                     }
                 }
                 1 -> {
-                    item {
-                        AdminListFilters(applicationQuery, { applicationQuery = it }, applicationStatus, { applicationStatus = it },
-                            stringResource(R.string.settings_search_apps), allDevices, applicationDevice, { applicationDevice = it })
-                    }
                     item {
                         if (!state.listState(allApplications.isEmpty()).hasContent) {
                             if (state.busy) PageStateLoading()
@@ -521,6 +522,8 @@ internal fun ServerAdminPage(
         }
     }
 
+    }
+
     if (logoutConfirm)
         BeaconConfirmDialog(
             title = stringResource(R.string.admin_logout),
@@ -547,8 +550,7 @@ internal fun ServerAdminPage(
             text = {
                 Column(
                     Modifier.fillMaxWidth()
-                        .heightIn(max = 420.dp)
-                        .verticalScroll(rememberScrollState()),
+,
                     verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
                 ) {
                     if (tab == 0) {

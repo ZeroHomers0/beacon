@@ -210,21 +210,7 @@ BeaconMessageTransition(
                             onNavigate = { ui.navigateSettings(it) },
                             receivePlan = ui.receivePlan,
                             receptionForm = ui.receptionForm,
-                            onSelectReceiveMode = selectMode@{ mode ->
-                                if (!runtimeState.runtimeConnected || !runtimeState.receivePlanLoaded || busy)
-                                    return@selectMode
-                                if (mode != ui.receivePlan.mode) {
-                                    val changeMode = {
-                                        ui.receptionForm.reset(runtimeState.pollingState.config,
-                                            runtimeState.receivePlan.copy(mode = mode))
-                                        actions.receivePlan(ui.receivePlan.copy(mode = mode))
-                                    }
-                                    if (ui.receptionForm.edited && ui.receptionForm.differsFrom(
-                                            runtimeState.pollingState.config, runtimeState.receivePlan))
-                                        ui.pendingNavigation = changeMode
-                                    else changeMode()
-                                }
-                            },
+                            onSelectReceiveMode = { mode -> ui.selectReceiveMode(runtimeState, actions, mode) },
                             onUiStyleChange = {
                                 ui.uiStyle = it
                             },

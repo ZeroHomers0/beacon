@@ -40,6 +40,20 @@ class BeaconUiState(
     val connectionForm = ConnectionFormState()
     val receptionForm = io.github.beacon.app.feature.settings.ReceptionFormState()
     val notificationForm = io.github.beacon.app.feature.settings.NotificationFormState()
+    var receiveModesOpen by mutableStateOf(false)
+    fun selectReceiveMode(state: RuntimeState, actions: RuntimeActions,
+        mode: io.github.beacon.app.domain.model.ReceiveMode) {
+        if (!state.runtimeConnected || !state.receivePlanLoaded || state.messageBusy || savingSettings) return
+        receiveModesOpen = false
+        if (mode == receivePlan.mode) return
+        val changeMode = {
+            receptionForm.reset(state.pollingState.config, state.receivePlan.copy(mode = mode))
+            actions.receivePlan(receivePlan.copy(mode = mode))
+        }
+        if (receptionForm.edited && receptionForm.differsFrom(state.pollingState.config, state.receivePlan))
+            pendingNavigation = changeMode
+        else changeMode()
+    }
     var savingSettings by mutableStateOf(false)
     var pendingNavigation by mutableStateOf<(() -> Unit)?>(null)
     var shouldConfirmExit: (SettingsScreen) -> Boolean = { false }

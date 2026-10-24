@@ -56,12 +56,14 @@ fun BeaconTopBar(
         if (compact)
             top.yukonga.miuix.kmp.basic.SmallTopAppBar(
                 title,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.background,
                 navigationIcon = navigationIcon,
                 actions = actions,
             )
         else
             top.yukonga.miuix.kmp.basic.TopAppBar(
                 title,
+                color = androidx.compose.material3.MaterialTheme.colorScheme.background,
                 navigationIcon = navigationIcon,
                 actions = actions,
                 scrollBehavior = behavior.miuix,
@@ -92,6 +94,12 @@ fun BeaconFilterChip(
     enabled: Boolean = true,
 ) {
     val buttonModifier = modifier.semantics { this.selected = selected }
-    if (selected) BeaconButton(onClick, buttonModifier, enabled) { label() }
-    else BeaconOutlinedButton(onClick, buttonModifier, enabled) { label() }
+    BeaconUnifiedButton(onClick, buttonModifier, enabled, selected = selected) {
+        Box(Modifier.size(16.dp), contentAlignment = androidx.compose.ui.Alignment.Center) {
+            if (selected) androidx.compose.material3.Icon(io.github.beacon.app.ui.icons.BeaconIcons.Check,
+                null, Modifier.size(16.dp))
+        }
+        Spacer(Modifier.width(BeaconUiMetrics.Gap4))
+        label()
+    }
 }

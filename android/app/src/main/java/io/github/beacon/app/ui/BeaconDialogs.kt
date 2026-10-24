@@ -63,6 +63,10 @@ internal fun BeaconDialogHost(
                 }
             },
         )
+    if (ui.receiveModesOpen) io.github.beacon.app.feature.settings.ReceiveModeDialog(
+        ui.receivePlan.mode, onSelect = { ui.selectReceiveMode(runtimeState, actions, it) },
+        onDismiss = { ui.receiveModesOpen = false })
+
     ui.pendingDelete?.let { keys ->
         val single = keys.size == 1
         BeaconConfirmDialog(

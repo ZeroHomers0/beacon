@@ -52,6 +52,7 @@ open class MainActivity : ComponentActivity() {
                     SettingsScreen.BACKGROUND,
                 ) ||
                 stoppedWithOperation ||
+                ui.receiveModesOpen ||
                 ui.filtersOpen ||
                 ui.pendingDelete != null ||
                 ui.operationDetails != null ||

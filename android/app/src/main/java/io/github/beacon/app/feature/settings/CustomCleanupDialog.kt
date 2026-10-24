@@ -54,18 +54,13 @@ fun CustomCleanupDialog(
                     isError = limitInvalid,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 )
-                if (daysInvalid || limitInvalid)
-                    BeaconText(
-                        stringResource(R.string.storage_custom_invalid),
-                        color = androidx.compose.material3.MaterialTheme.colorScheme.error,
-                    )
-                if (operationError.isNotBlank())
-                    SettingsStatusSummary(
-                        stringResource(R.string.storage_save_failed_title),
-                        operationError,
-                        io.github.beacon.app.ui.icons.BeaconIcons.Warning,
-                        androidx.compose.material3.MaterialTheme.colorScheme.error,
-                    )
+                SettingsOverviewField(stringResource(R.string.settings_validation_title),
+                    when {
+                        operationError.isNotBlank() -> operationError
+                        daysInvalid || limitInvalid -> stringResource(R.string.storage_custom_invalid)
+                        else -> stringResource(R.string.settings_form_ready)
+                    }, error = operationError.isNotBlank() || daysInvalid || limitInvalid)
+
             }
         },
         confirmButton = {

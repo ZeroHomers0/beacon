@@ -80,9 +80,7 @@ internal fun BeaconTopBarArea(
                     else stringResource(ui.pages[barPage]),
                     (sharedTitleBar && barPage == 0) ||
                         (barPage == 0 && ui.selectionMode) ||
-                        displayedDetail != null ||
-                        (barPage == 1 &&
-                            displayedSettingsScreen != SettingsScreen.HOME),
+                        displayedDetail != null,
                     barBehavior,
                     navigationIcon = {
                         if (
@@ -150,8 +148,8 @@ internal fun BeaconTopBarArea(
                                             runtimeState.realtimeRunning),
                                     ui.receivePlan.mode,
                                     onClick = {
-                                        ui.page = 1
-                                        ui.navigateSettings(SettingsScreen.RECEPTION)
+                                        if (runtimeState.runtimeConnected && runtimeState.receivePlanLoaded && !busy)
+                                            ui.receiveModesOpen = true
                                     },
                                     onLongClick = {
                                         ui.page = 1
@@ -366,6 +364,10 @@ internal fun BeaconTopBarArea(
                                         SettingsScreen.SERVER_APPLICATIONS,
                                     )
                         ) {
+                            io.github.beacon.app.feature.settings.AdminStatusFilterAction(
+                                adminModel.listFilters,
+                                displayedSettingsScreen == SettingsScreen.SERVER_APPLICATIONS,
+                                adminState.devices, adminState.loggedIn && !adminState.busy)
                             io.github.beacon.app.ui.components.BeaconRefreshAction(
                                 stringResource(R.string.admin_refresh),
                                 adminState.loggedIn && !adminState.busy,

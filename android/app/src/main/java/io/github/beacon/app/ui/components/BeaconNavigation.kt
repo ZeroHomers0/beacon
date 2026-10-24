@@ -13,6 +13,7 @@ import androidx.compose.material3.NavigationBarItem as MaterialNavigationItem
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -34,12 +35,14 @@ fun BeaconScaffold(
         if (miuix())
             top.yukonga.miuix.kmp.basic.Scaffold(
                 topBar = topBar,
+                containerColor = MaterialTheme.colorScheme.background,
                 bottomBar = bottomBar,
                 content = content,
             )
         else
             androidx.compose.material3.Scaffold(
                 topBar = topBar,
+                containerColor = MaterialTheme.colorScheme.background,
                 bottomBar = bottomBar,
                 content = content,
             )
@@ -166,6 +169,7 @@ fun BeaconDropdownPreference(
         } else
             Row(
                 Modifier.fillMaxWidth()
+                    .alpha(if (enabled) 1f else .38f)
                     .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
                     .clickable(enabled = enabled, role = androidx.compose.ui.semantics.Role.Button) { expanded = true }
                     .heightIn(min = BeaconUiMetrics.FieldMinHeight)

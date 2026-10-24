@@ -5,8 +5,6 @@ import io.github.beacon.app.ui.components.BeaconUiMetrics
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
@@ -154,13 +152,13 @@ fun SettingsBackupPanel(actions: RuntimeActions, busy: Boolean, grouped: Boolean
             text = {
                 Column(
                     Modifier.fillMaxWidth()
-                        .heightIn(max = 360.dp)
-                        .verticalScroll(rememberScrollState()),
+,
                     verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
                 ) {
                     SettingsHint(stringResource(R.string.settings_backup_import_hint))
                     BeaconText(stringResource(R.string.settings_backup_validated))
-                    if (hint.isNotEmpty()) BeaconText(hint)
+                    SettingsOverviewField(stringResource(R.string.settings_validation_title),
+                        hint.ifBlank { stringResource(R.string.settings_form_ready) }, error = failed == true)
                 }
             },
             confirmButton = {

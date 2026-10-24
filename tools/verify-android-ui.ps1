@@ -18,10 +18,12 @@ try {
     if ($DeviceTests) {
         $tasks += ':app:connectedDebugAndroidTest'
         if (-not $TestClass) {
-            $uiClasses = @('ReceptionPageOrderTest', 'SettingsStableLayoutTest', 'SettingsActionsLayoutTest', 'SettingsBackupPanelTest',
+            $uiClasses = @('QuietDaysSelectionTest', 'UiConsistencyRegressionTest', 'PendingRefreshUiTest', 'ReceptionPageOrderTest', 'SettingsStableLayoutTest', 'SettingsActionsLayoutTest', 'SettingsBackupPanelTest',
                 'StorageSettingsTest', 'SettingsInteractionRegressionTest', 'SettingsVisualQaTest',
                 'AdminSettingsLayoutTest', 'ReceiveRulesCompactTest', 'TimePreferenceTest',
-                'ConfigurationDialogsTest', 'BeaconDialogTest')
+                'ConfigurationDialogsTest', 'BeaconDialogTest',
+                'BeaconListInteractionTest#receptionModeSelectionAndLongPressMiuix',
+                'BeaconListInteractionTest#receptionModeSelectionAndLongPressMaterial')
             $TestClass = ($uiClasses | ForEach-Object { "io.github.beacon.app.$_" }) -join ','
         }
         if ($TestClass) { $extra += "-Pandroid.testInstrumentationRunnerArguments.class=$TestClass" }

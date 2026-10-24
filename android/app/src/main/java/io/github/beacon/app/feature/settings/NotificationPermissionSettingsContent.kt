@@ -42,6 +42,7 @@ internal fun LazyListScope.notificationPermissionSettingsItems(
     connected: Boolean,
     loadFailed: Boolean,
     onRetry: () -> Unit,
+    loading: Boolean = false,
 ) {
     item {
         SettingsGroup(stringResource(R.string.settings_permission_status_heading)) {
@@ -73,8 +74,8 @@ internal fun LazyListScope.notificationPermissionSettingsItems(
         // Resending is an action, not navigation, so it carries a button instead of the arrow the
         // row above uses to leave the app.
         SettingsSection(stringResource(R.string.settings_pending_notifications_title), action = {
-            BeaconRefreshAction(stringResource(R.string.action_refresh_status), connected && !busy,
-                false, onClick = onRetry)
+            BeaconRefreshAction(stringResource(R.string.action_refresh_status), connected && !busy && !loading,
+                loading, onClick = onRetry)
         }) {
             BeaconFittedText(
                 (pendingReminderCount?.let {

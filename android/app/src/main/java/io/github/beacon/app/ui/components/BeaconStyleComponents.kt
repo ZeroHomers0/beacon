@@ -70,17 +70,18 @@ fun BeaconText(
 
 /** All text actions share one treatment; legacy names preserve existing call sites. */
 @Composable
-private fun BeaconUnifiedButton(
+internal fun BeaconUnifiedButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     danger: Boolean = false,
+    selected: Boolean? = null,
     content: @Composable RowScope.() -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
     val foreground = if (!enabled) scheme.onSurface.copy(alpha = .38f)
-        else if (danger) scheme.error else scheme.primary
-    val background = scheme.surfaceContainerHigh
+        else if (danger) scheme.error else if (selected == true) scheme.onPrimaryContainer else scheme.primary
+    val background = if (selected == true) scheme.primaryContainer else scheme.surfaceContainerHigh
     val actionModifier = (if (LocalActionFillWidth.current) modifier.fillMaxWidth() else modifier)
         .heightIn(min = BeaconUiMetrics.ControlMinHeight)
         .widthIn(min = BeaconUiMetrics.ActionMinWidth)

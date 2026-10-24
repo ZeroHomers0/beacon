@@ -14,4 +14,9 @@
     <string name="reception_sync_tls_failure">服务器证书异常</string>
     <string name="reception_sync_config_failure">服务器配置或协议异常</string>
     <string name="overview_connected">已连接</string>
+    <string name="admin_stat_total">共 %1$d 个</string>
+    <string name="admin_stat_active">%1$d 个有效</string>
+    <string name="admin_stat_revoked">%1$d 个已撤销</string>
+    <string name="storage_used_space">已用空间</string>
+    <string name="admin_filter_title">筛选</string>
 </resources>

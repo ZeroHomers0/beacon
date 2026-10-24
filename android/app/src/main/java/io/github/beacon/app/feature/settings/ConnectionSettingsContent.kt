@@ -133,8 +133,9 @@ private fun ConnectionEditor(
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password))
                 SettingsHint(stringResource(R.string.binding_hint))
-                if (error.isNotBlank()) BeaconText(error, color = MaterialTheme.colorScheme.error)
-                if (submitted || busy) SettingsHint(state.status.text)
+                SettingsOverviewField(stringResource(R.string.settings_validation_title),
+                    if (error.isNotBlank()) error else if (submitted || busy) state.status.text
+                    else stringResource(R.string.settings_form_ready), error = error.isNotBlank())
             }
         },
         confirmButton = {
