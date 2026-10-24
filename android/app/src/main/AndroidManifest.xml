@@ -45,6 +45,9 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/state_widget_wide_info" />
         </receiver>
+        <receiver android:name=".widget.StateRefreshReceiver" android:exported="false">
+            <intent-filter><action android:name="android.intent.action.BOOT_COMPLETED" /><action android:name="android.intent.action.MY_PACKAGE_REPLACED" /><action android:name="android.intent.action.TIME_SET" /><action android:name="android.intent.action.TIMEZONE_CHANGED" /></intent-filter>
+        </receiver>
         <receiver android:name=".widget.PinStateWidgetReceiver" android:exported="false" />
         <receiver android:name=".widget.StateDismissReceiver" android:exported="false" />
         <activity android:name=".widget.StateWidgetActivity" android:exported="true">

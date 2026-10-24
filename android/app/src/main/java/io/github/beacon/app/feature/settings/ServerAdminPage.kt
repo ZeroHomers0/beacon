@@ -46,7 +46,7 @@ internal fun ServerAdminPage(
     val context = LocalContext.current
     val resources = androidx.compose.ui.platform.LocalResources.current
     if(screen==SettingsScreen.SERVER_TOPICS&&state.loggedIn){
-        AdminTopicsPage(state,model,scroll,modifier.padding(padding))
+        AdminTopicsPage(state,model,scroll,modifier,padding)
         return
     }
     var endpoint by rememberSaveable { mutableStateOf(defaultEndpoint) }
@@ -173,6 +173,10 @@ internal fun ServerAdminPage(
     }
     SettingsOperationFeedback(stringResource(R.string.admin_refresh),
         state.refreshFailure?.takeIf { tab != -1 }?.let { stringResource(it) }.orEmpty(), failed = true)
+    var listRefreshing by remember { mutableStateOf(false) }
+    LaunchedEffect(state.busy, listRefreshing) {
+        if (listRefreshing && !state.busy) listRefreshing = false
+    }
     Column(modifier) {
         if (state.loggedIn && tab in 0..1) Box(Modifier.fillMaxWidth().padding(
             start = padding.calculateLeftPadding(androidx.compose.ui.unit.LayoutDirection.Ltr),
@@ -189,14 +193,19 @@ internal fun ServerAdminPage(
                 total = if (tab == 0) allDevices.size else allApplications.size,
                 active = if (tab == 0) allDevices.count { !it.revoked } else allApplications.count { !it.revoked },
                 enabled = !state.busy,
+                totalIcon = if (tab == 0) BeaconIcons.Device else BeaconIcons.Applications,
             )
         }
+    BeaconPullToRefresh(listRefreshing, {
+        if (!state.busy) { listRefreshing = true; model.refresh() }
+    }, Modifier.fillMaxWidth().weight(1f), enabled = state.loggedIn && tab in 0..1) {
     BeaconSettingsList(
         state = scroll,
-        modifier = Modifier.fillMaxWidth().weight(1f),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = if (state.loggedIn && tab in 0..1) PaddingValues(
             start = padding.calculateLeftPadding(androidx.compose.ui.unit.LayoutDirection.Ltr),
             end = padding.calculateRightPadding(androidx.compose.ui.unit.LayoutDirection.Ltr),
+            top = BeaconUiMetrics.Gap4,
             bottom = padding.calculateBottomPadding(),
         ) else padding,
         listTag = "server-admin-list",
@@ -285,7 +294,7 @@ internal fun ServerAdminPage(
                     healthy = state.overviewLoaded && state.protocol == 1 && state.refreshFailure == null,
                     error = state.refreshFailure != null,
                     action = {
-                        SettingsToolAction(stringResource(R.string.admin_logout), BeaconIcons.Close,
+                        SettingsToolAction(stringResource(R.string.admin_logout), BeaconIcons.Logout,
                             enabled = !state.busy) { logoutConfirm = true }
                     },
                 ) {
@@ -333,7 +342,7 @@ internal fun ServerAdminPage(
                     ) {
                         onNavigate(SettingsScreen.SERVER_APPLICATIONS)
                     }
-                    SettingsActionRow(stringResource(R.string.admin_topics_title),"查看默认来源与应用上报的状态主题",BeaconIcons.Messages,!state.busy){onNavigate(SettingsScreen.SERVER_TOPICS)}
+                    SettingsActionRow(stringResource(R.string.admin_topics_title),"管理进度、数值、榜单和文字等数据内容",BeaconIcons.Topics,!state.busy){onNavigate(SettingsScreen.SERVER_TOPICS)}
                     SettingsActionRow(
                         stringResource(R.string.admin_test_title_page),
                         stringResource(R.string.admin_test_description),
@@ -524,7 +533,7 @@ internal fun ServerAdminPage(
             }
         }
     }
-
+    }
     }
 
     if (logoutConfirm)
@@ -801,6 +810,7 @@ internal fun AdminListCard(
     revoked: Boolean = false,
     priority: Int? = null,
     details: String = subtitle,
+    onDetails: (() -> Unit)? = null,
 ) {
     var showingDetails by remember { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
@@ -839,12 +849,12 @@ internal fun AdminListCard(
                 }
                 BeaconDropdownMenu(menuOpen && enabled, { menuOpen = false }) {
                     BeaconDropdownMenuItem({ BeaconText(stringResource(R.string.settings_view_details)) }) {
-                        menuOpen = false; showingDetails = true
+                        menuOpen = false; if(onDetails!=null)onDetails()else showingDetails = true
                     }
                     actions.forEach { (label, action) ->
                         BeaconDropdownMenuItem({ BeaconText(stringResource(label), color =
                             if (label in setOf(R.string.admin_delete_device, R.string.admin_revoke_device,
-                                R.string.admin_delete_application, R.string.admin_revoke_application))
+                                R.string.admin_delete_application, R.string.admin_revoke_application, R.string.admin_topic_clear))
                                 androidx.compose.material3.MaterialTheme.colorScheme.error
                             else androidx.compose.material3.MaterialTheme.colorScheme.onSurface) }) {
                             menuOpen = false

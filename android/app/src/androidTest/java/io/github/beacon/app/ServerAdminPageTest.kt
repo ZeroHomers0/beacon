@@ -261,7 +261,8 @@ class ServerAdminPageTest {
     @Test fun miuixUnboundPhoneBindsInOneTap() = oneTapBinding(BeaconUiStyle.MIUIX)
 
     private fun refinedPages(style: BeaconUiStyle) {
-        val model = ServerAdminViewModel { _, _ -> FixtureAdmin(includeApplications = true) }
+        val backend = FixtureAdmin(includeApplications = true)
+        val model = ServerAdminViewModel { _, _ -> backend }
         rule.runOnUiThread {
             // MainActivity may already own the production model; install this isolated fixture first.
             rule.activity.viewModelStore.clear()
@@ -292,6 +293,14 @@ class ServerAdminPageTest {
             rule.runOnIdle { screen.value = target }
             rule.waitForIdle()
             rule.onNodeWithTag("server-admin-list").assertIsDisplayed()
+            if (target in listOf(io.github.beacon.app.ui.components.SettingsScreen.SERVER_DEVICES,
+                    io.github.beacon.app.ui.components.SettingsScreen.SERVER_APPLICATIONS)) {
+                val before = backend.overviewCalls.get()
+                rule.onNodeWithTag("server-admin-list").performTouchInput { swipeDown(durationMillis = 600) }
+                rule.waitUntil(10000) { backend.overviewCalls.get() > before && !model.state.value.busy }
+                rule.mainClock.advanceTimeBy(1500)
+                rule.waitForIdle()
+            }
             if (target == io.github.beacon.app.ui.components.SettingsScreen.SERVER_TEST) {
                 rule.onAllNodes(hasSetTextAction()).assertCountEquals(2)
                 rule.onNodeWithText(rule.activity.getString(R.string.admin_send_test)).performScrollTo().assertIsNotEnabled()
@@ -307,8 +316,8 @@ class ServerAdminPageTest {
         rule.runOnIdle { screen.value = io.github.beacon.app.ui.components.SettingsScreen.SERVER_DEVICES }
         rule.waitForIdle()
         rule.runOnIdle { model.showCreation() }
-        rule.onAllNodes(hasSetTextAction())[0].performTextReplacement("Synthetic phone")
-        rule.onAllNodes(hasSetTextAction())[0].performImeAction()
+        rule.onAllNodes(hasSetTextAction()).onLast().performTextReplacement("Synthetic phone")
+        rule.onAllNodes(hasSetTextAction()).onLast().performImeAction()
         rule.onNode(hasText(rule.activity.getString(R.string.admin_create_binding)) and hasClickAction()).performClick()
         rule.waitUntil(5000) { model.state.value.secret != null }
         rule.onNodeWithContentDescription(rule.activity.getString(R.string.admin_copy)).assertIsDisplayed()
@@ -320,6 +329,7 @@ class ServerAdminPageTest {
     @Test fun refinedMiuixPages() = refinedPages(BeaconUiStyle.MIUIX)
 
     private class FixtureAdmin(private val includeApplications: Boolean = false) : ServerAdministration {
+        val overviewCalls = java.util.concurrent.atomic.AtomicInteger()
         var bindingCalls = 0
         override val endpoint = "https://example.invalid"
 
@@ -331,6 +341,7 @@ class ServerAdminPageTest {
             "storage":{"messages":12,"pending":2,"database_allocated_bytes":4096}}
         """
             ).apply {
+                overviewCalls.incrementAndGet()
                 if (includeApplications) put("applications", org.json.JSONArray().put(JSONObject()
                     .put("id", "app-1").put("device_id", "phone-1").put("name", "工作消息")
                     .put("default_priority", 5).put("revoked", false)))

@@ -22,6 +22,12 @@ internal class AdminListFilterState {
     var deviceStatus by androidx.compose.runtime.mutableIntStateOf(0)
     var applicationStatus by androidx.compose.runtime.mutableIntStateOf(0)
     var applicationDevice by androidx.compose.runtime.mutableStateOf("")
+    var topicSearch by androidx.compose.runtime.mutableStateOf("")
+    var topicDevice by androidx.compose.runtime.mutableStateOf("")
+    var topicApplication by androidx.compose.runtime.mutableStateOf("*")
+    var topicStatus by androidx.compose.runtime.mutableStateOf("all")
+    var topicOffset by androidx.compose.runtime.mutableIntStateOf(0)
+    var topicOpen by androidx.compose.runtime.mutableStateOf(false)
     var open by androidx.compose.runtime.mutableStateOf(false)
 }
 
@@ -61,15 +67,16 @@ internal fun AdminListFilters(
     devices: List<AdminDevice> = emptyList(), selectedDevice: String = "",
     onDevice: ((String) -> Unit)? = null,
     total: Int = 0, active: Int = 0, enabled: Boolean = true,
+    totalIcon: androidx.compose.ui.graphics.vector.ImageVector = io.github.beacon.app.ui.icons.BeaconIcons.Device,
 ) {
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
     Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
         BeaconSearchBox(query, onQuery, label, onSearch = { focus.clearFocus() })
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
-            BeaconSummaryPill(stringResource(R.string.admin_stat_total, total), io.github.beacon.app.ui.icons.BeaconIcons.Mail,
+            BeaconSummaryPill(stringResource(R.string.admin_stat_total, total), totalIcon,
                 highlighted = status == 0, enabled = enabled, onClick = { onStatus(0) }, Modifier.weight(1f), compact = true)
             BeaconSummaryPill(stringResource(if (status == 2) R.string.admin_stat_revoked else R.string.admin_stat_active,
-                if (status == 2) total - active else active), io.github.beacon.app.ui.icons.BeaconIcons.Device,
+                if (status == 2) total - active else active), if (status == 2) io.github.beacon.app.ui.icons.BeaconIcons.Block else io.github.beacon.app.ui.icons.BeaconIcons.Check,
                 highlighted = status != 0, enabled = enabled, onClick = { onStatus(if (status == 2) 2 else 1) },
                 Modifier.weight(1f), compact = true)
         }
@@ -85,7 +92,7 @@ internal fun AdminListFilters(
 }
 
 @Composable
-private fun AdminFilterChip(label: String, enabled: Boolean, onRemove: () -> Unit) {
+internal fun AdminFilterChip(label: String, enabled: Boolean, onRemove: () -> Unit) {
     BeaconActiveFilterChip(selected = true, onClick = onRemove, enabled = enabled,
         shape = BeaconUiMetrics.PillShape,
         label = { BeaconText(label, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
@@ -98,4 +105,24 @@ internal fun priorityShortLabel(value: Int): Int = when {
     value <= 3 -> R.string.settings_priority_silent
     value <= 7 -> R.string.settings_priority_normal
     else -> R.string.settings_priority_important
+}
+
+@Composable
+internal fun AdminTopicFilterAction(filters:AdminListFilterState,devices:List<AdminDevice>,applications:List<AdminApplication>,enabled:Boolean){
+    Box{
+        BeaconActionIcon(io.github.beacon.app.ui.icons.BeaconIcons.Filter,"筛选数据主题",enabled){filters.topicOpen=true}
+        BeaconDropdownMenu(filters.topicOpen,{filters.topicOpen=false}){
+            listOf("all" to "全部状态","active" to "有效","stale" to "数据陈旧","expired" to "已过期","deleted" to "已清空").forEach{(id,label)->
+                BeaconDropdownMenuItem({BeaconSelectableRow(label,filters.topicStatus==id)}){filters.topicStatus=id;filters.topicOffset=0;filters.topicOpen=false}
+            }
+            androidx.compose.material3.HorizontalDivider();SettingsLabel("设备")
+            (listOf("" to "全部设备")+devices.map{it.id to it.name.ifBlank{it.id}}).forEach{(id,label)->
+                BeaconDropdownMenuItem({BeaconSelectableRow(label,filters.topicDevice==id)}){filters.topicDevice=id;filters.topicApplication="*";filters.topicOffset=0;filters.topicOpen=false}
+            }
+            androidx.compose.material3.HorizontalDivider();SettingsLabel("发送应用")
+            (listOf("*" to "全部应用","" to "未关联应用")+applications.filter{filters.topicDevice.isBlank()||it.deviceId==filters.topicDevice}.map{it.id to it.name.ifBlank{it.id}}).forEach{(id,label)->
+                BeaconDropdownMenuItem({BeaconSelectableRow(label,filters.topicApplication==id)}){filters.topicApplication=id;filters.topicOffset=0;filters.topicOpen=false}
+            }
+        }
+    }
 }

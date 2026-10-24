@@ -70,6 +70,17 @@ fun SettingsPage(
         androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     var reminderAttempt by
         androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    val reminderLifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    androidx.compose.runtime.DisposableEffect(reminderLifecycle) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_START) reminderAttempt++
+        }
+        reminderLifecycle.addObserver(observer)
+        onDispose { reminderLifecycle.removeObserver(observer) }
+    }
+    var reminderRequested by androidx.compose.runtime.remember(screen, runtimeState.runtimeConnected, reminderAttempt) {
+        androidx.compose.runtime.mutableStateOf(false)
+    }
     androidx.compose.runtime.LaunchedEffect(
         reminderAttempt,
         screen,
@@ -79,8 +90,9 @@ fun SettingsPage(
         if (
             screen == SettingsScreen.NOTIFICATIONS &&
                 runtimeState.runtimeConnected &&
-                !runtimeState.messageBusy
+                !runtimeState.messageBusy && !reminderRequested
         ) {
+            reminderRequested = true
             reminderFailed = false
             reminderLoading = true
             actions.pendingReminders(onFailure = { reminderFailed = true; reminderLoading = false }) {

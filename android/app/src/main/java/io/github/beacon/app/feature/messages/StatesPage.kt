@@ -17,15 +17,21 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 @Composable
-internal fun StatesPage(modifier:Modifier=Modifier){
+internal fun StatesPage(modifier:Modifier=Modifier, busy:Boolean=false, connected:Boolean=true, onRefresh:()->Unit={}){
     val context=LocalContext.current;var rows by remember{mutableStateOf(emptyList<JSONObject>())};var search by remember{mutableStateOf("")};var showHidden by remember{mutableStateOf(false)}
-    LaunchedEffect(showHidden){while(true){rows=withContext(Dispatchers.IO){StateCache(context).use{db->db.all().filter{r->showHidden||db.preference("hidden:"+r.optString("local_source")+":"+r.optString("local_identity"))!="1"}}};delay(2000)}}
+    var version by remember{mutableIntStateOf(0)}
+    io.github.beacon.app.widget.ObserveStateChanges{version++}
+    io.github.beacon.app.widget.ObserveStateDeadline(rows){version++}
+    LaunchedEffect(showHidden,version){rows=withContext(Dispatchers.IO){StateCache(context).use{db->db.all().filter{r->showHidden||db.preference("hidden:"+r.optString("local_source")+":"+r.optString("local_identity"))!="1"}}}}
     val visible=rows.sortedByDescending{it.optLong("accepted_at_ms")}.filter{search.isBlank()||it.optString("title").contains(search,true)||it.optString("application_name").contains(search,true)}
-    LazyColumn(modifier.padding(horizontal=BeaconUiMetrics.PageInset),verticalArrangement=Arrangement.spacedBy(BeaconUiMetrics.SectionGap)){
+    var refreshing by remember { mutableStateOf(false) }
+    LaunchedEffect(refreshing,busy) { if(refreshing&&!busy){version++;refreshing=false} }
+    BeaconPullToRefresh(refreshing, { if(!busy){refreshing=true;onRefresh();version++} }, modifier, enabled=connected) {
+    LazyColumn(Modifier.fillMaxSize().padding(horizontal=BeaconUiMetrics.PageInset),verticalArrangement=Arrangement.spacedBy(BeaconUiMetrics.SectionGap)){
         item{BeaconSearchBox(search,{search=it},"搜索主题或应用",Modifier.fillMaxWidth(),onSearch={})}
         item{BeaconTextButton(onClick={showHidden=!showHidden}){BeaconText(if(showHidden)"隐藏已隐藏主题"else"显示已隐藏主题")}}
-        item{BeaconText("共 ${visible.size} 个状态 · 状态不计入未读",style=MaterialTheme.typography.labelMedium)}
-        if(visible.isEmpty())item{BeaconText("暂无状态，等待发送方上报。连接恢复后同步最新数据。")}
+        item{BeaconText("共 ${visible.size} 个主题 · 数据主题不计入未读",style=MaterialTheme.typography.labelMedium)}
+        if(visible.isEmpty())item{BeaconText("暂无数据主题，等待发送方上报。连接恢复后同步最新数据。")}
         items(visible,key={it.optString("local_source")+":"+it.optString("local_identity")}){row->
             BeaconCard(Modifier.fillMaxWidth()){
                 Column(Modifier.padding(BeaconUiMetrics.CardInset),verticalArrangement=Arrangement.spacedBy(BeaconUiMetrics.Gap12)){
@@ -38,5 +44,6 @@ internal fun StatesPage(modifier:Modifier=Modifier){
                 }
             }
         }
+    }
     }
 }

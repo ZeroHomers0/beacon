@@ -100,6 +100,7 @@ fun BeaconTimePreference(
                 unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             BeaconAlertDialog(
+                equalWidthActions = true,
                 onDismissRequest = { open = false },
                 title = { BeaconText(label) },
                 text = {
@@ -153,6 +154,7 @@ fun BeaconTimePreference(
         } else {
             val picker = rememberTimePickerState(minute / 60, minute % 60, true)
             BeaconAlertDialog(
+                equalWidthActions = true,
                 onDismissRequest = { open = false },
                 title = { BeaconText(label) },
                 text = {

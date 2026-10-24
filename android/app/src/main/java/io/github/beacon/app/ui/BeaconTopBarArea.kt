@@ -355,6 +355,8 @@ internal fun BeaconTopBarArea(
                             ) {
                                 adminModel.refresh()
                             }
+                        } else if(displayedDetail==null&&barPage==1&&displayedSettingsScreen==SettingsScreen.SERVER_TOPICS){
+                            io.github.beacon.app.feature.settings.AdminTopicFilterAction(adminModel.listFilters,adminState.devices,adminState.applications,adminState.loggedIn&&!adminState.busy)
                         } else if (
                             displayedDetail == null &&
                                 barPage == 1 &&

@@ -41,7 +41,7 @@ internal fun WidgetPreview(row:JSONObject?,config:JSONObject,size:SizeF,actual:B
         Column(Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
             BoxWithConstraints(Modifier.fillMaxWidth(),contentAlignment=Alignment.Center) {
                 val factor=minOf(1f,maxWidth.value/size.width,240f/size.height)
-                val bitmap=remember(row?.toString(),config.toString(),size,dark,density,factor){WidgetRenderer.render(row,config,size.width.toInt(),size.height.toInt(),dark,density*factor)}
+                val bitmap=remember(WidgetPerformance.displayKey(row,config),size,dark,density,factor){WidgetRenderer.render(row,config,size.width.toInt(),size.height.toInt(),dark,density*factor)}
                 Box(Modifier.width((size.width*factor).dp).height((size.height*factor).dp)){
                     if(config.optString("background")=="transparent")Canvas(Modifier.fillMaxSize()){
                         val cell=12.dp.toPx()
@@ -109,7 +109,7 @@ internal fun WidgetMetricSelector(row:JSONObject,config:JSONObject,onChange:(JSO
 internal fun WidgetTemplateSelector(row:JSONObject,config:JSONObject,size:SizeF,onSelect:(String)->Unit){
     SettingsGroup("模板样式"){
         Column(Modifier.padding(BeaconUiMetrics.CardInset),verticalArrangement=Arrangement.spacedBy(BeaconUiMetrics.Gap8)){
-            WidgetRenderer.templates.chunked(2).forEach{pair->
+            WidgetRenderer.templates.sortedBy{WidgetConfigRules.layoutError(row,JSONObject(config.toString()).put("template",it),size.width.toInt(),size.height.toInt())!=null}.chunked(2).forEach{pair->
                 Row(horizontalArrangement=Arrangement.spacedBy(BeaconUiMetrics.Gap8)){
                     pair.forEach{template->
                         val index=WidgetRenderer.templates.indexOf(template)
@@ -183,7 +183,7 @@ internal fun WidgetStateDetail(row:JSONObject,id:Int,cache:StateCache,onEdit:()-
         }}
         SettingsGroup("通知设置"){
             Column(Modifier.padding(horizontal=BeaconUiMetrics.CardInset)){
-                BeaconPreferenceToggle("显示静默状态通知","仅更新这一主题的通知",notify){value->notify=value;cache.preference("notify:$key",if(value)"1"else"0");cache.preference("dismiss:$key","");StateNotifications.refresh(context)}
+                BeaconPreferenceToggle("显示静默状态通知","仅更新这一主题的通知",notify){value->notify=value;cache.preference("notify:$key",if(value)"1"else"0");cache.preference("dismiss:$key","");StateNotifications.refresh(context);StateRefreshReceiver.schedule(context)}
             }
             if(progress.isNotEmpty())BeaconDropdownPreference("通知主内容",progress.map{it.optString("label",it.optString("id"))},progress.indexOfFirst{it.optString("id")==primary}.coerceAtLeast(0),settingsRow=true,icon=BeaconIcons.Tune){index->primary=progress[index].optString("id");cache.preference("primary:$key",primary);StateNotifications.refresh(context)}
         }
@@ -191,7 +191,7 @@ internal fun WidgetStateDetail(row:JSONObject,id:Int,cache:StateCache,onEdit:()-
             Column(Modifier.padding(horizontal=BeaconUiMetrics.CardInset)){
                 BeaconPreferenceToggle("在状态列表显示","隐藏不会删除数据或桌面组件",!hidden){show->hidden=!show;cache.preference("hidden:$key",if(hidden)"1"else"0")}
             }
-            SettingsRow(if(id==AppWidgetManager.INVALID_APPWIDGET_ID)"添加到桌面"else"编辑小组件","设置模板、内容和外观",BeaconIcons.Applications,onClick=onEdit)
+            SettingsRow(if(id==AppWidgetManager.INVALID_APPWIDGET_ID)"桌面添加说明"else"编辑小组件","设置模板、内容和外观",BeaconIcons.Applications,onClick=onEdit)
         }
     }
 }

@@ -266,8 +266,6 @@ class HttpMessageSync(
             if(!reply.getBoolean("has_more")) {
                 checkRunning()
                 local.stateCache.apply(namespace,records,reply.getString("next_cursor"),replace,initialCursor)
-                io.github.beacon.app.widget.BeaconStateWidget.refresh(local.stateContext)
-                io.github.beacon.app.widget.StateNotifications.refresh(local.stateContext)
                 return
             }
             if(reply.has("snapshot_token")) {snapshot=reply.getString("snapshot_token");pageCursor=reply.getString("page_cursor")} else {checkRunning();val next=reply.getString("next_cursor");local.stateCache.apply(namespace,records,next,false,initialCursor);records.clear();cursor=next;initialCursor=next}

@@ -156,6 +156,7 @@ fun BeaconDropdownPreference(
     icon: ImageVector? = null,
     settingsRow: Boolean = false,
     stacked: Boolean = false,
+    itemLeading: (@Composable (Int) -> Unit)? = null,
     onSelected: (Int) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -192,7 +193,7 @@ fun BeaconDropdownPreference(
             }
         BeaconDropdownMenu(expanded && enabled, { expanded = false }) {
             items.forEachIndexed { index, label ->
-                BeaconDropdownMenuItem({ BeaconSelectableRow(label, index == selectedIndex) }) {
+                BeaconDropdownMenuItem({ BeaconSelectableRow(label, index == selectedIndex,leading=itemLeading?.let{render->{render(index)}}) }) {
                     expanded = false
                     onSelected(index)
                 }

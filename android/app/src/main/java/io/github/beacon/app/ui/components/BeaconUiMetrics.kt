@@ -17,6 +17,8 @@ import androidx.compose.ui.unit.dp
  */
 object BeaconUiMetrics {
     val PageInset = 16.dp
+    val PageTopInset = 12.dp
+    val PageBottomInset = 24.dp
     val CardInset = 16.dp
     val SectionGap = 12.dp
     val SettingsGroupGap = 20.dp

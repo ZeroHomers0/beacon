@@ -75,6 +75,8 @@ data class AdminUiState(
     val topicsTotal:Int = 0,
     val topicsHasMore:Boolean = false,
     val topicsQuery:String = "",
+    val topicsLoaded:Boolean = false,
+    val topicsFailure:Int? = null,
     val topicDetail:JSONObject? = null,
 ) {
     fun listState(empty: Boolean) = io.github.beacon.app.domain.model.AsyncPageState.resolve(
@@ -215,25 +217,32 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
         ) {
             val overview = client.overview()
             val result = parseOverview(overview).copy(endpoint = client.endpoint, loggedIn = true)
-            result
+            withTopics(client,result)
         }
     }
 
     fun refresh() {
         if (mutable.value.secret != null || mutableCreating.value) return
         authenticated(null) { client ->
-            parseOverview(client.overview())
+            withTopics(client,parseOverview(client.overview())
                 .copy(
                     endpoint = client.endpoint,
                     loggedIn = true,
                     testDeviceId = mutable.value.testDeviceId,
-                )
+                ))
         }
     }
 
-    private fun topicsResult(client:ServerAdministration,query:JSONObject):AdminUiState {
+    private fun topicsResult(client:ServerAdministration,query:JSONObject,base:AdminUiState=mutable.value):AdminUiState {
         val result=client.stateTopics(query);val rows=result.getJSONArray("topics")
-        return mutable.value.copy(topics=List(rows.length()){rows.getJSONObject(it)},topicsTotal=result.getInt("total"),topicsHasMore=result.optBoolean("has_more"),topicsQuery=query.toString())
+        return base.copy(topics=List(rows.length()){rows.getJSONObject(it)},topicsTotal=result.getInt("total"),topicsHasMore=result.optBoolean("has_more"),topicsQuery=query.toString(),topicsLoaded=true,topicsFailure=null)
+    }
+    private fun withTopics(client:ServerAdministration,base:AdminUiState):AdminUiState {
+        val query=runCatching{JSONObject(mutable.value.topicsQuery)}.getOrElse{JSONObject().put("device_id","").put("state","all").put("search","").put("limit",50).put("offset",0)}
+        return try{topicsResult(client,query,base)}catch(error:Exception){
+            if(error is CancellationException||error is AdminRequestException&&error.status in listOf(401,403))throw error
+            base.copy(topics=mutable.value.topics,topicsTotal=mutable.value.topicsTotal,topicsHasMore=mutable.value.topicsHasMore,topicsQuery=query.toString(),topicsLoaded=true,topicsFailure=if(error is AdminRequestException&&error.status==404)R.string.admin_unavailable else R.string.admin_request_failed)
+        }
     }
     fun loadTopics(query:JSONObject)=authenticated(null){client->topicsResult(client,query)}
     fun loadTopic(identity:JSONObject)=authenticated(null){client->mutable.value.copy(topicDetail=client.stateTopic(identity).getJSONObject("state"))}

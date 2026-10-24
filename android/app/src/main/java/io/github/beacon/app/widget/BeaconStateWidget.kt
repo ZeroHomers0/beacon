@@ -24,17 +24,26 @@ open class BeaconStateWidget: AppWidgetProvider() {
     override fun onDeleted(context:Context, ids:IntArray){StateCache(context).use{db->ids.forEach{db.preference("widget:$it","")}}}
     override fun onRestored(context:Context, old:IntArray, new:IntArray){StateCache(context).use{db->old.indices.forEach{db.preference("widget:${new[it]}",db.preference("widget:${old[it]}"))}};refresh(context,new)}
     companion object {
-        private val pending=java.util.concurrent.atomic.AtomicBoolean(false)
         private val trailing=java.util.concurrent.Executors.newSingleThreadScheduledExecutor{task->Thread(task,"beacon-widget-refresh").apply{isDaemon=true}}
-        private fun schedule(context:Context){if(pending.compareAndSet(false,true))trailing.schedule({pending.set(false);refresh(context.applicationContext)},5,java.util.concurrent.TimeUnit.SECONDS)}
+        private var scheduled:java.util.concurrent.ScheduledFuture<*>?=null
+        private var scheduledAt=Long.MAX_VALUE
+        @Synchronized private fun schedule(context:Context,delay:Long){
+            val at=android.os.SystemClock.elapsedRealtime()+delay
+            if(at>=scheduledAt)return
+            scheduled?.cancel(false);scheduledAt=at
+            scheduled=trailing.schedule({synchronized(this){scheduledAt=Long.MAX_VALUE;scheduled=null};refresh(context.applicationContext)},delay,java.util.concurrent.TimeUnit.MILLISECONDS)
+        }
 
-        fun refresh(context:Context, ids:IntArray?=null){
+        private val bitmaps=object:android.util.LruCache<String,android.graphics.Bitmap>(8*1024*1024){override fun sizeOf(key:String,value:android.graphics.Bitmap)=value.byteCount}
+        @Synchronized fun refresh(context:Context, ids:IntArray?=null,source:String?=null,identities:Set<String>?=null){
+            WidgetPerformance.requests.incrementAndGet()
             val manager=AppWidgetManager.getInstance(context);val targets=ids?:WidgetInstances.ids(context)
-            StateCache(context).use{cache->val rows=cache.all();for(id in targets){
+            StateCache(context).use{cache->for(id in targets){
                 val config=runCatching{JSONObject(cache.preference("widget:$id"))}.getOrElse{JSONObject()}
-                val row=rows.firstOrNull{it.optString("local_source")==config.optString("source")&&it.optString("local_identity")==config.optString("identity")}
+                if(source!=null&&(config.optString("source")!=source||identities!=null&&config.optString("identity") !in identities))continue
+                val row=cache.find(config.optString("source"),config.optString("identity"))
                 val options=manager.getAppWidgetOptions(id);val format=WidgetInstances.format(context,id)
-                config.put("format",format.name)
+                config.put("format",format.name).put("_offline",!WidgetHealth.online(context))
                 val sizes=WidgetHostSizes.resolve(options,context.resources.configuration.orientation,format.width,format.height)
                 val dark=when(config.optString("background")){"light"->false;"dark"->true;else->context.resources.configuration.uiMode and 0x30 == 0x20}
                 val now=System.currentTimeMillis()
@@ -45,22 +54,26 @@ open class BeaconStateWidget: AppWidgetProvider() {
                 val pixelBudget=(bounds.width().toDouble()*bounds.height()*1.0).coerceIn(1.0,Int.MAX_VALUE.toDouble())
                 val area=sizes.sumOf{it.width.toDouble()*it.height}
                 val rasterDensity=kotlin.math.min(metrics.density.toDouble(),kotlin.math.sqrt(pixelBudget/area)).toFloat()
-                val signature="raster-v2:"+rasterDensity+":"+config.toString()+":"+sizes.joinToString()+":"+dark+":"+row?.optLong("revision")+":"+(row==null)+":"+(row?.optLong("stale_at_ms") in 1..now)+":"+(row?.optLong("expires_at_ms") in 1..now)
+                val signature="display-v3:"+rasterDensity+":"+sizes.joinToString()+":"+dark+":"+WidgetPerformance.displayKey(row,config)
                 val last=cache.preference("widget-last:$id").toLongOrNull()?:0L
-                if(ids==null&&cache.preference("widget-signature:$id")==signature)continue
-                if(ids==null&&row!=null&&status !in listOf("completed","failed","cancelled")&&now-last<5000){schedule(context);continue}
+                if(ids==null&&cache.preference("widget-signature:$id")==signature){WidgetPerformance.skipped.incrementAndGet();continue}
+                if(ids==null&&source!=null&&row!=null&&cache.preference("widget-valid:$id")=="1"&&status !in listOf("completed","failed","cancelled")&&now-last<WidgetPerformance.interval(config,row)){schedule(context,(WidgetPerformance.interval(config,row)-(now-last)).coerceAtLeast(250));continue}
                 fun render(size:android.util.SizeF):RemoteViews {
-                    val bitmap=WidgetRenderer.render(row,config,size.width.toInt(),size.height.toInt(),dark,rasterDensity,pixelBudget.toInt())
+                    val key=signature+":"+size
+                    val bitmap=bitmaps.get(key)?.also{WidgetPerformance.reused.incrementAndGet()}?:WidgetRenderer.render(row,config,size.width.toInt(),size.height.toInt(),dark,rasterDensity,pixelBudget.toInt()).also{
+                        bitmaps.put(key,it);WidgetPerformance.renders.incrementAndGet();WidgetPerformance.pixels.addAndGet(it.width.toLong()*it.height)
+                    }
                     return RemoteViews(context.packageName,R.layout.state_widget).apply{
                         setImageViewBitmap(R.id.widget_image,bitmap)
-                        setContentDescription(R.id.widget_image,row?.optString("body")?:"Beacon 状态，长按桌面组件编辑")
+                        setContentDescription(R.id.widget_image,row?.optString("body")?:"Beacon 数据，长按桌面组件编辑")
                         setOnClickPendingIntent(R.id.widget_image,null)
                     }
                 }
                 val views=if(android.os.Build.VERSION.SDK_INT>=31&&sizes.size>1)RemoteViews(sizes.associateWith{render(it)})else render(sizes.first())
                 manager.updateAppWidget(id,views)
-                cache.preference("widget-signature:$id",signature);cache.preference("widget-last:$id",now.toString())
+                cache.preference("widget-valid:$id",if(row==null)"0"else"1");cache.preference("widget-signature:$id",signature);cache.preference("widget-last:$id",now.toString())
             }}
+            StateRefreshReceiver.schedule(context)
         }
     }
 }

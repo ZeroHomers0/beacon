@@ -26,11 +26,19 @@ fun BeaconAlertDialog(
     text: @Composable () -> Unit,
     confirmButton: @Composable () -> Unit,
     dismissButton: (@Composable () -> Unit)? = null,
+    equalWidthActions: Boolean = false,
 ) {
     val screenHeight = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp
     val actions: @Composable () -> Unit = {
         if (dismissButton == null) {
             SettingsActions { confirmButton() }
+        } else if (equalWidthActions) {
+            CompositionLocalProvider(LocalActionFillWidth provides true) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12)) {
+                    Box(Modifier.weight(1f), propagateMinConstraints = true) { dismissButton() }
+                    Box(Modifier.weight(1f), propagateMinConstraints = true) { confirmButton() }
+                }
+            }
         } else BeaconActionPair(
             dismiss = { dismissButton() },
             confirm = confirmButton,

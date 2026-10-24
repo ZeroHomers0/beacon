@@ -8,7 +8,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /** Separate from event history and unread/ACK queues; shared safely across app processes. */
-class StateCache(context: Context) : SQLiteOpenHelper(context, "states.db", null, 2) {
+class StateCache(private val context: Context) : SQLiteOpenHelper(context, "states.db", null, 2) {
     init { setWriteAheadLoggingEnabled(true) }
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("CREATE TABLE states(source TEXT NOT NULL,identity TEXT NOT NULL,payload TEXT NOT NULL,PRIMARY KEY(source,identity))")
@@ -22,8 +22,13 @@ class StateCache(context: Context) : SQLiteOpenHelper(context, "states.db", null
         buildList { while (c.moveToNext()) add(JSONObject(c.getString(2)).put("local_source", c.getString(0)).put("local_identity", c.getString(1))) }
     }
     fun preference(key: String): String = readableDatabase.rawQuery("SELECT value FROM preferences WHERE key=?", arrayOf(key)).use { if (it.moveToFirst()) it.getString(0) else "" }
-    fun preference(key: String, value: String) { writableDatabase.insertWithOnConflict("preferences", null, ContentValues().apply { put("key", key); put("value", value) }, SQLiteDatabase.CONFLICT_REPLACE) }
-    fun forget(source: String) {val db=writableDatabase;db.beginTransaction();try{for(table in listOf("states","cursors","watermarks"))db.delete(table,"source=?",arrayOf(source));db.setTransactionSuccessful()}finally{db.endTransaction()}}
+    fun preference(key: String, value: String) {
+        writableDatabase.insertWithOnConflict("preferences", null, ContentValues().apply { put("key", key); put("value", value) }, SQLiteDatabase.CONFLICT_REPLACE)
+        if(key.startsWith("widget:")||key.startsWith("pin-result:"))io.github.beacon.app.widget.StateChanges.ui(context)
+    }
+    fun find(source:String,identity:String):JSONObject?=readableDatabase.rawQuery("SELECT payload FROM states WHERE source=? AND identity=?",arrayOf(source,identity)).use{if(it.moveToFirst())JSONObject(it.getString(0)).put("local_source",source).put("local_identity",identity)else null}
+    fun notificationBindings():List<Pair<String,String>> = readableDatabase.rawQuery("SELECT key FROM preferences WHERE key LIKE 'notify:%' AND value='1'",null).use{cursor->buildList{while(cursor.moveToNext()){val parts=cursor.getString(0).removePrefix("notify:").split(":",limit=2);if(parts.size==2)add(parts[0] to parts[1])}}}
+    fun forget(source: String) {val db=writableDatabase;db.beginTransaction();try{for(table in listOf("states","cursors","watermarks"))db.delete(table,"source=?",arrayOf(source));db.setTransactionSuccessful()}finally{db.endTransaction()};io.github.beacon.app.widget.StateChanges.data(context,source,null)}
     fun apply(source: String, records: List<JSONObject>, cursor: String, replace: Boolean, expectedCursor:String?=null) {
         require(records.size <= 10000 && cursor.length <= 1024)
         val db = writableDatabase; db.beginTransaction()
@@ -48,5 +53,6 @@ class StateCache(context: Context) : SQLiteOpenHelper(context, "states.db", null
             db.insertWithOnConflict("cursors",null,ContentValues().apply { put("source",source);put("cursor",cursor) },SQLiteDatabase.CONFLICT_REPLACE)
             db.setTransactionSuccessful()
         } finally { db.endTransaction() }
+        if(replace||records.isNotEmpty())io.github.beacon.app.widget.StateChanges.data(context,source,if(replace)null else records.map{it.optString("application_id")+":"+it.optString("topic_key")})
     }
 }

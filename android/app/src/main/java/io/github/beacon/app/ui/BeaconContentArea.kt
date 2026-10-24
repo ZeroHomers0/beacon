@@ -83,7 +83,7 @@ val listModifier =
         )
 val edge = BeaconUiMetrics.PageInset
 val listPadding =
-    PaddingValues(start = edge, end = edge, top = 12.dp, bottom = 24.dp)
+    PaddingValues(start = edge, end = edge, top = BeaconUiMetrics.PageTopInset, bottom = BeaconUiMetrics.PageBottomInset)
 // Scaffold follows the animated header height; animating body size again
 // would change the shared transition duration during a back gesture.
 BeaconMessageTransition(
@@ -133,7 +133,7 @@ BeaconMessageTransition(
             overscrollEffect = null,
         ) { visiblePage ->
             when (visiblePage) {
-                2 -> io.github.beacon.app.feature.messages.StatesPage(Modifier.fillMaxSize().padding(insets))
+                2 -> io.github.beacon.app.feature.messages.StatesPage(Modifier.fillMaxSize().padding(insets), busy = runtimeState.messageBusy || runtimeState.transportBusy, connected = runtimeState.runtimeConnected, onRefresh = { actions.transport() })
                 0 ->
                     MessagesPage(
                         messageScroll,

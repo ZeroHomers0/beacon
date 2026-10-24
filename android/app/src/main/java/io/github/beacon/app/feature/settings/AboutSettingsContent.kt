@@ -37,7 +37,6 @@ internal fun LazyListScope.aboutSettingsItems(
                 Modifier.size(64.dp)
                     .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp)),
             )
-            BeaconText("Beacon", style = MaterialTheme.typography.headlineMedium)
             BeaconFittedText(
                 stringResource(R.string.settings_app_tagline_hint),
                 modifier = Modifier.fillMaxWidth(),

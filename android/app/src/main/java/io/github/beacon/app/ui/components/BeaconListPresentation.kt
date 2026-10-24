@@ -201,8 +201,13 @@ fun BeaconPullToRefresh(
     onRefresh: () -> Unit,
     modifier: Modifier,
     indicatorPadding: PaddingValues = PaddingValues(0.dp),
+    enabled: Boolean = true,
     content: @Composable () -> Unit,
 ) {
+    if (!enabled) {
+        Box(modifier) { content() }
+        return
+    }
     if (LocalBeaconUiStyle.current == BeaconUiStyle.MIUIX) {
         top.yukonga.miuix.kmp.basic.PullToRefresh(
             isRefreshing = refreshing,

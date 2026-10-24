@@ -430,7 +430,7 @@ const TOOLS = [
       additionalProperties: false,
       properties: {
         mode: {type:"string",enum:["event","state"],description:"默认事件。持续更新必须使用 state，不要每秒新增事件。"},
-        topic_key: {type:"string",description:"状态主题稳定标识，不含凭据。"},
+        topic_key: {type:"string",description:"数据主题稳定标识，不含凭据。"},
         revision: {type:"integer",minimum:1,maximum:9007199254740991,description:"同主题单调递增版本，重试沿用原版本。"},
         state_type: {type:"string",enum:["persistent","task"]},
         status: {type:"string",enum:["running","paused","completed","failed","cancelled"]},

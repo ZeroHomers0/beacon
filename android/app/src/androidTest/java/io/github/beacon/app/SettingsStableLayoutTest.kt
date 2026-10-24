@@ -97,4 +97,26 @@ class SettingsStableLayoutTest {
 
     @Test fun materialRefreshKeepsBounds() = verify(BeaconUiStyle.MATERIAL3)
     @Test fun miuixRefreshKeepsBounds() = verify(BeaconUiStyle.MIUIX)
+    private fun verifyTimeActions(style: BeaconUiStyle) {
+        rule.runOnUiThread {
+            rule.activity.setContent {
+                BeaconTheme(style) {
+                    BeaconTimePreference("08:30", {}, "选择时间")
+                }
+            }
+        }
+        rule.onNodeWithText("08:30", substring = true).performClick()
+        rule.waitForIdle()
+        val cancel = rule.onNodeWithText(rule.activity.getString(R.string.action_cancel))
+            .getUnclippedBoundsInRoot()
+        val confirm = rule.onNodeWithText(rule.activity.getString(R.string.settings_confirm))
+            .getUnclippedBoundsInRoot()
+        org.junit.Assert.assertTrue(kotlin.math.abs(cancel.top.value - confirm.top.value) < 2f)
+        org.junit.Assert.assertTrue(kotlin.math.abs((cancel.right - cancel.left).value - (confirm.right - confirm.left).value) < 2f)
+        org.junit.Assert.assertTrue(cancel.right <= confirm.left)
+        rule.onNodeWithText(rule.activity.getString(R.string.action_cancel)).performClick()
+    }
+    @Test fun materialTimeActionsShareOneRow() = verifyTimeActions(BeaconUiStyle.MATERIAL3)
+    @Test fun miuixTimeActionsShareOneRow() = verifyTimeActions(BeaconUiStyle.MIUIX)
+
 }

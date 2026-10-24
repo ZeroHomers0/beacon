@@ -1,6 +1,5 @@
 package io.github.beacon.app.widget
 
-import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.Intent
 import android.os.Bundle
@@ -24,6 +23,7 @@ import io.github.beacon.app.ui.components.*
 import io.github.beacon.app.ui.icons.BeaconIcons
 import io.github.beacon.app.ui.theme.BeaconTheme
 import io.github.beacon.app.ui.theme.LocalBeaconUiStyle
+import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -44,10 +44,10 @@ class StateWidgetActivity : ComponentActivity() {
 
 private fun widgetDefaults(raw: String,row: JSONObject?): String {
     val config=runCatching{JSONObject(raw)}.getOrElse{JSONObject()}
-    if(!config.has("template"))config.put("template","horizontal_bars")
+    if(!config.has("template"))config.put("template",WidgetConfigRules.recommend(row?:JSONObject()))
     if(!config.has("color"))config.put("color","fixed")
     if(!config.has("background"))config.put("background","system")
-    if(!config.has("metrics"))config.put("metrics",JSONArray(WidgetConfigRules.selected(row?:JSONObject(),config).take(4).map{it.optString("id")}))
+    if(!config.has("metrics"))config.put("metrics",JSONArray(WidgetConfigRules.defaults(row?:JSONObject(),config).map{it.optString("id")}))
     if(row!=null&&!config.has("source"))config.put("source",row.optString("local_source")).put("identity",row.optString("local_identity"))
     return config.toString()
 }
@@ -68,12 +68,12 @@ internal fun StateWidgetEditor(id:Int, detail:Boolean, source:String?, identity:
     }
     var draft by rememberSaveable{mutableStateOf(initial)}
     var baseline by rememberSaveable{mutableStateOf(initial)}
-    val config=remember(draft){JSONObject(draft)}
+    val config=remember(draft,requestedFormat){JSONObject(draft).apply{if(!has("format")&&requestedFormat!=null)put("format",requestedFormat)}}
     val row=rows.firstOrNull{it.optString("local_source")==config.optString("source")&&it.optString("local_identity")==config.optString("identity")}
     var sourceFilter by rememberSaveable{mutableStateOf("*")}
     val sourceIds=listOf("*")+rows.map{it.optString("application_id")}.distinct()
     LaunchedEffect(sourceIds){if(sourceFilter !in sourceIds)sourceFilter="*"}
-    val sourceNames=sourceIds.map{key->if(key=="*")"全部来源"else if(key.isBlank())"默认来源"else rows.firstOrNull{it.optString("application_id")==key}?.optString("application_name").orEmpty().ifBlank{key}}
+    val sourceNames=sourceIds.map{key->if(key=="*")"全部应用"else if(key.isBlank())"未关联应用"else rows.firstOrNull{it.optString("application_id")==key}?.optString("application_name").orEmpty().ifBlank{key}}
     val choices=(rows.filter{sourceFilter=="*"||it.optString("application_id")==sourceFilter}+listOfNotNull(row)).distinctBy{it.optString("local_source")+":"+it.optString("local_identity")}
     var editing by rememberSaveable{mutableStateOf(!detail)}
     val defaultFormat=remember{requestedFormat?:WidgetInstances.format(context,id).name}
@@ -83,8 +83,13 @@ internal fun StateWidgetEditor(id:Int, detail:Boolean, source:String?, identity:
     var previewSize by remember{mutableStateOf(WidgetInstances.previewSize(context,id,format))}
     var discard by remember{mutableStateOf(false)}
     var feedback by remember{mutableStateOf("")}
-    var pinToken by rememberSaveable{mutableStateOf("")}
-    LaunchedEffect(pinToken){if(pinToken.isNotBlank())while(true){kotlinx.coroutines.delay(500);if(cache.preference("pin-result:$pinToken").isNotBlank()){cache.preference("pin-result:$pinToken","");onSaved();break}}}
+    var invalidation by remember{mutableIntStateOf(0)}
+    ObserveStateChanges{invalidation++}
+    ObserveStateDeadline(rows){invalidation++}
+    LaunchedEffect(invalidation){
+        rows=kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO){StateCache(context).use{it.all()}}
+
+    }
     val dirty=draft!=baseline
     fun update(change:(JSONObject)->Unit){draft=JSONObject(draft).apply(change).toString()}
     fun back(){if(editing&&dirty)discard=true else if(editing&&detail)editing=false else onExit()}
@@ -95,8 +100,7 @@ internal fun StateWidgetEditor(id:Int, detail:Boolean, source:String?, identity:
         lifecycle.addObserver(observer);onDispose{lifecycle.removeObserver(observer)}
     }
     LaunchedEffect(format){previewSize=WidgetInstances.previewSize(context,id,format)}
-    LaunchedEffect(cache){while(true){kotlinx.coroutines.delay(2000);rows=kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO){cache.all()}}}
-    val error=if(row==null)"暂无状态数据，请先由发送方上报。"else WidgetConfigRules.layoutError(row,config,previewSize.width.toInt(),previewSize.height.toInt())
+    val error=if(row==null)"暂无可展示的数据，请先由发送方上报。"else WidgetConfigRules.layoutError(row,config,previewSize.width.toInt(),previewSize.height.toInt())
     val save:()->Unit={
         if(error==null&&row!=null){
             try {
@@ -106,61 +110,66 @@ internal fun StateWidgetEditor(id:Int, detail:Boolean, source:String?, identity:
                     draft=saved.toString();baseline=draft
                     if(detail)editing=false else onSaved()
                 }else{
-                    val manager=AppWidgetManager.getInstance(context)
-                    if(!manager.isRequestPinAppWidgetSupported)feedback="请从桌面的小组件列表添加。"
-                    else{
-                        val token=java.util.UUID.randomUUID().toString()
-                        val callback=Intent(context,PinStateWidgetReceiver::class.java).putExtra("pin_token",token).setData(android.net.Uri.parse("beacon://pin/"+java.util.UUID.randomUUID())).putExtra("config",saved.toString())
-                        val pending=PendingIntent.getBroadcast(context,0,callback,PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
-                        if(manager.requestPinAppWidget(format.component(context),null,pending)){pinToken=token;feedback="请在桌面弹窗中确认添加。确认后将自动返回。"}else feedback="桌面未接受添加请求，请重试。"
-                    }
+                    feedback="请长按桌面空白处，打开小组件列表并选择 Beacon。App 仅管理已添加的组件。"
                 }
             }catch(_:Exception){feedback="保存失败，请重试。"}
         }
     }
+    val scroll=rememberLazyListState();val scope=rememberCoroutineScope()
     val bar=rememberBeaconBarBehavior();val style=LocalBeaconUiStyle.current
     BeaconScaffold(topBar={
-        BeaconTopBar(if(editing)"小组件设置"else"状态详情",false,bar,
+        BeaconTopBar(if(editing)"小组件设置"else"内容详情",false,bar,
             navigationIcon={BeaconIconButton(onClick={back()}){Icon(BeaconIcons.Back,"返回")}},
             actions={if(editing){
+                BeaconIconButton(onClick={scope.launch{scroll.animateScrollToItem(0)}}){Icon(BeaconIcons.Info,"查看预览")}
                 if(existing)BeaconSaveAction("保存设置",dirty||stored.isBlank(),false,error==null&&(dirty||stored.isBlank()),save)
-                else BeaconActionIcon(BeaconIcons.Add,"添加到桌面",enabled=error==null,onClick=save)
+                else BeaconActionIcon(BeaconIcons.Info,"桌面添加说明",onClick={feedback="请长按桌面空白处，从小组件列表选择 Beacon。"})
             }})
     },bottomBar={}){padding->
-        BeaconSettingsList(rememberLazyListState(),Modifier.fillMaxSize().padding(padding).nestedScroll(bar.connection(style)),contentPadding=PaddingValues(BeaconUiMetrics.PageInset)) {
+        BeaconSettingsList(scroll,Modifier.fillMaxSize().padding(padding).nestedScroll(bar.connection(style)),contentPadding=PaddingValues(start=BeaconUiMetrics.PageInset,end=BeaconUiMetrics.PageInset,top=BeaconUiMetrics.PageTopInset,bottom=BeaconUiMetrics.PageBottomInset)) {
             if(editing){
-                item { WidgetPreview(row,JSONObject(config.toString()).put("format",format.name),previewSize,existing,format,error) }
-                item { SettingsGroup("数据来源"){
+                item { WidgetPreview(row,JSONObject(config.toString()).put("format",format.name).put("_offline",!WidgetHealth.online(context)),previewSize,existing,format,error) }
+                item { SettingsGroup("数据选择"){
                     if(!existing)BeaconDropdownPreference("组件规格",WidgetFormat.entries.map{it.label},format.ordinal,settingsRow=true,icon=BeaconIcons.Applications){index->update{it.put("format",WidgetFormat.entries[index].name)}}
-                    BeaconDropdownPreference("来源（可选）",sourceNames,sourceIds.indexOf(sourceFilter).coerceAtLeast(0),settingsRow=true,icon=BeaconIcons.Applications){index->sourceFilter=sourceIds[index]}
-                    BeaconDropdownPreference("状态主题",choices.map{it.optString("title")+" · "+it.optString("application_name").ifBlank{if(it.optString("application_id").isBlank())"默认来源"else it.optString("application_id")}},choices.indexOf(row),enabled=choices.isNotEmpty(),settingsRow=true,icon=BeaconIcons.Messages){index->
+                    BeaconDropdownPreference("按发送应用筛选",sourceNames,sourceIds.indexOf(sourceFilter).coerceAtLeast(0),settingsRow=true,icon=BeaconIcons.Applications){index->sourceFilter=sourceIds[index]}
+                    BeaconDropdownPreference("选择展示内容",choices.map{it.optString("title").ifBlank{it.optString("topic_key")}+" · "+(if(it.optString("application_id").isBlank())"未关联应用"else it.optString("application_name").ifBlank{it.optString("application_id")})},choices.indexOf(row),enabled=choices.isNotEmpty(),settingsRow=true,icon=BeaconIcons.Topics){index->
                         val selected=choices[index]
                         val next=JSONObject(draft).put("source",selected.optString("local_source")).put("identity",selected.optString("local_identity"))
                         next.remove("metrics")
-                        next.put("metrics",JSONArray(WidgetConfigRules.selected(selected,next).take(4).map{it.optString("id")}))
+                        next.put("template",WidgetConfigRules.recommend(selected))
+                        next.put("metrics",JSONArray(WidgetConfigRules.defaults(selected,next).map{it.optString("id")}))
                         draft=next.toString()
+                    }
+                    Column(Modifier.padding(horizontal=BeaconUiMetrics.CardInset,vertical=BeaconUiMetrics.Gap8),verticalArrangement=Arrangement.spacedBy(BeaconUiMetrics.Gap8)){
+                        SettingsHint("选项来自本机已收到的数据。筛选仅帮助查找，选择展示内容后才会更换当前绑定。")
+                        SettingsHint("未关联应用：直接使用设备推送密钥上报，无需创建应用。")
+                        if(row!=null&&sourceFilter!="*"&&row.optString("application_id")!=sourceFilter)
+                            SettingsHint("当前展示内容不属于筛选的应用，已保留；选择新内容后才会更换。")
                     }
                 }}
                 if(row!=null){
                     item { WidgetMetricSelector(row,config){next->draft=next.toString()} }
-                    item { SettingsGroup("标题") { Column(Modifier.padding(BeaconUiMetrics.CardInset)){
+                    item { SettingsGroup("组件名称与标题") { Column(Modifier.padding(BeaconUiMetrics.CardInset)){
+                        BeaconTextField(config.optString("instance_name"),{value->update{it.put("instance_name",WidgetTextLimits.cap(value,24))}},Modifier.fillMaxWidth(),label={BeaconText("组件名称")},labelText="组件名称",singleLine=true,placeholder="仅用于区分桌面实例")
                         BeaconTextField(config.optString("title"),{value->update{it.put("title",if(value.codePointCount(0,value.length)>12)value.substring(0,value.offsetByCodePoints(0,12))else value)}},Modifier.fillMaxWidth(),label={BeaconText("自定义短标题")},labelText="自定义短标题",singleLine=true,placeholder="留空使用主题名称")
                         SettingsHint("最多12个字符，桌面按实际宽度省略显示。")
                     }}}
                     item { WidgetTemplateSelector(row,config,previewSize){value->update{it.put("template",value)}} }
-                    item { WidgetColorSettings(row,config){next->draft=next.toString()} }
-                    item { SettingsGroup("外观") {
-                        BeaconDropdownPreference("内容配色",listOf("自选颜色","按状态变色"),if(config.optString("color")=="semantic")1 else 0,settingsRow=true,icon=BeaconIcons.Palette){index->update{it.put("color",if(index==0)"fixed"else"semantic")}}
-                        BeaconDropdownPreference("卡片背景",listOf("跟随手机主题","浅色","深色","透明"),listOf("system","light","dark","transparent").indexOf(config.optString("background","system")),settingsRow=true,icon=BeaconIcons.ThemeMode){index->update{it.put("background",listOf("system","light","dark","transparent")[index])}}
+                    item { WidgetListSettings(config){next->draft=next.toString()} }
+                    item { WidgetTuningSettings(config){next->draft=next.toString()} }
+                    item { WidgetSimpleAppearance(row,config){next->draft=next.toString()} }
+                    item { WidgetMoreSettings(row,config){next->draft=next.toString()} }
+                    item { SettingsGroup("刷新与状态"){
+                        BeaconDropdownPreference("刷新策略",listOf("及时更新（约5秒）","均衡（任务约5秒，其他约15秒）","省电（约1分钟）"),listOf("fast","balanced","economy").indexOf(config.optString("refresh","balanced")).coerceAtLeast(0),settingsRow=true,icon=BeaconIcons.Sync){index->update{it.put("refresh",listOf("fast","balanced","economy")[index])}}
+                        Column(Modifier.padding(horizontal=BeaconUiMetrics.CardInset)){
+                            BeaconPreferenceToggle("显示更新时间","紧凑尺寸下优先保证内容可读",config.optBoolean("updated",true)){value->update{it.put("updated",value)}}
+                        }
                     }}
-                    item { SettingsGroup("显示选项") { Column(Modifier.padding(horizontal=BeaconUiMetrics.CardInset)){
-                        BeaconPreferenceToggle("显示分段提示颜色","按发送方设定的范围显示不同颜色",config.optBoolean("bands")){value->update{it.put("bands",value)}}
-                        BeaconPreferenceToggle("显示更新时间","紧凑尺寸下优先保证内容可读",config.optBoolean("updated",true)){value->update{it.put("updated",value)}}
-                    }}}
+
                 }
             }else if(row!=null){
-                item { WidgetStateDetail(row,id,cache,onEdit={baseline=draft;editing=true},onExit=onExit) }
-            }else item { SettingsGroup("状态已失效"){Column(Modifier.padding(BeaconUiMetrics.CardInset)){SettingsHint("原有配置保留，可返回设置重新选择数据。")}} }
+                item { WidgetStateDetail(row,id,cache,onEdit={if(existing){baseline=draft;editing=true}else feedback="请长按桌面空白处，从小组件列表选择 Beacon；添加后可在管理页面编辑。"},onExit=onExit) }
+            }else item { SettingsGroup("内容不可用"){Column(Modifier.padding(BeaconUiMetrics.CardInset)){SettingsHint("原有配置保留，可返回设置重新选择数据。")}} }
         }
     }
     if(feedback.isNotBlank())BeaconAlertDialog(onDismissRequest={feedback=""},title={BeaconText("小组件")},text={BeaconText(feedback)},confirmButton={BeaconButton(onClick={feedback=""}){BeaconText("知道了")}})

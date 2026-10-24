@@ -39,16 +39,25 @@ class StateWidgetEditorTest {
                     rule.onNodeWithText("导出状态快照").assertDoesNotExist()
                     rule.onNodeWithText("导入离线快照").assertDoesNotExist()
                     fun scrollTo(text:String){rule.onNodeWithTag("settings-list").performScrollToNode(hasText(text))}
-                    scrollTo("来源（可选）")
-                    rule.onNodeWithText("来源（可选）").performClick()
-                    rule.onNodeWithText("默认来源",substring=false).performClick()
-                    rule.onNodeWithText("测试额度 · 默认来源").assertExists()
+                    rule.onNodeWithText("来源（可选）").assertDoesNotExist()
+                    rule.onNodeWithText("状态主题").assertDoesNotExist()
+                    scrollTo("按发送应用筛选")
+                    rule.onNodeWithText("按发送应用筛选").performClick()
+                    rule.onNodeWithText("未关联应用",substring=false).performClick()
+                    rule.onNodeWithText("测试额度 · 未关联应用").assertExists()
+                    scrollTo("选择展示内容")
+                    rule.onNodeWithText("选择展示内容").assertExists()
+                    scrollTo("未关联应用：直接使用设备推送密钥上报，无需创建应用。")
+                    rule.onNodeWithText("未关联应用：直接使用设备推送密钥上报，无需创建应用。").assertExists()
+                    scrollTo("按发送应用筛选")
+                    val selectionFolder=requireNotNull(context.getExternalFilesDir("state-qa"));selectionFolder.mkdirs()
+                    java.io.File(selectionFolder,"widget_data_selection_${style.name}.png").outputStream().use{stream->rule.onRoot().captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG,100,stream)}
                     scrollTo("显示内容")
                     rule.onNodeWithContentDescription("上移 短周期").assertIsNotEnabled().performTouchInput{click()}
                     rule.onNodeWithContentDescription("下移 短周期").assertIsEnabled().performClick()
                     rule.onNodeWithContentDescription("下移 短周期").assertIsNotEnabled().performTouchInput{click()}
                     rule.onNodeWithContentDescription("上移 短周期").assertIsEnabled()
-                    assertTrue("metric order follows the move action",rule.onNodeWithText("长周期",substring=false).fetchSemanticsNode().boundsInRoot.top<rule.onNodeWithText("短周期",substring=false).fetchSemanticsNode().boundsInRoot.top)
+                    assertTrue("metric order follows the move action",rule.onNodeWithText("长周期",substring=false).getUnclippedBoundsInRoot().top<rule.onNodeWithText("短周期",substring=false).getUnclippedBoundsInRoot().top)
                     scrollTo("内容配色")
                     val before=rule.onNodeWithText("内容配色").fetchSemanticsNode().boundsInRoot.height
                     rule.onNodeWithText("内容配色").performClick()
@@ -80,7 +89,7 @@ class StateWidgetEditorTest {
                     rule.onNodeWithText("继续编辑").performClick()
                 }
                 ActivityScenario.launch<StateWidgetActivity>(Intent(context,StateWidgetActivity::class.java).putExtra("source",source).putExtra("identity",":editor:test").putExtra("detail",true)).use{
-                    rule.waitUntil(10000){rule.onAllNodesWithText("状态详情").fetchSemanticsNodes().isNotEmpty()}
+                    rule.waitUntil(10000){rule.onAllNodesWithText("内容详情").fetchSemanticsNodes().isNotEmpty()}
                     rule.onNodeWithTag("settings-list").performScrollToNode(hasText("通知设置"))
                     rule.onNodeWithText("通知主内容").assertExists()
                     val folder=requireNotNull(context.getExternalFilesDir("state-qa"));folder.mkdirs()

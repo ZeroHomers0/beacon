@@ -222,7 +222,7 @@ internal class RealtimeRuntimeController(
             ) = debounceNetworkChanged()
         }
 
-    private val networkMonitor = Runnable { networkChanged() }
+    private val networkMonitor = Runnable { networkChanged();io.github.beacon.app.widget.StateRefreshReceiver.request(service) }
 
     private fun debounceNetworkChanged() {
         if (destroyed) return

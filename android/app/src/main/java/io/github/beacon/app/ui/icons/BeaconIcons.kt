@@ -10,6 +10,12 @@ import androidx.compose.ui.unit.dp
 object BeaconIcons {
     val Device = vector("Device", 24f, 24f,
         "M6 2h12v20H6V2Zm2 2v14h8V4H8Zm3 15v1h2v-1h-2Z")
+    val Topics = vector("Topics", 24f, 24f,
+        "M12 2 1 8l11 6 11-6L12 2Zm0 2.3L18.8 8 12 11.7 5.2 8 12 4.3ZM2 11l10 5.5L22 11v2.3L12 19 2 13.3V11Zm0 5 10 5.5L22 16v2.3L12 24 2 18.3V16Z")
+    val List = vector("List", 24f, 24f,
+        "M3 5h2v2H3V5Zm4 0h14v2H7V5ZM3 11h2v2H3v-2Zm4 0h14v2H7v-2ZM3 17h2v2H3v-2Zm4 0h14v2H7v-2Z")
+    val Block = vector("Block", 24f, 24f,
+        "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 2a8 8 0 0 1 4.9 1.7L5.7 16.9A8 8 0 0 1 12 4Zm0 16a8 8 0 0 1-4.9-1.7L18.3 7.1A8 8 0 0 1 12 20Z")
     val Applications = vector("Applications", 24f, 24f,
         "M3 3h8v8H3V3Zm2 2v4h4V5H5Zm8-2h8v8h-8V3Zm2 2v4h4V5h-4ZM3 13h8v8H3v-8Zm2 2v4h4v-4H5Zm8-2h8v8h-8v-8Zm2 2v4h4v-4h-4Z")
     val Select = vector("Select", 24f, 24f, "M7 9l5-5 5 5-1.4 1.4L12 6.8l-3.6 3.6L7 9Zm0 6 1.4-1.4 3.6 3.6 3.6-3.6L17 15l-5 5-5-5Z")
@@ -282,6 +288,11 @@ object BeaconIcons {
         )
 
     // Original down-into-tray drawing for fetching and installing a newer build.
+    val Logout = vector(
+        "Logout", 24f, 24f,
+        "M5,3H12V5H5V19H12V21H5C3.9,21 3,20.1 3,19V5C3,3.9 3.9,3 5,3Z",
+        "M16.6,6.6L22,12L16.6,17.4L15.2,16L18.2,13H9V11H18.2L15.2,8Z",
+    )
     val Update =
         vector(
             "Update",

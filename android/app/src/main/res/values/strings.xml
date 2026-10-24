@@ -544,11 +544,12 @@
     <string name="shortcut_messages_long">查看消息</string>
     <string name="shortcut_settings_short">设置</string>
     <string name="shortcut_settings_long">打开设置</string>
-<string name="state_widget_title">Beacon 状态</string>
-<string name="state_widget_square_title">状态方卡 · 2×2</string>
-<string name="state_widget_wide_title">状态宽卡 · 4×2</string>
+<string name="state_widget_title">Beacon 数据</string>
+<string name="state_widget_square_title">数据方卡 · 2×2</string>
+<string name="state_widget_wide_title">数据宽卡 · 4×2</string>
 <string name="settings_widgets_title">小组件管理</string>
-<string name="admin_topics_title">状态主题</string>
+<string name="admin_topics_title">数据主题</string>
 <string name="admin_topic_cleared">主题状态已清空</string>
-<string name="ui_nav_states_title">状态</string>
+<string name="ui_nav_states_title">数据</string>
+    <string name="admin_topic_clear">清空当前状态</string>
 </resources>
