@@ -5,7 +5,6 @@ import androidx.compose.ui.res.stringResource
 import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.MessageAction
 import io.github.beacon.app.domain.model.RuntimeState
-import io.github.beacon.app.feature.settings.ReceiveModeDialog
 import io.github.beacon.app.ipc.RuntimeActions
 import io.github.beacon.app.ui.components.BeaconAlertDialog
 import io.github.beacon.app.ui.components.BeaconButton
@@ -18,7 +17,7 @@ import io.github.beacon.app.ui.components.BeaconUiMetrics
 /**
  * The modal dialogs that can appear over any page.
  *
- * They are pure renderings of state (`operationDetails`, `pendingNavigation`, `receiveModesOpen`,
+ * They are pure renderings of state (`operationDetails`, `pendingNavigation`,
  * `pendingDelete`) with no local memory of their own, so extracting them costs nothing beyond the
  * parameters below — and it takes the four largest inline blocks out of [BeaconApp].
  */
@@ -64,40 +63,6 @@ internal fun BeaconDialogHost(
                 }
             },
         )
-    if (ui.receiveModesOpen)
-        ReceiveModeDialog(
-            ui.receivePlan.mode,
-            onSelect = selectMode@{ mode ->
-                    if (
-                        !runtimeState.receivePlanLoaded ||
-                            !runtimeState.runtimeConnected ||
-                            runtimeState.messageBusy ||
-                            ui.savingSettings
-                    )
-                        return@selectMode
-                    if (mode != ui.receivePlan.mode) {
-                        val changeMode = {
-                            ui.receptionForm.reset(
-                                runtimeState.pollingState.config,
-                                runtimeState.receivePlan.copy(mode = mode),
-                            )
-                            actions.receivePlan(ui.receivePlan.copy(mode = mode))
-                        }
-                        if (
-                            ui.receptionForm.edited &&
-                                ui.receptionForm.differsFrom(
-                                    runtimeState.pollingState.config,
-                                    runtimeState.receivePlan,
-                                )
-                        )
-                            ui.pendingNavigation = changeMode
-                        else changeMode()
-                    }
-                    ui.receiveModesOpen = false
-                },
-            onDismiss = { ui.receiveModesOpen = false },
-        )
-
     ui.pendingDelete?.let { keys ->
         val single = keys.size == 1
         BeaconConfirmDialog(

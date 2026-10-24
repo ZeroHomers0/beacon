@@ -222,13 +222,7 @@ fun SettingsNotice(
     }
 }
 
-/**
- * A primary action together with the reason it cannot be pressed yet.
- *
- * A greyed-out button on its own makes the reader hunt for the field that is missing. The reason sits
- * directly under the button, where the eye already is, and disappears as soon as the action becomes
- * available — no separate validation pass, no dialog.
- */
+/** A shared action and a stable, meaningful validation line. */
 @Composable
 fun SettingsPrimaryAction(
     label: String,
@@ -244,12 +238,9 @@ fun SettingsPrimaryAction(
         SettingsActions {
             BeaconButton(onClick = onClick, enabled = enabled) { BeaconText(label) }
         }
-        if (!enabled && disabledReason != null)
-            BeaconText(
-                disabledReason,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        BeaconFittedText(disabledReason ?: stringResource(R.string.settings_form_ready),
+            Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -276,7 +267,7 @@ fun SettingsGroup(title: String, action: (@Composable () -> Unit)? = null, conte
             action()
         }
         BeaconCard(
-            Modifier.fillMaxWidth().animateContentSize(animationSpec = MotionResize),
+            Modifier.fillMaxWidth(),
             colors =
                 CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLow
@@ -353,11 +344,12 @@ fun SettingsRow(
         ) {
             BadgedIcon(icon, iconTint, badge)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap2)) {
-                BeaconText(title, style = MaterialTheme.typography.bodyLarge,
+                BeaconFittedText(title, Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodyLarge,
                     color = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
                 if (subtitle.isNotBlank())
-                    BeaconText(
+                    BeaconFittedText(
                         subtitle,
+                        modifier = Modifier.fillMaxWidth(),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

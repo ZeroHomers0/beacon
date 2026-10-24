@@ -40,15 +40,14 @@ fun BeaconTimeRangePreference(
         }
         val startMinute = timeMinute(start)
         val endMinute = timeMinute(end)
-        if (startMinute != null && endMinute != null && startMinute != endMinute) {
-            SettingsHint(
-                stringResource(
-                    if (startMinute > endMinute) R.string.time_range_overnight
-                    else R.string.time_range_same_day,
-                    end,
-                )
-            )
-        }
+        BeaconFittedText(
+            if (startMinute == null || endMinute == null || startMinute == endMinute)
+                stringResource(R.string.quiet_invalid)
+            else stringResource(if (startMinute > endMinute) R.string.time_range_overnight
+                else R.string.time_range_same_day, end),
+            Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -158,7 +157,7 @@ fun BeaconTimePreference(
                 title = { BeaconText(label) },
                 text = {
                     Column(
-                        Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+                        Modifier.fillMaxWidth(),
                         horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
                     ) {
                         TimePicker(state = picker)
@@ -194,47 +193,15 @@ private fun timeMinute(value: String): Int? {
 
 @Composable
 fun BeaconTimeSummary(label: String, value: String) {
-    val measurer = androidx.compose.ui.text.rememberTextMeasurer()
-    val density = androidx.compose.ui.platform.LocalDensity.current
-    val titleStyle = MaterialTheme.typography.bodyLarge
-    val valueStyle = MaterialTheme.typography.bodyMedium
-    BoxWithConstraints(
-        Modifier.fillMaxWidth()
-            .heightIn(min = BeaconUiMetrics.FieldMinHeight)
-            .padding(vertical = BeaconUiMetrics.FieldVerticalInset),
-        contentAlignment = androidx.compose.ui.Alignment.CenterStart,
-    ) {
-        val fits =
-            measurer.measure(label, titleStyle, maxLines = 1).size.width +
-                measurer.measure(value, valueStyle, maxLines = 1).size.width +
-                with(density) { 48.dp.roundToPx() } <= constraints.maxWidth
-        Row(
-            Modifier.fillMaxWidth(),
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
-        ) {
-            if (fits) {
-                BeaconText(label, Modifier.weight(1f), style = titleStyle)
-                BeaconText(
-                    value,
-                    style = valueStyle,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap4)) {
-                    BeaconText(label, style = titleStyle)
-                    BeaconText(
-                        value,
-                        style = valueStyle,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-            androidx.compose.material3.Icon(
-                io.github.beacon.app.ui.icons.BeaconIcons.Arrow,
-                null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+    Row(Modifier.fillMaxWidth().heightIn(min = BeaconUiMetrics.FieldMinHeight)
+        .padding(vertical = BeaconUiMetrics.FieldVerticalInset),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap2)) {
+            BeaconFittedText(label, Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodyLarge)
+            BeaconFittedText(value, Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        androidx.compose.material3.Icon(io.github.beacon.app.ui.icons.BeaconIcons.Arrow, null, Modifier.size(18.dp))
     }
 }

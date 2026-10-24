@@ -37,6 +37,7 @@ fun SettingsStatusSummary(
     singleLineDetails: Boolean = false,
     selectableDetails: Boolean = false,
     caption: String? = null,
+    reserveDetails: Boolean = false,
 ) {
     val iconSize = BeaconUiMetrics.StatusIconSize
     val displayedTint by androidx.compose.animation.animateColorAsState(
@@ -93,15 +94,24 @@ fun SettingsStatusSummary(
                     animationSpec = androidx.compose.animation.core.tween(BeaconMotion.QuickMs),
                     label = "connection-status-title",
                 ) { label ->
-                    BeaconText(
+                    BeaconFittedText(
                         label,
+                        modifier = Modifier.fillMaxWidth(),
                         style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                     )
                 }
-                if (displayedDetails.isNotBlank()) {
+                if (displayedDetails.isNotBlank() || reserveDetails) {
                     val content: @Composable () -> Unit = {
-                        BeaconText(
+                        if (singleLineDetails) BeaconFittedText(displayedDetails,
+                            modifier = Modifier.fillMaxWidth(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        else BeaconText(
                             displayedDetails,
+                            modifier = if (reserveDetails) Modifier.height(
+                                with(androidx.compose.ui.platform.LocalDensity.current) {
+                                    MaterialTheme.typography.bodySmall.fontSize.toDp() * 1.4f * 2
+                                }) else Modifier,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = if (singleLineDetails) 1 else 2,
@@ -112,7 +122,8 @@ fun SettingsStatusSummary(
                         androidx.compose.foundation.text.selection.SelectionContainer { content() }
                     else content()
                 }
-                if (!caption.isNullOrBlank()) BeaconText(caption,
+                if (!caption.isNullOrBlank()) BeaconFittedText(caption,
+                    modifier = Modifier.fillMaxWidth(),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -179,16 +190,16 @@ fun OperationResultPanel(title: String, result: String, failed: Boolean? = null)
             },
     )
 }
-/** Compact metadata wraps naturally instead of reserving empty detail lines. */
+/** Compact status values shrink before truncation so refreshes preserve the row height. */
 @Composable
 fun SettingsStatusDetail(title: String, details: String, error: Boolean = false) {
     Column(
         Modifier.fillMaxWidth().padding(vertical = BeaconUiMetrics.Gap4),
         verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap2),
     ) {
-        BeaconText(title, style = MaterialTheme.typography.labelMedium,
+        BeaconFittedText(title, Modifier.fillMaxWidth(), style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
-        BeaconText(details, style = MaterialTheme.typography.bodyMedium,
+        BeaconFittedText(details, Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodyMedium,
             color = if (error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
     }
 }

@@ -12,6 +12,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
@@ -78,7 +79,11 @@ fun BeaconTheme(
             surface = Color(0xFF1D2026),
             surfaceContainer = Color(0xFF1D2026),
         )
-        else top.yukonga.miuix.kmp.theme.lightColorScheme()
+        else top.yukonga.miuix.kmp.theme.lightColorScheme().copy(
+            background = Color(0xFFF5F5F8),
+            surface = Color.White,
+            surfaceContainer = Color.White,
+        )
     val bridge =
         if (style == BeaconUiStyle.MIUIX)
             colors.copy(
@@ -104,9 +109,21 @@ fun BeaconTheme(
     CompositionLocalProvider(LocalBeaconUiStyle provides style) {
         MaterialTheme(colorScheme = bridge, typography = Typography().let { base ->
             base.copy(
-                headlineLarge = base.headlineLarge.copy(fontSize = 28.sp, lineHeight = 36.sp),
-                headlineSmall = base.headlineSmall.copy(fontSize = 22.sp, lineHeight = 30.sp),
-                bodySmall = base.bodySmall.copy(fontSize = 13.sp, lineHeight = 20.sp),
+                displayLarge = base.displayLarge.copy(lineHeight = 1.4.em),
+                displayMedium = base.displayMedium.copy(lineHeight = 1.4.em),
+                displaySmall = base.displaySmall.copy(lineHeight = 1.4.em),
+                headlineLarge = base.headlineLarge.copy(fontSize = 28.sp, lineHeight = 1.4.em),
+                headlineMedium = base.headlineMedium.copy(lineHeight = 1.4.em),
+                headlineSmall = base.headlineSmall.copy(fontSize = 22.sp, lineHeight = 1.4.em),
+                titleLarge = base.titleLarge.copy(lineHeight = 1.4.em),
+                titleMedium = base.titleMedium.copy(lineHeight = 1.4.em),
+                titleSmall = base.titleSmall.copy(lineHeight = 1.4.em),
+                bodyLarge = base.bodyLarge.copy(lineHeight = 1.4.em),
+                bodyMedium = base.bodyMedium.copy(lineHeight = 1.4.em),
+                bodySmall = base.bodySmall.copy(fontSize = 13.sp, lineHeight = 1.4.em),
+                labelLarge = base.labelLarge.copy(lineHeight = 1.4.em),
+                labelMedium = base.labelMedium.copy(lineHeight = 1.4.em),
+                labelSmall = base.labelSmall.copy(lineHeight = 1.4.em),
             )
         }) {
             top.yukonga.miuix.kmp.theme.MiuixTheme(colors = miuix) {

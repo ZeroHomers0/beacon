@@ -32,8 +32,9 @@ internal fun AdminListFilters(
                 listOf(stringResource(R.string.settings_all_devices)) + devices.map { it.name.ifBlank { it.id.take(12) } },
                 ids.indexOf(selectedDevice).coerceAtLeast(0)) { onDevice(ids[it]) }
         }
-        if (query.isNotBlank() || status != 0 || selectedDevice.isNotBlank()) SettingsActions {
-            SettingsTextAction(stringResource(R.string.msg_clear_filters_action), io.github.beacon.app.ui.icons.BeaconIcons.Close) {
+        SettingsActions {
+            SettingsTextAction(stringResource(R.string.msg_clear_filters_action), io.github.beacon.app.ui.icons.BeaconIcons.Close,
+                enabled = query.isNotBlank() || status != 0 || selectedDevice.isNotBlank()) {
                 onQuery(""); onStatus(0); onDevice?.invoke("")
             }
         }

@@ -20,6 +20,7 @@ internal fun QuietHoursPanel(
     scheduleOnly: Boolean = false,
     onSchedule: (() -> Unit)? = null,
     editorSaving: Boolean = false,
+    failureMessage: Int? = null,
     onRetrySave: (() -> Unit)? = null,
 ) {
     with(form) {
@@ -54,9 +55,7 @@ internal fun QuietHoursPanel(
                 SettingsPreferences(stringResource(R.string.ui_v2_quiet_section)) {
                     // The section title used to become「设置数据加载中」while loading, which renamed
                     // the page instead of reporting state; the body now owns both.
-                    if (awaitingContent) {
-                        PageStateLoading()
-                    } else {
+                    run {
                         SettingsFieldGroup(
                             {
                                 BeaconPreferenceToggle(
@@ -69,23 +68,23 @@ internal fun QuietHoursPanel(
                                 }
                             },
                             {
-                                if (draft.enabled) BeaconDropdownPreference(
+                                BeaconDropdownPreference(
                                     stringResource(R.string.quiet_behavior),
                                     listOf(
                                         stringResource(R.string.quiet_silent),
                                         stringResource(R.string.quiet_save_only),
                                     ),
-                                    draft.behavior.ordinal,
-                                    enabled = editable,
+                                    if (loaded) draft.behavior.ordinal else -1,
+                                    enabled = editable && draft.enabled,
                                 ) {
                                     draft = draft.copy(behavior = QuietHoursBehavior.entries[it])
                                 }
                             },
                         )
-                        if (onSchedule != null && draft.enabled) {
+                        if (onSchedule != null) {
                             androidx.compose.material3.Surface(
                                 onClick = onSchedule,
-                                enabled = editable,
+                                enabled = editable && draft.enabled,
                                 color = androidx.compose.ui.graphics.Color.Transparent,
                             ) {
                                 BeaconTimeSummary(
@@ -96,14 +95,6 @@ internal fun QuietHoursPanel(
                         }
                     }
                 }
-            if (loaded && !scheduleValid && !scheduleOnly)
-                BeaconText(
-                    stringResource(
-                        if (draft.enabled) R.string.quiet_invalid
-                        else R.string.settings_quiet_invalid_disabled
-                    ),
-                    color = MaterialTheme.colorScheme.error,
-                )
             val scheduleContent: @Composable ColumnScope.() -> Unit = {
                 BeaconTimeRangePreference(
                     start,
@@ -115,6 +106,9 @@ internal fun QuietHoursPanel(
                     onEndChange = { end = it },
                 )
                 var customDays by remember { mutableStateOf(draft.weekdays != 127 && draft.weekdays != 31) }
+                LaunchedEffect(loaded) {
+                    if (loaded) customDays = draft.weekdays != 127 && draft.weekdays != 31
+                }
                 ActionFlow {
                     BeaconFilterChip(draft.weekdays == 127 && !customDays,
                         { draft = draft.copy(weekdays = 127); customDays = false },
@@ -125,26 +119,24 @@ internal fun QuietHoursPanel(
                     BeaconFilterChip(customDays, { customDays = true },
                         { BeaconText(stringResource(R.string.settings_custom_days)) }, enabled = editable)
                 }
-                if (customDays) ActionFlow {
+                ActionFlow {
                     labels.forEachIndexed { index, label ->
                         val bit = 1 shl index
                         BeaconFilterChip(
                             draft.weekdays and bit != 0,
                             { draft = draft.copy(weekdays = draft.weekdays xor bit) },
                             { BeaconText(label) },
-                            enabled = editable,
+                            enabled = editable && customDays,
                         )
                     }
                 }
-                if (loaded && !scheduleValid)
-                    BeaconText(
-                        stringResource(R.string.quiet_invalid),
-                        color = MaterialTheme.colorScheme.error,
-                    )
+                SettingsOverviewField(stringResource(R.string.settings_validation_title),
+                    stringResource(if (scheduleValid) R.string.settings_validation_ready else R.string.quiet_invalid),
+                    error = !scheduleValid)
             }
             if (scheduleOnly || onSchedule == null) {
                 SettingsSection(stringResource(R.string.settings_time_range_heading)) {
-                    if (awaitingContent && scheduleOnly) PageStateLoading() else {
+                    run {
                         scheduleContent()
                         if (scheduleOnly) {
                             SettingsHint(stringResource(if (draft.behavior == QuietHoursBehavior.SILENT)
@@ -154,9 +146,9 @@ internal fun QuietHoursPanel(
                     }
                 }
             }
-            if (failed) {
-                PageStateFailure(
-                    stringResource(R.string.settings_data_failed),
+            if (failed && failureMessage == null) {
+                SettingsRetryFeedback(
+                    stringResource(R.string.settings_data_failed), failed = true,
                     onRetry =
                         if (!saving && !editorSaving && state.runtimeConnected) {
                             {

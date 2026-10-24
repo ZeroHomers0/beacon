@@ -44,44 +44,39 @@ internal fun LazyListScope.notificationPermissionSettingsItems(
     onRetry: () -> Unit,
 ) {
     item {
-        SettingsSection(stringResource(R.string.settings_permission_status_heading)) {
+        SettingsGroup(stringResource(R.string.settings_permission_status_heading)) {
             val allowed = notificationPermission == NotificationPermissionState.ALLOWED
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    SettingsStatusSummary(
-                        title = stringResource(when (notificationPermission) {
-                            NotificationPermissionState.UNKNOWN -> R.string.diag_not_read_label
-                            NotificationPermissionState.ALLOWED -> R.string.settings_notifications_allowed_label
-                            NotificationPermissionState.DENIED -> R.string.settings_notifications_denied_label
-                        }), details = "", icon = if (allowed) BeaconIcons.Check else BeaconIcons.Warning,
-                        tint = if (allowed) io.github.beacon.app.ui.theme.beaconSuccessColor()
-                            else MaterialTheme.colorScheme.onSurfaceVariant, interactive = false)
-                }
-                SettingsToolAction(stringResource(R.string.settings_system_notification_title), BeaconIcons.OpenWeb) {
-                    try {
+            SettingsRow(
+                title = stringResource(R.string.settings_system_notification_title),
+                subtitle = stringResource(when (notificationPermission) {
+                    NotificationPermissionState.UNKNOWN -> R.string.diag_not_read_label
+                    NotificationPermissionState.ALLOWED -> R.string.settings_notifications_allowed_label
+                    NotificationPermissionState.DENIED -> R.string.settings_notifications_denied_label
+                }),
+                icon = BeaconIcons.Messages,
+                iconTint = if (allowed) io.github.beacon.app.ui.theme.beaconSuccessColor()
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                external = allowed || Build.VERSION.SDK_INT < 33,
+                onClick = {
+                    if (!allowed && notificationPermission == NotificationPermissionState.DENIED && Build.VERSION.SDK_INT >= 33) {
+                        onRequestNotificationPermission()
+                    } else try {
                         context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
                             .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName))
                     } catch (_: android.content.ActivityNotFoundException) { onNotificationSettingsUnavailable() }
                     catch (_: SecurityException) { onNotificationSettingsUnavailable() }
-                }
-            }
-            if (!allowed && notificationPermission != NotificationPermissionState.UNKNOWN && Build.VERSION.SDK_INT >= 33) {
-                SettingsActions {
-                    BeaconButton(onClick = onRequestNotificationPermission) {
-                        BeaconText(stringResource(R.string.settings_allow_notifications_action))
-                    }
-                }
-            }
+                },
+            )
         }
     }
     item {
         // Resending is an action, not navigation, so it carries a button instead of the arrow the
         // row above uses to leave the app.
         SettingsSection(stringResource(R.string.settings_pending_notifications_title), action = {
-            if (loadFailed) BeaconRefreshAction(stringResource(R.string.action_retry), connected && !busy,
+            BeaconRefreshAction(stringResource(R.string.action_refresh_status), connected && !busy,
                 false, onClick = onRetry)
         }) {
-            SettingsHint(
+            BeaconFittedText(
                 (pendingReminderCount?.let {
                     if (it > 0) resources.getString(R.string.settings_reminders_pending, it)
                     else resources.getString(R.string.settings_reminders_empty)
@@ -92,12 +87,17 @@ internal fun LazyListScope.notificationPermissionSettingsItems(
                             loadFailed -> R.string.settings_reminders_failed
                             else -> R.string.settings_reminders_loading
                         }
-                    ))
+                    )),
+                modifier = Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             SettingsActions {
-                if ((pendingReminderCount ?: 0) > 0) SettingsPrimaryButton(
+                SettingsPrimaryButton(
                     stringResource(R.string.settings_reminders_send),
-                    enabled = connected && !busy) { actions.transport(notifyOnly = true) }
+                    enabled = connected && !busy && (pendingReminderCount ?: 0) > 0) {
+                        actions.transport(notifyOnly = true)
+                    }
             }
         }
     }

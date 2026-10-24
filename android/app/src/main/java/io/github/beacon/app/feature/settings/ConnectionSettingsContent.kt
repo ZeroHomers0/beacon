@@ -31,7 +31,6 @@ import io.github.beacon.app.ui.components.BeaconTextField
 import io.github.beacon.app.ui.components.SettingsGroup
 import io.github.beacon.app.ui.components.SettingsPrimaryAction
 import io.github.beacon.app.ui.components.SettingsSection
-import io.github.beacon.app.ui.components.SettingsStatusSummary
 import io.github.beacon.app.ui.components.connectionStatusLabel
 import io.github.beacon.app.ui.components.copyToClipboard
 import io.github.beacon.app.ui.components.formatMessageTime
@@ -49,8 +48,8 @@ internal fun LazyListScope.connectionSettingsItems(
     bindingFormatHint: String,
     onFeedback: (String) -> Unit,
 ) {
-    item { ConnectionSummary(runtimeState, actions, connectionForm, busy, onFeedback) }
-    item { PushExamplesPanel(actions, !busy && runtimeState.configuredEndpoint.isNotBlank(),
+    item { ConnectionSummary(runtimeState, actions, connectionForm, busy) }
+    item { PushExamplesPanel(actions, runtimeState.runtimeConnected && !busy && runtimeState.configuredEndpoint.isNotBlank(),
         runtimeState.configuredEndpoint, onFeedback) }
     item { ClearConnectionPanel(runtimeState, actions, connectionForm) }
 }
@@ -58,61 +57,35 @@ internal fun LazyListScope.connectionSettingsItems(
 @Composable
 private fun ConnectionSummary(
     state: RuntimeState, actions: RuntimeActions, form: ConnectionFormState,
-    busy: Boolean, onFeedback: (String) -> Unit,
+    busy: Boolean,
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val resources = androidx.compose.ui.platform.LocalResources.current
     var editing by remember { mutableStateOf(false) }
-    var copied by remember { mutableStateOf(false) }
-    LaunchedEffect(copied) { if (copied) { kotlinx.coroutines.delay(1500); copied = false } }
-    SettingsSection(stringResource(R.string.settings_connection_status_heading), action = {
-        BeaconRefreshAction(stringResource(R.string.server_check_action),
-            state.runtimeConnected && !busy && state.configuredEndpoint.isNotBlank(),
-            state.serverChecking, actions::checkServer)
-    }) {
-        SettingsStatusSummary(
-            title = if (state.serverReachable == true) stringResource(R.string.connection_status_connected)
-                else connectionStatusLabel(state),
-            details = if (state.serverReachable == false) state.serverCheckResult else "",
-            icon = when {
-                state.serverChecking -> BeaconIcons.Sync
-                state.serverReachable == false -> BeaconIcons.Warning
-                else -> BeaconIcons.Cloud
-            },
-            tint = when (state.serverReachable) {
-                true -> io.github.beacon.app.ui.theme.beaconSuccessColor()
-                false -> MaterialTheme.colorScheme.error
-                null -> MaterialTheme.colorScheme.onSurfaceVariant
-            },
-            loading = state.serverChecking, interactive = false,
-            caption = stringResource(R.string.server_last_checked) + " · " + formatMessageTime(state.serverCheckedAtMs),
+    SettingsOverviewCard(
+        title = stringResource(R.string.settings_connection_status_heading),
+        status = if (state.serverReachable == true && !state.serverChecking && state.runtimeConnected)
+            stringResource(R.string.overview_connected) else connectionStatusLabel(state),
+        subtitle = state.configuredEndpoint.ifBlank { stringResource(R.string.settings_receive_unbound) },
+        healthy = state.runtimeConnected && state.serverReachable == true && !state.serverChecking,
+        error = state.serverReachable == false,
+        action = {
+            BeaconRefreshAction(stringResource(R.string.server_check_action),
+                state.runtimeConnected && !busy && state.configuredEndpoint.isNotBlank(),
+                state.serverChecking, actions::checkServer)
+        },
+    ) {
+        SettingsOverviewField(stringResource(R.string.binding_device_name), form.deviceName)
+        SettingsOverviewField(stringResource(R.string.server_last_checked), formatMessageTime(state.serverCheckedAtMs))
+        SettingsOverviewField(stringResource(if (state.serverReachable == false)
+            R.string.overview_check_result else R.string.settings_receive_mode_section),
+            if (state.serverReachable == false) state.serverCheckResult else stringResource(receiveModeTitle(state.receivePlan.mode)),
+            error = state.serverReachable == false)
+        SettingsPrimaryButton(
+            label = stringResource(if (state.configuredEndpoint.isBlank())
+                R.string.settings_configure_connection else R.string.settings_edit_connection),
+            modifier = Modifier.fillMaxWidth(),
+            enabled = state.runtimeConnected && !busy,
+            onClick = { editing = true },
         )
-        if (state.configuredEndpoint.isNotBlank()) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.Top) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap2)) {
-                    androidx.compose.foundation.text.selection.SelectionContainer {
-                        BeaconText(state.configuredEndpoint, style = MaterialTheme.typography.bodyMedium)
-                    }
-                    BeaconText(stringResource(R.string.binding_device_name) + " · " + form.deviceName,
-                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                SettingsToolAction(stringResource(R.string.binding_copy_push_address), BeaconIcons.Copy,
-                    enabled = state.runtimeConnected && !busy, completed = copied, onClick = {
-                    actions.copyPushKey { address ->
-                        copied = copyToClipboard(context, resources.getString(R.string.settings_clipboard_push_key),
-                            address, sensitive = true)
-                        if (copied) onFeedback(resources.getString(R.string.settings_copied_hint))
-                    }
-                })
-            }
-        }
-        SettingsActions {
-            if (state.configuredEndpoint.isBlank()) {
-                SettingsPrimaryButton(stringResource(R.string.settings_configure_connection),
-                    enabled = state.runtimeConnected && !busy, onClick = { editing = true })
-            } else SettingsTextAction(stringResource(R.string.settings_edit_connection), BeaconIcons.Tune,
-                enabled = state.runtimeConnected && !busy) { editing = true }
-        }
     }
 
     if (editing) ConnectionEditor(state, actions, form, busy, onDismiss = { editing = false })

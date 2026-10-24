@@ -75,7 +75,7 @@ class ConfigurationDialogsTest {
             }
             rule.onNodeWithText("新消息提醒").assertIsDisplayed()
             rule.onNodeWithText("静音与历史消息").assertIsDisplayed()
-            rule.onNodeWithText("自动接收运行状态").assertIsDisplayed()
+            rule.onNodeWithText(rule.activity.getString(R.string.channel_runtime)).assertIsDisplayed()
         } finally {
             rule.runOnUiThread { repository.close() }
         }

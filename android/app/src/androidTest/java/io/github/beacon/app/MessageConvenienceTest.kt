@@ -69,7 +69,13 @@ class MessageConvenienceTest {
                 }
             }
             rule.onNodeWithText("复制 curl 示例").assertDoesNotExist()
-            rule.onNodeWithText(rule.activity.getString(R.string.ui_v2_expand_examples)).performClick()
+            rule.onNodeWithText(rule.activity.getString(R.string.push_examples_title)).performClick()
+            rule.onNodeWithText("复制 curl 示例").assertIsDisplayed()
+            rule.onNodeWithText("复制 PowerShell 示例").assertIsDisplayed()
+            rule.onNodeWithText("复制 JSON curl 示例").assertIsDisplayed()
+            rule.onNodeWithText("复制 JSON PowerShell 示例").assertIsDisplayed()
+            rule.onNodeWithText(rule.activity.getString(R.string.settings_example_shell)).assertDoesNotExist()
+            rule.onNodeWithText(rule.activity.getString(R.string.settings_example_format)).assertDoesNotExist()
             rule.onNodeWithText("复制 curl 示例").performClick()
             val clipboard = rule.activity.getSystemService(ClipboardManager::class.java)
             rule.runOnUiThread {

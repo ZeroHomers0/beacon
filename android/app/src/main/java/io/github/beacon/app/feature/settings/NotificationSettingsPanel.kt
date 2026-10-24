@@ -28,9 +28,7 @@ internal fun NotificationSettingsPanel(
             // The title used to be swapped for a loading label, so the page appeared to rename
             // itself while it loaded. The section keeps its name and the body reports the state.
             SettingsPreferences(stringResource(R.string.notification_age_title)) {
-                if (pageState == AsyncPageState.INITIAL_LOADING) {
-                    PageStateLoading()
-                } else {
+                run {
                     SettingsFieldGroup(
                         {
                             BeaconDropdownPreference(
@@ -39,7 +37,7 @@ internal fun NotificationSettingsPanel(
                                     if (it < 60) stringResource(R.string.notification_minutes, it)
                                     else stringResource(R.string.notification_hours, it / 60)
                                 },
-                                minutes.indexOf(draft.freshMinutes),
+                                if (loaded) minutes.indexOf(draft.freshMinutes) else -1,
                                 enabled = enabled,
                             ) {
                                 draft = draft.copy(freshMinutes = minutes[it])
@@ -52,7 +50,7 @@ internal fun NotificationSettingsPanel(
                                     stringResource(R.string.quiet_silent),
                                     stringResource(R.string.quiet_save_only),
                                 ),
-                                draft.outdatedReminder.ordinal,
+                                if (loaded) draft.outdatedReminder.ordinal else -1,
                                 enabled = enabled,
                             ) {
                                 draft = draft.copy(outdatedReminder = OutdatedReminder.entries[it])
@@ -61,9 +59,9 @@ internal fun NotificationSettingsPanel(
                     )
                 }
             }
-            if (failed) {
-                PageStateFailure(
-                    stringResource(R.string.settings_data_failed),
+            if (failed && rulesFailure == null) {
+                SettingsRetryFeedback(
+                    stringResource(R.string.settings_data_failed), failed = true,
                     onRetry =
                         if (!saving && !rulesSaving && state.runtimeConnected) {
                             { if (loaded) onRetrySave() else attempt++ }

@@ -15,13 +15,16 @@ import io.github.beacon.app.ipc.RuntimeActions
 import io.github.beacon.app.ui.components.*
 
 @Composable
-internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) {
+internal fun StorageSettingsPanel(
+    state: RuntimeState, actions: RuntimeActions,
+    cached: StorageSettingsState = remember { StorageSettingsState() },
+) {
     val resources = androidx.compose.ui.platform.LocalResources.current
     val context = LocalContext.current
-    var settings by remember { mutableStateOf(CleanupSettings()) }
+    var settings by remember { mutableStateOf(cached.snapshot ?: CleanupSettings()) }
     val policy = settings.policy
-    var settingsLoaded by remember { mutableStateOf(false) }
-    var settingsLoading by remember { mutableStateOf(false) }
+    var settingsLoaded by remember { mutableStateOf(cached.snapshot != null) }
+    var settingsLoading by remember { mutableStateOf(state.runtimeConnected) }
     var loadFailed by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
     var saveFailed by remember { mutableStateOf(false) }
@@ -38,6 +41,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                 onFailure = { loadFailed = true; settingsLoading = false },
             ) {
                 settings = it
+                cached.snapshot = it
                 settingsLoaded = true
                 settingsLoading = false
                 if (pendingSave != null) {
@@ -63,6 +67,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
             },
         ) {
             settings = it
+            cached.snapshot = it
             pendingSave = null
             saving = false
             onSaved()
@@ -82,36 +87,24 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
         // Without this the page rendered every control disabled with no explanation; a failed read
         // is now visible and recoverable instead of looking like a broken toggle.
         if ((loadFailed || saveFailed) && !custom) {
-            PageStateFailure(
-                stringResource(
-                    if (saveFailed) R.string.storage_save_failed_title
-                    else R.string.storage_load_failed_title
-                ),
-                actionLabel =
-                    stringResource(
-                        if (saveFailed && settingsLoaded) R.string.settings_retry_save
-                        else R.string.settings_reload
-                    ),
-                onRetry =
-                    if (!state.messageBusy && state.runtimeConnected) {
-                        {
-                            val pending = pendingSave
-                            if (saveFailed && settingsLoaded && pending != null) save(pending)
-                            else attempt++
-                        }
-                    } else null,
+            SettingsRetryFeedback(
+                title = stringResource(if (saveFailed) R.string.storage_save_failed_title else R.string.storage_load_failed_title),
+                failed = true,
+                onRetry = if (!state.messageBusy && state.runtimeConnected) {
+                    {
+                        val pending = pendingSave
+                        if (saveFailed && settingsLoaded && pending != null) save(pending)
+                        else attempt++
+                    }
+                } else null,
             )
         }
-        SettingsGroup(stringResource(R.string.storage_local_database)) {
-            Column(
-                Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),
-                verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
-            ) {
-                BeaconText(
-                    preview?.databaseBytes?.let {
-                        formatStorageSize(context, it)
-                    } ?: BeaconUnknownValue,
-                    style = MaterialTheme.typography.headlineLarge.copy(fontFeatureSettings = "tnum"),
+
+        SettingsMetricSection(stringResource(R.string.storage_local_database)) {
+                SettingsMetricGrid(
+                    listOf(stringResource(R.string.storage_local_database) to
+                        (preview?.databaseBytes?.let { formatStorageSize(context, it) } ?: BeaconUnknownValue)),
+                    columns = 1,
                 )
                 SettingsMetricGrid(
                     listOf(
@@ -130,7 +123,6 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                     ),
                     columns = 3,
                 )
-            }
         }
         SettingsPreferences(stringResource(R.string.settings_cleanup_auto_title)) {
             SettingsFieldGroup(
@@ -145,11 +137,13 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                     }
                 },
                 {
-                    val result = io.github.beacon.app.domain.policy.CleanupResultPresentation.compact(settings.lastResult)
-                    if (settings.automatic) DiagnosticRow(
+                    val result = if (settingsLoaded)
+                        io.github.beacon.app.domain.policy.CleanupResultPresentation.compact(settings.lastResult)
+                    else BeaconUnknownValue
+                    // Keep the same record slot for initial loading, disabled and enabled states.
+                    DiagnosticRow(
                         stringResource(R.string.storage_last_result_label), result.ifBlank { BeaconUnknownValue },
                         reserveValueLines = 2)
-                    else if (result.isNotBlank()) SettingsHint(result)
 
                 },
             )
@@ -197,7 +191,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
             SettingsHint(stringResource(R.string.settings_saved_automatically))
         }
 
-        SettingsSection(stringResource(R.string.storage_preview_title), action = {
+        SettingsMetricSection(stringResource(R.string.storage_preview_title), action = {
             BeaconRefreshAction(stringResource(R.string.storage_preview_refresh), state.runtimeConnected && !state.messageBusy,
                 state.messageBusy, onClick = { actions.previewCleanup(policy) })
         }) {
@@ -212,7 +206,7 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                 ),
                 columns = 3,
             )
-            SettingsHint(
+            BeaconFittedText(
                 stringResource(
                     when {
                         !state.runtimeConnected -> R.string.settings_runtime_disconnected
@@ -222,10 +216,11 @@ internal fun StorageSettingsPanel(state: RuntimeState, actions: RuntimeActions) 
                         preview.planned <= 0 -> R.string.settings_preview_empty
                         else -> R.string.settings_preview_ready
                     }
-                )
+                ), modifier = Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             SettingsActions {
-                BeaconButton(onClick = { confirmation = preview }, enabled = state.runtimeConnected &&
+                BeaconButton(onClick = { confirmation = preview }, modifier = Modifier.fillMaxWidth(), enabled = state.runtimeConnected &&
                     !state.messageBusy && state.cleanupPreviewFresh && (preview?.planned ?: 0) > 0) {
                     BeaconText(stringResource(R.string.storage_clean_action))
                 }

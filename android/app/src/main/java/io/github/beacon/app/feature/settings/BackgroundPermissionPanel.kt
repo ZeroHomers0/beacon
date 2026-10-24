@@ -20,29 +20,10 @@ import io.github.beacon.app.ui.components.*
 
 @Composable
 fun BackgroundPermissionPanel() {
-    val resources = androidx.compose.ui.platform.LocalResources.current
     val context = LocalContext.current
     val owner = LocalLifecycleOwner.current
     var restricted by remember { mutableStateOf<Boolean?>(null) }
     var exempt by remember { mutableStateOf<Boolean?>(null) }
-    var help by remember { mutableStateOf(false) }
-    if (help)
-        BeaconAlertDialog(
-            onDismissRequest = { help = false },
-            title = { BeaconText(stringResource(R.string.settings_background_permissions_title)) },
-            text = {
-                SettingsHint(
-                    stringResource(R.string.background_autostart_hint) +
-                        "\n\n" +
-                        stringResource(R.string.background_restriction_hint)
-                )
-            },
-            confirmButton = {
-                BeaconButton(onClick = { help = false }) {
-                    BeaconText(stringResource(R.string.action_close))
-                }
-            },
-        )
     var unavailable by remember { mutableStateOf(false) }
     fun refresh() {
         restricted =
@@ -89,7 +70,7 @@ fun BackgroundPermissionPanel() {
         Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SettingsGroupGap),
     ) {
-        SettingsGroup(stringResource(R.string.settings_background_permissions_title)) {
+        SettingsGroup("") {
             SettingsRow(stringResource(R.string.background_autostart_title),
                 stringResource(R.string.background_manual_status), io.github.beacon.app.ui.icons.BeaconIcons.BackgroundTasks,
                 iconTint = MaterialTheme.colorScheme.onSurface, external = true, onClick = { appDetails() })
@@ -109,10 +90,7 @@ fun BackgroundPermissionPanel() {
                 iconTint = MaterialTheme.colorScheme.onSurface, external = true,
                 onClick = { openSettings(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) })
         }
-        SettingsActions {
-            SettingsTextAction(stringResource(R.string.settings_background_help),
-                io.github.beacon.app.ui.icons.BeaconIcons.Info) { help = true }
-        }
-        if (unavailable) SettingsNotice(stringResource(R.string.background_settings_unavailable))
+        SettingsOperationFeedback(stringResource(R.string.settings_background_permissions_title),
+            if (unavailable) stringResource(R.string.background_settings_unavailable) else "", failed = true)
     }
 }

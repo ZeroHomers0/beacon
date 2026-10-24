@@ -15,7 +15,7 @@ import io.github.beacon.app.domain.model.OperationStatus
 @Composable
 fun formatMessageTime(time: Long): String =
     if (time <= 0) stringResource(R.string.ui_unknown_label)
-    else io.github.beacon.app.domain.policy.DisplayTime.format(time)
+    else io.github.beacon.app.domain.policy.DisplayTime.compact(time)
 
 /** Connection remediation is fixed text; everything else shows the runtime's own message. */
 @Composable

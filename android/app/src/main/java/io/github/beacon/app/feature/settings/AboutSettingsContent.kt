@@ -27,9 +27,9 @@ internal fun LazyListScope.aboutSettingsItems(
 ) {
     item {
         Column(
-            Modifier.fillMaxWidth().padding(vertical = 16.dp),
+            Modifier.fillMaxWidth().padding(vertical = BeaconUiMetrics.Gap12),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
+            verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8),
         ) {
             androidx.compose.foundation.Image(
                 androidx.compose.ui.res.painterResource(R.drawable.beacon_logo_about),
@@ -38,15 +38,17 @@ internal fun LazyListScope.aboutSettingsItems(
                     .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp)),
             )
             BeaconText("Beacon", style = MaterialTheme.typography.headlineMedium)
-            BeaconText(
+            BeaconFittedText(
                 stringResource(R.string.settings_app_tagline_hint),
-                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.fillMaxWidth(),
+                style = MaterialTheme.typography.bodyMedium.copy(textAlign = androidx.compose.ui.text.style.TextAlign.Center),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             androidx.compose.foundation.text.selection.SelectionContainer {
-            BeaconText(
+            BeaconFittedText(
                 stringResource(R.string.settings_version_label, BuildConfig.VERSION_NAME),
-                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.fillMaxWidth(), inspectable = true,
+                style = MaterialTheme.typography.bodySmall.copy(textAlign = androidx.compose.ui.text.style.TextAlign.Center),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             }

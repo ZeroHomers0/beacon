@@ -36,6 +36,7 @@ class BeaconUiState(
             R.string.ui_nav_settings_title,
         )
 
+    val storageSettings = io.github.beacon.app.feature.settings.StorageSettingsState()
     val connectionForm = ConnectionFormState()
     val receptionForm = io.github.beacon.app.feature.settings.ReceptionFormState()
     val notificationForm = io.github.beacon.app.feature.settings.NotificationFormState()
@@ -85,7 +86,6 @@ class BeaconUiState(
             receivePlanState.value = value
         }
 
-    var receiveModesOpen by mutableStateOf(false)
     var readingKey: MessageKey? = null
     var readingOffset: Int = 0
     var restoreReadingPosition by mutableStateOf(false)

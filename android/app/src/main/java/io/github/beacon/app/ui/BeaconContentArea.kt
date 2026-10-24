@@ -210,13 +210,20 @@ BeaconMessageTransition(
                             onNavigate = { ui.navigateSettings(it) },
                             receivePlan = ui.receivePlan,
                             receptionForm = ui.receptionForm,
-                            onShowReceiveModes = {
-                                if (
-                                    runtimeState.runtimeConnected &&
-                                        runtimeState.receivePlanLoaded &&
-                                        !busy
-                                )
-                                    ui.receiveModesOpen = true
+                            onSelectReceiveMode = selectMode@{ mode ->
+                                if (!runtimeState.runtimeConnected || !runtimeState.receivePlanLoaded || busy)
+                                    return@selectMode
+                                if (mode != ui.receivePlan.mode) {
+                                    val changeMode = {
+                                        ui.receptionForm.reset(runtimeState.pollingState.config,
+                                            runtimeState.receivePlan.copy(mode = mode))
+                                        actions.receivePlan(ui.receivePlan.copy(mode = mode))
+                                    }
+                                    if (ui.receptionForm.edited && ui.receptionForm.differsFrom(
+                                            runtimeState.pollingState.config, runtimeState.receivePlan))
+                                        ui.pendingNavigation = changeMode
+                                    else changeMode()
+                                }
                             },
                             onUiStyleChange = {
                                 ui.uiStyle = it
@@ -236,6 +243,7 @@ BeaconMessageTransition(
                             onCheckUpdate = checkUpdateNow,
                             quietHoursForm = ui.quietHoursForm,
                             notificationForm = ui.notificationForm,
+                            storageSettings = ui.storageSettings,
                         )
                     }
             }

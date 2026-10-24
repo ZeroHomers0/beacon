@@ -18,14 +18,13 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import io.github.beacon.app.domain.model.BeaconUiStyle
 import io.github.beacon.app.ui.theme.LocalBeaconUiStyle
 
 internal val LocalCompactActions = staticCompositionLocalOf { false }
 
-internal val LocalDialogPrimary = staticCompositionLocalOf { false }
-
-internal val LocalDialogAction = staticCompositionLocalOf { false }
+internal val LocalActionFillWidth = staticCompositionLocalOf { false }
 
 /**
  * MIUIX draws a field with a placeholder label taller than one without, so two fields in the same
@@ -46,12 +45,15 @@ fun BeaconText(
     overflow: TextOverflow = TextOverflow.Clip,
     textAlign: androidx.compose.ui.text.style.TextAlign? = null,
 ) {
+    // Relative line height stays consistent when font size or accessibility scale changes.
+    val textStyle = style.copy(lineHeight = 1.4.em,
+        platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false))
     if (miuix())
         top.yukonga.miuix.kmp.basic.Text(
             text,
             modifier,
             color = color,
-            style = if (textAlign == null) style else style.copy(textAlign = textAlign),
+            style = if (textAlign == null) textStyle else textStyle.copy(textAlign = textAlign),
             maxLines = maxLines,
             overflow = overflow,
         )
@@ -60,34 +62,36 @@ fun BeaconText(
             text,
             modifier,
             color = color,
-            style = if (textAlign == null) style else style.copy(textAlign = textAlign),
+            style = if (textAlign == null) textStyle else textStyle.copy(textAlign = textAlign),
             maxLines = maxLines,
             overflow = overflow,
         )
 }
 
-/** Primary actions share geometry and typography in both visual styles. */
+/** All text actions share one treatment; legacy names preserve existing call sites. */
 @Composable
-fun BeaconButton(
+private fun BeaconUnifiedButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    danger: Boolean = false,
     content: @Composable RowScope.() -> Unit,
 ) {
-    val actionModifier = (if (LocalDialogAction.current) modifier.fillMaxWidth() else modifier)
+    val scheme = MaterialTheme.colorScheme
+    val foreground = if (!enabled) scheme.onSurface.copy(alpha = .38f)
+        else if (danger) scheme.error else scheme.primary
+    val background = scheme.surfaceContainerHigh
+    val actionModifier = (if (LocalActionFillWidth.current) modifier.fillMaxWidth() else modifier)
         .heightIn(min = BeaconUiMetrics.ControlMinHeight)
         .widthIn(min = BeaconUiMetrics.ActionMinWidth)
     val insets = PaddingValues(horizontal = BeaconUiMetrics.Gap12, vertical = BeaconUiMetrics.Gap4)
-    val scheme = MaterialTheme.colorScheme
     if (miuix()) {
         top.yukonga.miuix.kmp.basic.Button(onClick, actionModifier, enabled,
             cornerRadius = BeaconUiMetrics.ActionRadius,
-            minHeight = BeaconUiMetrics.ControlMinHeight,
-            insideMargin = insets,
+            minHeight = BeaconUiMetrics.ControlMinHeight, insideMargin = insets,
             colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.buttonColors(
-                color = scheme.primary, disabledColor = scheme.onSurface.copy(alpha = .12f)),
+                color = background, disabledColor = background),
         ) {
-            val foreground = if (enabled) scheme.onPrimary else scheme.onSurface.copy(alpha = .38f)
             CompositionLocalProvider(
                 androidx.compose.material3.LocalContentColor provides foreground,
                 top.yukonga.miuix.kmp.theme.LocalContentColor provides foreground,
@@ -96,54 +100,26 @@ fun BeaconButton(
             }
         }
     } else androidx.compose.material3.Button(onClick, actionModifier, enabled,
-        shape = BeaconUiMetrics.ActionShape, contentPadding = insets, content = content)
-}
-
-/** Secondary actions never gain a filled background merely because they appear in a dialog. */
-@Composable
-fun BeaconTextButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    content: @Composable RowScope.() -> Unit,
-) {
-    if (LocalDialogPrimary.current) {
-        BeaconButton(onClick, modifier, enabled, content)
-        return
-    }
-    val actionModifier = (if (LocalDialogAction.current) modifier.fillMaxWidth() else modifier)
-        .heightIn(min = BeaconUiMetrics.ControlMinHeight)
-        .widthIn(min = BeaconUiMetrics.ActionMinWidth)
-    val insets = PaddingValues(horizontal = BeaconUiMetrics.Gap12, vertical = BeaconUiMetrics.Gap4)
-    val foreground = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = .38f)
-    if (miuix()) {
-        top.yukonga.miuix.kmp.basic.Button(onClick, actionModifier, enabled,
-            cornerRadius = BeaconUiMetrics.ActionRadius,
-            minHeight = BeaconUiMetrics.ControlMinHeight, insideMargin = insets,
-            colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.buttonColors(
-                color = Color.Transparent, disabledColor = Color.Transparent),
-        ) {
-            CompositionLocalProvider(
-                androidx.compose.material3.LocalContentColor provides foreground,
-                top.yukonga.miuix.kmp.theme.LocalContentColor provides foreground,
-            ) {
-                androidx.compose.material3.ProvideTextStyle(MaterialTheme.typography.labelLarge) { content() }
-            }
-        }
-    } else androidx.compose.material3.TextButton(onClick, actionModifier, enabled,
         shape = BeaconUiMetrics.ActionShape, contentPadding = insets,
-        colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+            containerColor = background, disabledContainerColor = background,
             contentColor = foreground, disabledContentColor = foreground), content = content)
 }
 
-/** Compatibility adapter for existing call sites; secondary actions use one transparent treatment. */
 @Composable
-fun BeaconOutlinedButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    content: @Composable RowScope.() -> Unit,
-) = BeaconTextButton(onClick, modifier, enabled, content)
+fun BeaconButton(onClick: () -> Unit, modifier: Modifier = Modifier,
+    enabled: Boolean = true, content: @Composable RowScope.() -> Unit,
+) = BeaconUnifiedButton(onClick, modifier, enabled, content = content)
+
+@Composable
+fun BeaconTextButton(onClick: () -> Unit, modifier: Modifier = Modifier,
+    enabled: Boolean = true, content: @Composable RowScope.() -> Unit,
+) = BeaconUnifiedButton(onClick, modifier, enabled, content = content)
+
+@Composable
+fun BeaconOutlinedButton(onClick: () -> Unit, modifier: Modifier = Modifier,
+    enabled: Boolean = true, content: @Composable RowScope.() -> Unit,
+) = BeaconUnifiedButton(onClick, modifier, enabled, content = content)
 
 @Composable
 fun BeaconIconButton(
@@ -251,30 +227,8 @@ fun BeaconActionButton(
     }
 }
 
-/**
- * Irreversible confirmation. The filled error container is the only difference from [BeaconButton],
- * so it must stay reserved for actions that cannot be undone.
- */
+/** Destructive actions keep the same geometry and background, with a red label. */
 @Composable
-fun BeaconDangerButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    content: @Composable RowScope.() -> Unit,
-) {
-    androidx.compose.material3.Button(
-        onClick = onClick,
-        modifier =
-            if (LocalDialogAction.current) modifier.fillMaxWidth().heightIn(min = BeaconUiMetrics.ControlMinHeight)
-            else modifier.heightIn(min = BeaconUiMetrics.ControlMinHeight).widthIn(min = BeaconUiMetrics.ActionMinWidth),
-        enabled = enabled,
-        shape = BeaconUiMetrics.ActionShape,
-        colors =
-            androidx.compose.material3.ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.error,
-                contentColor = MaterialTheme.colorScheme.onError,
-            ),
-        contentPadding = PaddingValues(horizontal = BeaconUiMetrics.Gap12, vertical = BeaconUiMetrics.Gap4),
-        content = content,
-    )
-}
+fun BeaconDangerButton(onClick: () -> Unit, modifier: Modifier = Modifier,
+    enabled: Boolean = true, content: @Composable RowScope.() -> Unit,
+) = BeaconUnifiedButton(onClick, modifier, enabled, danger = true, content = content)

@@ -6,21 +6,51 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import io.github.beacon.app.ui.icons.BeaconIcons
 
-/** Content-width actions wrap on narrow screens and when accessibility text grows. */
+/** Full-width single action, equal-width peers; large labels stack without changing hierarchy. */
 @Composable
-fun SettingsActions(content: @Composable FlowRowScope.() -> Unit) {
-    FlowRow(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8, Alignment.End),
-        verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap4),
-        content = content,
-    )
+fun SettingsActions(content: @Composable () -> Unit) {
+    CompositionLocalProvider(LocalActionFillWidth provides true) {
+        Layout(content = content, modifier = Modifier.fillMaxWidth()) { measurables, constraints ->
+            if (measurables.isEmpty()) {
+                layout(constraints.maxWidth, 0) {}
+            } else {
+                val gap = BeaconUiMetrics.Gap8.roundToPx()
+                val count = measurables.size
+                val available = (constraints.maxWidth - gap * (count - 1)).coerceAtLeast(0)
+                val cellWidth = available / count
+                val horizontal = measurables.all { it.maxIntrinsicWidth(Constraints.Infinity) <= cellWidth }
+                val widths = List(count) { index ->
+                    if (horizontal) cellWidth + if (index < available % count) 1 else 0
+                    else constraints.maxWidth
+                }
+                val height = measurables.mapIndexed { index, item -> item.maxIntrinsicHeight(widths[index]) }.max()
+                val placeables = measurables.mapIndexed { index, item ->
+                    item.measure(Constraints.fixed(widths[index], height))
+                }
+                val totalHeight = if (horizontal) height else height * count + gap * (count - 1)
+                layout(constraints.maxWidth, constraints.constrainHeight(totalHeight)) {
+                    var offset = 0
+                    placeables.forEach {
+                        it.placeRelative(if (horizontal) offset else 0, if (horizontal) 0 else offset)
+                        offset += (if (horizontal) it.width else it.height) + gap
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -48,7 +78,7 @@ fun SettingsPrimaryButton(
     enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
-    BeaconButton(onClick, modifier, enabled) { BeaconText(label) }
+    BeaconButton(onClick, modifier.fillMaxWidth(), enabled) { BeaconText(label) }
 }
 
 /** Refresh, copy and overflow share one icon-only, labelled hit target. */
@@ -63,7 +93,8 @@ fun SettingsToolAction(
     onClick: () -> Unit,
 ) {
     BeaconIconButton(onClick = onClick,
-        modifier = modifier.sizeIn(minWidth = BeaconUiMetrics.ControlMinHeight, minHeight = BeaconUiMetrics.ControlMinHeight),
+        modifier = modifier.sizeIn(minWidth = BeaconUiMetrics.ControlMinHeight, minHeight = BeaconUiMetrics.ControlMinHeight)
+            .semantics { if (loading) progressBarRangeInfo = ProgressBarRangeInfo.Indeterminate },
         enabled = enabled && !loading) {
         BeaconLoadingIcon(if (completed) BeaconIcons.Check else icon, loading,
             modifier = Modifier.size(BeaconUiMetrics.IconMedium), description = description,

@@ -28,7 +28,7 @@ internal fun ReceiveRulesPanel(form: ReceptionFormState, busy: Boolean) {
                 form.plan = plan.copy(lowBatteryEnabled = it)
                 form.edited = true
             }
-            if (plan.lowBatteryEnabled) {
+            run {
                 val levels =
                     (listOf(10, 15, 20, 25, 30, 40, 50) + plan.lowBatteryPercent)
                         .distinct()
@@ -37,7 +37,7 @@ internal fun ReceiveRulesPanel(form: ReceptionFormState, busy: Boolean) {
                     resources.getString(R.string.settings_rules_battery_threshold),
                     levels.map { resources.getString(R.string.settings_rules_battery_percent, it) },
                     levels.indexOf(plan.lowBatteryPercent),
-                    !busy,
+                    !busy && plan.lowBatteryEnabled,
                 ) {
                     form.plan = plan.copy(lowBatteryPercent = levels[it])
                     form.edited = true
@@ -53,13 +53,13 @@ internal fun ReceiveRulesPanel(form: ReceptionFormState, busy: Boolean) {
                 form.plan = plan.copy(scheduleEnabled = it)
                 form.edited = true
             }
-            if (plan.scheduleEnabled) {
+            run {
                 BeaconTimeRangePreference(
                     start,
                     end,
                     stringResource(R.string.settings_rules_start),
                     stringResource(R.string.settings_rules_end),
-                    enabled = !busy,
+                    enabled = !busy && plan.scheduleEnabled,
                     onStartChange = {
                         form.scheduleStartText = it
                         form.edited = true
@@ -69,11 +69,9 @@ internal fun ReceiveRulesPanel(form: ReceptionFormState, busy: Boolean) {
                         form.edited = true
                     },
                 )
-                if (!form.scheduleValid)
-                    BeaconText(
-                        stringResource(R.string.settings_rules_time_invalid),
-                        color = androidx.compose.material3.MaterialTheme.colorScheme.error,
-                    )
+                SettingsOverviewField(stringResource(R.string.settings_validation_title),
+                    stringResource(if (form.scheduleValid) R.string.settings_validation_ready
+                        else R.string.settings_rules_time_invalid), error = !form.scheduleValid)
                 BeaconDropdownPreference(
                     resources.getString(R.string.settings_rules_schedule_mode),
                     listOf(
@@ -81,7 +79,7 @@ internal fun ReceiveRulesPanel(form: ReceptionFormState, busy: Boolean) {
                         resources.getString(R.string.ui_power_saving_mode),
                     ),
                     if (plan.scheduleRealtime) 0 else 1,
-                    !busy,
+                    !busy && plan.scheduleEnabled,
                 ) {
                     form.plan = plan.copy(scheduleRealtime = it == 0)
                     form.edited = true

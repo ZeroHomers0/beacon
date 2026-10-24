@@ -43,7 +43,7 @@ fun SettingsPage(
     onNavigate: (SettingsScreen) -> Unit,
     receivePlan: ReceivePlan,
     receptionForm: ReceptionFormState,
-    onShowReceiveModes: () -> Unit,
+    onSelectReceiveMode: (io.github.beacon.app.domain.model.ReceiveMode) -> Unit,
     onUiStyleChange: (BeaconUiStyle) -> Unit,
     onThemeModeChange: (BeaconThemeMode) -> Unit,
     onOperationDetails: (String) -> Unit,
@@ -52,6 +52,7 @@ fun SettingsPage(
     onNotificationSettingsUnavailable: () -> Unit,
     updateState: UpdateCheckState,
     onCheckUpdate: () -> Unit,
+    storageSettings: StorageSettingsState = androidx.compose.runtime.remember { StorageSettingsState() },
     notificationForm: NotificationFormState =
         androidx.compose.runtime.remember { NotificationFormState() },
     quietHoursForm: QuietHoursFormState =
@@ -167,46 +168,26 @@ fun SettingsPage(
         )
         return
     }
+    val needsRuntime = screen in setOf(SettingsScreen.CONNECTION, SettingsScreen.RECEPTION,
+        SettingsScreen.NOTIFICATIONS, SettingsScreen.NOTIFICATION_RULES, SettingsScreen.QUIET_HOURS,
+        SettingsScreen.STORAGE, SettingsScreen.BACKUP, SettingsScreen.GUIDE)
+    var runtimeUnavailable by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(runtimeState.runtimeConnected, screen) {
+        runtimeUnavailable = false
+        if (needsRuntime && !runtimeState.runtimeConnected) {
+            kotlinx.coroutines.delay(1500)
+            runtimeUnavailable = true
+        }
+    }
+    io.github.beacon.app.ui.components.SettingsRetryFeedback(
+        stringResource(R.string.settings_runtime_disconnected), runtimeUnavailable,
+        onRetry = { runtimeUnavailable = false; actions.start(context) })
+    if (screen in setOf(SettingsScreen.NOTIFICATION_RULES, SettingsScreen.QUIET_HOURS)) {
+        io.github.beacon.app.ui.components.SettingsOperationFeedback(
+            stringResource(R.string.settings_data_failed),
+            notificationForm.rulesFailure?.let { stringResource(it) }.orEmpty(), failed = true)
+    }
     BeaconSettingsList(state = scroll, modifier = modifier, contentPadding = padding) {
-        if (
-            !runtimeState.runtimeConnected &&
-                screen in
-                    setOf(
-                        SettingsScreen.CONNECTION,
-                        SettingsScreen.RECEPTION,
-                        SettingsScreen.NOTIFICATIONS,
-                        SettingsScreen.NOTIFICATION_RULES,
-                        SettingsScreen.QUIET_HOURS,
-                        SettingsScreen.STORAGE,
-                        SettingsScreen.BACKUP,
-                        SettingsScreen.GUIDE,
-                    )
-        ) {
-            item {
-                io.github.beacon.app.ui.components.SettingsSection(
-                    stringResource(R.string.settings_runtime_title)
-                ) {
-                    io.github.beacon.app.ui.components.SettingsHint(
-                        stringResource(R.string.settings_runtime_disconnected)
-                    )
-                    io.github.beacon.app.ui.components.BeaconButton(
-                        onClick = { actions.start(context) },
-                        modifier = Modifier.align(androidx.compose.ui.Alignment.End),
-                    ) {
-                        io.github.beacon.app.ui.components.BeaconText(
-                            stringResource(R.string.action_retry)
-                        )
-                    }
-                }
-            }
-        }
-        if (screen in setOf(SettingsScreen.NOTIFICATION_RULES, SettingsScreen.QUIET_HOURS)) {
-            notificationForm.rulesFailure?.let { failure ->
-                item {
-                    io.github.beacon.app.ui.components.SettingsNotice(stringResource(failure))
-                }
-            }
-        }
         when (screen) {
             SettingsScreen.HOME,
             SettingsScreen.APPEARANCE -> {
@@ -359,33 +340,20 @@ fun SettingsPage(
                         quietHoursForm,
                         scheduleOnly = true,
                         editorSaving = notificationForm.rulesSaving,
+                        failureMessage = notificationForm.rulesFailure,
                         onRetrySave = { notificationForm.saveRules(actions, quietHoursForm) },
                     )
                 }
-                if (notificationForm.failed)
-                    item {
-                        io.github.beacon.app.ui.components.SettingsSection(
-                            stringResource(R.string.notification_age_title)
-                        ) {
-                            io.github.beacon.app.ui.components.SettingsHint(
-                                stringResource(R.string.settings_data_failed)
-                            )
-                            io.github.beacon.app.ui.components.BeaconButton(
-                                onClick = {
-                                    if (notificationForm.loaded)
-                                        notificationForm.saveRules(actions, quietHoursForm)
-                                    else notificationForm.attempt++
-                                },
-                                enabled = runtimeState.runtimeConnected,
-                                modifier = Modifier.align(androidx.compose.ui.Alignment.End),
-                            ) {
-                                io.github.beacon.app.ui.components.BeaconText(
-                                    stringResource(R.string.action_retry)
-                                )
-                            }
-                        }
-                    }
+                if (notificationForm.failed && notificationForm.rulesFailure == null) item {
+                    io.github.beacon.app.ui.components.SettingsRetryFeedback(
+                        stringResource(R.string.settings_data_failed), true,
+                        onRetry = if (runtimeState.runtimeConnected) {
+                            { if (notificationForm.loaded) notificationForm.saveRules(actions, quietHoursForm)
+                                else notificationForm.attempt++ }
+                        } else null)
+                }
             }
+
             SettingsScreen.SERVER_ADMIN,
             SettingsScreen.SERVER_DEVICES,
             SettingsScreen.SERVER_APPLICATIONS,
@@ -416,14 +384,14 @@ fun SettingsPage(
                     actions,
                     receivePlan,
                     receptionForm,
-                    onShowReceiveModes,
+                    onSelectReceiveMode,
                     onOperationDetails,
                     busy,
                     polling,
                 )
             }
             SettingsScreen.STORAGE -> {
-                item { StorageSettingsPanel(runtimeState, actions) }
+                item { StorageSettingsPanel(runtimeState, actions, storageSettings) }
             }
             SettingsScreen.CONNECTION -> {
                 connectionSettingsItems(
@@ -460,6 +428,7 @@ fun SettingsPage(
                         quietHoursForm,
                         onSchedule = { onNavigate(SettingsScreen.QUIET_HOURS) },
                         editorSaving = notificationForm.rulesSaving,
+                        failureMessage = notificationForm.rulesFailure,
                         onRetrySave = { notificationForm.saveRules(actions, quietHoursForm) },
                     )
                 }

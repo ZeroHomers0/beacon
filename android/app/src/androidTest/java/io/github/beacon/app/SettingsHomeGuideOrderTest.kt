@@ -51,7 +51,7 @@ class SettingsHomeGuideOrderTest {
                             notificationPermission = NotificationPermissionState.ALLOWED, notificationHint = null,
                             uiStyle = style, themeMode = BeaconThemeMode.SYSTEM,
                             onNavigate = { destination = it }, receivePlan = ReceivePlan(), receptionForm = reception,
-                            onShowReceiveModes = {}, onUiStyleChange = {}, onThemeModeChange = {},
+                            onSelectReceiveMode = {}, onUiStyleChange = {}, onThemeModeChange = {},
                             onOperationDetails = {}, onFeedback = {}, onRequestNotificationPermission = {},
                             onNotificationSettingsUnavailable = {}, updateState = update, onCheckUpdate = {},
                         )

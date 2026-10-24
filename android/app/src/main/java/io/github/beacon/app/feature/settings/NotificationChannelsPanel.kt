@@ -24,8 +24,6 @@ fun NotificationChannelsPanel() {
         revision++
     }
     SettingsGroup(stringResource(R.string.notification_channels)) {
-        if (!context.getSystemService(NotificationManager::class.java).areNotificationsEnabled())
-            BeaconText(stringResource(R.string.channel_app_permission_off), Modifier.padding(16.dp))
         NotificationChannelKind.entries.forEach { kind ->
             val channel =
                 remember(kind, revision) {
@@ -83,11 +81,7 @@ fun NotificationChannelsPanel() {
                 }.isFailure
             })
         }
-        if (failed)
-            BeaconText(
-                stringResource(R.string.notification_channel_failed),
-                Modifier.padding(16.dp),
-                color = androidx.compose.material3.MaterialTheme.colorScheme.error,
-            )
+        SettingsOperationFeedback(stringResource(R.string.notification_channels),
+            if (failed) stringResource(R.string.notification_channel_failed) else "", failed = true)
     }
 }

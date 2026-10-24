@@ -39,4 +39,31 @@ class DisplayTimeTest {
         val result = "2026-10-15 08:01:02 · 已清理 12 条"
         assertEquals(result, CleanupResultPresentation.compact(result))
     }
+    @Test fun settingsShowClockTodayAndFullDateOnOtherDays() {
+        val now = Instant.parse("2026-10-24T04:00:00Z").toEpochMilli()
+        val zone = ZoneId.of("Asia/Shanghai")
+        assertEquals("08:01:02", DisplayTime.compact(
+            Instant.parse("2026-10-24T00:01:02Z").toEpochMilli(), now, zone))
+        assertEquals("2026-10-23 08:01:02", DisplayTime.compact(
+            Instant.parse("2026-10-23T00:01:02Z").toEpochMilli(), now, zone))
+        assertEquals("2026-10-25 08:01:02", DisplayTime.compact(
+            Instant.parse("2026-10-25T00:01:02Z").toEpochMilli(), now, zone))
+    }
+
+    @Test fun midnightBoundaryUsesLocalDateRatherThanLast24Hours() {
+        val now = Instant.parse("2026-10-24T16:00:01Z").toEpochMilli()
+        val previous = Instant.parse("2026-10-24T15:59:59Z").toEpochMilli()
+        assertEquals("2026-10-24 23:59:59", DisplayTime.compact(previous, now, ZoneId.of("Asia/Shanghai")))
+        assertEquals("15:59:59", DisplayTime.compact(previous, now, ZoneOffset.UTC))
+    }
+
+    @Test fun cleanupRecordUsesTheSameTodayRule() {
+        val now = Instant.parse("2026-10-24T04:00:00Z").toEpochMilli()
+        val zone = ZoneId.of("Asia/Shanghai")
+        assertEquals("08:01:02 · 已清理 12 条", CleanupResultPresentation.compact(
+            "2026-10-24 08:01:02 · 已清理 12 条本地消息", now, zone))
+        assertEquals("2026-10-23 08:01:02 · 已清理 12 条", CleanupResultPresentation.compact(
+            "2026-10-23 08:01:02 · 已清理 12 条本地消息", now, zone))
+    }
+
 }

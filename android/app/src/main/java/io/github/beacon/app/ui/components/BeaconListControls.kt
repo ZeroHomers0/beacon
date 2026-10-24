@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
@@ -26,11 +27,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.BeaconUiStyle
 import io.github.beacon.app.ui.icons.BeaconIcons
@@ -191,7 +194,10 @@ fun BeaconPreferenceToggle(
 ) {
     Row(
         Modifier.fillMaxWidth()
-            .heightIn(min = BeaconUiMetrics.FieldMinHeight),
+            .heightIn(min = BeaconUiMetrics.FieldMinHeight)
+            .named(title)
+            .toggleable(value = checked, enabled = enabled,
+                role = androidx.compose.ui.semantics.Role.Switch, onValueChange = onCheckedChange),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
     ) {
@@ -199,10 +205,11 @@ fun BeaconPreferenceToggle(
             Modifier.weight(1f).padding(vertical = BeaconUiMetrics.FieldVerticalInset),
             verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap4),
         ) {
-            BeaconText(title, style = MaterialTheme.typography.bodyLarge)
+            BeaconFittedText(title, Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodyLarge)
             if (summary.isNotBlank())
-                BeaconText(
+                BeaconFittedText(
                     summary,
+                    modifier = Modifier.fillMaxWidth(),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -212,15 +219,15 @@ fun BeaconPreferenceToggle(
         if (LocalBeaconUiStyle.current == BeaconUiStyle.MIUIX)
             top.yukonga.miuix.kmp.basic.Switch(
                 checked = checked,
-                onCheckedChange = onCheckedChange,
-                modifier = Modifier.named(title),
+                onCheckedChange = null,
+                modifier = Modifier.clearAndSetSemantics {},
                 enabled = enabled,
             )
         else
             Switch(
                 checked = checked,
-                onCheckedChange = onCheckedChange,
-                modifier = Modifier.named(title),
+                onCheckedChange = null,
+                modifier = Modifier.clearAndSetSemantics {},
                 enabled = enabled,
             )
     }
@@ -246,69 +253,25 @@ internal fun diagnosticRowFits(
     availableWidthPx: Int,
 ): Boolean = labelWidthPx + valueWidthPx + gapPx + DIAGNOSTIC_ROW_TOLERANCE_PX <= availableWidthPx
 
-/**
- * Key and value share one line when they genuinely fit, and stack otherwise.
- *
- * A fixed fractional split squeezed long keys into a one- or two-character orphan line and left
- * short keys floating far from their value, so measure first: the two-column form is used only when
- * the pair fits with [DIAGNOSTIC_ROW_GAP] to spare; otherwise both get the full width, which never
- * wraps. The one-line form right-aligns the value, keeping the pair symmetrical.
- */
+/** Compatibility entry point: metadata always uses the shared title/value geometry. */
 @Composable
 fun DiagnosticRow(label: String, value: String, reserveValueLines: Int = 0) {
-    val labelStyle = MaterialTheme.typography.bodyLarge
-    val valueStyle =
-        MaterialTheme.typography.bodyMedium.copy(
-            fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
-        )
-    val labelColor = MaterialTheme.colorScheme.onSurface
-    val measurer = rememberTextMeasurer()
-    val gapPx = with(LocalDensity.current) { DIAGNOSTIC_ROW_GAP.roundToPx() }
-    Surface(
-        modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-        color = androidx.compose.ui.graphics.Color.Transparent,
-    ) {
-        BoxWithConstraints(
-            Modifier.heightIn(min = BeaconUiMetrics.ControlMinHeight)
-                .padding(vertical = BeaconUiMetrics.Gap8),
-            contentAlignment = Alignment.CenterStart,
-        ) {
-            val labelWidth = measurer.measure(label, labelStyle, maxLines = 1).size.width
-            val valueWidth = measurer.measure(value, valueStyle, maxLines = 1).size.width
-            val fits =
-                reserveValueLines == 0 && constraints.hasBoundedWidth &&
-                    diagnosticRowFits(
-                        labelWidth,
-                        valueWidth,
-                        gapPx,
-                        constraints.maxWidth,
-                    )
-            if (fits)
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    BeaconText(label, style = labelStyle, color = labelColor)
-                    BeaconText(value, style = valueStyle)
-                }
-            else
-                Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap4)) {
-                    BeaconText(label, style = labelStyle, color = labelColor)
-                    BeaconText(
-                        value,
-                        modifier = if (reserveValueLines > 0) Modifier.heightIn(
-                            min = with(LocalDensity.current) {
-                                (valueStyle.lineHeight * reserveValueLines).toDp()
-                            }
-                        ) else Modifier,
-                        style = valueStyle,
-                        maxLines = if (reserveValueLines > 0) reserveValueLines else Int.MAX_VALUE,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                    )
-                }
+    SettingsOverviewField(label, value)
+}
+
+/** Statistics always use separate cells against the page background, without a nested card. */
+@Composable
+fun SettingsMetricSection(
+    title: String,
+    action: (@Composable () -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            SettingsLabel(title, Modifier.weight(1f))
+            action?.invoke()
         }
+        content()
     }
 }
 
@@ -321,45 +284,30 @@ fun SettingsMetricGrid(
 ) {
     require(columns == null || columns > 0)
     val density = LocalDensity.current
-    val measurer = rememberTextMeasurer()
-    val widest =
-        metrics.maxOfOrNull { (label, value) ->
-            maxOf(
-                measurer
-                    .measure(label, MaterialTheme.typography.labelMedium, maxLines = 1)
-                    .size
-                    .width,
-                measurer
-                    .measure(value, MaterialTheme.typography.titleMedium, maxLines = 1)
-                    .size
-                    .width,
-            )
-        } ?: 0
     BoxWithConstraints(modifier.fillMaxWidth()) {
-        val cellWidth = widest + with(density) { 24.dp.roundToPx() }
+        // Counts and loading placeholders must not change the number of columns.
+        val minimumCell = with(density) { (80.dp * density.fontScale.coerceAtLeast(1f)).roundToPx() }
         val gapWidth = with(density) { 8.dp.roundToPx() }
-        val availableColumns =
-            ((constraints.maxWidth + gapWidth) / (cellWidth + gapWidth).coerceAtLeast(1))
-                .coerceAtLeast(1)
+        val availableColumns = ((constraints.maxWidth + gapWidth) / (minimumCell + gapWidth)).coerceAtLeast(1)
         val resolvedColumns = minOf(columns ?: 2, availableColumns)
         Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
             metrics.chunked(resolvedColumns).forEach { pair ->
                 Row(
-                    Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                    Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8),
                 ) {
                     pair.forEach { (label, value) ->
                         Surface(
-                            Modifier.weight(1f).fillMaxHeight(),
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
-                            color = androidx.compose.ui.graphics.Color.Transparent,
+                            Modifier.weight(1f),
+                            shape = MaterialTheme.shapes.large,
+                            color = MaterialTheme.colorScheme.surfaceContainerLow,
                         ) {
                             Column(
-                                Modifier.padding(if (resolvedColumns == 3) 8.dp else 12.dp),
+                                Modifier.heightIn(min = 88.dp).padding(12.dp),
                                 verticalArrangement = Arrangement.SpaceBetween,
                                 horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
-                                BeaconText(
+                                BeaconFittedText(
                                     label,
                                     modifier = Modifier.fillMaxWidth(),
                                     style =
@@ -368,7 +316,7 @@ fun SettingsMetricGrid(
                                         ),
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
-                                BeaconText(
+                                BeaconFittedText(
                                     value,
                                     modifier = Modifier.fillMaxWidth(),
                                     style =

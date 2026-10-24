@@ -45,7 +45,7 @@ class ReceiveRulesCompactTest {
         rule.onNodeWithContentDescription("Wi-Fi 时即时接收").performScrollTo().performClick()
         rule.runOnIdle { assertTrue(form.plan.realtimeWhileCharging); assertTrue(form.plan.realtimeOnWifi) }
         rule.onNodeWithContentDescription("每日时间段").performScrollTo().performClick()
-        rule.onNodeWithText("时间段内接收方式").assertDoesNotExist()
+        rule.onNode(hasText("时间段内接收方式") and hasClickAction()).assertIsNotEnabled()
         rule.runOnIdle { assertFalse(form.plan.scheduleEnabled) }
         rule.onNodeWithText("接收规则").performScrollTo()
         val bitmap = rule.onRoot().captureToImage().asAndroidBitmap()

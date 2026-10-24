@@ -44,7 +44,7 @@ internal fun UpdateCheckDialog(
         onDismissRequest = onDismiss,
         title = { BeaconText(stringResource(R.string.settings_update_available, release.version)) },
         text = {
-            Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()),
+            Column(
                 verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
                 if (release.sizeBytes > 0) {
                     BeaconText(

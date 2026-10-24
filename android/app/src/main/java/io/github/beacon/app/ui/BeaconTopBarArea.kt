@@ -150,13 +150,8 @@ internal fun BeaconTopBarArea(
                                             runtimeState.realtimeRunning),
                                     ui.receivePlan.mode,
                                     onClick = {
-                                        if (
-                                            runtimeState.runtimeConnected &&
-                                                runtimeState
-                                                    .receivePlanLoaded &&
-                                                !busy
-                                        )
-                                            ui.receiveModesOpen = true
+                                        ui.page = 1
+                                        ui.navigateSettings(SettingsScreen.RECEPTION)
                                     },
                                     onLongClick = {
                                         ui.page = 1

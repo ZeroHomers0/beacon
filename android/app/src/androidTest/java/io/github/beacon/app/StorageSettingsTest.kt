@@ -46,6 +46,7 @@ class StorageSettingsTest {
                 RuntimeState(
                     runtimeConnected = true,
                     cleanupPolicy = CleanupPolicy(),
+                    cleanupPreviewFresh = true,
                     cleanupPreview = CleanupPreview("preview", 10, 2, 1, 4096, 3, 3, 3),
                 )
             rule.runOnUiThread {
@@ -108,6 +109,7 @@ class StorageSettingsTest {
             val newDays = if (CleanupPolicy().days == 14) "15" else "14"
             rule.onAllNodes(hasSetTextAction()).onFirst().performTextReplacement(newDays)
             rule.onNodeWithText("保存").assertIsEnabled().performClick()
+            rule.waitUntil { requests == 1 }
             rule.onNodeWithText("保存").assertIsNotEnabled()
             rule.onNodeWithText("取消").assertIsNotEnabled()
             rule.onNodeWithText(newDays).assertIsNotEnabled()
@@ -116,6 +118,7 @@ class StorageSettingsTest {
             rule.onNodeWithText("预期保存失败").assertIsDisplayed()
             rule.onAllNodes(hasSetTextAction()).onFirst().assertTextContains(newDays)
             rule.onNodeWithText("保存").assertIsEnabled().performClick()
+            rule.waitUntil { requests == 2 }
             assertEquals(2, requests)
             rule.runOnIdle { finish!!(requested!!) }
             rule.onNodeWithText("保存").assertDoesNotExist()

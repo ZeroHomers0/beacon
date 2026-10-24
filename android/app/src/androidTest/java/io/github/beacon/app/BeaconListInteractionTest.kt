@@ -244,13 +244,10 @@ class BeaconListInteractionTest {
                         onLongClick = { settings.incrementAndGet() },
                     )
                     if (open)
-                        io.github.beacon.app.feature.settings.ReceiveModeDialog(
+                        io.github.beacon.app.feature.settings.ReceiveModeOptions(
                             io.github.beacon.app.domain.model.ReceiveMode.POWER_SAVING,
-                            onSelect = {
-                                selected.set(it.ordinal)
-                                open = false
-                            },
-                            onDismiss = { open = false },
+                            enabled = true,
+                            onSelect = { selected.set(it.ordinal) },
                         )
                 }
             }

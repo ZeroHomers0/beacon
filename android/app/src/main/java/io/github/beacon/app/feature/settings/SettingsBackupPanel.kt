@@ -109,16 +109,14 @@ fun SettingsBackupPanel(actions: RuntimeActions, busy: Boolean, grouped: Boolean
                 }
         }
     val content: @Composable () -> Unit = {
-        Column(Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),
-            verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap)) {
-        SettingsHint(stringResource(R.string.ui_v2_export_settings_hint))
-        SettingsActions {
-        SettingsTextAction(
-            stringResource(R.string.settings_export),
-            io.github.beacon.app.ui.icons.BeaconIcons.Backup,
-            accessibilityLabel = stringResource(R.string.settings_backup_export),
+        Column(Modifier.fillMaxWidth()) {
+
+        SettingsCommandRow(
+            title = stringResource(R.string.settings_backup_export),
+            icon = io.github.beacon.app.ui.icons.BeaconIcons.Backup,
             enabled = !busy && !fileBusy,
             onClick = {
+                hint = ""
                 actions.settingsBackup(
                     onFailure = {
                         failed = true
@@ -131,26 +129,24 @@ fun SettingsBackupPanel(actions: RuntimeActions, busy: Boolean, grouped: Boolean
                 }
             },
         )
-        SettingsTextAction(
-            stringResource(R.string.settings_import),
-            io.github.beacon.app.ui.icons.BeaconIcons.History,
-            accessibilityLabel = stringResource(R.string.settings_backup_import),
+        SettingsCommandRow(
+            title = stringResource(R.string.settings_backup_import),
+            icon = io.github.beacon.app.ui.icons.BeaconIcons.History,
             enabled = !busy && !fileBusy,
             onClick = {
+                hint = ""
                 importFile.launch(
                     arrayOf("application/json", "text/plain", "application/octet-stream")
                 )
             },
         )
-        }
-        if (!importing && hint.isNotEmpty())
-            OperationResultPanel(stringResource(R.string.settings_backup_title), hint, failed)
 
         }
 }
     if (grouped)
         SettingsGroup(stringResource(R.string.settings_backup_settings_title)) { content() }
     else content()
+    SettingsOperationFeedback(stringResource(R.string.settings_backup_title), hint, failed, visible = !importing)
     if (importing)
         BeaconAlertDialog(
             onDismissRequest = { if (!busy) importing = false },

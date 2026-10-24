@@ -11,15 +11,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.Constraints
-import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 
 /**
- * Dialog actions share the same content-width, wrapping layout as settings cards.
+ * Dialog actions share the same equal-width, adaptive layout as settings cards.
  * Body content scrolls independently so actions remain reachable with a keyboard or large text.
  */
 @Composable
@@ -30,19 +27,20 @@ fun BeaconAlertDialog(
     confirmButton: @Composable () -> Unit,
     dismissButton: (@Composable () -> Unit)? = null,
 ) {
+    val screenHeight = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp
     val actions: @Composable () -> Unit = {
-        SettingsActions {
-            CompositionLocalProvider(LocalDialogPrimary provides false) {
-                if (dismissButton != null) dismissButton()
-            }
-            CompositionLocalProvider(LocalDialogPrimary provides true) { confirmButton() }
-        }
+        if (dismissButton == null) {
+            SettingsActions { confirmButton() }
+        } else BeaconActionPair(
+            dismiss = { dismissButton() },
+            confirm = confirmButton,
+        )
     }
+
     if (miuix()) {
-        val show = remember { mutableStateOf(true) }
-        top.yukonga.miuix.kmp.extra.WindowDialog(show, onDismissRequest = onDismissRequest) {
+        top.yukonga.miuix.kmp.extra.WindowDialog(show = true, onDismissRequest = onDismissRequest) {
             Column(
-                Modifier.heightIn(max = 600.dp),
+                Modifier.heightIn(max = screenHeight * .85f),
                 verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap16),
             ) {
                 androidx.compose.material3.ProvideTextStyle(MaterialTheme.typography.titleLarge) {
@@ -60,54 +58,16 @@ fun BeaconAlertDialog(
             confirmButton = actions,
             title = title,
             text = {
-                Box(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) { text() }
+                Box(Modifier.heightIn(max = screenHeight * .55f).verticalScroll(rememberScrollState())) { text() }
             },
         )
 }
 
 @Composable
 fun BeaconActionPair(dismiss: @Composable () -> Unit, confirm: @Composable () -> Unit) {
-    CompositionLocalProvider(LocalDialogAction provides true) {
-        Layout(
-            modifier = Modifier.fillMaxWidth(),
-            content = {
-                Box(propagateMinConstraints = true) { dismiss() }
-                Box(propagateMinConstraints = true) { confirm() }
-            },
-        ) { measurables, constraints ->
-            val gap = 12.dp.roundToPx()
-            val available = (constraints.maxWidth - gap).coerceAtLeast(0)
-            val naturalWidths = measurables.map { it.maxIntrinsicWidth(Constraints.Infinity) }
-            val half = available / 2
-            val horizontal = naturalWidths.max() <= half
-            val widths =
-                if (horizontal) listOf(half, available - half)
-                else listOf(constraints.maxWidth, constraints.maxWidth)
-            val rowHeight =
-                if (horizontal)
-                    measurables
-                        .mapIndexed { index, measurable ->
-                            measurable.maxIntrinsicHeight(widths[index])
-                        }
-                        .max()
-                else 0
-            val placeables = measurables.mapIndexed { index, measurable ->
-                measurable.measure(
-                    if (horizontal) Constraints.fixed(widths[index], rowHeight)
-                    else Constraints.fixedWidth(widths[index])
-                )
-            }
-            val height = if (horizontal) rowHeight else placeables.sumOf { it.height } + gap
-            layout(constraints.maxWidth, constraints.constrainHeight(height)) {
-                if (horizontal) {
-                    placeables[0].placeRelative(0, 0)
-                    placeables[1].placeRelative(widths[0] + gap, 0)
-                } else {
-                    placeables[0].placeRelative(0, 0)
-                    placeables[1].placeRelative(0, placeables[0].height + gap)
-                }
-            }
-        }
+    SettingsActions {
+        Box(propagateMinConstraints = true) { dismiss() }
+        Box(propagateMinConstraints = true) { confirm() }
     }
 }
 
@@ -116,7 +76,7 @@ fun BeaconActionPair(dismiss: @Composable () -> Unit, confirm: @Composable () ->
  * cancel/confirm pair. The confirm label defaults to 「确认」 because repeating the title produced
  * 「删除设备 / 删除设备」; a caller that knows the verb (删除、解绑、清理) passes it explicitly.
  *
- * [danger] fills the confirm button with the error container and is reserved for actions that
+ * [danger] gives the shared button a red label and is reserved for actions that
  * cannot be undone. [enabled] and [dismissEnabled] stay separate because a dialog that keeps the
  * user inside while a call is in flight disables both, while one whose confirm is simply not
  * applicable yet still allows a plain dismissal. Anything richer than a single sentence still
@@ -183,10 +143,8 @@ fun BeaconDropdownMenu(
     onDismissRequest: () -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val show = remember { mutableStateOf(expanded) }
-    SideEffect { show.value = expanded }
     top.yukonga.miuix.kmp.extra.WindowListPopup(
-        show = show,
+        show = expanded,
         popupPositionProvider =
             top.yukonga.miuix.kmp.basic.ListPopupDefaults.ContextMenuPositionProvider,
         alignment = top.yukonga.miuix.kmp.basic.PopupPositionProvider.Align.TopEnd,
@@ -203,16 +161,19 @@ fun BeaconDropdownMenu(
 
 @Composable
 fun BeaconDropdownMenuItem(text: @Composable () -> Unit, onClick: () -> Unit) {
-    if (miuix())
-        BeaconTextButton(onClick, Modifier.fillMaxWidth()) {
+    if (miuix()) {
+        androidx.compose.material3.Surface(onClick = onClick,
+            color = androidx.compose.ui.graphics.Color.Transparent) {
             CompositionLocalProvider(
-                top.yukonga.miuix.kmp.theme.LocalContentColor provides
-                    MaterialTheme.colorScheme.onSurface
+                top.yukonga.miuix.kmp.theme.LocalContentColor provides MaterialTheme.colorScheme.onSurface,
+                androidx.compose.material3.LocalContentColor provides MaterialTheme.colorScheme.onSurface,
             ) {
                 androidx.compose.material3.ProvideTextStyle(MaterialTheme.typography.bodyLarge) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) { text() }
+                    Row(Modifier.fillMaxWidth().heightIn(min = BeaconUiMetrics.ControlMinHeight)
+                        .padding(horizontal = BeaconUiMetrics.Gap12, vertical = BeaconUiMetrics.Gap8),
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) { text() }
                 }
             }
         }
-    else androidx.compose.material3.DropdownMenuItem(text, onClick)
+    } else androidx.compose.material3.DropdownMenuItem(text, onClick)
 }

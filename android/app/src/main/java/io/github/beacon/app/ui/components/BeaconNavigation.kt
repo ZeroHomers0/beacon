@@ -152,8 +152,6 @@ fun BeaconDropdownPreference(
     onSelected: (Int) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val measurer = rememberTextMeasurer()
-    val density = LocalDensity.current
     Box(Modifier.fillMaxWidth()) {
         if (settingsRow) {
             SettingsRow(
@@ -166,82 +164,23 @@ fun BeaconDropdownPreference(
                 onClick = { expanded = true },
             )
         } else
-            BoxWithConstraints(
+            Row(
                 Modifier.fillMaxWidth()
                     .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
-                    .clickable(
-                        enabled = enabled,
-                        role = androidx.compose.ui.semantics.Role.Button,
-                    ) {
-                        expanded = true
-                    }
+                    .clickable(enabled = enabled, role = androidx.compose.ui.semantics.Role.Button) { expanded = true }
                     .heightIn(min = BeaconUiMetrics.FieldMinHeight)
                     .padding(vertical = BeaconUiMetrics.FieldVerticalInset),
-                contentAlignment = androidx.compose.ui.Alignment.CenterStart,
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
             ) {
-                val value = items.getOrElse(selectedIndex) { "" }
-                val titleWidth =
-                    measurer
-                        .measure(title, MaterialTheme.typography.bodyLarge, maxLines = 1)
-                        .size
-                        .width
-                val valueWidth =
-                    measurer
-                        .measure(value, MaterialTheme.typography.bodyMedium, maxLines = 1)
-                        .size
-                        .width
-                val chromeWidth = with(density) { (if (icon == null) 30.dp else 62.dp).roundToPx() }
-                val gap = with(density) { 12.dp.roundToPx() }
-                val useStacked =
-                    stacked ||
-                        !diagnosticRowFits(
-                            titleWidth,
-                            valueWidth,
-                            gap,
-                            constraints.maxWidth - chromeWidth,
-                        )
-                Row(
-                    Modifier.fillMaxWidth(),
-                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
-                ) {
-                    if (icon != null)
-                        androidx.compose.material3.Icon(
-                            icon,
-                            null,
-                            Modifier.size(20.dp),
-                            tint = MaterialTheme.colorScheme.onSurface,
-                        )
-                    if (useStacked) {
-                        Column(
-                            Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap4),
-                        ) {
-                            BeaconText(title, style = MaterialTheme.typography.bodyLarge)
-                            BeaconText(
-                                items.getOrElse(selectedIndex) { "" },
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-                    } else {
-                        BeaconText(
-                            title,
-                            Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
-                        BeaconText(
-                            value,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    }
-                    androidx.compose.material3.Icon(
-                        BeaconIcons.Select,
-                        stringResource(R.string.ui_expand_options_action),
-                        Modifier.size(18.dp),
-                    )
+                if (icon != null) androidx.compose.material3.Icon(icon, null, Modifier.size(20.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap2)) {
+                    BeaconFittedText(title, Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodyLarge)
+                    BeaconFittedText(items.getOrElse(selectedIndex) { BeaconUnknownValue }, Modifier.fillMaxWidth(),
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                androidx.compose.material3.Icon(BeaconIcons.Select,
+                    stringResource(R.string.ui_expand_options_action), Modifier.size(18.dp))
             }
         BeaconDropdownMenu(expanded && enabled, { expanded = false }) {
             items.forEachIndexed { index, label ->

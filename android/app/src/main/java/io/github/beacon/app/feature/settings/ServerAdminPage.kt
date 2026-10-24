@@ -169,25 +169,14 @@ internal fun ServerAdminPage(
         copiedValue = if (accepted) value else null
         return accepted
     }
+    SettingsOperationFeedback(stringResource(R.string.admin_refresh),
+        state.refreshFailure?.takeIf { tab != -1 }?.let { stringResource(it) }.orEmpty(), failed = true)
     BeaconSettingsList(
         state = scroll,
         modifier = modifier,
         contentPadding = padding,
         listTag = "server-admin-list",
     ) {
-        // A failed refresh explains the numbers in the overview card, so there it sits inside that
-        // card instead of becoming a block above it that pushes the whole page down. The other tabs
-        // have no overview to explain, so they show the failure as the first row of their own list.
-        if (tab != -1)
-            state.refreshFailure?.let { failure ->
-                item {
-                    SettingsNotice(
-                        stringResource(failure),
-                        actionLabel = stringResource(R.string.action_retry),
-                        onAction = { model.refresh() },
-                    )
-                }
-            }
         if (state.restoring) {
             item {
                 SettingsSection(stringResource(R.string.admin_title)) {
@@ -203,7 +192,7 @@ internal fun ServerAdminPage(
                             if (state.restoreFailure == R.string.admin_credentials_clear_failed) model.logout()
                             else model.restoreSession(activity)
                         },
-                        modifier = Modifier.align(androidx.compose.ui.Alignment.End),
+                        modifier = Modifier.fillMaxWidth(),
                     ) { BeaconText(stringResource(R.string.action_retry)) }
                     SettingsCommandRow(stringResource(R.string.admin_clear_and_login),
                         icon = BeaconIcons.Close, danger = true, onClick = { model.logout() })
@@ -259,47 +248,34 @@ internal fun ServerAdminPage(
             }
         } else if (tab == -1) {
             item {
-                SettingsSection(stringResource(R.string.admin_overview), action = {
-                    SettingsTextAction(stringResource(R.string.admin_logout), BeaconIcons.Close, enabled = !state.busy) { logoutConfirm = true }
-                }) {
-                    state.refreshFailure?.let { failure ->
-                        SettingsNotice(
-                            stringResource(failure),
-                            modifier = Modifier.padding(bottom = BeaconUiMetrics.SectionGap),
-                            actionLabel = stringResource(R.string.action_retry),
-                            onAction = { model.refresh() },
-                        )
-                    }
-                    SettingsFieldGroup(
-                        {
-                            SettingsStatusSummary(
-                                stringResource(R.string.admin_endpoint),
-                                state.endpoint,
-                                icon = BeaconIcons.Server,
-                                interactive = false,
-                                singleLineDetails = true,
-                                selectableDetails = true,
-                            )
-                        },
-                        {
-                            DiagnosticRow(stringResource(R.string.admin_version), state.version)
-                        },
-                        {
-                            DiagnosticRow(
-                                stringResource(R.string.admin_compatibility),
-                                stringResource(
-                                    if (state.protocol == 1) R.string.admin_compatible_short
-                                    else R.string.admin_protocol_unknown_short
-                                ),
-                            )
-                        },
-                    )
+                SettingsOverviewCard(
+                    title = stringResource(R.string.admin_overview),
+                    status = stringResource(when {
+                        state.refreshFailure != null -> R.string.overview_attention
+                        state.overviewLoaded && state.protocol == 1 -> R.string.overview_server_ready
+                        else -> R.string.overview_server_unknown
+                    }),
+                    subtitle = state.endpoint,
+                    healthy = state.overviewLoaded && state.protocol == 1 && state.refreshFailure == null,
+                    error = state.refreshFailure != null,
+                    action = {
+                        SettingsToolAction(stringResource(R.string.admin_logout), BeaconIcons.Close,
+                            enabled = !state.busy) { logoutConfirm = true }
+                    },
+                ) {
+                    SettingsOverviewField(stringResource(R.string.admin_version), state.version)
+                    SettingsOverviewField(stringResource(if (state.refreshFailure == null)
+                        R.string.admin_compatibility else R.string.overview_check_result),
+                        state.refreshFailure?.let { stringResource(it) } ?: stringResource(
+                            if (state.protocol == 1) R.string.admin_compatible_short
+                            else R.string.admin_protocol_unknown_short), error = state.refreshFailure != null)
                 }
             }
+
             // Counts live in their own section: the overview card answers "which server",
             // this one answers "how much traffic", and the two never compete for the eye.
             item {
-                SettingsSection(stringResource(R.string.admin_stats_heading)) {
+                SettingsMetricSection(stringResource(R.string.admin_stats_heading)) {
                     SettingsMetricGrid(
                         listOf(
                             stringResource(R.string.admin_devices) to
@@ -310,8 +286,7 @@ internal fun ServerAdminPage(
                         ),
                         columns = 3,
                     )
-                    if (state.protocol != 1)
-                        SettingsHint(stringResource(R.string.admin_protocol_unknown))
+
                 }
             }
             item {
@@ -346,7 +321,7 @@ internal fun ServerAdminPage(
         if (state.loggedIn)
             when (tab) {
                 0 -> {
-                    if (allDevices.size >= 6 || deviceQuery.isNotBlank() || deviceStatus != 0) item {
+                    item {
                         AdminListFilters(deviceQuery, { deviceQuery = it }, deviceStatus, { deviceStatus = it },
                             stringResource(R.string.settings_search_devices))
                     }
@@ -356,7 +331,7 @@ internal fun ServerAdminPage(
                                 if (defaultEndpoint.isBlank()) {
                                     SettingsPrimaryButton(
                                         stringResource(R.string.admin_use_binding),
-                                        Modifier.align(androidx.compose.ui.Alignment.End),
+                                        Modifier.fillMaxWidth(),
                                         canBindCurrent && !state.busy,
                                     ) {
                                         model.bindThisPhone(
@@ -365,11 +340,8 @@ internal fun ServerAdminPage(
                                         )
                                     }
                                 }
-                                if (bindingSubmitted && localBindingResult.isNotBlank())
-                                    OperationResultPanel(
-                                        stringResource(R.string.admin_local_binding_result),
-                                        localBindingResult,
-                                    )
+                                SettingsOperationFeedback(stringResource(R.string.admin_local_binding_result),
+                                    localBindingResult.takeIf { bindingSubmitted }.orEmpty())
                             }
                         }
 
@@ -379,7 +351,6 @@ internal fun ServerAdminPage(
                             else
                                 PageStateFailure(
                                     stringResource(R.string.admin_overview_unavailable),
-                                    onRetry = { model.refresh() },
                                 )
                         } else if (devices.isEmpty())
                             BeaconEmptyState(
@@ -437,7 +408,7 @@ internal fun ServerAdminPage(
                     }
                 }
                 1 -> {
-                    if (allApplications.size >= 6 || applicationQuery.isNotBlank() || applicationStatus != 0 || applicationDevice.isNotBlank()) item {
+                    item {
                         AdminListFilters(applicationQuery, { applicationQuery = it }, applicationStatus, { applicationStatus = it },
                             stringResource(R.string.settings_search_apps), allDevices, applicationDevice, { applicationDevice = it })
                     }
@@ -447,7 +418,6 @@ internal fun ServerAdminPage(
                             else
                                 PageStateFailure(
                                     stringResource(R.string.admin_overview_unavailable),
-                                    onRetry = { model.refresh() },
                                 )
                         } else if (applications.isEmpty())
                             BeaconEmptyState(
@@ -493,6 +463,8 @@ internal fun ServerAdminPage(
                             ),
                             modifier = Modifier.animateItem(),
                             revoked = app.revoked, priority = app.priority,
+                            details = app.id + "\n" + app.deviceId + "\n" +
+                                state.devices.find { it.id == app.deviceId }?.name.orEmpty(),
                         )
                     }
                 }
@@ -674,9 +646,11 @@ internal fun ServerAdminPage(
                                     bindCurrent(state.endpoint, secret.value, bindingName)
                                     model.dismissSecret()
                                 })
-                        if (secret.example.isNotEmpty())
-                            SettingsToolAction(stringResource(R.string.admin_copy_example), BeaconIcons.Copy,
-                                completed = copiedValue == secret.example, onClick = { copy(secret.example) })
+                    }
+                    if (secret.example.isNotEmpty()) Row(Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End) {
+                        SettingsToolAction(stringResource(R.string.admin_copy_example), BeaconIcons.Copy,
+                            completed = copiedValue == secret.example, onClick = { copy(secret.example) })
                     }
                 }
             },
@@ -811,7 +785,7 @@ private fun AdminActionConfirm(
 }
 
 @Composable
-private fun AdminListCard(
+internal fun AdminListCard(
     title: String,
     subtitle: String,
     status: String,
@@ -820,45 +794,41 @@ private fun AdminListCard(
     modifier: Modifier = Modifier,
     revoked: Boolean = false,
     priority: Int? = null,
+    details: String = subtitle,
 ) {
     var showingDetails by remember { mutableStateOf(false) }
-    if (showingDetails) BeaconAlertDialog(onDismissRequest = { showingDetails = false },
-        title = { BeaconText(title) }, text = {
-            androidx.compose.foundation.text.selection.SelectionContainer { BeaconText(subtitle) }
-        }, confirmButton = { BeaconTextButton(onClick = { showingDetails = false }) { BeaconText(stringResource(R.string.action_close)) } })
     var menuOpen by remember { mutableStateOf(false) }
+    if (showingDetails) BeaconAlertDialog(
+        onDismissRequest = { showingDetails = false },
+        title = { BeaconText(title) },
+        text = {
+            androidx.compose.foundation.text.selection.SelectionContainer {
+                Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12)) {
+                    BeaconText(details)
+                    BeaconText(status)
+                    if (priority != null) BeaconText(stringResource(priorityShortLabel(priority)))
+                }
+            }
+        },
+        confirmButton = { BeaconButton({ showingDetails = false }) { BeaconText(stringResource(R.string.action_close)) } },
+    )
     BeaconListCard(modifier) {
-        Row(
-            Modifier.fillMaxWidth(),
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
-        ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap4)) {
-                BeaconText(
-                    title,
-                    style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
-                    maxLines = 2,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                )
-                BeaconText(
-                    if (subtitle.length > 40) subtitle.take(36) + "…" else subtitle,
+                BeaconFittedText(title, Modifier.fillMaxWidth(),
+                    style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
+                BeaconFittedText(subtitle, Modifier.fillMaxWidth(),
                     style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                )
-                ActionFlow {
-                    val tone = if (revoked) androidx.compose.material3.MaterialTheme.colorScheme.error
-                        else io.github.beacon.app.ui.theme.beaconSuccessColor()
-                    androidx.compose.material3.Surface(color = tone.copy(alpha = .12f),
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(BeaconUiMetrics.BadgeRadius),
-                        modifier = Modifier.align(androidx.compose.ui.Alignment.CenterVertically)) {
-                        BeaconText(status, Modifier.padding(horizontal = BeaconUiMetrics.Gap6, vertical = BeaconUiMetrics.BadgeVerticalInset),
-                            color = tone, style = androidx.compose.material3.MaterialTheme.typography.labelMedium)
-                    }
-                    if (priority != null) BeaconText(stringResource(priorityShortLabel(priority)),
-                        modifier = Modifier.align(androidx.compose.ui.Alignment.CenterVertically),
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
+                    BeaconFittedText(status, Modifier.weight(1f),
+                        color = if (revoked) androidx.compose.material3.MaterialTheme.colorScheme.error
+                            else io.github.beacon.app.ui.theme.beaconSuccessColor(),
                         style = androidx.compose.material3.MaterialTheme.typography.labelMedium)
+                    if (priority != null) BeaconFittedText(stringResource(priorityShortLabel(priority)),
+                        Modifier.weight(1f), style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             Box {
@@ -927,16 +897,15 @@ private fun DevicePicker(
     change: (String) -> Unit,
     enabled: Boolean,
 ) {
-    if (devices.isEmpty()) SettingsHint(stringResource(R.string.admin_no_active_devices))
-    else
         BeaconDropdownPreference(
             stringResource(R.string.admin_device),
-            devices.map { "${it.name} · ${it.id.take(8)}" },
+            devices.map { "${it.name} · ${it.id.take(8)}" }
+                .ifEmpty { listOf(stringResource(R.string.admin_no_active_devices)) },
             devices.indexOfFirst { it.id == selected }.coerceAtLeast(0),
-            enabled = enabled,
+            enabled = enabled && devices.isNotEmpty(),
             stacked = true,
         ) {
-            change(devices[it].id)
+            devices.getOrNull(it)?.let { device -> change(device.id) }
         }
 }
 

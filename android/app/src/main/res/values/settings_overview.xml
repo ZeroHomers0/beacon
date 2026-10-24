@@ -1,0 +1,17 @@
+<resources>
+    <string name="overview_running">运行正常</string>
+    <string name="overview_attention">需要检查</string>
+    <string name="overview_waiting">等待连接</string>
+    <string name="overview_server_ready">服务器正常</string>
+    <string name="overview_server_unknown">状态待确认</string>
+    <string name="overview_check_result">检测结果</string>
+    <string name="settings_validation_title">时段检查</string>
+    <string name="settings_validation_ready">时段有效</string>
+    <string name="settings_guide_status_title">测试结果</string>
+    <string name="settings_guide_test_idle">尚未发送测试</string>
+    <string name="settings_form_ready">填写完成，可继续</string>
+    <string name="reception_sync_auth_failure">接收凭证无效，请检查绑定</string>
+    <string name="reception_sync_tls_failure">服务器证书异常</string>
+    <string name="reception_sync_config_failure">服务器配置或协议异常</string>
+    <string name="overview_connected">已连接</string>
+</resources>

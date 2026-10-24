@@ -21,7 +21,7 @@
     <string name="settings_advanced_details">连接详情</string>
     <string name="settings_saved_automatically">修改后自动保存</string>
     <string name="settings_open_channels">通知频道与声音</string>
-    <string name="settings_open_channels_hint">查看频道状态，设置声音与振动</string>
+    <string name="settings_open_channels_hint">频道状态、声音与振动</string>
     <string name="settings_example_shell">命令环境</string>
     <string name="settings_example_format">请求格式</string>
     <string name="settings_example_copy">复制示例</string>
@@ -34,8 +34,8 @@
     <string name="settings_all_devices">全部设备</string>
     <string name="settings_no_filter_results">没有符合筛选条件的项目</string>
     <string name="settings_complete">完成</string>
-    <string name="settings_cloud_scope">以下操作影响服务器端消息，不会清理手机本地记录。</string>
-    <string name="settings_local_scope">以下操作仅清理本机消息，不会删除服务器端记录。</string>
+    <string name="settings_cloud_scope">仅清理服务器消息，保留本机记录。</string>
+    <string name="settings_local_scope">仅清理本机消息，保留服务器记录。</string>
     <string name="settings_guide_progress">已完成 %1$d / %2$d 步</string>
     <string name="settings_selected_device">所属设备</string>
     <string name="settings_priority_save">仅保存</string>
@@ -45,5 +45,5 @@
     <string name="settings_export">导出</string>
     <string name="settings_import">导入</string>
     <string name="settings_guide_steps">配置进度</string>
-    <string name="settings_guide_test_pending">发送测试，确认消息和通知均可收到</string>
+    <string name="settings_guide_test_pending">发送测试，检查消息与通知</string>
 </resources>

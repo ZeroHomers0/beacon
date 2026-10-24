@@ -104,38 +104,24 @@ fun FirstUseGuidePanel(
                         else -> if (!busy && connected) testConfirmation = true
                     }
                 })
-            if (index == currentStep || (index == 3 && testSent && !received)) {
-                Column(Modifier.fillMaxWidth().padding(horizontal = BeaconUiMetrics.CardInset),
-                    verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
-                    if (index == 3) {
-                        if (result.isNotEmpty()) OperationResultPanel(
-                            stringResource(R.string.settings_guide_test_action), result, testFailed)
-                        if (testSent) Row(Modifier.fillMaxWidth(),
-                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                            BeaconCheckbox(received, { received = it }, enabled = !busy,
-                                contentDescription = stringResource(R.string.settings_guide_received))
-                            BeaconText(stringResource(R.string.settings_guide_received), Modifier.weight(1f))
-                        }
-                    }
-                    SettingsHint(stringResource(when (index) {
-                        0 -> R.string.settings_guide_next_bind
-                        1 -> R.string.settings_guide_next_permission
-                        2 -> R.string.settings_guide_receive_hint
-                        else -> if (testSent) R.string.settings_guide_next_confirm else R.string.settings_guide_next_test
-                    }))
-                    Spacer(Modifier.height(BeaconUiMetrics.Gap8))
-                }
-            }
         }
-        if (done.all { it }) Column(Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset)) {
-            SettingsActions {
-                BeaconButton(enabled = !busy, onClick = {
-                    preferences.edit().putBoolean("completed", true).apply()
-                    onNavigate(SettingsScreen.HOME)
-                }) { BeaconText(stringResource(R.string.settings_guide_done)) }
+        Column(Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),
+            verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12)) {
+            SettingsOverviewField(stringResource(R.string.settings_guide_status_title),
+                result.ifBlank { stringResource(R.string.settings_guide_test_idle) }, error = testFailed == true)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                BeaconCheckbox(received, { received = it }, enabled = !busy && testSent,
+                    contentDescription = stringResource(R.string.settings_guide_received))
+                BeaconFittedText(stringResource(R.string.settings_guide_received), Modifier.weight(1f))
+            }
+            SettingsPrimaryButton(stringResource(R.string.settings_guide_done), Modifier.fillMaxWidth(),
+                enabled = !busy && done.all { it }) {
+                preferences.edit().putBoolean("completed", true).apply()
+                onNavigate(SettingsScreen.HOME)
             }
         }
     }
+    SettingsOperationFeedback(stringResource(R.string.settings_guide_status_title), result, testFailed)
     if (testConfirmation)
         BeaconAlertDialog(
             onDismissRequest = { testConfirmation = false },
@@ -146,6 +132,7 @@ fun FirstUseGuidePanel(
                     onClick = {
                         testConfirmation = false
                         val requestedEndpoint = currentEndpoint
+                        result = ""
                         testSent = false
                         received = false
                         testFailed = null

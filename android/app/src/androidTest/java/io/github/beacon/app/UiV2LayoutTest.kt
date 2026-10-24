@@ -74,7 +74,7 @@ class UiV2LayoutTest {
                                 connectionDirty = false, notificationPermission = NotificationPermissionState.ALLOWED,
                                 notificationHint = null, uiStyle = selectedStyle.value, themeMode = selectedMode.value,
                                 onNavigate = { current.value = it }, receivePlan = ReceivePlan(),
-                                receptionForm = remember { ReceptionFormState() }, onShowReceiveModes = {},
+                                receptionForm = remember { ReceptionFormState() }, onSelectReceiveMode = {},
                                 onUiStyleChange = { selectedStyle.value = it }, onThemeModeChange = { selectedMode.value = it },
                                 onOperationDetails = {}, onFeedback = {},
                                 onRequestNotificationPermission = {}, onNotificationSettingsUnavailable = {},

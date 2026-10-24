@@ -42,6 +42,7 @@ fun NotificationSoundPanel() {
                 stringResource(R.string.settings_sound_system),
                 io.github.beacon.app.ui.icons.BeaconIcons.Messages,
             ) {
+                hint = ""
                 runCatching {
                     val manager = context.getSystemService(NotificationManager::class.java)
                     // Seed only missing channels; preserve the user's existing channel settings.
@@ -60,7 +61,7 @@ fun NotificationSoundPanel() {
                     .onFailure { hint = resources.getString(R.string.settings_sound_unavailable) }
             }
         }
-        if (hint.isNotEmpty()) BeaconText(hint)
+        SettingsOperationFeedback(stringResource(R.string.settings_sound_title), hint, failed = true)
     }
 }
 

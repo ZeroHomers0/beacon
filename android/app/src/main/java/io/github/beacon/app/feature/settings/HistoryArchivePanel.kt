@@ -69,42 +69,38 @@ fun HistoryArchivePanel(actions: RuntimeActions, busy: Boolean, grouped: Boolean
     val open =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { run(it, true) }
     val content: @Composable () -> Unit = {
-        Column(Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),
-            verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap)) {
-        SettingsHint(stringResource(R.string.ui_v2_export_history_hint))
-        SettingsActions {
-        SettingsTextAction(
-            stringResource(R.string.settings_export),
-            io.github.beacon.app.ui.icons.BeaconIcons.Backup,
-            accessibilityLabel = stringResource(R.string.settings_archive_export),
+        Column(Modifier.fillMaxWidth()) {
+
+        SettingsCommandRow(
+            title = stringResource(R.string.settings_archive_export),
+            icon = io.github.beacon.app.ui.icons.BeaconIcons.Backup,
             enabled = !busy,
             onClick = {
+                hint = ""
                 operation = false
                 password = ""
                 confirmPassword = ""
                 encrypted = true
             },
         )
-        SettingsTextAction(
-            stringResource(R.string.settings_import),
-            io.github.beacon.app.ui.icons.BeaconIcons.History,
-            accessibilityLabel = stringResource(R.string.settings_archive_import),
+        SettingsCommandRow(
+            title = stringResource(R.string.settings_archive_import),
+            icon = io.github.beacon.app.ui.icons.BeaconIcons.History,
             enabled = !busy,
             onClick = {
+                hint = ""
                 operation = true
                 password = ""
                 confirmPassword = ""
                 encrypted = true
             },
         )
-        }
-        if (hint.isNotEmpty())
-            OperationResultPanel(stringResource(R.string.settings_archive_title), hint, failed)
 
         }
 }
     if (grouped) SettingsGroup(stringResource(R.string.settings_archive_title)) { content() }
     else content()
+    SettingsOperationFeedback(stringResource(R.string.settings_archive_title), hint, failed, visible = operation == null)
     if (operation != null)
         BeaconAlertDialog(
             onDismissRequest = {

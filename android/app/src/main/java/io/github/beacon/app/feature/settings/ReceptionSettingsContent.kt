@@ -28,7 +28,8 @@ import io.github.beacon.app.ui.components.SettingsGroup
 import io.github.beacon.app.ui.components.SettingsPreferences
 import io.github.beacon.app.ui.components.SettingsRow
 import io.github.beacon.app.ui.components.SettingsSection
-import io.github.beacon.app.ui.components.SettingsStatusDetail
+import io.github.beacon.app.ui.components.SettingsOverviewCard
+import io.github.beacon.app.ui.components.SettingsOverviewField
 import io.github.beacon.app.ui.components.formatMessageTime
 import io.github.beacon.app.ui.components.receiveModeIcon
 import io.github.beacon.app.ui.components.receiveModeTitle
@@ -43,31 +44,43 @@ internal fun LazyListScope.receptionSettingsItems(
     actions: RuntimeActions,
     receivePlan: ReceivePlan,
     receptionForm: ReceptionFormState,
-    onShowReceiveModes: () -> Unit,
+    onSelectReceiveMode: (ReceiveMode) -> Unit,
     onOperationDetails: (String) -> Unit,
     busy: Boolean,
     polling: PollingState,
 ) {
     item {
-        SettingsGroup(stringResource(R.string.settings_receive_mode_section)) {
-            SettingsRow(
-                stringResource(R.string.ui_current_receive_mode),
-                stringResource(receiveModeTitle(receivePlan.mode)),
-                receiveModeIcon(receivePlan.mode),
-                iconTint = io.github.beacon.app.ui.components.receiveModeColor(receivePlan.mode),
-                onClick = onShowReceiveModes,
-                selection = true,
-                enabled = runtimeState.runtimeConnected && runtimeState.receivePlanLoaded && !busy,
-            )
-        }
-    }
-    item {
-        SettingsSection(stringResource(R.string.settings_receive_status_title), action = {
-            io.github.beacon.app.ui.components.BeaconRefreshAction(stringResource(R.string.action_refresh_status),
-                !busy && runtimeState.runtimeConnected, false,
-                onClick = { actions.refreshPolling { actions.receivePlan() } })
-        }) {
-            SettingsStatusDetail(
+        val ready = runtimeState.runtimeConnected && runtimeState.receivePlanLoaded &&
+            runtimeState.configuredEndpoint.isNotBlank() && polling.config.enabled
+        val failed = polling.blocked.isNotBlank() ||
+            (polling.lastOutcome != null && polling.lastOutcome !in setOf(
+                io.github.beacon.app.domain.model.SyncOutcome.OK,
+                io.github.beacon.app.domain.model.SyncOutcome.STOPPED,
+                io.github.beacon.app.domain.model.SyncOutcome.BUSY)) ||
+            (receivePlan.mode == ReceiveMode.REALTIME && runtimeState.realtimeDiagnostics.failure !=
+                io.github.beacon.app.domain.model.RealtimeFailure.NONE)
+        val healthy = ready && !failed &&
+            ((receivePlan.mode == ReceiveMode.POWER_SAVING &&
+                polling.lastOutcome == io.github.beacon.app.domain.model.SyncOutcome.OK) || runtimeState.realtimeRunning ||
+                (receivePlan.mode == ReceiveMode.RULES &&
+                    polling.lastOutcome == io.github.beacon.app.domain.model.SyncOutcome.OK &&
+                    runtimeState.realtimeDiagnostics.failure == io.github.beacon.app.domain.model.RealtimeFailure.NONE))
+        SettingsOverviewCard(
+            title = stringResource(R.string.settings_receive_status_title),
+            status = stringResource(when {
+                !runtimeState.runtimeConnected -> R.string.settings_runtime_disconnected
+                !runtimeState.receivePlanLoaded -> R.string.settings_data_loading
+                runtimeState.transportBusy -> R.string.reception_syncing
+                failed -> R.string.overview_attention
+                healthy -> R.string.overview_running
+                !polling.config.enabled -> R.string.reception_paused
+                else -> R.string.overview_waiting
+            }),
+            subtitle = stringResource(receiveModeTitle(receivePlan.mode)),
+            healthy = healthy && !runtimeState.transportBusy,
+            error = ready && failed,
+        ) {
+            SettingsOverviewField(
                 stringResource(R.string.reception_https_status),
                 when {
                     runtimeState.configuredEndpoint.isBlank() ->
@@ -79,6 +92,13 @@ internal fun LazyListScope.receptionSettingsItems(
                     runtimeState.transportBusy -> stringResource(R.string.reception_syncing)
                     polling.blocked.isNotBlank() -> polling.blocked
                     !polling.config.enabled -> stringResource(R.string.reception_paused)
+                    polling.lastOutcome == io.github.beacon.app.domain.model.SyncOutcome.AUTH ->
+                        stringResource(R.string.reception_sync_auth_failure)
+                    polling.lastOutcome == io.github.beacon.app.domain.model.SyncOutcome.TLS ->
+                        stringResource(R.string.reception_sync_tls_failure)
+                    polling.lastOutcome in setOf(io.github.beacon.app.domain.model.SyncOutcome.CONFIG,
+                        io.github.beacon.app.domain.model.SyncOutcome.PROTOCOL) ->
+                        stringResource(R.string.reception_sync_config_failure)
                     polling.lastOutcome == io.github.beacon.app.domain.model.SyncOutcome.TRANSIENT ->
                         stringResource(R.string.reception_sync_retry)
                     polling.lastOutcome == io.github.beacon.app.domain.model.SyncOutcome.STORAGE ->
@@ -91,7 +111,7 @@ internal fun LazyListScope.receptionSettingsItems(
                     runtimeState.configuredEndpoint.isNotBlank() && runtimeState.receivePlanLoaded &&
                     !runtimeState.transportBusy,
             )
-            SettingsStatusDetail(
+            SettingsOverviewField(
                 stringResource(R.string.receive_realtime_status_title),
                 when {
                     runtimeState.configuredEndpoint.isBlank() ->
@@ -131,7 +151,7 @@ internal fun LazyListScope.receptionSettingsItems(
                             .first()
                 },
             )
-            SettingsStatusDetail(
+            SettingsOverviewField(
                 stringResource(R.string.settings_last_sync_success_desc) +
                     (polling.lastSuccessInserted?.let {
                         " · " + stringResource(R.string.receive_success_count, it)
@@ -140,17 +160,23 @@ internal fun LazyListScope.receptionSettingsItems(
                 else stringResource(R.string.settings_sync_never),
             )
             io.github.beacon.app.ui.components.SettingsActions {
-                BeaconButton(onClick = { actions.transport() }, enabled = !busy && runtimeState.runtimeConnected) {
-                    if (runtimeState.transportBusy) {
-                        io.github.beacon.app.ui.components.BeaconLoadingIcon(
-                            io.github.beacon.app.ui.icons.BeaconIcons.Sync, true,
+                BeaconButton(onClick = { actions.transport() }, modifier = Modifier.fillMaxWidth(),
+                    enabled = !busy && !runtimeState.transportBusy && runtimeState.runtimeConnected) {
+                    io.github.beacon.app.ui.components.BeaconLoadingIcon(
+                            io.github.beacon.app.ui.icons.BeaconIcons.Sync, runtimeState.transportBusy,
                             Modifier.size(BeaconUiMetrics.IconInline), tint = LocalContentColor.current)
-                        Spacer(Modifier.width(BeaconUiMetrics.Gap6))
-                    }
+                    Spacer(Modifier.width(BeaconUiMetrics.Gap6))
                     BeaconText(stringResource(R.string.action_sync_now))
                 }
             }
         }
+    }
+    item {
+        ReceiveModeOptions(
+            selected = receivePlan.mode,
+            enabled = runtimeState.runtimeConnected && runtimeState.receivePlanLoaded && !busy,
+            onSelect = onSelectReceiveMode,
+        )
     }
     if (receivePlan.mode == ReceiveMode.RULES) {
         item {
@@ -298,54 +324,37 @@ private fun InheritedReceptionPreferences(
     receptionForm: ReceptionFormState,
     busy: Boolean,
 ) {
-    var expanded by
-        androidx.compose.runtime.saveable.rememberSaveable {
-            androidx.compose.runtime.mutableStateOf<String?>(null)
-        }
-    Column(
-        verticalArrangement =
-            Arrangement.spacedBy(
-                io.github.beacon.app.ui.components.BeaconUiMetrics.SettingsGroupGap
-            )
-    ) {
-        io.github.beacon.app.ui.components.SettingsHint(
-            stringResource(R.string.settings_inherited_receive_hint)
-        )
+    var expanded by remember { mutableStateOf<String?>(null) }
+    Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SettingsGroupGap)) {
+        io.github.beacon.app.ui.components.SettingsHint(stringResource(R.string.settings_inherited_receive_hint))
         SettingsGroup(stringResource(R.string.settings_inherited_receive_title)) {
-            SettingsRow(
-                stringResource(R.string.receive_mode_realtime),
-                if (receptionForm.plan.adaptiveHeartbeat)
-                    stringResource(R.string.receive_adaptive_heartbeat)
-                else
-                    stringResource(
-                        R.string.receive_heartbeat_seconds,
-                        receptionForm.plan.heartbeatSeconds,
-                    ),
+            SettingsRow(stringResource(R.string.receive_mode_realtime),
+                if (receptionForm.plan.adaptiveHeartbeat) stringResource(R.string.receive_adaptive_heartbeat)
+                else stringResource(R.string.receive_heartbeat_seconds, receptionForm.plan.heartbeatSeconds),
                 io.github.beacon.app.ui.icons.BeaconIcons.Realtime,
                 iconTint = MaterialTheme.colorScheme.onSurface,
-                onClick = { expanded = if (expanded == "connection") null else "connection" },
-                enabled = !busy && runtimeState.runtimeConnected && runtimeState.receivePlanLoaded,
-                expanded = expanded == "connection",
-            )
-            if (expanded == "connection") {
-                ConnectionPreferences(runtimeState, receptionForm, busy, grouped = false)
-            }
-        }
-        SettingsGroup(stringResource(R.string.ui_v2_power_conditions_title)) {
-            SettingsRow(
-                stringResource(receiveModeTitle(ReceiveMode.POWER_SAVING)),
+                onClick = { expanded = "connection" }, selection = true,
+                enabled = !busy && runtimeState.runtimeConnected && runtimeState.receivePlanLoaded)
+            SettingsRow(stringResource(R.string.ui_v2_power_conditions_title),
                 stringResource(R.string.settings_interval_minutes_option, receptionForm.interval),
-                receiveModeIcon(ReceiveMode.POWER_SAVING),
+                io.github.beacon.app.ui.icons.BeaconIcons.PowerSaving,
                 iconTint = MaterialTheme.colorScheme.onSurface,
-                onClick = { expanded = if (expanded == "polling") null else "polling" },
-                enabled = !busy && runtimeState.runtimeConnected && runtimeState.receivePlanLoaded,
-                expanded = expanded == "polling",
-            )
-            if (expanded == "polling") {
-                PollingPreferences(runtimeState, receptionForm, busy, grouped = false)
-            }
+                onClick = { expanded = "polling" }, selection = true,
+                enabled = !busy && runtimeState.runtimeConnected && runtimeState.receivePlanLoaded)
         }
     }
+    if (expanded != null) io.github.beacon.app.ui.components.BeaconAlertDialog(
+        onDismissRequest = { expanded = null },
+        title = { BeaconText(stringResource(if (expanded == "connection")
+            R.string.receive_mode_realtime else R.string.ui_v2_power_conditions_title)) },
+        text = {
+            if (expanded == "connection") ConnectionPreferences(runtimeState, receptionForm, busy, grouped = false)
+            else PollingPreferences(runtimeState, receptionForm, busy, grouped = false)
+        },
+        confirmButton = {
+            BeaconButton({ expanded = null }) { BeaconText(stringResource(R.string.action_close)) }
+        },
+    )
 }
 
 @androidx.compose.runtime.Composable
