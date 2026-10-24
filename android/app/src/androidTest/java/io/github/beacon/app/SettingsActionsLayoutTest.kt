@@ -140,7 +140,7 @@ class SettingsActionsLayoutTest {
         rule.onAllNodes(spinning).assertCountEquals(1)
         rule.onNode(hasContentDescription("刷新一") and spinning).assertExists()
         rule.runOnIdle { loading.value = false }
-        rule.mainClock.advanceTimeBy(64)
+        rule.mainClock.advanceTimeBy(400)
         rule.onAllNodes(spinning).assertCountEquals(0)
     }
 

@@ -197,14 +197,13 @@ fun BeaconPreferenceToggle(
         Modifier.fillMaxWidth()
             .heightIn(min = BeaconUiMetrics.FieldMinHeight)
             .named(title)
-            .alpha(if (enabled) 1f else .38f)
             .toggleable(value = checked, enabled = enabled,
                 role = androidx.compose.ui.semantics.Role.Switch, onValueChange = onCheckedChange),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
     ) {
         Column(
-            Modifier.weight(1f).padding(vertical = BeaconUiMetrics.FieldVerticalInset),
+            Modifier.weight(1f).alpha(if (enabled) 1f else .38f).padding(vertical = BeaconUiMetrics.FieldVerticalInset),
             verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap4),
         ) {
             BeaconFittedText(title, Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodyLarge)

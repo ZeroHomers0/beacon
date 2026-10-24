@@ -27,18 +27,19 @@ internal fun MessageCardFooter(
         horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap2)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap4)) {
             BeaconText(
                 if (message.createdAtMs <= 0) stringResource(R.string.ui_unknown_label) else DisplayTime.clock(message.createdAtMs),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
             )
-            if (message.reminderPending) BeaconText(
-                stringResource(R.string.msg_reminder_pending_label),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.tertiary,
-            )
+            Box(Modifier.size(16.dp), contentAlignment = Alignment.Center) {
+                if (message.reminderPending) androidx.compose.material3.Icon(
+                    io.github.beacon.app.ui.icons.BeaconIcons.Messages,
+                    stringResource(R.string.msg_reminder_pending_label), Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.onSurface)
+            }
         }
         FooterTags(Modifier.weight(1f)) {
             if (message.applicationId.isNotBlank()) MessageFilterTag(

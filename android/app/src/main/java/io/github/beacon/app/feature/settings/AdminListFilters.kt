@@ -86,7 +86,7 @@ internal fun AdminListFilters(
 
 @Composable
 private fun AdminFilterChip(label: String, enabled: Boolean, onRemove: () -> Unit) {
-    androidx.compose.material3.InputChip(selected = true, onClick = onRemove, enabled = enabled,
+    BeaconActiveFilterChip(selected = true, onClick = onRemove, enabled = enabled,
         shape = BeaconUiMetrics.PillShape,
         label = { BeaconText(label, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
         trailingIcon = { androidx.compose.material3.Icon(io.github.beacon.app.ui.icons.BeaconIcons.Close,

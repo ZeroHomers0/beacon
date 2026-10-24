@@ -18,7 +18,7 @@ try {
     if ($DeviceTests) {
         $tasks += ':app:connectedDebugAndroidTest'
         if (-not $TestClass) {
-            $uiClasses = @('QuietDaysSelectionTest', 'UiConsistencyRegressionTest', 'PendingRefreshUiTest', 'ReceptionPageOrderTest', 'SettingsStableLayoutTest', 'SettingsActionsLayoutTest', 'SettingsBackupPanelTest',
+            $uiClasses = @('CardSurfaceRegressionTest', 'MessageFailureUiTest', 'GlobalUiStabilityTest', 'QuietDaysSelectionTest', 'UiConsistencyRegressionTest', 'PendingRefreshUiTest', 'ReceptionPageOrderTest', 'SettingsStableLayoutTest', 'SettingsActionsLayoutTest', 'SettingsBackupPanelTest',
                 'StorageSettingsTest', 'SettingsInteractionRegressionTest', 'SettingsVisualQaTest',
                 'AdminSettingsLayoutTest', 'ReceiveRulesCompactTest', 'TimePreferenceTest',
                 'ConfigurationDialogsTest', 'BeaconDialogTest',

@@ -9,6 +9,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.*
@@ -56,6 +57,13 @@ class AdminSettingsLayoutTest {
             rule.runOnIdle { failed.value = true }
             assertEquals(before, rule.onNodeWithTag("overview").getUnclippedBoundsInRoot())
             rule.runOnIdle { failed.value = false }
+            val statusBitmap = rule.onNodeWithTag("overview").captureToImage().asAndroidBitmap()
+            val pixels = IntArray(statusBitmap.width * statusBitmap.height)
+            statusBitmap.getPixels(pixels, 0, statusBitmap.width, 0, 0, statusBitmap.width, statusBitmap.height)
+            assertTrue("Healthy card uses the reference background in both themes",
+                pixels.count { it == BeaconHealthyCardBackground.toArgb() } > 1000)
+            assertTrue("Circle and check use the reference green without alpha blending",
+                pixels.count { it == BeaconHealthyCardMark.toArgb() } > 100)
             val name = "ADMIN_${style}_${mode}_${scale}"
             val bitmap = rule.onRoot().captureToImage().asAndroidBitmap()
             val file = java.io.File(rule.activity.getExternalFilesDir("ui-qa"), "$name.png")

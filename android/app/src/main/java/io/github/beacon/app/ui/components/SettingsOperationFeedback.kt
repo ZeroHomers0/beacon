@@ -37,3 +37,12 @@ fun SettingsRetryFeedback(title: String, failed: Boolean, onRetry: (() -> Unit)?
         },
     )
 }
+
+/** An action failure must not insert a new row into the message or settings content. */
+@Composable
+fun BeaconFailureDialog(message: String, onDismiss: () -> Unit) {
+    BeaconAlertDialog(onDismissRequest = onDismiss,
+        title = { BeaconText(stringResource(R.string.operation_failed_title)) },
+        text = { SelectionContainer { BeaconText(message, color = MaterialTheme.colorScheme.error) } },
+        confirmButton = { BeaconButton(onDismiss) { BeaconText(stringResource(R.string.action_close)) } })
+}

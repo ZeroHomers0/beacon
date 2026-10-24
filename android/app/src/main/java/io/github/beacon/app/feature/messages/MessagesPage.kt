@@ -188,7 +188,7 @@ private fun MessagesContent(
     Column(modifier) {
         Column(
             Modifier.fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface)
+                .background(MaterialTheme.colorScheme.background)
                 .padding(
                     start = padding.calculateStartPadding(layoutDirection),
                     end = padding.calculateEndPadding(layoutDirection),
@@ -256,7 +256,7 @@ private fun MessagesContent(
                 )
                     ActionFlow {
                         if (applied.readFilter != MessageReadFilter.ALL)
-                            InputChip(
+                            io.github.beacon.app.ui.components.BeaconActiveFilterChip(
                                 shape = BeaconUiMetrics.PillShape,
                                 selected = true,
                                 enabled = !busy,
@@ -286,7 +286,7 @@ private fun MessagesContent(
                                 },
                             )
                         if (applied.search.isNotBlank())
-                            InputChip(
+                            io.github.beacon.app.ui.components.BeaconActiveFilterChip(
                                 shape = BeaconUiMetrics.PillShape,
                                 selected = true,
                                 enabled = !busy,

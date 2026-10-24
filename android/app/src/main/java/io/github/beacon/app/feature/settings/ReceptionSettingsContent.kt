@@ -159,11 +159,12 @@ internal fun LazyListScope.receptionSettingsItems(
                 if (polling.lastSuccessMs > 0) formatMessageTime(polling.lastSuccessMs)
                 else stringResource(R.string.settings_sync_never),
             )
+            var syncRequested by io.github.beacon.app.ui.components.rememberActionProgress(runtimeState.transportBusy)
             io.github.beacon.app.ui.components.SettingsActions {
-                BeaconButton(onClick = { actions.transport() }, modifier = Modifier.fillMaxWidth(),
-                    enabled = !busy && !runtimeState.transportBusy && runtimeState.runtimeConnected) {
+                BeaconButton(onClick = { syncRequested = true; actions.transport() }, modifier = Modifier.fillMaxWidth(),
+                    enabled = !busy && !runtimeState.transportBusy && !syncRequested && runtimeState.runtimeConnected) {
                     io.github.beacon.app.ui.components.BeaconLoadingIcon(
-                            io.github.beacon.app.ui.icons.BeaconIcons.Sync, runtimeState.transportBusy,
+                            io.github.beacon.app.ui.icons.BeaconIcons.Sync, syncRequested,
                             Modifier.size(BeaconUiMetrics.IconInline), tint = LocalContentColor.current)
                     Spacer(Modifier.width(BeaconUiMetrics.Gap6))
                     BeaconText(stringResource(R.string.action_sync_now))

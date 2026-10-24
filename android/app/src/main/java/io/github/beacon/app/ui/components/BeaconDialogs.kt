@@ -95,6 +95,7 @@ fun BeaconConfirmDialog(
     dismissEnabled: Boolean = true,
     dismissText: String = stringResource(R.string.action_cancel),
     errorText: String? = null,
+    statusText: String? = null,
 ) {
     BeaconAlertDialog(
         onDismissRequest = onDismiss,
@@ -102,12 +103,10 @@ fun BeaconConfirmDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
                 SettingsHint(description)
-                if (errorText != null)
-                    BeaconText(
-                        errorText,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
+                if (statusText != null || errorText != null)
+                    SettingsOverviewField(stringResource(R.string.settings_validation_title),
+                        errorText ?: statusText.orEmpty(), error = errorText != null)
+
             }
         },
         confirmButton = {

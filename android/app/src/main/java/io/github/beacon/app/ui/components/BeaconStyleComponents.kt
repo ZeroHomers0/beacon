@@ -25,6 +25,7 @@ import io.github.beacon.app.ui.theme.LocalBeaconUiStyle
 internal val LocalCompactActions = staticCompositionLocalOf { false }
 
 internal val LocalActionFillWidth = staticCompositionLocalOf { false }
+internal val LocalButtonLabel = staticCompositionLocalOf { false }
 
 /**
  * MIUIX draws a field with a placeholder label taller than one without, so two fields in the same
@@ -46,6 +47,9 @@ fun BeaconText(
     textAlign: androidx.compose.ui.text.style.TextAlign? = null,
 ) {
     // Relative line height stays consistent when font size or accessibility scale changes.
+    val label = LocalButtonLabel.current
+    val resolvedMaxLines = if (label) 1 else maxLines
+    val resolvedOverflow = if (label) TextOverflow.Ellipsis else overflow
     val textStyle = style.copy(lineHeight = 1.4.em,
         platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false))
     if (miuix())
@@ -54,8 +58,8 @@ fun BeaconText(
             modifier,
             color = color,
             style = if (textAlign == null) textStyle else textStyle.copy(textAlign = textAlign),
-            maxLines = maxLines,
-            overflow = overflow,
+            maxLines = resolvedMaxLines,
+            overflow = resolvedOverflow,
         )
     else
         androidx.compose.material3.Text(
@@ -63,8 +67,8 @@ fun BeaconText(
             modifier,
             color = color,
             style = if (textAlign == null) textStyle else textStyle.copy(textAlign = textAlign),
-            maxLines = maxLines,
-            overflow = overflow,
+            maxLines = resolvedMaxLines,
+            overflow = resolvedOverflow,
         )
 }
 
@@ -79,9 +83,9 @@ internal fun BeaconUnifiedButton(
     content: @Composable RowScope.() -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val foreground = if (!enabled) scheme.onSurface.copy(alpha = .38f)
-        else if (danger) scheme.error else if (selected == true) scheme.onPrimaryContainer else scheme.primary
-    val background = if (selected == true) scheme.primaryContainer else scheme.surfaceContainerHigh
+    val foreground = if (!enabled) (if (selected != null) BeaconTagInk else scheme.onSurface).copy(alpha = .38f)
+        else if (danger) scheme.error else if (selected != null) BeaconTagInk else scheme.primary
+    val background = when (selected) { true -> BeaconChoiceSelected; false -> BeaconChoiceUnselected; null -> scheme.surfaceContainerHigh }
     val actionModifier = (if (LocalActionFillWidth.current) modifier.fillMaxWidth() else modifier)
         .heightIn(min = BeaconUiMetrics.ControlMinHeight)
         .widthIn(min = BeaconUiMetrics.ActionMinWidth)
@@ -94,6 +98,7 @@ internal fun BeaconUnifiedButton(
                 color = background, disabledColor = background),
         ) {
             CompositionLocalProvider(
+                LocalButtonLabel provides true,
                 androidx.compose.material3.LocalContentColor provides foreground,
                 top.yukonga.miuix.kmp.theme.LocalContentColor provides foreground,
             ) {
@@ -104,7 +109,9 @@ internal fun BeaconUnifiedButton(
         shape = BeaconUiMetrics.ActionShape, contentPadding = insets,
         colors = androidx.compose.material3.ButtonDefaults.buttonColors(
             containerColor = background, disabledContainerColor = background,
-            contentColor = foreground, disabledContentColor = foreground), content = content)
+            contentColor = foreground, disabledContentColor = foreground), content = {
+                CompositionLocalProvider(LocalButtonLabel provides true) { content() }
+            })
 }
 
 @Composable

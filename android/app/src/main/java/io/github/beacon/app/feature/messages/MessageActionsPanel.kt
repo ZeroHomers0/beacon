@@ -66,11 +66,7 @@ fun MessageActionsPanel(actions: List<MessageLinkAction>, legacyUrl: String = ""
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            if (failed)
-                BeaconText(
-                    stringResource(R.string.message_link_failed),
-                    color = MaterialTheme.colorScheme.error,
-                )
+            if (failed) BeaconFailureDialog(stringResource(R.string.message_link_failed)) { failed = false }
         }
     }
 }

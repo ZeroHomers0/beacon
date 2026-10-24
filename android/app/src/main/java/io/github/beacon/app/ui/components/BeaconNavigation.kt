@@ -159,7 +159,7 @@ fun BeaconDropdownPreference(
         if (settingsRow) {
             SettingsRow(
                 title,
-                items.getOrElse(selectedIndex) { "" },
+                items.getOrElse(selectedIndex) { BeaconUnknownValue },
                 icon ?: BeaconIcons.Settings,
                 iconTint = MaterialTheme.colorScheme.onSurface,
                 enabled = enabled,

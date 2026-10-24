@@ -180,12 +180,11 @@ fun BeaconSelectableRow(
         horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
     ) {
         if (leading != null) leading()
-        BeaconText(label, Modifier.weight(1f))
-        if (selected)
-            androidx.compose.material3.Icon(
-                BeaconIcons.Check,
-                stringResource(R.string.ui_selected_state_desc),
-                Modifier.size(20.dp),
-            )
+        BeaconText(label, Modifier.weight(1f), maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        Box(Modifier.size(20.dp)) {
+            if (selected) androidx.compose.material3.Icon(BeaconIcons.Check,
+                stringResource(R.string.ui_selected_state_desc), Modifier.size(20.dp))
+        }
     }
 }

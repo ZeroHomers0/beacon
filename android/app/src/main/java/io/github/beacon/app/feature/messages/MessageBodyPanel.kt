@@ -46,7 +46,8 @@ internal fun MessageLinkDialog(link: String, onDismiss: () -> Unit) {
         text = {
             Column {
                 BeaconText(link)
-                if (failed) BeaconText(stringResource(R.string.message_link_failed))
+                SettingsOverviewField(stringResource(R.string.settings_validation_title),
+                    stringResource(if (failed) R.string.message_link_failed else R.string.message_link_ready), error = failed)
             }
         },
         confirmButton = {

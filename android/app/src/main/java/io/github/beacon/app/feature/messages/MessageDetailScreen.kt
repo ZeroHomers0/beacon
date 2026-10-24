@@ -223,12 +223,7 @@ fun MessageDetailScreen(
             if (hasMedia) {
                 MessageMediaPanel(message.bark)
             }
-            if (shareFailed) {
-                BeaconText(
-                    stringResource(R.string.message_share_failed),
-                    color = MaterialTheme.colorScheme.error,
-                )
-            }
+            if (shareFailed) BeaconFailureDialog(stringResource(R.string.message_share_failed)) { shareFailed = false }
             val barkUrl = runCatching {
                 org.json.JSONObject(message.bark).optString("url")
             }

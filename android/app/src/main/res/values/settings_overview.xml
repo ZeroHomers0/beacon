@@ -19,4 +19,6 @@
     <string name="admin_stat_revoked">%1$d 个已撤销</string>
     <string name="storage_used_space">已用空间</string>
     <string name="admin_filter_title">筛选</string>
+    <string name="operation_failed_title">操作未完成</string>
+    <string name="message_link_ready">准备打开链接</string>
 </resources>

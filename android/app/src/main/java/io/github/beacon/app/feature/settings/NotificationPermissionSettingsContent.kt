@@ -78,7 +78,7 @@ internal fun LazyListScope.notificationPermissionSettingsItems(
                 loading, onClick = onRetry)
         }) {
             BeaconFittedText(
-                (pendingReminderCount?.let {
+                (if (loadFailed) resources.getString(R.string.settings_reminders_failed) else pendingReminderCount?.let {
                     if (it > 0) resources.getString(R.string.settings_reminders_pending, it)
                     else resources.getString(R.string.settings_reminders_empty)
                 }
@@ -91,7 +91,7 @@ internal fun LazyListScope.notificationPermissionSettingsItems(
                     )),
                 modifier = Modifier.fillMaxWidth(),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (loadFailed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
             )
             SettingsActions {
                 SettingsPrimaryButton(

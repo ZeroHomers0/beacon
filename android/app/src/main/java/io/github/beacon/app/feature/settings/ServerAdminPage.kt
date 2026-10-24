@@ -190,7 +190,11 @@ internal fun ServerAdminPage(
     BeaconSettingsList(
         state = scroll,
         modifier = Modifier.fillMaxWidth().weight(1f),
-        contentPadding = padding,
+        contentPadding = if (state.loggedIn && tab in 0..1) PaddingValues(
+            start = padding.calculateLeftPadding(androidx.compose.ui.unit.LayoutDirection.Ltr),
+            end = padding.calculateRightPadding(androidx.compose.ui.unit.LayoutDirection.Ltr),
+            bottom = padding.calculateBottomPadding(),
+        ) else padding,
         listTag = "server-admin-list",
     ) {
         if (state.restoring) {
@@ -357,7 +361,7 @@ internal fun ServerAdminPage(
                             }
                         }
 
-                    item {
+                    if (!state.listState(allDevices.isEmpty()).hasContent || devices.isEmpty()) item {
                         if (!state.listState(allDevices.isEmpty()).hasContent) {
                             if (state.busy) PageStateLoading()
                             else
@@ -413,7 +417,7 @@ internal fun ServerAdminPage(
                     }
                 }
                 1 -> {
-                    item {
+                    if (!state.listState(allApplications.isEmpty()).hasContent || applications.isEmpty()) item {
                         if (!state.listState(allApplications.isEmpty()).hasContent) {
                             if (state.busy) PageStateLoading()
                             else
@@ -425,14 +429,6 @@ internal fun ServerAdminPage(
                                 BeaconIcons.CredentialUpdate,
                                 stringResource(R.string.admin_applications_title),
                                 stringResource(if (allApplications.isEmpty()) R.string.admin_no_applications else R.string.settings_no_filter_results),
-                            )
-                        else
-                            SettingsHint(
-                                stringResource(
-                                    R.string.admin_list_summary,
-                                    applications.size,
-                                    applications.count { it.revoked },
-                                )
                             )
                     }
                     items(applications, key = { "application-${it.id}" }) { app ->
@@ -777,6 +773,7 @@ private fun AdminActionConfirm(
         enabled = state.awaiting == null,
         dismissEnabled = state.awaiting == null,
         errorText = failure?.let { stringResource(it) },
+        statusText = stringResource(if (state.awaiting != null) R.string.admin_loading else R.string.settings_form_ready),
         onDismiss = { if (state.awaiting == null) onDismiss() },
         onConfirm = {
             failure = null
@@ -815,27 +812,24 @@ internal fun AdminListCard(
         confirmButton = { BeaconButton({ showingDetails = false }) { BeaconText(stringResource(R.string.action_close)) } },
     )
     BeaconListCard(modifier) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.Top,
             horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap4)) {
                 BeaconFittedText(title, Modifier.fillMaxWidth(),
-                    style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
+                    style = androidx.compose.material3.MaterialTheme.typography.titleMedium.copy(
+                        fontSize = BeaconListText.TitleSize, lineHeight = BeaconListText.TitleLineHeight))
                 BeaconFittedText(subtitle, Modifier.fillMaxWidth(),
                     style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
                     color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
-                    BeaconFittedText(status, Modifier.weight(1f),
-                        color = if (revoked) androidx.compose.material3.MaterialTheme.colorScheme.error
-                            else io.github.beacon.app.ui.theme.beaconSuccessColor(),
-                        style = androidx.compose.material3.MaterialTheme.typography.labelMedium)
-                    if (priority != null) BeaconFittedText(stringResource(priorityShortLabel(priority)),
-                        Modifier.weight(1f), style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
-                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
-                }
             }
-            Box {
-                SettingsToolAction(stringResource(R.string.admin_more_actions), BeaconIcons.More,
-                    enabled = enabled, onClick = { menuOpen = true })
+            FirstLineSlot(BeaconListText.TitleLineHeight) {
+              Box {
+                BeaconIconButton(onClick = { menuOpen = true }, enabled = enabled,
+                    modifier = Modifier.size(BeaconUiMetrics.MessageCardActionSize)) {
+                    androidx.compose.material3.Icon(BeaconIcons.More,
+                        stringResource(R.string.admin_more_actions),
+                        Modifier.size(BeaconUiMetrics.MessageCardActionIconSize))
+                }
                 BeaconDropdownMenu(menuOpen && enabled, { menuOpen = false }) {
                     BeaconDropdownMenuItem({ BeaconText(stringResource(R.string.settings_view_details)) }) {
                         menuOpen = false; showingDetails = true
@@ -851,7 +845,16 @@ internal fun AdminListCard(
                         }
                     }
                 }
+              }
             }
+        }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
+            Spacer(Modifier.weight(1f))
+            MessageFilterTag(status, compact = true,
+                containerColor = BeaconTagPalette[if (revoked) 7 else 1])
+            if (priority != null) MessageFilterTag(stringResource(priorityShortLabel(priority)),
+                modifier = Modifier.widthIn(max = 180.dp), compact = true, toneSlot = 0)
         }
     }
 }

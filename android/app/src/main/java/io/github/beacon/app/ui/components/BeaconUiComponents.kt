@@ -598,23 +598,19 @@ internal fun MessageFilterTag(
     enabled: Boolean = true,
     outlined: Boolean = false,
     toneSlot: Int = -1,
+    containerColor: Color? = null,
     onClick: (() -> Unit)? = null,
 ) {
     Box(
         modifier
             .semantics { if (compact) contentDescription = label }
             .clip(RoundedCornerShape(BeaconUiMetrics.BadgeRadius))
-            .background(
-                if (toneSlot < 0)
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.10f)
-                        .compositeOver(MaterialTheme.colorScheme.surfaceContainerLow)
-                else beaconTagContainer(label, toneSlot)
-            )
+            .background(containerColor ?: beaconTagContainer(label, toneSlot))
             .then(
                 if (!outlined) Modifier
                 else Modifier.border(
                     1.dp,
-                    MaterialTheme.colorScheme.outline.copy(alpha = 0.6f),
+                    BeaconTagOutline,
                     RoundedCornerShape(BeaconUiMetrics.BadgeRadius),
                 )
             )

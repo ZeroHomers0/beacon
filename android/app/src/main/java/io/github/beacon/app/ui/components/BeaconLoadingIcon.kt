@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.async
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
@@ -52,30 +53,32 @@ fun BeaconLoadingIcon(
     }
 }
 
+/** Click ownership and minimum visible feedback are shared by icon and full-width actions. */
 @Composable
-fun BeaconRefreshAction(
-    description: String,
-    enabled: Boolean,
-    loading: Boolean,
-    onClick: () -> Unit,
-) {
-    var requested by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+internal fun rememberActionProgress(loading: Boolean): androidx.compose.runtime.MutableState<Boolean> {
+    val requested = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     val currentLoading by androidx.compose.runtime.rememberUpdatedState(loading)
-    androidx.compose.runtime.LaunchedEffect(requested) {
-        if (!requested) return@LaunchedEffect
+    androidx.compose.runtime.LaunchedEffect(requested.value) {
+        if (!requested.value) return@LaunchedEffect
         try {
-            // A shared busy flag can change for unrelated work. Only the initiating control spins.
-            // Clear ignored or synchronous requests so a later operation cannot inherit ownership.
-            val started = kotlinx.coroutines.withTimeoutOrNull(1500) {
-                androidx.compose.runtime.snapshotFlow { currentLoading }.first { it }
-            } == true
-            if (started) androidx.compose.runtime.snapshotFlow { currentLoading }.first { !it }
-        } finally {
-            requested = false
-        }
+            kotlinx.coroutines.coroutineScope {
+                val visible = async { kotlinx.coroutines.delay(320) }
+                val started = kotlinx.coroutines.withTimeoutOrNull(750) {
+                    androidx.compose.runtime.snapshotFlow { currentLoading }.first { it }
+                } == true
+                if (started) androidx.compose.runtime.snapshotFlow { currentLoading }.first { !it }
+                visible.await()
+            }
+        } finally { requested.value = false }
     }
+    return requested
+}
+
+@Composable
+fun BeaconRefreshAction(description: String, enabled: Boolean, loading: Boolean, onClick: () -> Unit) {
+    var requested by rememberActionProgress(loading)
     SettingsToolAction(description, io.github.beacon.app.ui.icons.BeaconIcons.Sync,
-        enabled = enabled && !requested, loading = requested && loading,
+        enabled = enabled && !requested, loading = requested,
         onClick = { requested = true; onClick() })
 }
 

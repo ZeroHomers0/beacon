@@ -11,10 +11,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.beacon.app.ui.icons.BeaconIcons
-import io.github.beacon.app.ui.theme.beaconSuccessColor
+
+// Sampled from the supplied reference after converting its Display P3 profile to sRGB.
+internal val BeaconHealthyCardBackground = Color(0xFFDFFAE4)
+internal val BeaconHealthyCardMark = Color(0xFF35D267)
+internal val BeaconHealthyCardInk = Color(0xFF14261A)
 
 /** Two real text lines and an overlaid status mark: data changes never insert layout slots. */
 @Composable
@@ -28,25 +33,26 @@ fun SettingsOverviewCard(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val tone = when { healthy -> beaconSuccessColor(); error -> scheme.error; else -> scheme.onSurfaceVariant }
+    val tone = when { healthy -> BeaconHealthyCardMark; error -> scheme.error; else -> scheme.onSurfaceVariant }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             SettingsLabel(title, Modifier.weight(1f))
             action?.invoke()
         }
         BeaconCard(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(
-            containerColor = tone.copy(alpha = if (healthy) .16f else .06f).compositeOver(scheme.surfaceContainerLow))) {
+            containerColor = if (healthy) BeaconHealthyCardBackground
+                else tone.copy(alpha = .06f).compositeOver(scheme.surfaceContainerLow))) {
             Box(Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large)) {
                 // A match-parent overlay never contributes to the measured height.
                 Box(Modifier.matchParentSize()) {
                     if (healthy) Box(
                         Modifier.align(Alignment.BottomEnd).offset(x = 16.dp, y = 20.dp)
-                            .size(88.dp).border(8.dp, tone.copy(alpha = .85f), CircleShape),
+                            .size(88.dp).border(8.dp, tone, CircleShape),
                         contentAlignment = Alignment.Center,
                     ) {
                         androidx.compose.foundation.Canvas(Modifier.size(60.dp)) {
                             val stroke = 8.dp.toPx()
-                            val color = tone.copy(alpha = .85f)
+                            val color = tone
                             drawLine(color, androidx.compose.ui.geometry.Offset(size.width * .18f, size.height * .52f),
                                 androidx.compose.ui.geometry.Offset(size.width * .42f, size.height * .75f), stroke,
                                 cap = androidx.compose.ui.graphics.StrokeCap.Round)
@@ -60,9 +66,11 @@ fun SettingsOverviewCard(
                     top = BeaconUiMetrics.CardInset, end = 80.dp, bottom = BeaconUiMetrics.CardInset),
                     verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap4)) {
                     BeaconFittedText(status, Modifier.fillMaxWidth(),
+                        color = if (healthy) BeaconHealthyCardInk else scheme.onSurface,
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold))
                     BeaconFittedText(subtitle, Modifier.fillMaxWidth(),
-                        style = MaterialTheme.typography.bodySmall, color = scheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (healthy) BeaconHealthyCardInk else scheme.onSurfaceVariant,
                         inspectable = true, inspectTitle = title)
                 }
             }

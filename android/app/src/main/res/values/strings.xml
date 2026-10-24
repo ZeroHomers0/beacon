@@ -531,7 +531,6 @@
     <string name="admin_devices_title">设备管理</string>
     <string name="admin_applications_title">应用管理</string>
     <string name="admin_test_title_page">测试发送</string>
-    <string name="admin_list_summary">共 %1$d 个 · 已撤销 %2$d 个</string>
     <string name="admin_unnamed_device">未命名设备</string>
     <string name="admin_unnamed_application">未命名应用</string>
     <string name="admin_application_device">所属设备：%1$s</string>

@@ -55,6 +55,6 @@ fun BeaconMessageTransition(
                 } else null)
         },
     ) { message ->
-        Box(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface)) { content(message) }
+        Box(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background)) { content(message) }
     }
 }

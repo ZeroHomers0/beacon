@@ -77,7 +77,7 @@ fun BeaconSettingsTransition(
     ) { screen ->
         Box(
             (if (animateSize) Modifier.fillMaxWidth() else Modifier.fillMaxSize())
-                .background(MaterialTheme.colorScheme.surface)
+                .background(MaterialTheme.colorScheme.background)
         ) {
             content(screen)
         }

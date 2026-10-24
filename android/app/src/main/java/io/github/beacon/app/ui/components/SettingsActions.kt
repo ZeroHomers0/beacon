@@ -22,6 +22,7 @@ import io.github.beacon.app.ui.icons.BeaconIcons
 /** Full-width single action, equal-width peers; large labels stack without changing hierarchy. */
 @Composable
 fun SettingsActions(content: @Composable () -> Unit) {
+    val fontScale = androidx.compose.ui.platform.LocalDensity.current.fontScale.coerceAtLeast(1f)
     CompositionLocalProvider(LocalActionFillWidth provides true) {
         Layout(content = content, modifier = Modifier.fillMaxWidth()) { measurables, constraints ->
             if (measurables.isEmpty()) {
@@ -31,7 +32,8 @@ fun SettingsActions(content: @Composable () -> Unit) {
                 val count = measurables.size
                 val available = (constraints.maxWidth - gap * (count - 1)).coerceAtLeast(0)
                 val cellWidth = available / count
-                val horizontal = measurables.all { it.maxIntrinsicWidth(Constraints.Infinity) <= cellWidth }
+                // Operation labels change while submitting or confirming; only the viewport decides orientation.
+                val horizontal = count == 1 || cellWidth >= (120.dp * fontScale).roundToPx()
                 val widths = List(count) { index ->
                     if (horizontal) cellWidth + if (index < available % count) 1 else 0
                     else constraints.maxWidth

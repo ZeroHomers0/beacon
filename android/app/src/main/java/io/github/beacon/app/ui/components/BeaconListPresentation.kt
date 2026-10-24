@@ -29,8 +29,11 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -243,19 +246,20 @@ fun BeaconSummaryPill(
     modifier: Modifier = Modifier,
     compact: Boolean = false,
 ) {
+    val darkSummary = MaterialTheme.colorScheme.background.luminance() < .5f
+    val summaryColor = if (darkSummary) {
+        if (highlighted) Color(0xFF3C3C3C) else Color(0xFF292929)
+    } else {
+        if (highlighted) Color(0xFFDDDDDD) else Color(0xFFEEEEEE)
+    }
     Surface(
         modifier = if (onClick == null) modifier else modifier
             .heightIn(min = if (compact) InputChipDefaults.Height else BeaconUiMetrics.ControlMinHeight)
             .clip(RoundedCornerShape(50))
+            .semantics { selected = highlighted }
             .clickable(enabled = enabled, role = androidx.compose.ui.semantics.Role.Button, onClick = onClick),
         shape = RoundedCornerShape(50),
-        // The pills below the search box stay neutral: selection is a deeper step of the same
-        // grey, never a hue, so the two counters read as one control pair. The step is derived
-        // from onSurface so it stays visible whichever surface tokens the theme maps together.
-        color =
-            MaterialTheme.colorScheme.onSurface.copy(
-                alpha = if (highlighted) 0.14f else 0.06f,
-            ),
+        color = summaryColor,
     ) {
         Row(
             Modifier.padding(horizontal = 12.dp, vertical = if (compact) 2.dp else 8.dp),
@@ -266,17 +270,10 @@ fun BeaconSummaryPill(
                 icon,
                 null,
                 Modifier.size(16.dp),
-                tint =
-                    if (highlighted) MaterialTheme.colorScheme.onSurface
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                tint = MaterialTheme.colorScheme.onSurface,
             )
-            BeaconText(
-                label,
-                color =
-                    if (highlighted) MaterialTheme.colorScheme.onSurface
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.labelMedium,
-            )
+            BeaconFittedText(label, Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.labelMedium.copy(textAlign = androidx.compose.ui.text.style.TextAlign.Center))
         }
     }
 }
