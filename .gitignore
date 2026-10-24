@@ -11,6 +11,8 @@ __pycache__/
 /docs/design/structured-state-api.md
 /docs/design/structured-ui/
 /dist/
+# Local build and verification artifacts are never committed.
+/artifacts/
 android/.gradle/
 android/.kotlin/
 android/.idea/
