@@ -59,7 +59,7 @@ private data class RenderedBody(
  * Renders one message body.
  *
  * [raw] is owned by the screen, not by this composable: the render/source switch belongs to the
- * metadata row under the body, so the body itself must not push that row around by declaring it.
+ * metadata row in the header card, so the body itself must not push that row around by declaring it.
  */
 @Composable
 internal fun MessageMarkdownBody(body: String, raw: Boolean, modifier: Modifier = Modifier) {

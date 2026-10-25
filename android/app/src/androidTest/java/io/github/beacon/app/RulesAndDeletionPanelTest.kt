@@ -104,7 +104,7 @@ class RulesAndDeletionPanelTest {
             assertEquals(0, cleared)
             rule.onAllNodesWithText("清理本地消息").onLast().performScrollTo().performClick()
             rule.onNodeWithText("继续").performClick()
-            rule.onNodeWithText("确认清理全部").performClick()
+            rule.onNodeWithText("清理全部").performClick()
             assertEquals(1, cleared)
         } finally {
             rule.runOnUiThread { repository.close() }

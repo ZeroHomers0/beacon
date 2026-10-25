@@ -1,5 +1,15 @@
 # Beacon 项目约定
 
+## 开发前必须阅读
+
+- [API.md](API.md)：唯一的接口、字段和小组件发送格式参考。
+- [FRONTEND_GUIDELINES.md](FRONTEND_GUIDELINES.md)：现有双UI风格、各类组件、页面布局、保存交互与小组件样式约束。
+- [BACKEND_GUIDELINES.md](BACKEND_GUIDELINES.md)：Go/Workers协议一致性、权限、事务、迁移和验证要求。
+- [REPOSITORY_GUIDELINES.md](REPOSITORY_GUIDELINES.md)：根目录职责、临时目录、禁止提交内容及提交前检查。
+
+新增功能先检查同类代码和公共组件，不自行重设计。API或UI规则变化同步对应规范。临时脚本放`.tmp-*/`，构建/截图放`artifacts/`，设计草稿放`docs/design/`，均不得提交；不得通过强制添加或跳过检查绕过。提交前运行 `node tools/check-repository.mjs` 与 `node tools/check-docs.mjs`，并检查暂存diff。保留用户未提交的改动，提交/推送/部署按用户授权分别执行。
+
+
 ## 任务进度通知（Beacon 推送，当前仅在测试）
 
 `beacon` MCP 服务已注册在**当前项目**（local 作用域，仅 D:\code\beacon 生效），源码在 `mcp/`。

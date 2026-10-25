@@ -49,3 +49,30 @@ workers/dist/
 # MCP dependencies and local client-registration helper.
 /mcp/node_modules/
 /mcp/tools/register-ccswitch.mjs
+
+# Repository policy: local scratch, caches, reports, and runtime data.
+/tmp/
+/temp/
+/scratch/
+/logs/
+/screenshots/
+/coverage/
+/beacon-data/
+node_modules/
+.cache/
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+coverage/
+playwright-report/
+test-results/
+.DS_Store
+Thumbs.db
+*.tmp
+*.bak
+*.orig
+*.rej
+
+# Structured sender local revision journal.
+beacon-revisions.json

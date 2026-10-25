@@ -60,7 +60,7 @@ class MessageConvenienceTest {
             assertEquals(1, reminded)
             rule.onNodeWithText("example.com").performScrollTo().performClick()
             rule.onNodeWithText("打开网页链接？").assertIsDisplayed()
-            rule.onNodeWithText("打开浏览器").assertIsDisplayed()
+            rule.onNodeWithText(rule.activity.getString(R.string.message_open_browser)).assertIsDisplayed()
             rule.onNodeWithText("取消").performClick()
             rule.onNodeWithText("打开网页链接？").assertDoesNotExist()
             rule.runOnUiThread {

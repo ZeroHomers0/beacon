@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 
 /**
- * Dialog actions share the same equal-width, adaptive layout as settings cards.
+ * Dialog action pairs always share one row equally; settings-card actions stay adaptive.
  * Body content scrolls independently so actions remain reachable with a keyboard or large text.
  */
 @Composable
@@ -26,23 +26,19 @@ fun BeaconAlertDialog(
     text: @Composable () -> Unit,
     confirmButton: @Composable () -> Unit,
     dismissButton: (@Composable () -> Unit)? = null,
-    equalWidthActions: Boolean = false,
 ) {
     val screenHeight = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp
     val actions: @Composable () -> Unit = {
         if (dismissButton == null) {
-            SettingsActions { confirmButton() }
-        } else if (equalWidthActions) {
-            CompositionLocalProvider(LocalActionFillWidth provides true) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12)) {
-                    Box(Modifier.weight(1f), propagateMinConstraints = true) { dismissButton() }
-                    Box(Modifier.weight(1f), propagateMinConstraints = true) { confirmButton() }
+            CompositionLocalProvider(LocalDialogActionLabel provides true) { SettingsActions { confirmButton() } }
+        } else {
+            CompositionLocalProvider(LocalActionFillWidth provides true, LocalDialogActionLabel provides true) {
+                Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12)) {
+                    Box(Modifier.weight(1f).fillMaxHeight(), propagateMinConstraints = true) { dismissButton() }
+                    Box(Modifier.weight(1f).fillMaxHeight(), propagateMinConstraints = true) { confirmButton() }
                 }
             }
-        } else BeaconActionPair(
-            dismiss = { dismissButton() },
-            confirm = confirmButton,
-        )
+        }
     }
 
     if (miuix()) {

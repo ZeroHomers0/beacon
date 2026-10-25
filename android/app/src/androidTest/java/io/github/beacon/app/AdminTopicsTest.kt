@@ -44,6 +44,10 @@ class AdminTopicsTest {
         rule.onNodeWithText("创建",substring=false).assertIsNotEnabled()
         rule.onNode(hasSetTextAction() and hasAnyAncestor(hasTestTag("topic-name"))).performTextInput("预创建主题")
         rule.onNodeWithText("创建",substring=false).assertIsEnabled()
+        val cancelBounds=rule.onNode(hasText("取消") and hasClickAction()).fetchSemanticsNode().boundsInRoot
+        val createBounds=rule.onNode(hasText("创建") and hasClickAction()).fetchSemanticsNode().boundsInRoot
+        assertEquals(cancelBounds.width,createBounds.width,1f)
+        assertEquals(cancelBounds.center.y,createBounds.center.y,1f)
         val folder=requireNotNull(rule.activity.getExternalFilesDir("state-qa"));folder.mkdirs()
         java.io.File(folder,"topic_create_${style.name}.png").outputStream().use{androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot().compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
         rule.onNodeWithText("创建",substring=false).performClick()

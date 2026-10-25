@@ -128,6 +128,41 @@ class BeaconDialogTest {
         rule.onNodeWithText("已关闭弹窗").assertIsDisplayed()
     }
 
+    @Test fun miuixDialogActionsShareOneRowAtLargeFont()=equalActions(BeaconUiStyle.MIUIX)
+    @Test fun materialDialogActionsShareOneRowAtLargeFont()=equalActions(BeaconUiStyle.MATERIAL3)
+    private fun equalActions(style:BeaconUiStyle){
+        rule.runOnUiThread{rule.activity.setContent{
+            val density=androidx.compose.ui.platform.LocalDensity.current
+            androidx.compose.runtime.CompositionLocalProvider(
+                androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density,2f)
+            ){
+                BeaconTheme(style){BeaconAlertDialog(
+                    onDismissRequest={},title={BeaconText("新建主题")},text={BeaconText("合成测试内容")},
+                    confirmButton={androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density,2f)){BeaconButton(onClick={}){BeaconText("创建应用")}}},
+                    dismissButton={androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density,2f)){BeaconTextButton(onClick={}){BeaconText("取消操作")}}},
+                )}
+            }
+        }}
+        val cancel=rule.onNode(hasText("取消操作") and hasClickAction()).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val create=rule.onNode(hasText("创建应用") and hasClickAction()).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        org.junit.Assert.assertEquals("same row",cancel.center.y,create.center.y,1f)
+        org.junit.Assert.assertEquals("equal width",cancel.width,create.width,1f)
+        org.junit.Assert.assertEquals("equal height",cancel.height,create.height,1f)
+        org.junit.Assert.assertTrue("cancel on the left",cancel.right<create.left)
+        val folder=requireNotNull(rule.activity.getExternalFilesDir("dialog-qa"));folder.mkdirs()
+        java.io.File(folder,"equal_${style.name}.png").outputStream().use{InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot().compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
+        for(label in listOf("取消操作","创建应用")){
+            val layouts=mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+            rule.onNodeWithText(label).performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult){it(layouts)}
+            org.junit.Assert.assertTrue(layouts.isNotEmpty())
+            val layout=layouts.last()
+            org.junit.Assert.assertEquals("complete labels",label.length,layout.getLineEnd(layout.lineCount-1))
+            for(line in 0 until layout.lineCount)org.junit.Assert.assertFalse("no truncated labels",layout.isLineEllipsized(line))
+            org.junit.Assert.assertTrue("text stays in the button",layout.size.height<=cancel.height)
+            org.junit.Assert.assertEquals(13f,layouts.last().layoutInput.style.fontSize.value,.01f)
+        }
+    }
+
     private fun mountMenu(style: BeaconUiStyle) {
         rule.runOnUiThread {
             rule.activity.setContent {

@@ -107,5 +107,5 @@ private fun BarkEncryptionEditor(busy: Boolean, error: String, onDismiss: () -> 
             BeaconButton(onClick = { onSave(key, iv) }, enabled = !busy && BarkEncryptionValidation.valid(key, iv)) {
                 BeaconText(stringResource(R.string.action_save))
             }
-        }, dismissButton = { BeaconCancelButton(onDismiss, enabled = !busy) }, equalWidthActions = true)
+        }, dismissButton = { BeaconCancelButton(onDismiss, enabled = !busy) })
 }

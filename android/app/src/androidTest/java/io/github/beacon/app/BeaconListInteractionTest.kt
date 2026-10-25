@@ -55,7 +55,22 @@ class BeaconListInteractionTest {
                 }
             }
         }
-        rule.onNodeWithText("查看消息信息").performScrollTo().performClick()
+        val header=rule.onNodeWithTag("message-detail-header").fetchSemanticsNode().boundsInRoot
+        val body=rule.onNodeWithTag("message-detail-body").fetchSemanticsNode().boundsInRoot
+        org.junit.Assert.assertTrue("Header and body are separate cards",header.bottom<body.top)
+        rule.onNodeWithText("查看消息信息").assertDoesNotExist()
+        rule.onNodeWithTag("message-detail-raw-content").assertDoesNotExist()
+        val expand=rule.onNodeWithContentDescription(rule.activity.getString(R.string.msg_detail_expand_raw_action))
+        expand.performScrollTo()
+        val heading=rule.onNodeWithText(rule.activity.getString(R.string.msg_detail_raw_heading)).fetchSemanticsNode().boundsInRoot
+        val toggle=expand.fetchSemanticsNode().boundsInRoot
+        org.junit.Assert.assertTrue("Toggle is right of the section title",toggle.left>heading.left)
+        org.junit.Assert.assertEquals("Toggle shares the title row",heading.center.y,toggle.center.y,2f)
+        expand.performClick()
+        rule.onNodeWithTag("message-detail-raw-content").assertExists()
+        rule.onNodeWithContentDescription(rule.activity.getString(R.string.msg_detail_collapse_raw_action)).performScrollTo().performClick()
+        rule.onNodeWithTag("message-detail-raw-content").assertDoesNotExist()
+        expand.performScrollTo().performClick()
         rule.onNodeWithText("消息 ID：not-a-number-id").assertExists()
         rule.onNodeWithText("查看来源消息").assertDoesNotExist()
         rule.onNodeWithText("复制正文").assertDoesNotExist()

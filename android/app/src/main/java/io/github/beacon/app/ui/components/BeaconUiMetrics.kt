@@ -2,6 +2,7 @@ package io.github.beacon.app.ui.components
 
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /**
  * Shared geometry for both themes; compact metadata keeps its own smaller radius.
@@ -67,6 +68,7 @@ object BeaconUiMetrics {
     val ActionMinWidth = 64.dp
     val ActionRadius = 12.dp
     val ActionShape = RoundedCornerShape(ActionRadius)
+    val DialogActionTextSize = 13.sp
     val ControlMinHeight = 48.dp
 
     /** Inline spacing steps, smallest first. */

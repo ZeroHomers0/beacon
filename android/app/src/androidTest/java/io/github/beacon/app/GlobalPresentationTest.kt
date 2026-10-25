@@ -103,10 +103,10 @@ class GlobalPresentationTest {
         rule.onNodeWithText("回归分组").assertIsDisplayed()
         rule.onNodeWithText("消息 ID：synthetic-id").assertDoesNotExist()
         capture("global-detail-$style")
-        rule.onNodeWithText(rule.activity.getString(R.string.msg_detail_expand_raw_action)).performScrollTo().performClick()
+        rule.onNodeWithContentDescription(rule.activity.getString(R.string.msg_detail_expand_raw_action)).performScrollTo().performClick()
         rule.onNodeWithText("消息 ID：synthetic-id").assertExists()
         rule.onNodeWithText(rule.activity.getString(R.string.msg_detail_received_time_label)).assertExists()
-        rule.onNodeWithText(rule.activity.getString(R.string.msg_detail_collapse_raw_action)).performScrollTo().performClick()
+        rule.onNodeWithContentDescription(rule.activity.getString(R.string.msg_detail_collapse_raw_action)).performScrollTo().performClick()
         rule.onNodeWithText("消息 ID：synthetic-id").assertDoesNotExist()
     }
 

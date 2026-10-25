@@ -8,7 +8,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import io.github.beacon.app.R
@@ -20,14 +22,7 @@ import io.github.beacon.app.ui.components.*
 import io.github.beacon.app.ui.icons.BeaconIcons
 import java.time.ZoneId
 
-/**
- * A rule between the header, its metadata, and the body.
- *
- * Deliberately not a plain [HorizontalDivider] at the call site: the colour and thickness are a
- * typographic decision that belongs with the rest of the detail page's scale, and every rule on the
- * screen has to match. `outlineVariant` is the theme's lowest-contrast line, so one pixel reads as a
- * pause rather than a second card edge.
- */
+/** Low-contrast divider between the title and metadata within the header card. */
 @Composable
 private fun DetailRule() {
     HorizontalDivider(
@@ -76,7 +71,7 @@ fun MessageDetailScreen(
             verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
         ) {
             BeaconCard(
-                Modifier.fillMaxWidth(),
+                Modifier.fillMaxWidth().testTag("message-detail-header"),
                 colors =
                     CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerLow
@@ -86,9 +81,7 @@ fun MessageDetailScreen(
                     Modifier.padding(BeaconUiMetrics.CardInset),
                     verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap10),
                 ) {
-                    // Title, then metadata, then prose. The action is held inside the first title
-                    // line rather than centred on the row, so a two-line title does not push it
-                    // down; the divider closes the header so the body reads as its own block.
+                    // Header content has its own card; align actions with the first title line.
                     Row(verticalAlignment = Alignment.Top) {
                         SelectionContainer(Modifier.weight(1f)) {
                             BeaconText(
@@ -171,13 +164,8 @@ fun MessageDetailScreen(
                         message.group.isNotBlank() ||
                             message.applicationId.isNotBlank() ||
                             canToggle
-                    // One rule closes the header, another closes the tag row, and the body follows.
-                    // Metadata stays above the body because the application and the group say what
-                    // the message is before the reader commits to a wall of text, and because the
-                    // render/source switch has to be reachable without scrolling to the end of a
-                    // 64 KiB body.
-                    DetailRule()
                     if (hasMetadata) {
+                        DetailRule()
                         MessageMetadataRow(hasAction = canToggle) {
                             if (message.applicationId.isNotBlank()) {
                                 MessageFilterTag(
@@ -204,8 +192,17 @@ fun MessageDetailScreen(
                                 )
                             }
                         }
-                        DetailRule()
                     }
+                }
+            }
+            BeaconCard(
+                Modifier.fillMaxWidth().testTag("message-detail-body"),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+            ) {
+                Column(
+                    Modifier.padding(BeaconUiMetrics.CardInset),
+                    verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap10),
+                ) {
                     MessageMarkdownBody(message.body, raw)
                     StructuredBlocksPanel(message.structuredBlocks)
                     BeaconText(
@@ -230,70 +227,80 @@ fun MessageDetailScreen(
             }
                 .getOrDefault("")
             MessageActionsPanel(message.actions, barkUrl)
-            // The main card is the message itself; the collapsible technical payload gets a
-            // section label so it reads as a second, subordinate block.
-            SettingsLabel(stringResource(R.string.msg_detail_raw_heading))
-            BeaconCard(
-                Modifier.fillMaxWidth(),
+            Row(
+                Modifier.fillMaxWidth().testTag("message-detail-raw-header"),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8),
+            ) {
+                SettingsLabel(stringResource(R.string.msg_detail_raw_heading), Modifier.weight(1f))
+                BeaconIconButton(
+                    onClick = { rawInfo = !rawInfo },
+                    modifier = Modifier.size(BeaconUiMetrics.ControlMinHeight),
+                ) {
+                    Icon(
+                        BeaconIcons.Arrow,
+                        contentDescription = stringResource(
+                            if (rawInfo) R.string.msg_detail_collapse_raw_action
+                            else R.string.msg_detail_expand_raw_action
+                        ),
+                        modifier = Modifier.size(BeaconUiMetrics.IconMedium)
+                            .rotate(if (rawInfo) 270f else 90f),
+                    )
+                }
+            }
+            if (rawInfo) BeaconCard(
+                Modifier.fillMaxWidth().testTag("message-detail-raw-content"),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
             ) {
                 Column(
                     Modifier.padding(BeaconUiMetrics.CardInset),
                     verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
                 ) {
-                    BeaconTextButton(onClick = { rawInfo = !rawInfo }) {
-                        BeaconText(stringResource(
-                            if (rawInfo) R.string.msg_detail_collapse_raw_action
-                            else R.string.msg_detail_expand_raw_action
-                        ))
-                    }
-                    if (rawInfo) {
-                        SettingsHint(stringResource(R.string.msg_detail_reminder_hint))
-                        SettingsHint(stringResource(R.string.msg_detail_timezone_hint))
-                        SettingsFieldGroup(
-                            {
-                                DiagnosticRow(stringResource(R.string.ui_v2_priority), message.priority.toString())
-                            },
-                            {
-                                DiagnosticRow(stringResource(R.string.ui_v2_read_state),
-                                    stringResource(if (message.isRead) R.string.msg_read_label else R.string.msg_unread_label))
-                            },
-                            {
-                                DiagnosticRow(stringResource(R.string.ui_v2_expiry), detailTime(message.expiresAtMs, missing))
-                            },
-                            {
-                                DiagnosticRow(
-                                    stringResource(R.string.msg_detail_reminder_state_label),
-                                    stringResource(
-                                        if (message.reminderPending) R.string.msg_detail_reminder_pending
-                                        else R.string.msg_detail_reminder_none
-                                    ),
-                                )
-                            },
-                            {
-                                DiagnosticRow(
-                                    stringResource(R.string.msg_detail_sent_time_label),
-                                    detailTime(message.createdAtMs, missing),
-                                )
-                            },
-                            {
-                                DiagnosticRow(
-                                    stringResource(R.string.msg_detail_received_time_label),
-                                    detailTime(message.receivedAtMs, missing),
-                                )
-                            },
-                        )
-                        SelectionContainer {
-                            Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
-                                BeaconText(
-                                    stringResource(R.string.msg_detail_id_desc, message.id),
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                                BeaconText(
-                                    stringResource(R.string.msg_detail_source_desc, message.server),
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                            }
+                    SettingsHint(stringResource(R.string.msg_detail_reminder_hint))
+                    SettingsHint(stringResource(R.string.msg_detail_timezone_hint))
+                    SettingsFieldGroup(
+                        {
+                            DiagnosticRow(stringResource(R.string.ui_v2_priority), message.priority.toString())
+                        },
+                        {
+                            DiagnosticRow(stringResource(R.string.ui_v2_read_state),
+                                stringResource(if (message.isRead) R.string.msg_read_label else R.string.msg_unread_label))
+                        },
+                        {
+                            DiagnosticRow(stringResource(R.string.ui_v2_expiry), detailTime(message.expiresAtMs, missing))
+                        },
+                        {
+                            DiagnosticRow(
+                                stringResource(R.string.msg_detail_reminder_state_label),
+                                stringResource(
+                                    if (message.reminderPending) R.string.msg_detail_reminder_pending
+                                    else R.string.msg_detail_reminder_none
+                                ),
+                            )
+                        },
+                        {
+                            DiagnosticRow(
+                                stringResource(R.string.msg_detail_sent_time_label),
+                                detailTime(message.createdAtMs, missing),
+                            )
+                        },
+                        {
+                            DiagnosticRow(
+                                stringResource(R.string.msg_detail_received_time_label),
+                                detailTime(message.receivedAtMs, missing),
+                            )
+                        },
+                    )
+                    SelectionContainer {
+                        Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
+                            BeaconText(
+                                stringResource(R.string.msg_detail_id_desc, message.id),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                            BeaconText(
+                                stringResource(R.string.msg_detail_source_desc, message.server),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
                         }
                     }
                 }

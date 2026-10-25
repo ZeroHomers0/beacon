@@ -608,12 +608,7 @@ internal fun ServerAdminPage(
                         else model.createApplication(deviceId, appName, priority)
                     },
                 ) {
-                    BeaconText(
-                        stringResource(
-                            if (tab == 0) R.string.admin_create_binding
-                            else R.string.admin_create_application
-                        )
-                    )
+                    BeaconText(stringResource(R.string.action_create))
                 }
             },
             dismissButton = {

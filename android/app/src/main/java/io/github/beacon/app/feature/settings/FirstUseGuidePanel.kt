@@ -152,7 +152,7 @@ fun FirstUseGuidePanel(
                         }
                     }
                 ) {
-                    BeaconText(stringResource(R.string.settings_setup_test_send))
+                    BeaconText(stringResource(R.string.action_send_test))
                 }
             },
             dismissButton = {

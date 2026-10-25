@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+node tools/check-repository.mjs --staged
+node tools/check-docs.mjs --staged

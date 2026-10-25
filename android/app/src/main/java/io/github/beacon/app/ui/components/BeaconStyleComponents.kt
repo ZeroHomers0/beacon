@@ -26,6 +26,7 @@ internal val LocalCompactActions = staticCompositionLocalOf { false }
 
 internal val LocalActionFillWidth = staticCompositionLocalOf { false }
 internal val LocalButtonLabel = staticCompositionLocalOf { false }
+internal val LocalDialogActionLabel = staticCompositionLocalOf { false }
 
 /**
  * MIUIX draws a field with a placeholder label taller than one without, so two fields in the same
@@ -48,9 +49,10 @@ fun BeaconText(
 ) {
     // Relative line height stays consistent when font size or accessibility scale changes.
     val label = LocalButtonLabel.current
-    val resolvedMaxLines = if (label) 1 else maxLines
-    val resolvedOverflow = if (label) TextOverflow.Ellipsis else overflow
-    val textStyle = style.copy(lineHeight = 1.4.em,
+    val dialogLabel = label && LocalDialogActionLabel.current
+    val resolvedMaxLines = if (label && !dialogLabel) 1 else maxLines
+    val resolvedOverflow = if (label && !dialogLabel) TextOverflow.Ellipsis else overflow
+    val textStyle = style.copy(fontSize = if (dialogLabel) BeaconUiMetrics.DialogActionTextSize else style.fontSize, lineHeight = 1.4.em,
         platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false))
     if (miuix())
         top.yukonga.miuix.kmp.basic.Text(

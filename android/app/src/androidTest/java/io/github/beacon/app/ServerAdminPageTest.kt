@@ -132,7 +132,7 @@ class ServerAdminPageTest {
         rule.onNodeWithTag("server-admin-list").performScrollToNode(hasSetTextAction())
         rule.onAllNodes(hasSetTextAction())[0].performScrollTo().performTextReplacement("new phone")
         rule.onAllNodes(hasSetTextAction())[0].performImeAction()
-        rule.onAllNodes(hasText("创建绑定码") and hasClickAction()).onLast().performScrollTo().performClick()
+        rule.onNode(hasText("创建") and hasClickAction()).performScrollTo().performClick()
         rule.waitUntil(5000) { model.state.value.secret != null }
         rule.onNodeWithText("b".repeat(32)).assertIsDisplayed()
         rule.onAllNodesWithText("一键绑定当前手机").onLast().assertIsDisplayed()
