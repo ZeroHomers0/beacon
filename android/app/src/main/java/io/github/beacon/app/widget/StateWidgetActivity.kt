@@ -87,6 +87,23 @@ internal fun StateWidgetEditor(id:Int, detail:Boolean, source:String?, identity:
     var discard by remember{mutableStateOf(false)}
     var feedback by remember{mutableStateOf("")}
     var invalidation by remember{mutableIntStateOf(0)}
+    var topicSyncKey by remember { mutableIntStateOf(0) }
+    var topicSyncing by remember { mutableStateOf(false) }
+    var topicSyncMessage by remember { mutableStateOf("") }
+    val editorLifecycle=LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(editorLifecycle,editing,topicSyncKey) {
+        var sync:WidgetTopicSync?=null
+        fun start(){
+            if(!editing||sync!=null)return
+            topicSyncing=true;topicSyncMessage="正在同步可选主题…"
+            sync=WidgetTopicSync(context){message->topicSyncing=false;topicSyncMessage=message;invalidation++}.also{it.start()}
+        }
+        fun stop(){sync?.close();sync=null;topicSyncing=false}
+        val observer=LifecycleEventObserver{_,event->when(event){Lifecycle.Event.ON_START->start();Lifecycle.Event.ON_STOP->stop();else->Unit}}
+        editorLifecycle.addObserver(observer)
+        if(editorLifecycle.currentState.isAtLeast(Lifecycle.State.STARTED))start()
+        onDispose{editorLifecycle.removeObserver(observer);stop()}
+    }
     ObserveStateChanges{invalidation++}
     ObserveStateDeadline(rows){invalidation++}
     LaunchedEffect(invalidation){
@@ -143,7 +160,9 @@ internal fun StateWidgetEditor(id:Int, detail:Boolean, source:String?, identity:
                         if(!selected.optBoolean("_waiting"))next.put("metrics",JSONArray(WidgetConfigRules.defaults(selected,next).map{it.optString("id")}))
                         draft=next.toString()
                     }
+                    SettingsCommandRow("同步主题",topicSyncMessage,BeaconIcons.Sync,enabled=!topicSyncing){topicSyncKey++}
                     Column(Modifier.padding(horizontal=BeaconUiMetrics.CardInset,vertical=BeaconUiMetrics.Gap8),verticalArrangement=Arrangement.spacedBy(BeaconUiMetrics.Gap8)){
+                        SettingsHint("仅显示当前绑定设备的主题；为其他设备创建的主题不会出现在这里。")
                         SettingsHint("选项来自服务器已创建的主题，尚未上报也可绑定。筛选仅帮助查找，选择展示内容后才会更换当前绑定。")
                         SettingsHint("未关联应用：直接使用设备推送密钥上报，无需创建应用。")
                         if(row!=null&&sourceFilter!="*"&&row.optString("application_id")!=sourceFilter)

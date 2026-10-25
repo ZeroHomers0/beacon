@@ -212,6 +212,9 @@ internal class RuntimeControlClient(private val binder: IBinder) {
             )
         }
 
+    fun syncWidgetTopics(): String =
+        binder.request(RuntimeProtocol.SYNC_WIDGET_TOPICS) { requireNotNull(it.readString()) }
+
     fun address(): String =
         binder.request(RuntimeProtocol.GET_CONNECTION) { requireNotNull(it.readString()) }
 

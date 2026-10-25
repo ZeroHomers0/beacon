@@ -45,6 +45,7 @@ object RuntimeProtocol {
     const val CLEAR_ALL_MESSAGES = PING + 37
     const val BARK_ENCRYPTION = PING + 41
     const val BARK_ENCRYPTION_STATUS = PING + 47
+    const val SYNC_WIDGET_TOPICS = PING + 48
     /** One-shot status read: cached probe verdict plus live realtime liveness. */
     const val GET_STATUS = PING + 46
     const val TEST_DELIVERY = PING + 40

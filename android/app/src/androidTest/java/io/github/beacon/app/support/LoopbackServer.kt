@@ -23,6 +23,8 @@ class LoopbackServer(
     private val executor = Executors.newSingleThreadExecutor()
 
     val endpoint = "http://127.0.0.1:${socket.localPort}"
+    val responses=java.util.concurrent.ConcurrentHashMap<String,Pair<Int,String>>()
+    val paths=java.util.concurrent.CopyOnWriteArrayList<String>()
     val posted = AtomicReference("")
     val probes = AtomicInteger()
     val acceptedToken = AtomicReference("d".repeat(64))
@@ -47,6 +49,9 @@ class LoopbackServer(
         client.soTimeout = 5000
         val input = client.getInputStream().bufferedReader()
         val start = input.readLine() ?: return
+        val path=start.split(" ")[1].substringBefore("?")
+        paths.add(path)
+        val route=responses[path]
         var length = 0
         var authorized = ""
         while (true) {
@@ -79,15 +84,16 @@ class LoopbackServer(
             when {
                 binding -> bindBody
                 revoking -> revokeResponse.get()
+                route != null -> route.second
                 else -> DEVICE_SUMMARY
             }
         val code =
             when {
                 binding -> bindStatus
                 revoking -> revokeStatus.get()
-                !enforceToken -> 200
-                authorized == "Bearer " + acceptedToken.get() -> 200
-                else -> 401
+                enforceToken && authorized != "Bearer " + acceptedToken.get() -> 401
+                route != null -> route.first
+                else -> 200
             }
         val bytes = result.toByteArray()
         client.getOutputStream().apply {

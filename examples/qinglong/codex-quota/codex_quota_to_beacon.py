@@ -19,13 +19,13 @@ Beacon 数据主题，由手机桌面小组件展示。
 环境变量：
     BEACON_BASE_URL      必填，Beacon 服务地址，例如 https://push.gzautobot.top
     BEACON_PUSH_KEY      必填，设备推送密钥或应用令牌
-    CODEX_AUTH_JSON      必填，Codex 凭据：auth.json 的路径，或直接粘贴整段 JSON 内容
+    CODEX_AUTH_JSON      必填，Codex 原生 auth.json 或 CLIProxyAPI 导出的 Codex JSON：文件路径或完整内容
     CODEX_TOKEN_CACHE    可选，刷新后的令牌缓存文件，默认脚本同目录
     CODEX_REFRESH        可选，1/true 允许用 refresh_token 自动续期，默认开启
     CODEX_USAGE_URL      可选，额度接口，默认 https://chatgpt.com/backend-api/wham/usage
     CODEX_TOKEN_URL      可选，令牌刷新接口，默认 https://auth.openai.com/oauth/token
     CODEX_CLIENT_ID      可选，刷新令牌用的 OAuth client_id，一般不用改
-    CODEX_ACCOUNT_ID     可选，工作区/组织账号 ID，只有多账号时才需要带
+    CODEX_ACCOUNT_ID     可选，覆盖凭据/JWT自动读取的账号 ID
     TOPIC_KEY            可选，数据主题标识，默认 widget/codex-quota
     FRESH_FOR_SECONDS    可选，多旧算过期（秒），默认 3600（两倍采集间隔）
     WARN_PERCENT         可选，已用比例到达该值标黄，默认 70
@@ -43,6 +43,7 @@ Beacon 数据主题，由手机桌面小组件展示。
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import os
 import sys
@@ -182,18 +183,64 @@ def _retry_after(value: str | None, default: int = 10) -> int:
 
 # ---------------------------------------------------------------- 凭据与续期
 
-def _jwt_exp(token: str) -> int:
-    """读出 JWT 的 exp（秒）；格式异常返回 0，交给服务端 401 再决定。"""
+def _jwt_claims(token: str) -> dict:
+    """Decode local identity/expiry hints only; the usage server validates the token."""
     parts = token.split(".")
     if len(parts) < 2:
-        return 0
-    segment = parts[1] + "=" * (-len(parts[1]) % 4)
+        return {}
     try:
+        segment = parts[1] + "=" * (-len(parts[1]) % 4)
         claims = json.loads(base64.urlsafe_b64decode(segment.encode()).decode("utf-8"))
-    except (ValueError, TypeError):
-        return 0
-    value = claims.get("exp")
-    return int(value) if isinstance(value, (int, float)) else 0
+        return claims if isinstance(claims, dict) else {}
+    except (ValueError, TypeError, UnicodeError):
+        return {}
+
+
+def _jwt_exp(token: str) -> int:
+    value = _jwt_claims(token).get("exp")
+    return int(value) if isinstance(value, (int, float)) and not isinstance(value, bool) and 0 < value <= 253402300799 else 0
+
+
+def _tokens(auth: dict) -> dict:
+    """Keep the selected credential partition intact; never mix token pairs."""
+    nested = auth.get("tokens")
+    source = nested if isinstance(nested, dict) and any(nested.get(k) for k in ("access_token", "refresh_token")) else auth
+    return {k: v.strip() for k, v in source.items() if k in ("access_token", "refresh_token", "id_token", "account_id") and isinstance(v, str) and v.strip()}
+
+
+def _with_tokens(auth: dict, tokens: dict) -> dict:
+    updated = dict(auth)
+    nested = auth.get("tokens")
+    if isinstance(nested, dict) and any(nested.get(k) for k in ("access_token", "refresh_token")):
+        updated["tokens"] = dict(nested, **tokens)
+    elif any(k in auth for k in ("access_token", "refresh_token")):
+        updated.update(tokens)
+    else:
+        updated["tokens"] = tokens
+    return updated
+
+
+def _account_id(auth: dict) -> str:
+    tokens = _tokens(auth)
+    if tokens.get("account_id"):
+        return tokens["account_id"]
+    for name in ("access_token", "id_token"):
+        claims = _jwt_claims(tokens.get(name, ""))
+        identity = claims.get("https://api.openai.com/auth")
+        if isinstance(identity, dict) and isinstance(identity.get("chatgpt_account_id"), str):
+            return identity["chatgpt_account_id"].strip()
+    return ""
+
+
+def _cache_scope(auth: dict) -> str:
+    tokens = _tokens(auth)
+    account = _account_id(auth)
+    subject = _jwt_claims(tokens.get("access_token", "")).get("sub")
+    # Older unscoped caches are deliberately not reused after changing credential formats/accounts.
+    identity = [account, subject if isinstance(subject, str) else ""]
+    if not any(identity):
+        identity = [tokens.get("refresh_token") or tokens.get("access_token", "")]
+    return hashlib.sha256(json.dumps(identity, ensure_ascii=False).encode()).hexdigest()
 
 
 def _cache_path() -> Path:
@@ -275,8 +322,8 @@ def _write_json(path: Path, value: dict) -> None:
 
 
 def load_auth() -> tuple[dict, Path | None]:
-    """读取 Codex 凭据，返回 (auth 字典, 可回写路径)。支持路径或整段 JSON。"""
-    raw = _env("CODEX_AUTH_JSON")
+    """Read native tokens.* or CLIProxyAPI flat credentials, preserving the source format."""
+    raw = _env("CODEX_AUTH_JSON").lstrip("\ufeff")
     if not raw:
         fail(1, "缺少环境变量 CODEX_AUTH_JSON（auth.json 路径，或整段 JSON）")
     if raw.startswith("{"):
@@ -297,26 +344,27 @@ def load_auth() -> tuple[dict, Path | None]:
 def _apply_cached_tokens(auth: dict) -> dict:
     """缓存里的令牌比凭据文件新时优先使用，避免各进程各刷各的。"""
     cached = _read_json(_cache_path())
-    if not cached:
+    if not _tokens(auth) or not cached:
         return auth
-    fresh = ((cached.get("tokens") or {}).get("access_token") or "").strip()
+    if cached.get("scope") != _cache_scope(auth):
+        return auth
+    cached_tokens = _tokens(cached)
+    fresh = cached_tokens.get("access_token", "")
     if not fresh:
         return auth
-    tokens = dict(auth.get("tokens") or {})
-    current = _jwt_exp(tokens.get("access_token") or "")
-    if _jwt_exp(fresh) > current:
-        tokens.update({k: v for k, v in cached["tokens"].items() if v})
-        auth = dict(auth, tokens=tokens)
-        log("使用缓存中的已续期令牌")
+    tokens = _tokens(auth)
+    if _jwt_exp(fresh) > _jwt_exp(tokens.get("access_token", "")):
+        auth = _with_tokens(auth, cached_tokens)
+        log("使用当前账号缓存中的已续期令牌")
     return auth
 
 
-def refresh_tokens(auth: dict, auth_path: Path | None) -> dict:
+def refresh_tokens(auth: dict, auth_path: Path | None, cache_scope: str | None = None) -> dict:
     """用 refresh_token 换新令牌，并尽力回写凭据文件与缓存。"""
-    tokens = dict(auth.get("tokens") or {})
+    tokens = _tokens(auth)
     refresh_token = (tokens.get("refresh_token") or "").strip()
     if not refresh_token:
-        fail(1, "auth.json 里没有 refresh_token，无法自动续期；请重新 `codex login` 并更新凭据")
+        fail(1, "凭据中没有 refresh_token，无法自动续期；请从原登录工具重新导出 Codex 凭据")
     log("access_token 已过期或即将过期，尝试刷新")
     status, data, _ = http_json(
         _env("CODEX_TOKEN_URL", DEFAULT_TOKEN_URL),
@@ -329,17 +377,24 @@ def refresh_tokens(auth: dict, auth_path: Path | None) -> dict:
         timeout=25.0,
         retries=1,
     )
-    if status != 200 or not data.get("access_token"):
-        detail = json.dumps(data, ensure_ascii=False)[:300]
-        fail(2, f"刷新令牌失败：HTTP {status} {detail}；请重新 `codex login` 并更新凭据")
+    if status != 200 or not isinstance(data.get("access_token"), str) or not data["access_token"].strip():
+        fail(2, f"刷新令牌失败：HTTP {status}；请从原登录工具重新导出 Codex 凭据")
     tokens["access_token"] = data["access_token"]
     # 服务端可能轮换 refresh_token：新的一定要落盘，否则下次就刷不动了。
-    if data.get("refresh_token"):
+    if isinstance(data.get("refresh_token"), str) and data["refresh_token"].strip():
         tokens["refresh_token"] = data["refresh_token"]
-    if data.get("id_token"):
+    if isinstance(data.get("id_token"), str) and data["id_token"].strip():
         tokens["id_token"] = data["id_token"]
-    updated = dict(auth, tokens=tokens, last_refresh=_utc_now())
-    _persist(updated, auth_path)
+    updated = _with_tokens(auth, tokens)
+    updated["last_refresh"] = _utc_now()
+    native = updated.get("tokens")
+    if not (isinstance(native, dict) and any(native.get(k) for k in ("access_token", "refresh_token"))):
+        expiry = _jwt_exp(tokens["access_token"])
+        if not expiry and isinstance(data.get("expires_in"), (int, float)) and 0 < data["expires_in"] < 315360000:
+            expiry = int(time.time() + data["expires_in"])
+        if expiry:
+            updated["expired"] = datetime.fromtimestamp(expiry, timezone.utc).isoformat().replace("+00:00", "Z")
+    _persist(updated, auth_path, scope=cache_scope or _cache_scope(auth))
     return updated
 
 
@@ -349,7 +404,7 @@ def _utc_now() -> str:
     return now.strftime("%Y-%m-%dT%H:%M:%S.") + f"{now.microsecond // 1000:03d}Z"
 
 
-def _persist(auth: dict, auth_path: Path | None) -> None:
+def _persist(auth: dict, auth_path: Path | None, scope: str | None = None) -> None:
     saved = False
     if auth_path is not None:
         try:
@@ -357,10 +412,10 @@ def _persist(auth: dict, auth_path: Path | None) -> None:
             saved = True
         except OSError as exc:
             log(f"回写 {auth_path} 失败（{exc}），改为只写缓存；请确认容器对该文件可写")
-    tokens = auth.get("tokens") or {}
+    tokens = _tokens(auth)
     if tokens.get("access_token"):
         try:
-            _write_json(_cache_path(), {"tokens": tokens})
+            _write_json(_cache_path(), {"tokens": tokens, "scope": scope or _cache_scope(auth)})
             saved = True
         except OSError as exc:
             log(f"写入令牌缓存失败：{exc}")
@@ -369,22 +424,35 @@ def _persist(auth: dict, auth_path: Path | None) -> None:
 
 
 def ensure_token(auth: dict, auth_path: Path | None) -> str:
-    auth = _apply_cached_tokens(auth)
-    token = ((auth.get("tokens") or {}).get("access_token") or "").strip()
+    if auth.get("type") not in (None, "", "codex"):
+        fail(1, "凭据类型不是 codex；请导出 Codex 账号凭据，而非其他服务的凭据")
+    if auth.get("use_siwc") is True:
+        fail(1, "此文件启用了独立 siwc 凭据分区，当前脚本不支持；请导出普通 Codex OAuth 凭据")
+    scope = _cache_scope(auth)
+    updated = _apply_cached_tokens(auth)
+    token = _tokens(updated).get("access_token", "")
     if not token:
-        fail(1, "凭据里没有 tokens.access_token；请重新 `codex login`")
+        if _flag("CODEX_REFRESH", default=True) and _tokens(updated).get("refresh_token"):
+            updated = refresh_tokens(updated, auth_path, scope)
+            token = _tokens(updated)["access_token"]
+        else:
+            fail(1, "凭据中没有 access_token（支持 tokens.access_token 或顶层 access_token）；请从原登录工具重新导出 Codex 凭据")
     expires_at = _jwt_exp(token)
     if _flag("CODEX_REFRESH", default=True) and expires_at and expires_at - time.time() < REFRESH_MARGIN_SECONDS:
-        auth = refresh_tokens(auth, auth_path)
-        token = auth["tokens"]["access_token"]
+        updated = refresh_tokens(updated, auth_path, scope)
+        token = _tokens(updated)["access_token"]
+    # A subsequent 401 retry must use the latest rotated refresh token, never the original one.
+    snapshot = dict(updated)
+    auth.clear()
+    auth.update(snapshot)
     return token
 
 
 # ---------------------------------------------------------------- 额度接口
 
-def fetch_usage(token: str) -> tuple[int, dict]:
+def fetch_usage(token: str, account_id: str = "") -> tuple[int, dict]:
     headers = {"Authorization": f"Bearer {token}"}
-    account_id = _env("CODEX_ACCOUNT_ID")
+    account_id = _env("CODEX_ACCOUNT_ID") or account_id
     if account_id:
         headers["ChatGPT-Account-Id"] = account_id
     status, data, _ = http_json(_env("CODEX_USAGE_URL", DEFAULT_USAGE_URL), headers=headers, timeout=25.0, retries=2)
@@ -392,12 +460,13 @@ def fetch_usage(token: str) -> tuple[int, dict]:
 
 
 def read_usage(auth: dict, auth_path: Path | None) -> dict:
+    scope = _cache_scope(auth)
     token = ensure_token(auth, auth_path)
-    status, data = fetch_usage(token)
+    status, data = fetch_usage(token, _account_id(auth))
     if status in (401, 403) and _flag("CODEX_REFRESH", default=True):
         log(f"额度接口返回 HTTP {status}，令牌可能被提前吊销，尝试刷新后重试")
-        auth = refresh_tokens(auth, auth_path)
-        status, data = fetch_usage(auth["tokens"]["access_token"])
+        auth = refresh_tokens(auth, auth_path, scope)
+        status, data = fetch_usage(_tokens(auth)["access_token"], _account_id(auth))
     if status != 200:
         detail = json.dumps(data, ensure_ascii=False)[:300]
         fail(2, f"额度接口返回 HTTP {status} {detail}")

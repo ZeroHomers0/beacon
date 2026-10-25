@@ -30,7 +30,22 @@ Beacon 的数据主题必须预创建，**推送密钥不能创建主题**，脚
 
 ## 3. 取出 Codex 凭据
 
-脚本读的是 Codex CLI 自己的登录凭据 `auth.json`，位置：
+脚本支持两种普通 Codex OAuth 凭据，`CODEX_AUTH_JSON` 均可填写文件路径或整段单账号 JSON：
+
+- Codex CLI 原生 `auth.json`：令牌位于 `tokens.access_token`、`tokens.refresh_token`。
+- CLIProxyAPI 导出的 Codex 认证文件：`type` 为 `codex`，令牌位于顶层 `access_token`、`refresh_token`。格式依据 [CLIProxyAPI 源码](https://github.com/router-for-me/CLIProxyAPI/blob/main/internal/auth/codex/token.go)。
+
+CLIProxyAPI 导出示意（以下均为占位值）：
+
+```json
+{"type":"codex","access_token":"<access-token>","refresh_token":"<refresh-token>","account_id":"<account-id>"}
+```
+
+直接把原导出 JSON 交给脚本即可，不必手工包一层 `tokens`，也不必为适配格式重新执行 `codex login`。脚本自动读取账号 ID；`CODEX_ACCOUNT_ID` 仅用于手动覆盖。刷新时保持原来的顶层/嵌套结构，并保留CLIProxyAPI的其他元数据。旧版没有账号标记的令牌缓存不会复用，避免更换账号后读取上一账号的额度。
+
+需要导出的是Codex账号的认证JSON，不是CLIProxyAPI对外提供的API Key，也不是多账号ZIP/数组。当前不支持启用`use_siwc`的独立凭据分区。如果同一份登录凭据仍由CLIProxyAPI维护续期，可设置`CODEX_REFRESH=0`并更新导出文件，避免两个程序同时轮换同一refresh token。
+
+Codex CLI 原生 `auth.json` 默认位置：
 
 | 系统 | 路径 |
 | --- | --- |
@@ -51,7 +66,7 @@ Beacon 的数据主题必须预创建，**推送密钥不能创建主题**，脚
 
 **方式 B：直接把内容塞进环境变量**
 
-`CODEX_AUTH_JSON` 除了路径，也接受**整段 JSON**：
+`CODEX_AUTH_JSON` 除了路径，也接受**整段 JSON**。下面是原生格式示例，CLIProxyAPI 格式见上文：
 
 ```json
 {"auth_mode":"chatgpt","tokens":{"access_token":"...","refresh_token":"...","account_id":"..."},"last_refresh":"..."}
@@ -153,3 +168,11 @@ docker exec -e BEACON_BASE_URL=https://push.gzautobot.top -e BEACON_PUSH_KEY=你
 | 手机没有立刻刷新 | 服务端返回成功只代表数据已落库，桌面刷新被系统合并节流，省电模式下约 1 分钟 |
 
 本地运行状态文件（`.codex_quota_state.json`、`.codex_quota_token.json`、`.codex_quota.lock`）属于运行数据，已被仓库忽略，不要提交。
+
+## 离线兼容验证
+
+```bash
+python -m unittest discover -s examples/qinglong/codex-quota -v
+```
+
+测试只使用合成凭据与模拟接口，不执行真实登录、刷新或推送。

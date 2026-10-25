@@ -144,6 +144,18 @@ class HttpMessageSync(
         return reply
     }
 
+    /** Widget configuration needs the registered catalog even when polling is disabled.
+     * This read never receives/acknowledges messages or changes the reception schedule. */
+    fun syncTopicCatalog(): Boolean {
+        settings.validate(BuildConfig.DEBUG)
+        val capabilities = checkedIdentity()
+        if (capabilities.optInt("topic_catalog_protocol") != 1) return false
+        val server = capabilities.getString("server_id")
+        val namespace = MessageIdentity.namespace(server, capabilities.getString("device_id"))
+        syncTopics(namespace, server)
+        return true
+    }
+
     /** Fetches same-origin stream metadata with the same bearer credential as HTTP polling. */
     fun realtimeConfiguration(): io.github.beacon.app.domain.model.RealtimeConfiguration {
         settings.validate(BuildConfig.DEBUG)

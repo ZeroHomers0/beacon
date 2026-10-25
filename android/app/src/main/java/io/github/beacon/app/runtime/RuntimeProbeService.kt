@@ -491,6 +491,7 @@ class RuntimeProbeService : Service() {
                             io.github.beacon.app.ipc.RuntimeProtocol.HISTORY_ARCHIVE,
                             io.github.beacon.app.ipc.RuntimeProtocol.PENDING_REMINDERS,
                             io.github.beacon.app.ipc.RuntimeProtocol.GET_STATUS,
+                            io.github.beacon.app.ipc.RuntimeProtocol.SYNC_WIDGET_TOPICS,
                         )
                 )
                     return super.onTransact(code, data, reply, flags)
@@ -1367,6 +1368,28 @@ class RuntimeProbeService : Service() {
                         writeLong(snapshot[4])
                         writeLong(snapshot[5])
                     }
+                    return true
+                }
+                if (code == io.github.beacon.app.ipc.RuntimeProtocol.SYNC_WIDGET_TOPICS) {
+                    if (data.dataAvail() != 0) throw SecurityException("Unexpected payload")
+                    val expected = generation.get()
+                    val request = worker.submit<String> {
+                        val secrets = TransportSecretStore(this@RuntimeProbeService)
+                        if (!secrets.isConfigured()) return@submit "请先在 App 中绑定这台设备，再选择展示内容。"
+                        try {
+                            val sync = HttpMessageSync(secrets.load(), store, { generation.get() == expected })
+                            if (sync.syncTopicCatalog()) "已同步当前绑定设备的主题；未上报数据的主题也可选择。"
+                            else "当前服务器不支持预创建主题目录，请升级服务器；已有内容仍可使用。"
+                        } catch (error: Exception) {
+                            "主题同步未完成。" + SyncFailure.describe(error, SyncFailure.outcome(error))
+                        }
+                    }
+                    val message = try { request.get(35, java.util.concurrent.TimeUnit.SECONDS) }
+                        catch (_: java.util.concurrent.TimeoutException) {
+                            request.cancel(true)
+                            "主题同步超时，保留本地选项，请重试。"
+                        }
+                    requireNotNull(reply).apply { writeNoException(); writeString(message) }
                     return true
                 }
                 if (code == GET_CONNECTION) {
