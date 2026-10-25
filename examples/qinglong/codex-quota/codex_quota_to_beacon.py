@@ -45,6 +45,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import math
 import os
 import sys
 import time
@@ -480,20 +481,33 @@ def read_usage(auth: dict, auth_path: Path | None) -> dict:
 
 # ---------------------------------------------------------------- 组装数据
 
-def _window(raw: object, fallback_seconds: int) -> dict | None:
+def _finite_number(value: object) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+
+
+def _window(raw: object, fallback_seconds: int, now: int) -> dict | None:
     if not isinstance(raw, dict):
         return None
     percent = raw.get("used_percent")
-    if not isinstance(percent, (int, float)):
+    if not _finite_number(percent):
         return None
     window_seconds = raw.get("limit_window_seconds")
     reset_at = raw.get("reset_at")
     reset_after = raw.get("reset_after_seconds")
+    window_seconds = int(window_seconds) if _finite_number(window_seconds) and window_seconds > 0 else fallback_seconds
+    if _finite_number(reset_at) and reset_at > 0:
+        reset_at = int(reset_at)
+        reset_after = max(0, reset_at - now)
+    elif _finite_number(reset_after) and reset_after >= 0:
+        reset_after = int(reset_after)
+        reset_at = now + reset_after
+    else:
+        reset_at, reset_after = 0, 0
     return {
         "used": max(0.0, min(100.0, float(percent))),
-        "window_seconds": int(window_seconds) if isinstance(window_seconds, (int, float)) else fallback_seconds,
-        "reset_at": int(reset_at) if isinstance(reset_at, (int, float)) else 0,
-        "reset_after": int(reset_after) if isinstance(reset_after, (int, float)) else 0,
+        "window_seconds": max(1, window_seconds),
+        "reset_at": reset_at,
+        "reset_after": reset_after,
     }
 
 
@@ -517,6 +531,18 @@ def _duration(seconds: int) -> str:
 
 def _clock(epoch: int) -> str:
     return datetime.fromtimestamp(epoch).strftime("%m-%d %H:%M") if epoch > 0 else "未知"
+
+
+def _reset_progress(block_id: str, label: str, window: dict) -> dict:
+    """时间也是普通数值进度；单位随剩余时间缩短，避免四环内显示过长。"""
+    seconds = window["reset_after"]
+    divisor, unit = (60, "min") if seconds < 3600 else ((3600, "h") if seconds < 86400 else (86400, "d"))
+    value = math.ceil(seconds / divisor) if unit == "min" else round(seconds / divisor, 1)
+    return {
+        "kind": "progress", "id": block_id, "label": label,
+        "value": value, "max": max(value, window["window_seconds"] / divisor),
+        "unit": unit, "tone": "normal",
+    }
 
 
 def _tone(remaining: float, warn: int, critical: int) -> str:
@@ -551,8 +577,9 @@ def _progress_block(block_id: str, label: str, remaining: float, warn: int, crit
 def build_state(data: dict) -> tuple[str, str, list, str]:
     """返回 (标题, 副标题, 数据块, 摘要正文)。"""
     rate_limit = data.get("rate_limit") or {}
-    session = _window(rate_limit.get("primary_window"), 18000)
-    weekly = _window(rate_limit.get("secondary_window"), 604800)
+    now = int(time.time())
+    session = _window(rate_limit.get("primary_window"), 18000, now)
+    weekly = _window(rate_limit.get("secondary_window"), 604800, now)
     warn = _int_env("WARN_PERCENT", 70, 1, 99)
     critical = _int_env("CRITICAL_PERCENT", 90, warn, 100)
 
@@ -563,12 +590,16 @@ def build_state(data: dict) -> tuple[str, str, list, str]:
     summary: list[str] = []
     if session:
         left = 100.0 - session["used"]
-        blocks.append(_progress_block("session", "5 小时额度剩余", left, warn, critical))
-        summary.append(f"5 小时窗口剩余 {_percent(left)}")
+        blocks.append(_progress_block("session", "5h 额度", left, warn, critical))
+        summary.append(f"5h 剩余 {_percent(left)}")
     if weekly:
         left = 100.0 - weekly["used"]
-        blocks.append(_progress_block("week", "周额度剩余", left, warn, critical))
-        summary.append(f"七天窗口剩余 {_percent(left)}")
+        blocks.append(_progress_block("week", "7d 额度", left, warn, critical))
+        summary.append(f"7d 剩余 {_percent(left)}")
+
+    for block_id, label, window in (("session-reset-time", "5h 重置", session), ("week-reset-time", "7d 重置", weekly)):
+        if window and window["reset_at"] > 0:
+            blocks.append(_reset_progress(block_id, label, window))
 
     detail_items: list[dict] = []
     resets: list[str] = []
@@ -578,20 +609,20 @@ def build_state(data: dict) -> tuple[str, str, list, str]:
         if session["reset_at"] > 0:
             detail_items.append({
                 "id": "session-reset",
-                "label": "5 小时重置",
+                "label": "5h 重置",
                 "text": f"{_duration(session['reset_after'])}后 · {_clock(session['reset_at'])}",
             })
-            blocks.append({"kind": "countdown", "id": "session-countdown", "label": "5 小时重置倒计时", "target_at_ms": session["reset_at"] * 1000})
-            resets.append(f"5 小时窗口 {_duration(session['reset_after'])}后重置")
+            blocks.append({"kind": "countdown", "id": "session-countdown", "label": "5h 重置倒计时", "target_at_ms": session["reset_at"] * 1000})
+            resets.append(f"5h {_duration(session['reset_after'])}后重置")
     if weekly:
         if weekly["reset_at"] > 0:
             detail_items.append({
                 "id": "week-reset",
-                "label": "周额度重置",
+                "label": "7d 重置",
                 "text": f"{_duration(weekly['reset_after'])}后 · {_clock(weekly['reset_at'])}",
             })
-            blocks.append({"kind": "countdown", "id": "week-countdown", "label": "周额度重置倒计时", "target_at_ms": weekly["reset_at"] * 1000})
-            resets.append(f"周额度 {_duration(weekly['reset_after'])}后重置")
+            blocks.append({"kind": "countdown", "id": "week-countdown", "label": "7d 重置倒计时", "target_at_ms": weekly["reset_at"] * 1000})
+            resets.append(f"7d {_duration(weekly['reset_after'])}后重置")
 
     credits = data.get("credits") or {}
     if isinstance(credits, dict) and credits:
