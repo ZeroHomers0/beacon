@@ -21,7 +21,7 @@ open class BeaconStateWidget: AppWidgetProvider() {
     }
     override fun onUpdate(context:Context, manager:AppWidgetManager, ids:IntArray){refresh(context,ids)}
     override fun onAppWidgetOptionsChanged(context:Context, manager:AppWidgetManager, id:Int, options:Bundle){refresh(context,intArrayOf(id))}
-    override fun onDeleted(context:Context, ids:IntArray){StateCache(context).use{db->ids.forEach{db.preference("widget:$it","")}}}
+    override fun onDeleted(context:Context, ids:IntArray){StateCache(context).use{db->ids.forEach{db.preference("widget:$it","");db.preference("widget-signature:$it","");db.preference("widget-last:$it","");db.preference("widget-valid:$it","")}};StateRefreshReceiver.schedule(context)}
     override fun onRestored(context:Context, old:IntArray, new:IntArray){StateCache(context).use{db->old.indices.forEach{db.preference("widget:${new[it]}",db.preference("widget:${old[it]}"))}};refresh(context,new)}
     companion object {
         private val trailing=java.util.concurrent.Executors.newSingleThreadScheduledExecutor{task->Thread(task,"beacon-widget-refresh").apply{isDaemon=true}}
@@ -38,7 +38,14 @@ open class BeaconStateWidget: AppWidgetProvider() {
         @Synchronized fun refresh(context:Context, ids:IntArray?=null,source:String?=null,identities:Set<String>?=null){
             WidgetPerformance.requests.incrementAndGet()
             val manager=AppWidgetManager.getInstance(context);val targets=ids?:WidgetInstances.ids(context)
+            // Incoming state is already durable. Never rasterize a hidden desktop on data pushes.
+            // Initial host requests can still populate missing RemoteViews.
+            if(ids==null&&!context.getSystemService(android.os.PowerManager::class.java).isInteractive){
+                StateRefreshReceiver.schedule(context)
+                return
+            }
             StateCache(context).use{cache->for(id in targets){
+                if(!context.getSystemService(android.os.PowerManager::class.java).isInteractive&&cache.preference("widget-signature:$id").isNotEmpty())continue
                 val config=runCatching{JSONObject(cache.preference("widget:$id"))}.getOrElse{JSONObject()}
                 if(source!=null&&(config.optString("source")!=source||identities!=null&&config.optString("identity") !in identities))continue
                 val row=cache.find(config.optString("source"),config.optString("identity"))
@@ -54,9 +61,9 @@ open class BeaconStateWidget: AppWidgetProvider() {
                 val pixelBudget=(bounds.width().toDouble()*bounds.height()*1.0).coerceIn(1.0,Int.MAX_VALUE.toDouble())
                 val area=sizes.sumOf{it.width.toDouble()*it.height}
                 val rasterDensity=kotlin.math.min(metrics.density.toDouble(),kotlin.math.sqrt(pixelBudget/area)).toFloat()
-                val signature="display-v4:"+rasterDensity+":"+sizes.joinToString()+":"+dark+":"+WidgetPerformance.displayKey(row,config)
+                val signature="display-v6:"+android.provider.Settings.Global.getInt(context.contentResolver,android.provider.Settings.Global.BOOT_COUNT,0)+":"+java.util.TimeZone.getDefault().id+":"+context.resources.configuration.locales.toLanguageTags()+":"+rasterDensity+":"+sizes.joinToString()+":"+dark+":"+WidgetPerformance.displayKey(row,config)
                 val last=cache.preference("widget-last:$id").toLongOrNull()?:0L
-                if(ids==null&&cache.preference("widget-signature:$id")==signature){WidgetPerformance.skipped.incrementAndGet();continue}
+                if(cache.preference("widget-signature:$id")==signature){WidgetPerformance.skipped.incrementAndGet();continue}
                 if(ids==null&&source!=null&&row!=null&&cache.preference("widget-valid:$id")=="1"&&status !in listOf("completed","failed","cancelled")&&now-last<WidgetPerformance.interval(config,row)){schedule(context,(WidgetPerformance.interval(config,row)-(now-last)).coerceAtLeast(250));continue}
                 fun render(size:android.util.SizeF):RemoteViews {
                     val key=signature+":"+size

@@ -38,6 +38,20 @@ def request(base, key, path, payload=None, request_key=None):
             time.sleep(2 ** attempt)
 
 
+def should_send(previous, kind, value, status, unknown_total, now, min_interval=5, min_change=1, keepalive=300):
+    """Only suppress running task samples; final states, changes of mode and freshness win."""
+    if kind != "download" or status in ("completed", "failed", "cancelled"):
+        return True
+    if not previous or previous.get("status") != status or previous.get("unknown_total") != unknown_total:
+        return True
+    elapsed = now - previous.get("sent_at", 0)
+    if elapsed < 0 or elapsed >= keepalive:
+        return True
+    if elapsed < min_interval:
+        return False
+    return not unknown_total and abs(value - previous.get("value", value)) >= min_change
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("kind", choices=["quota", "download", "disk", "metrics"])
@@ -46,12 +60,14 @@ def main():
     parser.add_argument("--status", choices=["running", "paused", "completed", "failed", "cancelled"], default="running")
     parser.add_argument("--journal", type=pathlib.Path, default=pathlib.Path("beacon-revisions.json"))
     parser.add_argument("--unknown-total", action="store_true")
+    parser.add_argument("--min-interval", type=float, default=5, help="running download samples: minimum seconds between posts")
+    parser.add_argument("--min-change", type=float, default=1, help="running download samples: minimum percentage-point change")
+    parser.add_argument("--keepalive", type=float, default=300, help="maximum seconds without a running task freshness update (at most 300)")
     args = parser.parse_args()
+    if not (0 <= args.min_interval <= args.keepalive <= 300 and 0 <= args.min_change <= 100):
+        parser.error("require 0 <= min-interval <= keepalive <= 300 and 0 <= min-change <= 100")
     base = os.environ["BEACON_URL"].rstrip("/")
     key = os.environ["BEACON_PUSH_KEY"]
-    capability = request(base, key, "/api/v1/push-capabilities")
-    if capability.get("state_protocol") != 1:
-        raise RuntimeError("Server does not support state protocol 1")
     topic = args.kind + ":" + args.topic
     journal = json.loads(args.journal.read_text(encoding="utf-8")) if args.journal.exists() else {}
     if topic in journal and "event_pending" in journal[topic]:
@@ -60,6 +76,14 @@ def main():
     # Complete a request left uncertain by a previous process before allocating a revision.
     if topic in journal and "pending" in journal[topic]:
         request(base, key, "/api/v1/push", journal[topic]["pending"])
+    scope = hashlib.sha256((base + "\0" + key).encode()).hexdigest()
+    previous = journal.get(topic, {}).get("sample", {})
+    if previous.get("scope") == scope and not should_send(previous, args.kind, args.value, args.status, args.unknown_total, time.time(), args.min_interval, args.min_change, args.keepalive):
+        print("Sample coalesced locally; no HTTP request")
+        return
+    capability = request(base, key, "/api/v1/push-capabilities")
+    if capability.get("state_protocol") != 1:
+        raise RuntimeError("Server does not support state protocol 1")
     meta = request(base, key, "/api/v1/states/meta?topic_key=" + urllib.parse.quote(topic, safe=""))
     revision = max(journal.get(topic, {}).get("revision", 0), meta["revision"]) + 1
     payload = {"mode": "state", "schema_version": 1, "topic_key": topic, "revision": revision, "observed_at_ms": int(time.time()*1000), "fresh_for_seconds": 600, "title": args.topic, "body": f"{args.kind}: {args.value}%"}
@@ -77,15 +101,16 @@ def main():
         temporary = args.journal.with_suffix(".tmp")
         temporary.write_text(json.dumps(journal, ensure_ascii=False), encoding="utf-8")
         temporary.replace(args.journal)
+    sample = {"scope": scope, "value": args.value, "status": args.status, "unknown_total": args.unknown_total, "sent_at": time.time()}
     save({"revision": revision, "pending": payload})
     result = request(base, key, "/api/v1/push", payload)
-    save({"revision": revision})
+    save({"revision": revision, "sample": sample})
     if args.kind == "download" and args.status in ("completed", "failed", "cancelled"):
         event={"title":args.topic,"body":"下载任务："+args.status,"priority":8 if args.status=="failed" else 5}
         event_key=hashlib.sha256(f"{topic}:{revision}:{args.status}".encode()).hexdigest()
-        save({"revision":revision,"event_pending":event,"event_key":event_key})
+        save({"revision":revision,"sample":sample,"event_pending":event,"event_key":event_key})
         request(base,key,"/api/v1/push",event,event_key)
-        save({"revision":revision})
+        save({"revision":revision,"sample":sample})
     print(f"State accepted: revision {result['revision']}")
 
 

@@ -14,7 +14,7 @@ object StateChanges {
     const val ACTION="io.github.beacon.STATE_CACHE_CHANGED"
     fun ui(context:Context){context.sendBroadcast(Intent(ACTION).setPackage(context.packageName))}
     fun data(context:Context,source:String,identities:List<String>?){
-        ui(context)
+        // UI invalidation is emitted once by the receiver after the merged refresh.
         context.sendBroadcast(Intent(context,StateRefreshReceiver::class.java).putExtra("source",source).apply{
             identities?.let{putStringArrayListExtra("identities",ArrayList(it))}
         })

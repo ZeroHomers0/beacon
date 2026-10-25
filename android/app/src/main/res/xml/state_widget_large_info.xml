@@ -5,5 +5,5 @@
     android:initialLayout="@layout/state_widget"
     android:previewImage="@drawable/state_widget_large_preview" android:previewLayout="@layout/state_widget_large_preview"
     android:configure="io.github.beacon.app.widget.StateWidgetActivity"
-    android:resizeMode="none" android:updatePeriodMillis="1800000"
+    android:resizeMode="none" android:updatePeriodMillis="3600000"
     android:widgetCategory="home_screen" android:widgetFeatures="reconfigurable" />

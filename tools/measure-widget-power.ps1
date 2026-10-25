@@ -1,7 +1,7 @@
 param(
     [Parameter(Mandatory=$true)][string]$Serial,
     [Parameter(Mandatory=$true)][ValidateSet('Start','End')][string]$Phase,
-    [Parameter(Mandatory=$true)][ValidateSet('no-widget','one-widget','four-widgets','download')][string]$Scenario,
+    [Parameter(Mandatory=$true)][ValidateSet('no-widget','one-widget','four-widgets','download','idle-night','weak-network')][string]$Scenario,
     [string]$Package='io.github.beacon.app.debug',
     [string]$Adb='adb',
     [string]$OutputDirectory='artifacts/widget-power'
@@ -18,6 +18,8 @@ function Save-DeviceOutput([string]$Name,[string[]]$Arguments){
 }
 Save-DeviceOutput 'battery' @('shell','dumpsys','battery')
 Save-DeviceOutput 'app-batterystats' @('shell','dumpsys','batterystats',$Package)
+Save-DeviceOutput 'power' @('shell','dumpsys','power')
+Save-DeviceOutput 'app-processes' @('shell','dumpsys','procstats','--hours','3',$Package)
 Save-DeviceOutput 'app-memory' @('shell','dumpsys','meminfo',$Package)
 @{phase=$Phase;scenario=$Scenario;serial=$Serial;package=$Package;captured_at=(Get-Date).ToUniversalTime().ToString('o')} |
     ConvertTo-Json | Set-Content -LiteralPath (Join-Path $directory "$Phase-metadata.json") -Encoding utf8

@@ -30,12 +30,16 @@ class WebSocketTransportTest {
         val server = MockWebServer()
         server.useHttps(serverTls.sslSocketFactory(), false)
         val acknowledged = CountDownLatch(1)
+        val changes = CountDownLatch(2)
+        val beats = java.util.concurrent.atomic.AtomicInteger()
         server.enqueue(
             MockResponse()
                 .withWebSocketUpgrade(
                     object : WebSocketListener() {
                         override fun onMessage(webSocket: WebSocket, text: String) {
                             assertEquals("@beacon/heartbeat/1", text)
+                            webSocket.send("@beacon/state_changed/1")
+                            webSocket.send("@beacon/topics_changed/1")
                             webSocket.send("@beacon/heartbeat_ack/1")
                         }
                     }
@@ -53,7 +57,8 @@ class WebSocketTransportTest {
                 controlIntervalSeconds = 60,
                 nowMs = { elapsed },
                 batch = true,
-                onHeartbeat = { acknowledged.countDown() },
+                onHeartbeat = { beats.incrementAndGet(); acknowledged.countDown() },
+                onStateChanged = { changes.countDown() },
             )
         try {
             transport.connect(
@@ -75,6 +80,8 @@ class WebSocketTransportTest {
             elapsed = 61_000 // The executor still has its original minute-long delay.
             transport.coalesceHeartbeat()
             assertTrue(acknowledged.await(3, TimeUnit.SECONDS))
+            assertTrue(changes.await(3, TimeUnit.SECONDS))
+            assertEquals("Change hints must not invoke the heartbeat callback",1,beats.get())
             val request = server.takeRequest()
             assertEquals("1", request.getHeader("X-Beacon-Heartbeat"))
             assertEquals("batch", request.getHeader("X-Beacon-Reception"))

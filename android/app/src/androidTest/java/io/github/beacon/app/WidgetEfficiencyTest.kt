@@ -71,12 +71,30 @@ class WidgetEfficiencyTest {
             BeaconStateWidget.refresh(context,ids.toIntArray())
             assertTrue("at most one new raster for identical instances",WidgetPerformance.renders.get()-before<=1)
             assertTrue("second instance reuses raster",WidgetPerformance.reused.get()>reuse)
+            val duplicateSkips=WidgetPerformance.skipped.get()
+            BeaconStateWidget.refresh(context,ids.toIntArray())
+            assertTrue("Host updates also skip identical content",WidgetPerformance.skipped.get()>=duplicateSkips+2)
             val after=WidgetPerformance.renders.get()
             BeaconStateWidget.refresh(context,source="unrelated",identities=setOf(":efficiency"))
             assertEquals(after,WidgetPerformance.renders.get())
             val skipped=WidgetPerformance.skipped.get()
             BeaconStateWidget.refresh(context,source=source,identities=setOf(":efficiency"))
             assertTrue(WidgetPerformance.skipped.get()>=skipped+2)
+            val power=context.getSystemService(android.os.PowerManager::class.java)
+            fun key(code:Int){android.os.ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation.executeShellCommand("input keyevent $code")).use{it.readBytes()}}
+            val signature=StateCache(context).use{it.preference("widget-signature:${ids.first()}")}
+            try {
+                key(223);rule.waitUntil(5000){!power.isInteractive}
+                val changed=JSONObject(data.toString()).put("revision",2)
+                changed.getJSONArray("blocks").getJSONObject(0).put("value",77)
+                StateCache(context).use{it.apply(source,listOf(changed),"two",false)}
+                assertFalse("Screen must remain off during data arrival",power.isInteractive)
+                BeaconStateWidget.refresh(context,source=source,identities=setOf(":efficiency"))
+                assertEquals("Sleeping desktops keep their last raster",signature,StateCache(context).use{it.preference("widget-signature:${ids.first()}")})
+                key(224);rule.waitUntil(5000){power.isInteractive}
+                rule.waitUntil(10000){StateCache(context).use{it.preference("widget-signature:${ids.first()}")!=signature}}
+            } finally {key(224)}
+
         }finally{host.deleteHost();StateCache(context).use{cache->ids.forEach{cache.preference("widget:$it","")};cache.forget(source)}}
     }
 

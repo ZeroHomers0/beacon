@@ -64,6 +64,9 @@ internal class RealtimeRuntimeController(
     private val main = Handler(Looper.getMainLooper())
     private var receiptTask: Runnable? = null
     private var stateRecovery: Runnable? = null
+    private var stateSignal: Runnable? = null
+    @Volatile private var stateSignalNotBefore = 0L
+    private val recoveryPolicy = StateRecoveryPolicy()
     private var notificationTask: Runnable? = null
     private var receivedInBatch = 0
     private var insertedInBatch = 0
@@ -189,6 +192,7 @@ internal class RealtimeRuntimeController(
             override fun onReceive(context: android.content.Context, intent: Intent) {
                 networkChanged()
                 if (intent.action == Intent.ACTION_SCREEN_ON) {
+                    io.github.beacon.app.widget.StateRefreshReceiver.request(service)
                     runCatching { worker.execute { if (!destroyed) coalesceNetworkWork() } }
                 }
             }
@@ -322,21 +326,52 @@ internal class RealtimeRuntimeController(
         reconcile()
     }
 
-    private fun scheduleStateRecovery(settings:TransportSettings,valid:()->Boolean){
+    // The runtime actor owns the deadline. Heartbeats reuse an already active radio;
+    // one non-wakeup handler deadline remains as a safety net for legacy transports.
+    private fun scheduleStateRecovery(settings: TransportSettings, valid: () -> Boolean) {
         stateRecovery?.let(main::removeCallbacks)
-        val task=object:Runnable{
-            override fun run(){runCatching{worker.execute{
-                if(stateRecovery!==this||!valid()||!running)return@execute
-                if(store.stateCache.preference("supports:"+settings.endpoint)=="1")catchUp()
-                main.postDelayed(this,60000)
-            }}}
+        val task = object : Runnable {
+            override fun run() { runCatching { worker.execute {
+                if (stateRecovery !== this || !valid() || !running) return@execute
+                recoverStateIfDue(settings)
+                if (stateRecovery === this && valid() && running)
+                    main.postDelayed(this, recoveryPolicy.remaining(android.os.SystemClock.elapsedRealtime()))
+            } } }
         }
-        stateRecovery=task
-        main.postDelayed(task,60000)
+        stateRecovery = task
+        main.postDelayed(task, recoveryPolicy.remaining(android.os.SystemClock.elapsedRealtime()))
+    }
+
+    private fun recoverStateIfDue(settings: TransportSettings) {
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (recoveryPolicy.due(now)) {
+            recoveryPolicy.attempted(now)
+            if (store.stateCache.preference("supports:" + settings.endpoint) == "1") catchUp()
+        }
+    }
+
+    private fun queueStateSignal(valid: () -> Boolean) {
+        synchronized(this) {
+            if (!valid() || stateSignal != null) return
+            val task = object : Runnable { override fun run() {
+                runCatching { worker.execute {
+                    synchronized(this@RealtimeRuntimeController) { if (stateSignal !== this) return@execute; stateSignal = null }
+                    if (!valid() || !running) return@execute
+                    stateSignalNotBefore = android.os.SystemClock.elapsedRealtime() + 5_000L
+                    recoveryPolicy.attempted(android.os.SystemClock.elapsedRealtime())
+                    catchUp()
+                } }
+            } }
+            stateSignal = task
+            main.postDelayed(task, (stateSignalNotBefore - android.os.SystemClock.elapsedRealtime()).coerceAtLeast(250L))
+        }
     }
 
     fun reset() {
         stateRecovery?.let(main::removeCallbacks);stateRecovery=null
+        synchronized(this) { stateSignal?.let(main::removeCallbacks); stateSignal = null }
+        stateSignalNotBefore = 0L
+        recoveryPolicy.reset(android.os.SystemClock.elapsedRealtime())
         receiptTask?.let { main.removeCallbacks(it) }
         receiptTask = null
         receivedInBatch = 0
@@ -538,12 +573,16 @@ internal class RealtimeRuntimeController(
                             }
                         }
                     },
+                    onStateChanged = {
+                        lastHeartbeatAtMs = android.os.SystemClock.elapsedRealtime()
+                        queueStateSignal(::valid)
+                    },
                     onHeartbeat = {
                         lastHeartbeatAtMs = android.os.SystemClock.elapsedRealtime()
                         runCatching {
                             worker.execute {
                                 if (!valid()) return@execute
-                                if(store.stateCache.preference("supports:"+settings.endpoint)=="1")catchUp()
+                                recoverStateIfDue(settings)
                                 receiptTask?.let { task ->
                                     main.removeCallbacks(task)
                                     task.run()
@@ -624,7 +663,10 @@ internal class RealtimeRuntimeController(
                     onSubscribed = {
                         runCatching {
                             worker.execute {
-                                if (epoch.get() == capture && polling().shouldSchedule) catchUp()
+                                if (epoch.get() == capture && polling().shouldSchedule) {
+                                    recoveryPolicy.reset(android.os.SystemClock.elapsedRealtime())
+                                    catchUp()
+                                }
                             }
                         }
                     },
@@ -695,6 +737,8 @@ internal class RealtimeRuntimeController(
         epoch.incrementAndGet()
         main.removeCallbacks(monitor)
         main.removeCallbacks(networkMonitor)
+        stateRecovery?.let(main::removeCallbacks); stateRecovery = null
+        synchronized(this) { stateSignal?.let(main::removeCallbacks); stateSignal = null }
         receiptTask?.let { main.removeCallbacks(it) }
         notificationTask?.let { main.removeCallbacks(it) }
         // Dropped explicitly: a leftover handle would keep queueNotifications from ever scheduling

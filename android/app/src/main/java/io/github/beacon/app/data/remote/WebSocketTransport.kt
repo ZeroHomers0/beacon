@@ -23,6 +23,7 @@ internal class WebSocketTransport(
     private val batch: Boolean = false,
     private val onVerified: (Int) -> Unit = {},
     private val onHeartbeat: () -> Unit = {},
+    private val onStateChanged: () -> Unit = {},
     private val nowMs: () -> Long = SystemClock::elapsedRealtime,
 ) : RealtimeTransport {
     constructor(heartbeatSeconds: Int) : this(defaultClient(heartbeatSeconds))
@@ -105,8 +106,8 @@ internal class WebSocketTransport(
                         }
 
                         override fun onMessage(webSocket: WebSocket, text: String) {
-                            if(text=="@beacon/state_changed/1"||text=="@beacon/topics_changed/1"){onHeartbeat();return}
                             if (closed.get()) return
+                            if(text=="@beacon/state_changed/1"||text=="@beacon/topics_changed/1"){onStateChanged();return}
                             if (controlIntervalSeconds > 0 && text == "@beacon/heartbeat_ack/1") {
                                 synchronized(this@WebSocketTransport) {
                                     if (!waiting) return

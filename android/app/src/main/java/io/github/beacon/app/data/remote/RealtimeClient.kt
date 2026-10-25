@@ -33,6 +33,7 @@ internal constructor(
         onVerifiedHeartbeat: (Int) -> Unit = {},
         onHeartbeat: () -> Unit = {},
         powerSaving: Boolean = false,
+        onStateChanged: () -> Unit = {},
     ) : this(
         configuration,
         password,
@@ -50,13 +51,15 @@ internal constructor(
                     batch = batchOrdinaryMessages,
                     onVerified = onVerifiedHeartbeat,
                     onHeartbeat = onHeartbeat,
+                    onStateChanged = onStateChanged,
                 )
             else
                 WebSocketTransport(
-                    io.github.beacon.app.domain.model.RealtimeHeartbeat.forFailures(
+                    http = WebSocketTransport.defaultClient(io.github.beacon.app.domain.model.RealtimeHeartbeat.forFailures(
                         heartbeatSeconds,
                         failures,
-                    )
+                    )),
+                    onStateChanged = onStateChanged,
                 )
         },
     )
