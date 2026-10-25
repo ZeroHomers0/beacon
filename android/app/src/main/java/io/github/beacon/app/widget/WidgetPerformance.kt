@@ -2,7 +2,7 @@ package io.github.beacon.app.widget
 
 import org.json.JSONObject
 
-/** Counters contain no state content or credentials. Debuggable via the management page. */
+/** Counters contain no state content or credentials; used by performance verification. */
 object WidgetPerformance {
     val requests=java.util.concurrent.atomic.AtomicLong()
     val renders=java.util.concurrent.atomic.AtomicLong()
@@ -10,7 +10,6 @@ object WidgetPerformance {
     val skipped=java.util.concurrent.atomic.AtomicLong()
     val pixels=java.util.concurrent.atomic.AtomicLong()
     val observers=java.util.concurrent.atomic.AtomicLong()
-    fun summary()="本进程：刷新 ${requests.get()} · 绘制 ${renders.get()} · 复用 ${reused.get()} · 跳过 ${skipped.get()}"
     /** Footer is approximate to five minutes; the signature must use the same bucket. */
     fun updatedAt(row:JSONObject):Long = row.optLong("accepted_at_ms").coerceAtLeast(0L)/300_000L*300_000L
     fun interval(config:JSONObject,row:JSONObject?):Long=when(config.optString("refresh","balanced")){

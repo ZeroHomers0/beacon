@@ -27,14 +27,17 @@ object WidgetHealth {
 }
 
 @Composable internal fun WidgetMoreSettings(row:JSONObject,config:JSONObject,onChange:(JSONObject)->Unit){
+    val type = config.optString("template")
+    if(type == "text") return
+    val numeric = type != "text_list"
     var expanded by remember{mutableStateOf(false)}
     Column(verticalArrangement=Arrangement.spacedBy(BeaconUiMetrics.SettingsGroupGap)){
         SettingsGroup("更多设置"){
-            SettingsRow("单项颜色与数值格式","颜色优先级：单项设置 > 统一设置 > 分段提示 > 状态或自动颜色",BeaconIcons.Tune,iconTint=androidx.compose.material3.MaterialTheme.colorScheme.onSurface,onClick={expanded=!expanded},expanded=expanded)
+            SettingsRow(if(numeric)"单项颜色与数值格式"else"列表颜色","颜色优先级：单项设置 > 统一设置 > 分段提示 > 状态或自动颜色",BeaconIcons.Tune,iconTint=androidx.compose.material3.MaterialTheme.colorScheme.onSurface,onClick={expanded=!expanded},expanded=expanded)
         }
         if(expanded){
             WidgetColorSettings(row,config,onChange,advanced=true)
-            SettingsGroup("数值格式"){
+            if(numeric) SettingsGroup("数值格式"){
                 val decimals=listOf(-1,0,1,2,3)
                 BeaconDropdownPreference("小数位数",listOf("自动","整数","1位","2位","3位"),decimals.indexOf(config.optInt("decimals",-1)).coerceAtLeast(0),settingsRow=true,icon=BeaconIcons.Tune){i->onChange(JSONObject(config.toString()).put("decimals",decimals[i]))}
                 BeaconDropdownPreference("单位位置",listOf("数值后","数值前","隐藏单位"),listOf("after","before","hidden").indexOf(config.optString("unit_position","after")).coerceAtLeast(0),settingsRow=true,icon=BeaconIcons.Tune){i->onChange(JSONObject(config.toString()).put("unit_position",listOf("after","before","hidden")[i]))}

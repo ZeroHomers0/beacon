@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.beacon.app.data.local.StateCache
 import io.github.beacon.app.data.local.UiStyleStore
 import io.github.beacon.app.ui.components.*
@@ -56,11 +57,40 @@ private fun widgetDefaults(raw: String,row: JSONObject?): String {
 
 @Composable
 internal fun StateWidgetEditor(id:Int, detail:Boolean, source:String?, identity:String?, requestedFormat:String?, onExit:()->Unit, onSaved:()->Unit) {
+    val activity = androidx.activity.compose.LocalActivity.current as androidx.activity.ComponentActivity
+    val model = remember(activity) { androidx.lifecycle.ViewModelProvider(activity)[WidgetEditorViewModel::class.java] }
+    val snapshot by model.snapshot.collectAsStateWithLifecycle()
+    val failed by model.failed.collectAsStateWithLifecycle()
+    val saving by model.saving.collectAsStateWithLifecycle()
+    LaunchedEffect(id) { model.reload(id) }
+    ObserveStateChanges { model.reload(id) }
+    ObserveStateDeadline(snapshot?.rows.orEmpty()) { model.reload(id) }
+    val loaded = snapshot
+    if (loaded == null) {
+        val bar = rememberBeaconBarBehavior()
+        BeaconScaffold(topBar = {
+            BeaconTopBar(if(detail) "内容详情" else "小组件设置", false, bar,
+                navigationIcon={BeaconIconButton(onClick=onExit){Icon(BeaconIcons.Back,"返回")}}, actions={})
+        }, bottomBar={}) { padding ->
+            Column(Modifier.fillMaxSize().padding(padding).padding(BeaconUiMetrics.PageInset)) {
+                SettingsHint(if(failed) "小组件设置加载失败，请重试。" else "正在加载小组件设置…")
+                if(failed) BeaconButton(onClick={model.reload(id)}) { BeaconText("重试") }
+            }
+        }
+    } else {
+        StateWidgetEditorContent(id,detail,source,identity,requestedFormat,onExit,onSaved,loaded,model,saving)
+        SettingsRetryFeedback("小组件数据加载失败",failed,onRetry={model.reload(id)})
+    }
+}
+
+@Composable
+private fun StateWidgetEditorContent(id:Int, detail:Boolean, source:String?, identity:String?, requestedFormat:String?, onExit:()->Unit, onSaved:()->Unit,
+    snapshot:WidgetEditorSnapshot,model:WidgetEditorViewModel,saving:Boolean) {
     val context=LocalContext.current
     val cache=remember{StateCache(context)}
     DisposableEffect(cache){onDispose{cache.close()}}
-    var rows by remember{mutableStateOf(cache.all())}
-    val stored=remember{cache.preference("widget:$id")}
+    val rows=snapshot.rows
+    val stored=remember{snapshot.stored}
     val initial=remember {
         val saved=runCatching{JSONObject(stored)}.getOrElse{JSONObject()}
         val wantedSource=source?:saved.optString("source")
@@ -86,7 +116,20 @@ internal fun StateWidgetEditor(id:Int, detail:Boolean, source:String?, identity:
     var previewSize by remember{mutableStateOf(WidgetInstances.previewSize(context,id,format))}
     var discard by remember{mutableStateOf(false)}
     var feedback by remember{mutableStateOf("")}
-    var invalidation by remember{mutableIntStateOf(0)}
+    val saveResult by model.saveResult.collectAsStateWithLifecycle()
+    LaunchedEffect(saveResult) {
+        saveResult?.let { result ->
+            if (result.failed) feedback="保存失败，请重试。"
+            else result.raw?.let { saved ->
+                baseline=saved
+                if(WidgetConfiguration.equivalent(draft,saved,format.name))draft=saved
+                hasSaved=true
+                onSaved()
+                result.warning?.let { feedback=it }
+            }
+            model.consumeSaveResult(result)
+        }
+    }
     var topicSyncKey by remember { mutableIntStateOf(0) }
     var topicSyncing by remember { mutableStateOf(false) }
     var topicSyncMessage by remember { mutableStateOf("") }
@@ -96,7 +139,7 @@ internal fun StateWidgetEditor(id:Int, detail:Boolean, source:String?, identity:
         fun start(){
             if(!editing||sync!=null)return
             topicSyncing=true;topicSyncMessage="正在同步可选主题…"
-            sync=WidgetTopicSync(context){message->topicSyncing=false;topicSyncMessage=message;invalidation++}.also{it.start()}
+            sync=WidgetTopicSync(context){message->topicSyncing=false;topicSyncMessage=message;model.reload(id)}.also{it.start()}
         }
         fun stop(){sync?.close();sync=null;topicSyncing=false}
         val observer=LifecycleEventObserver{_,event->when(event){Lifecycle.Event.ON_START->start();Lifecycle.Event.ON_STOP->stop();else->Unit}}
@@ -104,35 +147,25 @@ internal fun StateWidgetEditor(id:Int, detail:Boolean, source:String?, identity:
         if(editorLifecycle.currentState.isAtLeast(Lifecycle.State.STARTED))start()
         onDispose{editorLifecycle.removeObserver(observer);stop()}
     }
-    ObserveStateChanges{invalidation++}
-    ObserveStateDeadline(rows){invalidation++}
-    LaunchedEffect(invalidation){
-        rows=kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO){StateCache(context).use{it.all()}}
-
-    }
-    val dirty=draft!=baseline||!hasSaved
+    val dirty=!WidgetConfiguration.equivalent(draft,baseline,format.name)||!hasSaved
     fun update(change:(JSONObject)->Unit){draft=JSONObject(draft).apply(change).toString()}
-    fun back(){if(editing&&dirty)discard=true else if(editing&&detail)editing=false else onExit()}
+    fun back(){if(saving)return;if(editing&&dirty)discard=true else if(editing&&detail)editing=false else onExit()}
     BackHandler{back()}
     val lifecycle=LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle,format){
-        val observer=LifecycleEventObserver{_,event->if(event==Lifecycle.Event.ON_RESUME){previewSize=WidgetInstances.previewSize(context,id,format);rows=cache.all()}}
+        val observer=LifecycleEventObserver{_,event->if(event==Lifecycle.Event.ON_RESUME){previewSize=WidgetInstances.previewSize(context,id,format)}}
         lifecycle.addObserver(observer);onDispose{lifecycle.removeObserver(observer)}
     }
     LaunchedEffect(format){previewSize=WidgetInstances.previewSize(context,id,format)}
     val error=if(row==null)"请先选择一个已创建的数据主题。"else WidgetConfigRules.layoutError(row,config,previewSize.width.toInt(),previewSize.height.toInt())
     val save:()->Unit={
-        if(error==null&&row!=null){
-            try {
+        if(!saving&&error==null&&row!=null){
                 val saved=JSONObject(draft).put("format",format.name)
                 if(existing){
-                    cache.preference("widget:$id",saved.toString());BeaconStateWidget.refresh(context,intArrayOf(id))
-                    draft=saved.toString();baseline=draft;hasSaved=true
-                    onSaved()
+                    model.save(id,saved.toString())
                 }else{
                     feedback="请长按桌面空白处，打开小组件列表并选择 Beacon。App 仅管理已添加的组件。"
                 }
-            }catch(_:Exception){feedback="保存失败，请重试。"}
         }
     }
     val scroll=rememberLazyListState();val scope=rememberCoroutineScope()
@@ -142,7 +175,7 @@ internal fun StateWidgetEditor(id:Int, detail:Boolean, source:String?, identity:
             navigationIcon={BeaconIconButton(onClick={back()}){Icon(BeaconIcons.Back,"返回")}},
             actions={if(editing){
                 BeaconIconButton(onClick={scope.launch{scroll.animateScrollToItem(0)}}){Icon(BeaconIcons.Info,"查看预览")}
-                if(existing)BeaconSaveAction("保存设置",dirty,false,error==null&&dirty,save)
+                if(existing)BeaconSaveAction("保存设置",dirty,saving,!saving&&error==null&&dirty,save)
                 else BeaconActionIcon(BeaconIcons.Info,"桌面添加说明",onClick={feedback="请长按桌面空白处，从小组件列表选择 Beacon。"})
             }})
     },bottomBar={}){padding->
@@ -191,7 +224,7 @@ internal fun StateWidgetEditor(id:Int, detail:Boolean, source:String?, identity:
 
                 }
             }else if(row!=null){
-                item { WidgetStateDetail(row,id,cache,onEdit={if(existing){baseline=draft;editing=true}else feedback="请长按桌面空白处，从小组件列表选择 Beacon；添加后可在管理页面编辑。"},onExit=onExit) }
+                item { WidgetStateDetail(row,id,cache,onEdit={if(existing){baseline=draft;editing=true}else feedback="请长按桌面空白处，从小组件列表选择 Beacon；添加后可在管理页面编辑。"}) }
             }else item { SettingsGroup("内容不可用"){Column(Modifier.padding(BeaconUiMetrics.CardInset)){SettingsHint("原有配置保留，可返回设置重新选择数据。")}} }
         }
     }

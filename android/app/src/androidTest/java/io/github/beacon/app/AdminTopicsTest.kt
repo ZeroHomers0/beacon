@@ -23,6 +23,46 @@ import org.junit.Test
 
 class AdminTopicsTest {
     @get:Rule val rule=createAndroidComposeRule<MainActivity>()
+    @Test fun topicMutationCommitsOnceWhenTheFollowingReadFails() {
+        val backend=TopicBackend(true)
+        val model=ServerAdminViewModel{_,_->backend}
+        rule.runOnUiThread { model.login("https://example.invalid","a".repeat(64)) }
+        rule.waitUntil(10000){model.state.value.loggedIn&&!model.state.value.busy}
+        for(action in listOf("create","update","delete")) {
+            var completed=false
+            backend.failReadsAfterMutation=true
+            backend.failReads=false
+            rule.runOnUiThread {
+                model.mutateTopic(action,JSONObject().put("device_id","phone").put("topic_key","quota").put("name","主题"),JSONObject()) { completed=true }
+            }
+            rule.waitUntil(10000){!model.state.value.busy}
+            rule.runOnIdle { assertTrue(completed) }
+            assertEquals(null,model.state.value.actionFailure)
+            assertNotNull(model.state.value.topicsFailure)
+            assertEquals(R.string.admin_topic_refresh_after_success_failed,model.state.value.feedback)
+        }
+        assertEquals(3,backend.mutations)
+        backend.failReads=false
+        rule.runOnUiThread { model.loadTopics(JSONObject()) }
+        rule.waitUntil(10000){!model.state.value.busy}
+        assertNull(model.state.value.topicsFailure)
+        assertEquals(3,backend.mutations)
+    }
+
+    @Test fun clearCommitsOnceWhenTheFollowingReadFails() {
+        val backend=TopicBackend(false)
+        val model=ServerAdminViewModel{_,_->backend}
+        rule.runOnUiThread { model.login("https://example.invalid","a".repeat(64)) }
+        rule.waitUntil(10000){model.state.value.loggedIn&&!model.state.value.busy}
+        backend.failReads=true
+        var completed=false
+        rule.runOnUiThread { model.clearTopic(JSONObject(),JSONObject()){completed=true} }
+        rule.waitUntil(10000){!model.state.value.busy}
+        rule.runOnIdle { assertTrue(completed) }
+        assertTrue(backend.cleared)
+        assertNull(model.state.value.actionFailure)
+        assertNotNull(model.state.value.topicsFailure)
+    }
     @Test fun defaultSourceManagementWorksWithoutApplicationsInMiuix()=verify(BeaconUiStyle.MIUIX)
     @Test fun defaultSourceManagementWorksWithoutApplicationsInMaterial()=verify(BeaconUiStyle.MATERIAL3)
 
@@ -110,6 +150,9 @@ class AdminTopicsTest {
     }
 
     private class TopicBackend(private val catalog:Boolean=false):ServerAdministration {
+        @Volatile var failReads=false
+        @Volatile var failReadsAfterMutation=false
+        @Volatile var mutations=0
         override val endpoint="https://example.invalid"
         val query=java.util.concurrent.atomic.AtomicReference(JSONObject())
         val listCalls=java.util.concurrent.atomic.AtomicInteger()
@@ -117,16 +160,21 @@ class AdminTopicsTest {
         var clearedIdentity=JSONObject()
         @Volatile var catalogRow:JSONObject?=null
         override fun overview()=JSONObject("""{"server_id":"test-server","protocol":1,"storage":{"messages":0,"pending":0,"database_allocated_bytes":4096},"devices":[{"device_id":"phone","name":"测试手机","revoked":false}],"applications":[]}""").put("topic_catalog_protocol",if(catalog)1 else 0)
-        override fun topics(query:JSONObject)=JSONObject().put("topics",catalogRow?.let{JSONArray().put(it)}?:JSONArray()).put("total",if(catalogRow==null)0 else 1).put("has_more",false)
+        override fun topics(query:JSONObject):JSONObject {
+            if(failReads)throw java.io.IOException("read failed")
+            return JSONObject().put("topics",catalogRow?.let{JSONArray().put(it)}?:JSONArray()).put("total",if(catalogRow==null)0 else 1).put("has_more",false)
+        }
         override fun mutateTopic(action:String,payload:JSONObject):JSONObject{
             catalogRow=when(action){
                 "create"->JSONObject(payload.toString()).put("topic_key",payload.optString("topic_key").ifBlank{"generated"}).put("title",payload.getString("name")).put("device_name","测试手机").put("source_name","未关联应用").put("config_version",1).put("revision",0).put("state","waiting")
                 "update"->JSONObject(catalogRow!!.toString()).put("title",payload.getString("name")).put("name",payload.getString("name")).put("config_version",2)
                 "delete"->null
                 else->error(action)
-            };return JSONObject().put("topic",catalogRow)
+            };mutations++;if(failReadsAfterMutation)failReads=true
+            return JSONObject().put("topic",catalogRow)
         }
         override fun stateTopics(query:JSONObject):JSONObject{
+            if(failReads)throw java.io.IOException("read failed")
             listCalls.incrementAndGet()
             this.query.set(JSONObject(query.toString()))
             val row=JSONObject("""{"device_id":"phone","device_name":"测试手机","application_id":"","source_name":"默认来源","topic_key":"quota:a","title":"无应用额度","revision":3,"state":"active"}""")

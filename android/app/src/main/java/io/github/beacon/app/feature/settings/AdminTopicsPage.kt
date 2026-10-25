@@ -33,6 +33,7 @@ internal fun AdminTopicsPage(state:AdminUiState,model:ServerAdminViewModel,scrol
     var attempted by remember{mutableStateOf("")}
     var pending by remember{mutableStateOf<JSONObject?>(null)}
     var detailOpen by remember{mutableStateOf(false)}
+    var detailIdentity by remember { mutableStateOf<JSONObject?>(null) }
     var refreshing by remember{mutableStateOf(false)}
     val query=JSONObject().put("device_id",device).put("state",status).put("search",search.trim()).put("limit",50).put("offset",offset).apply{if(application!="*")put("application_id",application)}
     val request=query.toString()
@@ -47,6 +48,7 @@ internal fun AdminTopicsPage(state:AdminUiState,model:ServerAdminViewModel,scrol
     val states=if(state.topicCatalog)listOf("all","waiting","active","stale","expired")else listOf("all","active","stale","expired","deleted")
     val labels=if(state.topicCatalog)listOf("全部状态","等待数据","有效","数据陈旧","已过期")else listOf("全部状态","有效","数据陈旧","已过期","已清空")
     SettingsRetryFeedback("数据主题加载失败",state.refreshFailure!=null||state.topicsFailure!=null,onRetry={reload++})
+    SettingsRetryFeedback("详情加载失败",detailOpen&&state.topicDetailFailure!=null,onRetry={detailIdentity?.let(model::loadTopic)})
     val direction=androidx.compose.ui.platform.LocalLayoutDirection.current
     Column(modifier){
         Column(Modifier.fillMaxWidth().padding(start=padding.calculateStartPadding(direction),end=padding.calculateEndPadding(direction),top=padding.calculateTopPadding(),bottom=BeaconUiMetrics.Gap8),verticalArrangement=Arrangement.spacedBy(BeaconUiMetrics.Gap8)){
@@ -79,7 +81,7 @@ internal fun AdminTopicsPage(state:AdminUiState,model:ServerAdminViewModel,scrol
                             }
                         },
                         revoked=row.optString("state") in listOf("deleted","expired"),
-                        onDetails=if(row.optLong("revision")>0)({model.dismissTopic();detailOpen=true;model.loadTopic(topicIdentity(row))})else null)
+                        onDetails=if(row.optLong("revision")>0)({model.dismissTopic();detailOpen=true;detailIdentity=topicIdentity(row);model.loadTopic(detailIdentity!!)})else null)
                 }
                 if(offset>0||state.topicsHasMore)item{BeaconActionPair(
                     dismiss={BeaconTextButton(onClick={offset=(offset-50).coerceAtLeast(0)},enabled=offset>0&&!state.busy){BeaconText("上一页")}},

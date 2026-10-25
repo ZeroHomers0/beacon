@@ -111,6 +111,7 @@ class BeaconUiState(
 
     var page: Int by savedState(handle, "page", 0)
     var search: String by savedState(handle, "search", "")
+    var statesShowHidden: Boolean by savedState(handle, "statesShowHidden", false)
     var readFilter: MessageReadFilter by savedState(handle, "readFilter", MessageReadFilter.ALL)
     var selectionMode: Boolean by savedState(handle, "selectionMode", false)
     var selectedKeys: List<MessageKey> by savedState(handle, "selectedKeys", emptyList())

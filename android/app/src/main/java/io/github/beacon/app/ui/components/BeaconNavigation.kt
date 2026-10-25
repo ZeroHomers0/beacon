@@ -68,7 +68,7 @@ fun BeaconNavigation(
     rail: Boolean = false,
     onNavigate: (Int) -> Unit,
 ) {
-    val icons = listOf(BeaconIcons.Messages, BeaconIcons.Settings, BeaconIcons.Messages)
+    val icons = listOf(BeaconIcons.Messages, BeaconIcons.Settings, BeaconIcons.Topics)
     if (rail) {
         if (miuix()) {
             val railColor = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surface

@@ -6,6 +6,7 @@ import kotlin.math.*
 
 /** Shared by native desktop RemoteViews and the configuration preview. No network assets. */
 object WidgetRenderer {
+    private const val CORNER_RADIUS_DP = 27f
     val templates = listOf("numbers", "horizontal_bars", "vertical_bars", "single_ring", "nested_rings", "ring_grid", "segmented_ring", "text_list", "text", "sparkline")
     val names = listOf("纯数字", "横向进度条", "纵向柱状图", "单环", "嵌套环", "独立小环", "占比圆环", "文字列表", "整段文字", "迷你趋势图")
     fun render(row: JSONObject?, inputConfig: JSONObject, width: Int, height: Int, dark: Boolean, density: Float = 1f, maxPixels: Int = 2097152): Bitmap {
@@ -43,7 +44,8 @@ object WidgetRenderer {
         }
 
         p.color=if(config.optString("background")=="transparent") Color.TRANSPARENT else if(dark)Color.rgb(25,28,34)else Color.rgb(248,249,250)
-        c.drawRoundRect(RectF(0f,0f,w.toFloat(),h.toFloat()),min(27f,min(w,h)*.5f),min(27f,min(w,h)*.5f),p)
+        val cornerRadius=min(CORNER_RADIUS_DP,min(w,h)*.5f)
+        c.drawRoundRect(RectF(0f,0f,w.toFloat(),h.toFloat()),cornerRadius,cornerRadius,p)
         val template=config.optString("template","horizontal_bars")
 
         val now=System.currentTimeMillis();val expired=row!=null&&(row.optLong("expires_at_ms") in 1..now);val stale=row!=null&&(row.optLong("stale_at_ms") in 1..now)

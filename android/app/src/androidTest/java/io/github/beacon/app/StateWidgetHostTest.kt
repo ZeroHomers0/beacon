@@ -44,9 +44,6 @@ class StateWidgetHostTest {
             }finally{instrumentation.uiAutomation.dropShellPermissionIdentity()}
             val views=ids.map{id->var view:android.appwidget.AppWidgetHostView?=null;instrumentation.runOnMainSync{view=host.createView(context,id,manager.getAppWidgetInfo(id))};requireNotNull(view)}
             assertTrue(io.github.beacon.app.widget.WidgetInstances.ids(context).toList().containsAll(ids))
-            val callbackConfig=StateCache(context).use{it.preference("widget:${ids[0]}")}
-            io.github.beacon.app.widget.PinStateWidgetReceiver().onReceive(context,android.content.Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,ids[0]).putExtra("config",callbackConfig).putExtra("pin_token","host-test"))
-            StateCache(context).use{assertEquals(ids[0].toString(),it.preference("pin-result:host-test"));it.preference("pin-result:host-test","")}
             BeaconStateWidget.refresh(context)
             instrumentation.waitForIdleSync()
             val deadline=android.os.SystemClock.elapsedRealtime()+5000

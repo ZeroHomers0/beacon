@@ -49,6 +49,7 @@ enum class AdminAction {
     REVOKE_APPLICATION,
     CLEAR_STATE,
     MUTATE_TOPIC,
+    LOAD_TOPIC,
 }
 
 data class AdminUiState(
@@ -80,6 +81,7 @@ data class AdminUiState(
     val topicsLoaded:Boolean = false,
     val topicsFailure:Int? = null,
     val topicDetail:JSONObject? = null,
+    val topicDetailFailure: Int? = null,
 ) {
     fun listState(empty: Boolean) = io.github.beacon.app.domain.model.AsyncPageState.resolve(
         loaded = overviewLoaded,
@@ -256,19 +258,49 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
             base.copy(topics=mutable.value.topics,topicsTotal=mutable.value.topicsTotal,topicsHasMore=mutable.value.topicsHasMore,topicsQuery=query.toString(),topicsLoaded=true,topicsFailure=if(error is AdminRequestException&&error.status==404)R.string.admin_unavailable else R.string.admin_request_failed)
         }
     }
-    fun loadTopics(query:JSONObject)=authenticated(null){client->topicsResult(client,query)}
-    fun loadTopic(identity:JSONObject)=authenticated(null){client->mutable.value.copy(topicDetail=client.stateTopic(identity).getJSONObject("state"))}
-    fun dismissTopic(){mutable.value=mutable.value.copy(topicDetail=null)}
+    fun loadTopics(query: JSONObject) {
+        if (mutable.value.busy) return
+        mutable.value = mutable.value.copy(topicsFailure = null)
+        authenticated(null) { client -> topicsResult(client, query) }
+    }
+    fun loadTopic(identity:JSONObject)=authenticated(null, AdminAction.LOAD_TOPIC){client->mutable.value.copy(topicDetail=client.stateTopic(identity).getJSONObject("state"), topicDetailFailure=null)}
+    fun dismissTopic(){mutable.value=mutable.value.copy(topicDetail=null, topicDetailFailure=null)}
+
+    private suspend fun refreshAfterTopicMutation(client: ServerAdministration, query: JSONObject) {
+        try {
+            val result = withContext(Dispatchers.IO) { topicsResult(client, query) }
+            mutable.value = result.copy(feedback = mutable.value.feedback)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            // The write has already committed. Never invite the user to execute it again.
+            mutable.value = mutable.value.copy(
+                topicsLoaded = false,
+                topicsFailure = R.string.admin_request_failed,
+                feedback = R.string.admin_topic_refresh_after_success_failed,
+            )
+        }
+    }
+
     fun clearTopic(identity:JSONObject,query:JSONObject,onSuccess:()->Unit){
         val client=session?:return
-        run(R.string.admin_topic_cleared,AdminAction.CLEAR_STATE,onSuccess={onSuccess()}){client.clearStateTopic(identity);topicsResult(client,query).copy(topicDetail=null,awaiting=null,actionFailure=null)}
+        run(R.string.admin_topic_cleared, AdminAction.CLEAR_STATE, onSuccess={
+            onSuccess()
+            refreshAfterTopicMutation(client, query)
+        }) {
+            client.clearStateTopic(identity)
+            mutable.value.copy(topicDetail=null, awaiting=null, actionFailure=null)
+        }
     }
 
     fun mutateTopic(action:String,payload:JSONObject,query:JSONObject,onSuccess:()->Unit){
         val client=session?:return
-        run(R.string.admin_topic_saved,AdminAction.MUTATE_TOPIC,onSuccess={onSuccess()}){
+        run(R.string.admin_topic_saved,AdminAction.MUTATE_TOPIC,onSuccess={
+            onSuccess()
+            refreshAfterTopicMutation(client, query)
+        }){
             client.mutateTopic(action,payload)
-            topicsResult(client,query).copy(topicDetail=null,awaiting=null,actionFailure=null)
+            mutable.value.copy(topicDetail=null,awaiting=null,actionFailure=null)
         }
     }
 
@@ -413,6 +445,7 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
                 refreshFailure = null,
                 awaiting = action,
                 actionFailure = null,
+                topicDetailFailure = if (action == AdminAction.LOAD_TOPIC) null else mutable.value.topicDetailFailure,
             )
         job = viewModelScope.launch {
             try {
@@ -459,7 +492,9 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
                     mutable.value = AdminUiState(endpoint = mutable.value.endpoint, feedback = feedback)
                 } else
                     mutable.value =
-                        if (success == null)
+                        if (action == AdminAction.LOAD_TOPIC)
+                            mutable.value.copy(busy=false, awaiting=null, topicDetailFailure=feedback)
+                        else if (success == null)
                             mutable.value.copy(
                                 busy = false,
                                 feedback = null,

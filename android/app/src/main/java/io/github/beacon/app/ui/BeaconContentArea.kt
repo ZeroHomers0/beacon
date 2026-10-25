@@ -133,7 +133,7 @@ BeaconMessageTransition(
             overscrollEffect = null,
         ) { visiblePage ->
             when (visiblePage) {
-                2 -> io.github.beacon.app.feature.messages.StatesPage(Modifier.fillMaxSize().padding(insets), busy = runtimeState.messageBusy || runtimeState.transportBusy, connected = runtimeState.runtimeConnected, onRefresh = { actions.transport() })
+                2 -> io.github.beacon.app.feature.messages.StatesPage(Modifier.fillMaxSize().padding(insets), busy = runtimeState.messageBusy || runtimeState.transportBusy, connected = runtimeState.runtimeConnected, showHidden=ui.statesShowHidden,onShowHidden={ui.statesShowHidden=it},onRefresh = { actions.transport() })
                 0 ->
                     MessagesPage(
                         messageScroll,

@@ -26,7 +26,7 @@ class StateCache(private val context: Context) : SQLiteOpenHelper(context, "stat
     fun preference(key: String): String = readableDatabase.rawQuery("SELECT value FROM preferences WHERE key=?", arrayOf(key)).use { if (it.moveToFirst()) it.getString(0) else "" }
     fun preference(key: String, value: String) {
         writableDatabase.insertWithOnConflict("preferences", null, ContentValues().apply { put("key", key); put("value", value) }, SQLiteDatabase.CONFLICT_REPLACE)
-        if(key.startsWith("widget:")||key.startsWith("pin-result:"))io.github.beacon.app.widget.StateChanges.ui(context)
+        if(key.startsWith("widget:"))io.github.beacon.app.widget.StateChanges.ui(context)
     }
     private fun dataRow(source:String,identity:String):JSONObject?=readableDatabase.rawQuery("SELECT payload FROM states WHERE source=? AND identity=?",arrayOf(source,identity)).use{if(it.moveToFirst())JSONObject(it.getString(0)).put("local_source",source).put("local_identity",identity)else null}
     private fun merge(data:JSONObject?,topic:JSONObject):JSONObject {

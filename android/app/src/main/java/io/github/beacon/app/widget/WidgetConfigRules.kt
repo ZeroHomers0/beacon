@@ -20,7 +20,7 @@ object WidgetConfigRules {
         return (0 until ids.length()).mapNotNull{i->available.firstOrNull{it.optString("id")==ids.optString(i)}}
     }
     fun error(row:JSONObject,config:JSONObject):String?{
-        if(row.optBoolean("_topic_deleted"))return "主题已删除，请恢复主题或选择其他内容"
+        if(row.optBoolean("_topic_deleted"))return "主题已删除，请选择其他内容或新建主题"
         if(row.optBoolean("_waiting"))return null
         if(config.optString("template")=="auto")return error(row,resolved(row,config))
         WidgetTuning.error(config)?.let{return it}

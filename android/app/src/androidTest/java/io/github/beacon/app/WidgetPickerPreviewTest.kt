@@ -11,6 +11,18 @@ import org.junit.Test
 
 /** Export deterministic samples through the real renderer; no user data or credentials. */
 class WidgetPickerPreviewTest {
+ @Test fun cornerRadiusIsIdenticalAtEveryWidgetSize(){
+  val images=WidgetFormat.entries.map{WidgetRenderer.render(null,JSONObject().put("background","light"),it.width,it.height,false,1f)}
+  try{
+   for(image in images){
+    assertEquals("27dp rounding keeps the top edge at x=16 transparent",0,android.graphics.Color.alpha(image.getPixel(16,0)))
+    assertEquals(255,android.graphics.Color.alpha(image.getPixel(27,0)))
+    for(x in 0 until 27)for(y in 0 until 27){
+     assertEquals("corner alpha at ($x,$y) must not scale with widget dimensions",android.graphics.Color.alpha(images.first().getPixel(x,y)),android.graphics.Color.alpha(image.getPixel(x,y)))
+    }
+   }
+  }finally{images.forEach{it.recycle()}}
+ }
  @Test fun exportAccuratePreviewsForEveryProvider(){
   val context=InstrumentationRegistry.getInstrumentation().targetContext
   val folder=requireNotNull(context.getExternalFilesDir("picker-previews"));folder.mkdirs()
@@ -22,6 +34,10 @@ class WidgetPickerPreviewTest {
    assertNull(WidgetConfigRules.layoutError(row,config,format.width,format.height))
    val bitmap=WidgetRenderer.render(row,config,format.width,format.height,false,3f)
    val file=java.io.File(folder,"${format.name.lowercase()}.png");file.outputStream().use{bitmap.compress(Bitmap.CompressFormat.PNG,100,it)};bitmap.recycle()
+   val automation=InstrumentationRegistry.getInstrumentation().uiAutomation
+   for(command in listOf("mkdir -p /data/local/tmp/beacon-picker-previews","cp ${file.absolutePath} /data/local/tmp/beacon-picker-previews/${file.name}")){
+    android.os.ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand(command)).use{it.readBytes()}
+   }
   }
  }
  @Test fun providerPreviewsAreDistinctAndScalable(){

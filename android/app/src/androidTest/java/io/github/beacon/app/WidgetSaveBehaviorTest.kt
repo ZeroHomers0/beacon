@@ -43,19 +43,24 @@ class WidgetSaveBehaviorTest {
                 val intent=Intent(context,StateWidgetActivity::class.java).setAction(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE)
                     .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,id).putExtra("source",source).putExtra("identity",":save:test")
                 ActivityScenario.launch<StateWidgetActivity>(intent).use{scenario->
-                    rule.waitUntil(10000){rule.onAllNodesWithText("小组件设置").fetchSemanticsNodes().isNotEmpty()}
+                    rule.waitUntil(10000){rule.onAllNodesWithContentDescription("保存设置").fetchSemanticsNodes().isNotEmpty()}
                     val save=rule.onNodeWithContentDescription("保存设置")
                     if(newConfig){
                         save.assertIsEnabled().performClick()
+                        rule.waitUntil(10000){StateCache(context).use{it.preference("widget:$id").isNotBlank()}}
                         rule.waitForIdle();scenario.onActivity{assertFalse(it.isFinishing)}
                         rule.onAllNodesWithText("小组件设置").onFirst().assertExists();save.assertIsNotEnabled()
                     }else save.assertIsNotEnabled()
                     rule.onNodeWithTag("settings-list").performScrollToNode(hasSetTextAction())
                     val name=rule.onAllNodes(hasSetTextAction()).onFirst()
                     name.performTextReplacement("我的组件");save.assertIsEnabled().performClick()
+                    if(!newConfig)scenario.recreate()
+                    rule.waitUntil(10000){StateCache(context).use{runCatching{JSONObject(it.preference("widget:$id")).optString("instance_name")=="我的组件"}.getOrDefault(false)}}
+                    rule.waitUntil(10000){rule.onAllNodesWithContentDescription("保存设置").fetchSemanticsNodes().isNotEmpty()}
                     rule.waitForIdle();scenario.onActivity{assertFalse(it.isFinishing)}
                     rule.onAllNodesWithText("小组件设置").onFirst().assertExists();save.assertIsNotEnabled()
                     StateCache(context).use{assertEquals("我的组件",JSONObject(it.preference("widget:$id")).getString("instance_name"))}
+                    rule.onNodeWithTag("settings-list").performScrollToNode(hasSetTextAction())
                     name.performTextReplacement("临时名称");save.assertIsEnabled()
                     name.performTextReplacement("我的组件");save.assertIsNotEnabled()
                 }

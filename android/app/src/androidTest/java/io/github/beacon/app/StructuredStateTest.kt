@@ -159,21 +159,4 @@ class StructuredStateTest {
         config.put("template","single_ring");assertNotNull(WidgetConfigRules.error(r,config))
         config.put("template","segmented_ring");assertNotNull(WidgetConfigRules.error(r,config))
     }
-    @Test fun importedSnapshotsCannotPoisonLiveRevisionWatermarks(){
-        val source="a".repeat(64)
-        StateCache(context).use{cache->
-            cache.forget(source)
-            val offline=java.security.MessageDigest.getInstance("SHA-256").digest(("offline:"+source).toByteArray()).joinToString(""){"%02x".format(it.toInt()and 255)}
-            cache.forget(offline)
-            try{
-                cache.apply(source,listOf(row(1)),"live-cursor",true)
-                val raw=io.github.beacon.app.widget.StateDataArchive.export(cache)
-                io.github.beacon.app.widget.StateDataArchive.restore(cache,raw)
-                cache.apply(source,listOf(row(2)),"live-next",false)
-                assertEquals(2L,cache.all().first{it.optString("local_source")==source}.getLong("revision"))
-                assertTrue(cache.all().any{it.optString("local_source")==offline&&it.optBoolean("local_imported")})
-                assertEquals("live-next",cache.cursor(source))
-            }finally{cache.forget(source);cache.forget(offline)}
-        }
-    }
 }

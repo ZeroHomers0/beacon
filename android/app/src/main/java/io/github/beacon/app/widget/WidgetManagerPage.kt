@@ -33,8 +33,6 @@ fun WidgetManagerPage(modifier:Modifier,scroll:LazyListState,padding:PaddingValu
         if(refreshing) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO){BeaconStateWidget.refresh(context,ids=current.toIntArray())}
         ids=current;rows=snapshot.first;configs=snapshot.second
         refreshing=false
-        val focused=StateCache(context).use{it.preference("widget-focus").toIntOrNull()}
-        if(focused in current){scroll.animateScrollToItem(1+current.indexOf(focused));StateCache(context).use{it.preference("widget-focus","")}}
     }
     BeaconPullToRefresh(refreshing,{if(!refreshing){refreshing=true;version++}},modifier){
     BeaconSettingsList(scroll,Modifier.fillMaxSize(),contentPadding=padding){

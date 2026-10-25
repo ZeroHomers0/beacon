@@ -137,6 +137,7 @@ internal fun WidgetTemplateSelector(row:JSONObject,config:JSONObject,size:SizeF,
 @Composable
 private fun TemplateGlyph(type:String,enabled:Boolean=true){
     val ink=if(enabled)MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha=.38f);val muted=MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha=.2f)
+    val segmentColors=if(enabled)listOf(ink,MaterialTheme.colorScheme.secondary,MaterialTheme.colorScheme.tertiary)else listOf(ink,ink.copy(alpha=.26f),ink.copy(alpha=.16f))
     Canvas(Modifier.fillMaxWidth().height(32.dp)){
         val stroke=4.dp.toPx()
         when(type){
@@ -144,6 +145,22 @@ private fun TemplateGlyph(type:String,enabled:Boolean=true){
             "numbers"->for(i in 0..1){drawRoundRect(ink,Offset(size.width*i*.5f,size.height*.15f),Size(size.width*.3f,size.height*.4f),androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()));drawLine(muted,Offset(size.width*i*.5f,size.height*.85f),Offset(size.width*(i*.5f+.35f),size.height*.85f),2.dp.toPx())}
             "horizontal_bars"->for(i in 0..1){val y=size.height*(.25f+i*.5f);drawLine(muted,Offset(0f,y),Offset(size.width*.9f,y),stroke,StrokeCap.Round);drawLine(ink,Offset(0f,y),Offset(size.width*(.35f+i*.2f),y),stroke,StrokeCap.Round)}
             "vertical_bars"->for(i in 0..2)drawRect(ink,Offset(size.width*i*.3f,size.height*(.6f-i*.2f)),Size(size.width*.2f,size.height*(.4f+i*.2f)))
+            "segmented_ring"->{
+                val diameter=size.height*.78f;val origin=Offset((size.width-diameter)/2,(size.height-diameter)/2)
+                var start=-90f
+                listOf(172f,100f,76f).forEachIndexed{index,sweep->
+                    drawArc(segmentColors[index],start,sweep,false,origin,Size(diameter,diameter),style=Stroke(stroke,cap=StrokeCap.Butt))
+                    start+=sweep+4f
+                }
+            }
+            "sparkline"->{
+                val left=stroke/2;val right=size.width-stroke/2
+                val points=listOf(.72f,.5f,.63f,.28f,.4f,.16f).mapIndexed{index,y->Offset(left+(right-left)*index/5,size.height*y)}
+                drawLine(muted,Offset(left,size.height*.9f),Offset(right,size.height*.9f),1.dp.toPx())
+                val path=androidx.compose.ui.graphics.Path().apply{moveTo(points.first().x,points.first().y);points.drop(1).forEach{lineTo(it.x,it.y)}}
+                drawPath(path,ink,style=Stroke(3.dp.toPx(),cap=StrokeCap.Round,join=androidx.compose.ui.graphics.StrokeJoin.Round))
+                drawCircle(ink,2.dp.toPx(),points.last())
+            }
             else->{val count=if(type=="nested_rings")3 else if(type=="ring_grid")2 else 1
                 for(i in 0 until count){val diameter=if(type=="nested_rings")size.height*(.9f-i*.22f)else size.height*.85f;val x=if(type=="ring_grid")size.width*(i*.5f+.1f)else(size.width-diameter)/2;val y=(size.height-diameter)/2
                     drawArc(muted,0f,360f,false,Offset(x,y),Size(diameter,diameter),style=Stroke(stroke))
@@ -155,7 +172,7 @@ private fun TemplateGlyph(type:String,enabled:Boolean=true){
 }
 
 @Composable
-internal fun WidgetStateDetail(row:JSONObject,id:Int,cache:StateCache,onEdit:()->Unit,onExit:()->Unit){
+internal fun WidgetStateDetail(row:JSONObject,id:Int,cache:StateCache,onEdit:()->Unit){
     val context=androidx.compose.ui.platform.LocalContext.current
     val key=row.optString("local_source")+":"+row.optString("local_identity")
     var notify by remember(key){mutableStateOf(cache.preference("notify:$key")=="1")}
