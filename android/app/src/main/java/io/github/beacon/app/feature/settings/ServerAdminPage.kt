@@ -87,7 +87,7 @@ internal fun ServerAdminPage(
     var clearStage by remember { mutableIntStateOf(0) }
     var deletingDevice by remember { mutableStateOf<AdminDevice?>(null) }
     var confirmTest by remember { mutableStateOf(false) }
-    var logoutConfirm by remember { mutableStateOf(false) }
+    val logoutConfirm by model.logoutConfirmation.collectAsStateWithLifecycle()
     var copiedValue by remember { mutableStateOf<String?>(null) }
     var bindingSubmitted by rememberSaveable { mutableStateOf(false) }
     val currentBind by rememberUpdatedState(onUseBinding)
@@ -293,10 +293,6 @@ internal fun ServerAdminPage(
                     subtitle = state.endpoint,
                     healthy = state.overviewLoaded && state.protocol == 1 && state.refreshFailure == null,
                     error = state.refreshFailure != null,
-                    action = {
-                        SettingsToolAction(stringResource(R.string.admin_logout), BeaconIcons.Logout,
-                            enabled = !state.busy) { logoutConfirm = true }
-                    },
                 ) {
                     SettingsOverviewField(stringResource(R.string.admin_version), state.version)
                     SettingsOverviewField(stringResource(if (state.refreshFailure == null)
@@ -541,9 +537,10 @@ internal fun ServerAdminPage(
             title = stringResource(R.string.admin_logout),
             description = stringResource(R.string.admin_logout_hint),
             danger = false,
-            onDismiss = { logoutConfirm = false },
+            onDismiss = model::dismissLogout,
+            enabled = !state.busy,
+            dismissEnabled = !state.busy,
             onConfirm = {
-                logoutConfirm = false
                 model.logout()
                 token = ""
             },

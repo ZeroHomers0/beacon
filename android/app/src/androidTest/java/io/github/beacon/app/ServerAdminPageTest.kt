@@ -1,7 +1,8 @@
 package io.github.beacon.app
 
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.*
+import androidx.compose.runtime.collectAsState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
@@ -193,8 +194,8 @@ class ServerAdminPageTest {
             .onNodeWithText(rule.activity.getString(R.string.admin_no_applications))
             .assertIsDisplayed()
         rule.runOnIdle { screen.value = io.github.beacon.app.ui.components.SettingsScreen.SERVER_ADMIN }
-        rule.onNodeWithTag("server-admin-list").performScrollToNode(hasText("退出登录"))
-        rule.onNodeWithText("退出登录").performClick()
+        rule.runOnIdle { model.requestLogout() }
+        rule.onNodeWithText(rule.activity.getString(R.string.action_confirm)).performClick()
         rule.waitUntil(5000) { !model.state.value.loggedIn }
         assertNull(model.state.value.secret)
         assertTrue(model.state.value.applications.isEmpty())
@@ -276,8 +277,19 @@ class ServerAdminPageTest {
                 val density = LocalDensity.current
                 CompositionLocalProvider(LocalDensity provides Density(density.density, 1.5f)) {
                     BeaconTheme(style) {
-                        ServerAdminPage("", rememberLazyListState(), Modifier, PaddingValues(16.dp),
-                            { _, _, _ -> }, {}, screen = screen.value, onNavigate = { screen.value = it })
+                        val adminState = model.state.collectAsState().value
+                        Column {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                if (screen.value == io.github.beacon.app.ui.components.SettingsScreen.SERVER_ADMIN)
+                                    io.github.beacon.app.feature.settings.AdminOverviewActions(adminState, model)
+                                else if (screen.value in listOf(io.github.beacon.app.ui.components.SettingsScreen.SERVER_DEVICES,
+                                        io.github.beacon.app.ui.components.SettingsScreen.SERVER_APPLICATIONS))
+                                    io.github.beacon.app.feature.settings.AdminManagementActions(adminState, model,
+                                        screen.value == io.github.beacon.app.ui.components.SettingsScreen.SERVER_APPLICATIONS)
+                            }
+                            ServerAdminPage("", rememberLazyListState(), Modifier.weight(1f), PaddingValues(16.dp),
+                                { _, _, _ -> }, {}, screen = screen.value, onNavigate = { screen.value = it })
+                        }
                     }
                 }
             }
@@ -295,6 +307,8 @@ class ServerAdminPageTest {
             rule.onNodeWithTag("server-admin-list").assertIsDisplayed()
             if (target in listOf(io.github.beacon.app.ui.components.SettingsScreen.SERVER_DEVICES,
                     io.github.beacon.app.ui.components.SettingsScreen.SERVER_APPLICATIONS)) {
+                rule.onNodeWithContentDescription(rule.activity.getString(R.string.admin_refresh)).assertDoesNotExist()
+                rule.onNodeWithContentDescription(rule.activity.getString(R.string.admin_filter_title)).assertExists()
                 val before = backend.overviewCalls.get()
                 rule.onNodeWithTag("server-admin-list").performTouchInput { swipeDown(durationMillis = 600) }
                 rule.waitUntil(10000) { backend.overviewCalls.get() > before && !model.state.value.busy }
@@ -323,6 +337,17 @@ class ServerAdminPageTest {
         rule.onNodeWithContentDescription(rule.activity.getString(R.string.admin_copy)).assertIsDisplayed()
         rule.onNodeWithText(rule.activity.getString(R.string.settings_complete)).performClick()
         rule.waitUntil(5000) { model.state.value.secret == null }
+        rule.runOnIdle { screen.value = io.github.beacon.app.ui.components.SettingsScreen.SERVER_ADMIN }
+        rule.waitForIdle()
+        val refresh=rule.onNodeWithContentDescription(rule.activity.getString(R.string.admin_refresh)).fetchSemanticsNode().boundsInRoot
+        val logout=rule.onNodeWithContentDescription(rule.activity.getString(R.string.admin_logout)).fetchSemanticsNode().boundsInRoot
+        assertTrue("logout is to the right of refresh",logout.center.x > refresh.center.x)
+        rule.onNodeWithContentDescription(rule.activity.getString(R.string.admin_logout)).performClick()
+        rule.onNodeWithText(rule.activity.getString(R.string.action_cancel)).performClick()
+        assertTrue(model.state.value.loggedIn)
+        rule.onNodeWithContentDescription(rule.activity.getString(R.string.admin_logout)).performClick()
+        rule.onNodeWithText(rule.activity.getString(R.string.action_confirm)).performClick()
+        rule.waitUntil(5000) { !model.state.value.loggedIn }
     }
 
     @Test fun refinedMaterialPages() = refinedPages(BeaconUiStyle.MATERIAL3)

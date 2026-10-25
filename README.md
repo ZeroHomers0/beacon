@@ -23,7 +23,7 @@ Beacon 是一个自托管的 Android 消息推送应用。手机安装 App，服
 
 ## 3. 技术架构
 
-结构化消息、实时状态与桌面小组件已接入；开发规格、API、视觉原型及验收记录维护在[独立文档仓库](https://github.com/ZeroHomers0/beacon-docs/tree/main/docs/design)。数据库升级前请备份；小米最新系统仍待真机验收。
+结构化消息、实时状态与桌面小组件已接入；数据上报格式与 API 示例见本文[小组件数据上报指南](#小组件数据上报-api)，设计草稿与验收素材仅保留在本地。数据库升级前请备份；小米最新系统仍待真机验收。
 
 ```mermaid
 flowchart LR
@@ -690,7 +690,7 @@ curl --fail-with-body "$BEACON_URL/api/v1/states/meta?topic_key=widget%2Fdemo-pr
 
 发送方持续通过 HTTP 上报，服务端通过 WebSocket 通知手机有更新，断线后通过 HTTP 补收。无需把上传改成 WebSocket。桌面更新会合并与限流（及时约5秒，均衡下任务约5秒、其他约15秒，省电约1分钟）；不适合每帧动画或保证每秒刷新。系统进度通知可展示一条主进度，多个进度的完整信息放在 App 和小组件。状态通知按主题开启，普通状态更新不应反复响铃；任务完成等事件可另发普通消息。
 
-可运行脚本见 [examples/structured](examples/structured)，详细[数据主题 API 文档](https://github.com/ZeroHomers0/beacon-docs/blob/main/docs/design/structured-state-api.md)、完整开发规格与视觉验收记录见[文档仓库](https://github.com/ZeroHomers0/beacon-docs/tree/main/docs/design/structured-ui)。
+可运行脚本见 [examples/structured](examples/structured)，字段、格式及鉴权约束以上文为准。设计草稿和原生验收图仅保留在本地 `docs/design/` 或本地文档仓库，不纳入版本控制。
 
 ### 刷新、布局与功耗优化
 

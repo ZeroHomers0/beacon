@@ -126,3 +126,20 @@ internal fun AdminTopicFilterAction(filters:AdminListFilterState,devices:List<Ad
         }
     }
 }
+
+
+@Composable
+internal fun AdminOverviewActions(state: AdminUiState, model: ServerAdminViewModel) {
+    BeaconRefreshAction(stringResource(R.string.admin_refresh), state.loggedIn && !state.busy,
+        state.busy, onClick = model::refresh)
+    if (state.loggedIn) BeaconActionIcon(io.github.beacon.app.ui.icons.BeaconIcons.Logout,
+        stringResource(R.string.admin_logout), !state.busy, onClick = model::requestLogout)
+}
+
+@Composable
+internal fun AdminManagementActions(state: AdminUiState, model: ServerAdminViewModel, application: Boolean) {
+    AdminStatusFilterAction(model.listFilters, application, state.devices, state.loggedIn && !state.busy)
+    BeaconActionIcon(io.github.beacon.app.ui.icons.BeaconIcons.Add,
+        stringResource(if (application) R.string.admin_create_application else R.string.admin_create_binding),
+        state.loggedIn && !state.busy, onClick = model::showCreation)
+}

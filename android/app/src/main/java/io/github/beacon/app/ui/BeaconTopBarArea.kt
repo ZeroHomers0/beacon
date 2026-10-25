@@ -348,13 +348,7 @@ internal fun BeaconTopBarArea(
                                 displayedSettingsScreen ==
                                     SettingsScreen.SERVER_ADMIN
                         ) {
-                            io.github.beacon.app.ui.components.BeaconRefreshAction(
-                                stringResource(R.string.admin_refresh),
-                                adminState.loggedIn && !adminState.busy,
-                                adminState.busy,
-                            ) {
-                                adminModel.refresh()
-                            }
+                            io.github.beacon.app.feature.settings.AdminOverviewActions(adminState, adminModel)
                         } else if(displayedDetail==null&&barPage==1&&displayedSettingsScreen==SettingsScreen.SERVER_TOPICS){
                             io.github.beacon.app.feature.settings.AdminTopicFilterAction(adminModel.listFilters,adminState.devices,adminState.applications,adminState.loggedIn&&!adminState.busy)
                         } else if (
@@ -366,31 +360,8 @@ internal fun BeaconTopBarArea(
                                         SettingsScreen.SERVER_APPLICATIONS,
                                     )
                         ) {
-                            io.github.beacon.app.feature.settings.AdminStatusFilterAction(
-                                adminModel.listFilters,
-                                displayedSettingsScreen == SettingsScreen.SERVER_APPLICATIONS,
-                                adminState.devices, adminState.loggedIn && !adminState.busy)
-                            io.github.beacon.app.ui.components.BeaconRefreshAction(
-                                stringResource(R.string.admin_refresh),
-                                adminState.loggedIn && !adminState.busy,
-                                adminState.busy,
-                            ) {
-                                adminModel.refresh()
-                            }
-                            BeaconActionIcon(
-                                BeaconIcons.Add,
-                                stringResource(
-                                    if (
-                                        displayedSettingsScreen ==
-                                            SettingsScreen.SERVER_DEVICES
-                                    )
-                                        R.string.admin_create_binding
-                                    else R.string.admin_create_application
-                                ),
-                                adminState.loggedIn && !adminState.busy,
-                            ) {
-                                adminModel.showCreation()
-                            }
+                            io.github.beacon.app.feature.settings.AdminManagementActions(
+                                adminState, adminModel, displayedSettingsScreen == SettingsScreen.SERVER_APPLICATIONS)
                         } else if (
                             displayedDetail == null &&
                                 barPage == 1 &&

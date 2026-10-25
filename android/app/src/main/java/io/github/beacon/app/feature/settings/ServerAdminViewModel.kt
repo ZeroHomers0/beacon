@@ -98,6 +98,15 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
     private val mutableCreating = MutableStateFlow(false)
     val creating = mutableCreating.asStateFlow()
 
+    private val mutableLogoutConfirmation = MutableStateFlow(false)
+    val logoutConfirmation = mutableLogoutConfirmation.asStateFlow()
+
+    fun requestLogout() {
+        if (mutable.value.loggedIn && !mutable.value.busy) mutableLogoutConfirmation.value = true
+    }
+
+    fun dismissLogout() { mutableLogoutConfirmation.value = false }
+
     fun showCreation() {
         if (mutable.value.loggedIn && !mutable.value.busy) mutableCreating.value = true
     }
@@ -174,6 +183,7 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
     }
 
     fun logout() {
+        dismissLogout()
         dismissCreation()
         generation++
         job?.cancel()
