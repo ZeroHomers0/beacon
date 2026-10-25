@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# cron: */30 * * * *
-# */30 * * * * codex_quota_to_beacon.py
+# cron: */5 * * * *
+# */5 * * * * codex_quota_to_beacon.py
 # new Env('Beacon Codex 额度');
 """Codex 额度 -> Beacon 数据主题（青龙面板定时任务）
 
-每 30 分钟读取一次 Codex 的五小时窗口与七天窗口额度，作为**完整快照**上报到
+每 5 分钟读取一次 Codex 的五小时窗口与七天窗口额度，变化时作为**完整快照**上报到
 Beacon 数据主题，由手机桌面小组件展示。
 
 用法（青龙面板）：
     1. 先在 App「服务器管理 → 数据主题」创建主题，例如 widget/codex-quota
     2. 把本文件放到青龙的脚本目录，例如 /ql/data/scripts/codex-quota/codex_quota_to_beacon.py
     3. 「环境变量」里添加 BEACON_BASE_URL、BEACON_PUSH_KEY，以及下面的 CODEX_AUTH_JSON
-    4. 定时任务命令填 `task codex-quota/codex_quota_to_beacon.py`，定时规则填 `*/30 * * * *`
+    4. 定时任务命令填 `task codex-quota/codex_quota_to_beacon.py`，定时规则填 `*/5 * * * *`
 
 本脚本只依赖 Python 标准库（urllib），青龙镜像无需安装任何依赖。
 
@@ -27,7 +27,8 @@ Beacon 数据主题，由手机桌面小组件展示。
     CODEX_CLIENT_ID      可选，刷新令牌用的 OAuth client_id，一般不用改
     CODEX_ACCOUNT_ID     可选，覆盖凭据/JWT自动读取的账号 ID
     TOPIC_KEY            可选，数据主题标识，默认 widget/codex-quota
-    FRESH_FOR_SECONDS    可选，多旧算过期（秒），默认 3600（两倍采集间隔）
+    FRESH_FOR_SECONDS    可选，多旧算过期（秒），默认 3600（两倍保鲜上限）
+    MAX_REPORT_SECONDS   可选，无变化时的最长上报间隔，默认 1800
     WARN_PERCENT         可选，已用比例到达该值标黄，默认 70
     CRITICAL_PERCENT     可选，已用比例到达该值标红，默认 90
     BEACON_TTL           可选，数据有效期（秒），默认 604800；0 表示服务端默认
@@ -50,6 +51,7 @@ import os
 import sys
 import time
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 from typing import NoReturn
 from urllib import error, parse, request
@@ -64,6 +66,7 @@ REFRESH_MARGIN_SECONDS = 300
 # 锁文件超过这个时间就认为持有者已经死了，可以接管。
 STALE_LOCK_SECONDS = 600
 TITLE = "Codex 额度"
+_retry_not_before = 0
 
 
 def _env(name: str, default: str = "") -> str:
@@ -124,11 +127,9 @@ def http_json(
     elif payload is not None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     last_error = ""
-    next_delay = 0
     for attempt in range(retries + 1):
         if attempt:
-            delay = next_delay or min(2**attempt, 8)
-            next_delay = 0
+            delay = min(2**attempt, 8)
             log(f"第 {attempt + 1} 次重试，{delay}s 后继续：{last_error}")
             time.sleep(delay)
         req = request.Request(url, data=body, method=method)
@@ -145,11 +146,10 @@ def http_json(
                 return resp.status, _decode(resp.read()), dict(resp.headers.items())
         except error.HTTPError as exc:
             data = _decode(exc.read())
-            # 429 按 Retry-After 等待；其余 4xx 是请求本身的问题，重试没有意义。
-            if exc.code == 429 and attempt < retries:
-                next_delay = _retry_after(exc.headers.get("Retry-After"), default=10)
-                last_error = f"HTTP 429 被限流，等待 {next_delay}s"
-                continue
+            # 不占用青龙任务睡眠；由持久化冷却时间控制下次运行。
+            if exc.code == 429:
+                global _retry_not_before
+                _retry_not_before = max(_retry_not_before, int(time.time()) + _retry_after(exc.headers.get("Retry-After"), default=300))
             if 500 <= exc.code < 600 and attempt < retries:
                 last_error = f"HTTP {exc.code} {data or ''}".strip()
                 continue
@@ -177,9 +177,12 @@ def _retry_after(value: str | None, default: int = 10) -> int:
     if not value:
         return default
     try:
-        return max(1, min(int(value), 60))
+        return max(1, int(value))
     except ValueError:
-        return default
+        try:
+            return max(1, math.ceil(parsedate_to_datetime(value).timestamp() - time.time()))
+        except (ValueError, TypeError, OverflowError):
+            return default
 
 
 # ---------------------------------------------------------------- 凭据与续期
@@ -680,13 +683,54 @@ def main() -> int:
 
 
 def _run(base: str, key: str, topic: str, dry_run: bool) -> int:
+    global _retry_not_before
+    _retry_not_before = 0
     auth, auth_path = load_auth()
+    state_path = _state_path()
+    scope = hashlib.sha256(json.dumps([base, key, topic, _cache_scope(auth), _env("CODEX_ACCOUNT_ID"), _env("CODEX_USAGE_URL", DEFAULT_USAGE_URL)]).encode()).hexdigest()
+    journal = _read_json(state_path) or {}
+    if journal.get("scope") != scope:
+        journal = {"scope": scope}
+    now = int(time.time())
+    if not dry_run and journal.get("retry_at", 0) > now:
+        log(f"失败退避中，{journal['retry_at'] - now}s 后才允许再次查询，本次跳过")
+        return 0
+    try:
+        return _collect_and_push(base, key, topic, dry_run, auth, auth_path, state_path, journal)
+    except (SystemExit, RuntimeError, OSError) as exc:
+        if isinstance(exc, SystemExit) and not exc.code:
+            raise
+        if not dry_run:
+            failures = min(int(journal.get("failures", 0)) + 1, 10)
+            journal.update(failures=failures, retry_at=max(int(time.time()) + min(300 * 2 ** (failures - 1), 3600), _retry_not_before))
+            _save_journal(state_path, journal)
+        raise
+
+
+def _display_fingerprint(payload: dict) -> str:
+    """比较数值、重置点与配置，忽略每次采集生成的时间文案。"""
+    display = {k: v for k, v in payload.items() if k not in ("revision", "observed_at_ms", "body")}
+    display = json.loads(json.dumps(display))
+    for block in display["blocks"]:
+        if block.get("id") == "detail":
+            for item in block.get("items", []):
+                if item.get("id") in ("session-reset", "week-reset"):
+                    item.pop("text", None)  # 绝对重置点由 countdown 块参与比较。
+    return hashlib.sha256(json.dumps(display, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()).hexdigest()
+
+
+def _report_interval(payload: dict) -> int:
+    bounds = [_int_env("MAX_REPORT_SECONDS", 1800, 1, 1800), (payload.get("ttl") or 604800) // 2]
+    if payload.get("fresh_for_seconds"):
+        bounds.append(payload["fresh_for_seconds"] // 2)
+    return max(1, min(bounds))
+
+
+def _collect_and_push(base: str, key: str, topic: str, dry_run: bool, auth: dict, auth_path: Path | None, state_path: Path, journal: dict) -> int:
     data = read_usage(auth, auth_path)
     title, subtitle, blocks, body = build_state(data)
     log(body)
 
-    state_path = _state_path()
-    journal = _read_json(state_path) or {}
     observed_at_ms = int(time.time() * 1000)
     fresh = _int_env("FRESH_FOR_SECONDS", 3600, 0, 604800)
     payload = {
@@ -711,13 +755,23 @@ def _run(base: str, key: str, topic: str, dry_run: bool) -> int:
         print(json.dumps(dict(payload, revision="<查询后分配>"), ensure_ascii=False, indent=2), flush=True)
         return 0
 
+    fingerprint = _display_fingerprint(payload)
+    age = observed_at_ms // 1000 - journal.get("reported_at", 0)
+    if not journal.get("pending") and journal.get("fingerprint") == fingerprint and 0 <= age < _report_interval(payload):
+        if journal.get("failures") or journal.get("retry_at"):
+            journal.update(failures=0, retry_at=0)
+            _save_journal(state_path, journal)
+        log("展示数值未变化，跳过上报；最长 30 分钟保鲜")
+        return 0
+
     # 上一次异常退出留下的请求先补发，避免版本号被跳过。
     if isinstance(journal.get("pending"), dict):
         log("补发上次未确认的请求")
-        try:
-            http_json(f"{base}/api/v1/push", method="POST", headers={"Authorization": f"Bearer {key}"}, payload=journal["pending"], timeout=25.0, retries=2)
-        except Exception as exc:  # noqa: BLE001 - 补发失败不阻塞本次采集
-            log(f"补发失败，忽略：{exc}")
+        pending_status, _, _ = http_json(f"{base}/api/v1/push", method="POST", headers={"Authorization": f"Bearer {key}"}, payload=journal["pending"], timeout=25.0, retries=2)
+        if pending_status == 400:
+            log("旧请求内容已被拒绝，改用本次采集及配置重新上报")
+        elif pending_status not in (200, 409):
+            fail(3, f"补发请求失败：HTTP {pending_status}，进入退避")
 
     server_revision, exists = topic_revision(base, key, topic)
     if not exists:
@@ -725,11 +779,8 @@ def _run(base: str, key: str, topic: str, dry_run: bool) -> int:
     revision = max(int(journal.get("revision") or 0), server_revision) + 1
     payload["revision"] = revision
 
-    journal = {"revision": revision, "pending": payload}
-    try:
-        _write_json(state_path, journal)
-    except OSError as exc:
-        log(f"写入版本日志失败（不影响上报）：{exc}")
+    journal.update(revision=revision, pending=payload)
+    _save_journal(state_path, journal)
 
     status, result, _ = http_json(f"{base}/api/v1/push", method="POST", headers={"Authorization": f"Bearer {key}"}, payload=payload, timeout=25.0, retries=2)
 
@@ -741,15 +792,15 @@ def _run(base: str, key: str, topic: str, dry_run: bool) -> int:
             fail(1, f"数据主题 {topic} 在上报过程中被删除了，请重新创建")
         revision = max(revision, server_revision) + 1
         payload["revision"] = revision
-        try:
-            _write_json(state_path, {"revision": revision, "pending": payload})
-        except OSError as exc:
-            log(f"写入版本日志失败（不影响上报）：{exc}")
+        journal.update(revision=revision, pending=payload)
+        _save_journal(state_path, journal)
         status, result, _ = http_json(f"{base}/api/v1/push", method="POST", headers={"Authorization": f"Bearer {key}"}, payload=payload, timeout=25.0, retries=2)
 
     if status == 200:
         log(f"上报成功：revision {result.get('revision', revision)}，{len(blocks)} 个数据块")
-        _record(state_path, revision)
+        journal.pop("pending", None)
+        journal.update(revision=revision, fingerprint=fingerprint, reported_at=observed_at_ms // 1000, failures=0, retry_at=0)
+        _save_journal(state_path, journal)
         return 0
 
     detail = json.dumps(result, ensure_ascii=False)[:400] if result else ""
@@ -765,9 +816,9 @@ def _run(base: str, key: str, topic: str, dry_run: bool) -> int:
     return 3
 
 
-def _record(path: Path, revision: int) -> None:
+def _save_journal(path: Path, journal: dict) -> None:
     try:
-        _write_json(path, {"revision": revision})
+        _write_json(path, journal)
     except OSError as exc:
         log(f"写入版本日志失败（不影响上报）：{exc}")
 

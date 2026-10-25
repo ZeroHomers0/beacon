@@ -144,7 +144,7 @@ object WidgetRenderer {
         }
         if(stale)text("数据已过期 · 最后采样 "+java.text.SimpleDateFormat("HH:mm",java.util.Locale.getDefault()).format(java.util.Date(row.optLong("observed_at_ms"))),pad,h-pad,11f,muted,cap=24)
         else if(config.optBoolean("_offline"))text("网络未连通 · 最后结果",pad,h-pad,11f,muted,cap=24)
-        else if(!compactRing&&config.optBoolean("updated",true))text("更新 "+java.text.SimpleDateFormat("HH:mm",java.util.Locale.getDefault()).format(java.util.Date(row.optLong("accepted_at_ms"))),pad,h-pad,11f,muted,cap=24)
+        else if(!compactRing&&config.optBoolean("updated",true))text("更新约 "+java.text.SimpleDateFormat("HH:mm",java.util.Locale.getDefault()).format(java.util.Date(WidgetPerformance.updatedAt(row))),pad,h-pad,11f,muted,cap=24)
         return bitmap
     }
 }

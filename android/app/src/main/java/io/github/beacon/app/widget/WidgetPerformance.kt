@@ -11,6 +11,8 @@ object WidgetPerformance {
     val pixels=java.util.concurrent.atomic.AtomicLong()
     val observers=java.util.concurrent.atomic.AtomicLong()
     fun summary()="本进程：刷新 ${requests.get()} · 绘制 ${renders.get()} · 复用 ${reused.get()} · 跳过 ${skipped.get()}"
+    /** Footer is approximate to five minutes; the signature must use the same bucket. */
+    fun updatedAt(row:JSONObject):Long = row.optLong("accepted_at_ms").coerceAtLeast(0L)/300_000L*300_000L
     fun interval(config:JSONObject,row:JSONObject?):Long=when(config.optString("refresh","balanced")){
         "fast"->5000;"economy"->60000;else->if(row?.optString("state_type")=="task")5000 else 15000
     }
@@ -24,7 +26,7 @@ object WidgetPerformance {
             if(config.optString("template")!="text")display.put("blocks",org.json.JSONArray(WidgetConfigRules.selected(row,config)))
             if(config.optString("template")=="text")display.put("body",row.optString("body"))
             if(stale)display.put("sampleMinute",row.optLong("observed_at_ms")/60000)
-            else if(config.optBoolean("updated",true))display.put("updatedMinute",row.optLong("accepted_at_ms")/60000)
+            else if(config.optBoolean("updated",true))display.put("updatedAt",updatedAt(row))
         }
         return java.security.MessageDigest.getInstance("SHA-256").digest((canonical(appearance)+canonical(display)).toByteArray()).joinToString(""){"%02x".format(it.toInt()and 255)}
     }

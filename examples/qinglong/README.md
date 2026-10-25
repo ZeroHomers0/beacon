@@ -35,7 +35,7 @@ ql repo "https://github.com/ZeroHomers0/beacon.git" "examples/qinglong/.*_to_bea
 | --- | --- | --- |
 | 每日新闻 | `30 7 * * *`，每天07:30 | [下方每日新闻配置](#每日新闻详细配置)，普通消息，无需数据主题 |
 | 热搜榜 | `*/30 * * * *`，每30分钟 | [热搜榜说明](hot-search/README.md)，先创建对应数据主题 |
-| Codex 额度 | `*/30 * * * *`，每30分钟 | [额度说明](codex-quota/README.md)，先创建主题并准备自身凭据 |
+| Codex 额度 | `*/5 * * * *`，每5分钟查询，变化时上报、最长30分钟保鲜 | [额度说明](codex-quota/README.md)，先创建主题并准备自身凭据 |
 
 公共变量为 `BEACON_BASE_URL` 和 `BEACON_PUSH_KEY`；热搜榜额外设置 `HOT_SOURCES`，额度任务额外设置 `CODEX_AUTH_JSON`。每个脚本的可选项见各自说明。不要把用于单个任务的 `STATE_FILE`、`TOPIC_KEY`、`DRY_RUN` 等覆盖项全局套到所有任务；按青龙版本使用任务级变量或在单个任务命令前设置，仅对该任务生效。
 
