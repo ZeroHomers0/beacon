@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# cron: 30 7 * * *
+# 30 7 * * * 60s_to_beacon.py
+# new Env('Beacon 每日新闻');
 """60s 新闻 -> Beacon 推送（青龙面板定时任务）
 
 用法（青龙面板）：

@@ -1,4 +1,49 @@
-# 60s 新闻 → Beacon（青龙面板定时任务）
+# Beacon 青龙订阅脚本
+
+使用现有 [Beacon 仓库](https://github.com/ZeroHomers0/beacon) 即可订阅；Git 仓库地址不能填写 GitHub 的 `tree/main/examples/qinglong` 目录页面。通过路径白名单仅将本目录的 Python 任务导入青龙，不会把 Android、后端和其他示例加入定时任务。Git 首次克隆仍会获取整个仓库源码。
+
+## 订阅配置
+
+在青龙「订阅管理 → 新建订阅」填写：
+
+| 字段 | 值 |
+| --- | --- |
+| 名称 / 别名 | `Beacon` / `beacon`（支持别名的版本可填写） |
+| 类型 | 公开仓库 |
+| 链接 | `https://github.com/ZeroHomers0/beacon.git` |
+| 分支 | `main` |
+| 白名单 | `examples/qinglong/.*_to_beacon\.py$` |
+| 黑名单 | `test_\|__pycache__` |
+| 依赖文件 | 留空，三个脚本均只依赖 Python 标准库 |
+| 文件后缀 / 扩展名 | `py` |
+| 自动添加任务 | 开启 |
+| 订阅更新定时 | `0 6 * * *`，每天更新一次脚本 |
+
+保存后点一次「运行」拉取仓库，青龙会读取脚本头部的任务名称和 cron 标记并生成任务。先配置下方环境变量，再启用/运行具体任务；无需三个任务全部启用。订阅更新的 cron 只负责拉取代码，不代表消息推送频率。已有任务的时间通常不会被重复导入覆盖，需要在「定时任务」中手动调整。
+
+也可在青龙容器终端运行（需要面板已开启自动添加任务）：
+
+```bash
+ql repo "https://github.com/ZeroHomers0/beacon.git" "examples/qinglong/.*_to_beacon\.py$" "test_|__pycache__" "" "main" "py"
+```
+
+导入后的任务命令包含仓库目录前缀，例如 `task beacon/examples/qinglong/60s_to_beacon.py`；实际前缀取决于青龙版本和订阅别名，以面板自动生成的命令为准，不要改成缺少仓库前缀的手工复制命令。
+
+## 可选任务
+
+| 任务 | 默认定时 | 配置说明 |
+| --- | --- | --- |
+| 每日新闻 | `30 7 * * *`，每天07:30 | [下方每日新闻配置](#每日新闻详细配置)，普通消息，无需数据主题 |
+| 热搜榜 | `*/30 * * * *`，每30分钟 | [热搜榜说明](hot-search/README.md)，先创建对应数据主题 |
+| Codex 额度 | `*/30 * * * *`，每30分钟 | [额度说明](codex-quota/README.md)，先创建主题并准备自身凭据 |
+
+公共变量为 `BEACON_BASE_URL` 和 `BEACON_PUSH_KEY`；热搜榜额外设置 `HOT_SOURCES`，额度任务额外设置 `CODEX_AUTH_JSON`。每个脚本的可选项见各自说明。不要把用于单个任务的 `STATE_FILE`、`TOPIC_KEY`、`DRY_RUN` 等覆盖项全局套到所有任务；按青龙版本使用任务级变量或在单个任务命令前设置，仅对该任务生效。
+
+订阅只同步代码，不会导入密钥或代建主题。凭据和运行日志/缓存留在青龙持久化数据目录；额度凭据建议放在订阅目录之外，例如 `/ql/data/auth.json`，以免重建订阅目录时丢失。青龙删除订阅并清理文件前，应自行保存运行状态和凭据；不要同时保留手动复制与订阅生成的同一任务，以免重复执行。
+
+配置字段依据 [青龙官方仓库](https://github.com/whyour/qinglong) 的订阅过滤与任务元数据实现，界面字段名称可能随版本变化。
+
+## 每日新闻详细配置
 
 每天定时拉取 [60s API](https://docs.60s-api.viki.moe/) 的「每天 60 秒读懂世界」，整理成一条 Markdown 消息推送到 [Beacon](../..)。
 
@@ -31,7 +76,7 @@ docker cp 60s_to_beacon.py qinglong:/ql/data/scripts/60s_to_beacon.py
 
 ### 方式 B：放仓库里用订阅
 
-把脚本提交到自己的脚本仓库，在青龙「订阅管理」里指向该仓库（白名单填 `60s_to_beacon.py`），青龙会定时拉取、按需执行。定时任务命令同样是 `task 60s_to_beacon.py`。
+按上方[订阅配置](#订阅配置)填写现有 Beacon 仓库即可，无需另建仓库。若仅需新闻，将白名单改为 `examples/qinglong/60s_to_beacon\.py$`。命令使用面板自动生成的含仓库前缀版本。
 
 ## 3. 环境变量
 

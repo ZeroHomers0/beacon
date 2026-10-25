@@ -45,6 +45,12 @@ workers/dist/
 
 # Qinglong example task runtime state (dedupe marker written beside the script).
 .60s_to_beacon_state.json
+# Qinglong hot-search task runtime state (revision high-water mark beside the script).
+.hot_search_to_beacon_state.json
+# Qinglong Codex-quota task runtime state (revision journal, token cache, run lock).
+.codex_quota_state.json
+.codex_quota_token.json
+.codex_quota.lock
 
 # MCP dependencies and local client-registration helper.
 /mcp/node_modules/
