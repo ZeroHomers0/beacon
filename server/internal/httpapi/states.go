@@ -10,6 +10,10 @@ import (
 func stateError(w http.ResponseWriter, err error) {
 	status, code := 500, "internal_error"
 	switch {
+	case errors.Is(err, domain.ErrTopicNotFound):
+		status, code = 404, err.Error()
+	case errors.Is(err, domain.ErrTopicDeleted), errors.Is(err, domain.ErrTopicConflict):
+		status, code = 409, err.Error()
 	case errors.Is(err, domain.ErrUnauthorized):
 		status, code = 401, "unauthorized"
 	case errors.Is(err, domain.ErrInvalidMessage):
@@ -92,5 +96,37 @@ func (a *API) pushCapabilities(w http.ResponseWriter, r *http.Request) {
 		stateError(w, domain.ErrUnauthorized)
 		return
 	}
-	writeJSON(w, 200, map[string]any{"state_protocol": 1, "structured_schema_versions": []int{1}, "block_kinds": domain.BlockKinds, "state_limits": map[string]int{"topics": 500, "bytes": 8388608, "per_application_per_minute": 120, "per_device_per_minute": 300}})
+	writeJSON(w, 200, map[string]any{"topic_catalog_protocol": 1, "state_protocol": 1, "structured_schema_versions": []int{1}, "block_kinds": domain.BlockKinds, "state_limits": map[string]int{"topics": 500, "bytes": 8388608, "per_application_per_minute": 120, "per_device_per_minute": 300}})
+}
+
+func (a *API) topics(w http.ResponseWriter, r *http.Request) {
+	if !requireMethod(w, r, "GET") {
+		return
+	}
+	device, err := a.authenticate(r, false)
+	if err != nil {
+		stateError(w, domain.ErrUnauthorized)
+		return
+	}
+	q := r.URL.Query()
+	for k := range q {
+		if k != "cursor" && k != "snapshot_token" && k != "page_cursor" && k != "limit" {
+			stateError(w, domain.ErrInvalidMessage)
+			return
+		}
+	}
+	limit := 100
+	if q.Has("limit") {
+		limit, err = strconv.Atoi(q.Get("limit"))
+		if err != nil {
+			stateError(w, domain.ErrInvalidMessage)
+			return
+		}
+	}
+	result, err := a.service.TopicPage(device, q.Get("cursor"), q.Get("snapshot_token"), q.Get("page_cursor"), limit)
+	if err != nil {
+		stateError(w, err)
+		return
+	}
+	writeJSON(w, 200, result)
 }

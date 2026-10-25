@@ -273,6 +273,43 @@ class HttpMessageSync(
         throw SyncResponseException(SyncStage.MESSAGES)
     }
 
+    private fun syncTopics(namespace: String, server: String) {
+        val local = store as? io.github.beacon.app.data.local.RuntimeMessageStore ?: return
+        val previousSource=local.stateCache.preference("source-for:"+settings.endpoint)
+        if(previousSource.isNotEmpty()&&previousSource!=namespace)local.stateCache.forget(previousSource)
+        local.stateCache.preference("source-for:"+settings.endpoint,namespace)
+        var initialCursor = local.stateCache.topicCursor(namespace)
+        var cursor = initialCursor
+        var snapshot = ""
+        var pageCursor = ""
+        var replace = cursor.isEmpty()
+        val records = mutableListOf<JSONObject>()
+        var snapshotBytes=0L
+        fun encoded(value: String) = java.net.URLEncoder.encode(value, "UTF-8")
+        for (page in 0 until 100) {
+            checkRunning()
+            val query = when {
+                cursor.isNotEmpty() -> "?limit=100&cursor=" + encoded(cursor)
+                snapshot.isNotEmpty() -> "?limit=100&snapshot_token=" + encoded(snapshot) + "&page_cursor=" + encoded(pageCursor)
+                else -> "?limit=100"
+            }
+            val reply = try { request("/api/v1/topics$query") } catch (e: HttpRejectedException) {
+                if (e.statusCode == 410) { cursor="";snapshot="";pageCursor="";records.clear();snapshotBytes=0;initialCursor=local.stateCache.topicCursor(namespace);replace=true;continue } else throw e
+            }
+            require(reply.getString("server_id") == server)
+            val rows=reply.getJSONArray("topics");require(rows.length()<=100)
+            for(i in 0 until rows.length()){val record=rows.getJSONObject(i);records.add(record);if(replace)snapshotBytes+=record.toString().toByteArray().size}
+            require(!replace||(records.size<=500&&snapshotBytes<=8*1024*1024))
+            if(!reply.getBoolean("has_more")) {
+                checkRunning()
+                local.stateCache.applyTopics(namespace,records,reply.getString("next_cursor"),replace,initialCursor)
+                return
+            }
+            if(reply.has("snapshot_token")) {snapshot=reply.getString("snapshot_token");pageCursor=reply.getString("page_cursor")} else {checkRunning();val next=reply.getString("next_cursor");local.stateCache.applyTopics(namespace,records,next,false,initialCursor);records.clear();cursor=next;initialCursor=next}
+        }
+        throw SyncResponseException(SyncStage.MESSAGES)
+    }
+
     fun run(): String {
         insertedCount = 0
         settings.validate(BuildConfig.DEBUG)
@@ -352,7 +389,7 @@ class HttpMessageSync(
             }
         }
         var stateNote=""
-        if(capabilities.optInt("state_protocol")==1)try{syncStates(namespace,server)}catch(error:Exception){
+        if(capabilities.optInt("state_protocol")==1)try{if(capabilities.optInt("topic_catalog_protocol")==1)syncTopics(namespace,server);syncStates(namespace,server)}catch(error:Exception){
             if(error is SyncAuthenticationException||error is SyncCancelledException)throw error
             stateNote="；状态同步未完成，稍后重试（普通消息已按原流程处理）"
         }

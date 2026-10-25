@@ -1,3 +1,4 @@
+import { TopicStore } from "./topics";
 import { reject, token, type Sender } from "./domain";
 import { validateBlocks } from "./blocks";
 import { checkStateVersion, validStateStatus, validTopicKey, type StateVersion } from "./state-version";
@@ -67,6 +68,7 @@ export class StateStore {
  save(sender:Sender,p:Record<string,unknown>,digest:string,now:number):StateRecord{
  validateState(p,now);
  return this.storage.transactionSync(()=>{
+ new TopicStore(this.storage,this.server).check(sender,String(p.topic_key));
  const old=this.rows("SELECT * FROM current_states WHERE device=? AND application=? AND topic=?",sender.device,sender.application,String(p.topic_key))[0];
  const prev:StateVersion|null=old?{revision:Number(old.revision),digest:String(old.digest),deleted:!!old.deleted,task:!!old.task,status:String(old.status)}:null;
  const next:StateVersion={revision:Number(p.revision),digest,deleted:p.operation==="delete",task:p.state_type==="task",status:String(p.status??"")};
@@ -78,12 +80,12 @@ export class StateStore {
  }
  const record:StateRecord={...p,application_id:sender.application,application_name:sender.name??"",topic_key:String(p.topic_key),revision:Number(p.revision),accepted_at_ms:now,expires_at_ms:next.deleted?0:now+Number(p.ttl||604800)*1000,stale_at_ms:p.fresh_for_seconds?Number(p.observed_at_ms??0)+Number(p.fresh_for_seconds)*1000:0,deleted:next.deleted,unchanged:false};
  const encoded=JSON.stringify(record);if(this.storage.sql.databaseSize+bytes(encoded)*3+524288>256*1024*1024)reject(507,"storage_capacity_reached");const usage=this.rows("SELECT count(*) AS n,coalesce(sum(length(CAST(payload AS BLOB))*(deleted=0)),0) AS bytes FROM current_states WHERE device=?",sender.device)[0];
- if(!old&&Number(usage.n)>=500||Number(usage.bytes)-(old&&!old.deleted?bytes(String(old.payload)):0)+bytes(encoded)>8*1024*1024)reject(507,"storage_capacity_reached");
+ if(Number(usage.bytes)-(old&&!old.deleted?bytes(String(old.payload)):0)+bytes(encoded)>8*1024*1024)reject(507,"storage_capacity_reached");
  this.rows("INSERT INTO current_states VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(device,application,topic) DO UPDATE SET revision=excluded.revision,digest=excluded.digest,deleted=excluded.deleted,task=excluded.task,status=excluded.status,payload=excluded.payload,expires=excluded.expires",sender.device,sender.application,record.topic_key,next.revision,digest,Number(next.deleted),Number(next.task),next.status,encoded,record.expires_at_ms);
  this.change(sender.device,sender.application,record.topic_key,encoded,now);return record;
  });
  }
- meta(sender:Sender,topic:string){if(!validTopicKey(topic))reject(400,"invalid_message");const row=this.rows("SELECT revision,deleted,status FROM current_states WHERE device=? AND application=? AND topic=?",sender.device,sender.application,topic)[0];return row?{revision:Number(row.revision),deleted:!!row.deleted,status:String(row.status)}:{revision:0,deleted:false,status:""}}
+ meta(sender:Sender,topic:string){if(!validTopicKey(topic))reject(400,"invalid_message");new TopicStore(this.storage,this.server).check(sender,topic);const row=this.rows("SELECT revision,deleted,status FROM current_states WHERE device=? AND application=? AND topic=?",sender.device,sender.application,topic)[0];return row?{revision:Number(row.revision),deleted:!!row.deleted,status:String(row.status)}:{revision:0,deleted:false,status:""}}
  private cursor(device:string,seq:number){return btoa(`${this.server}:${device}:${seq}`).replaceAll("+","-").replaceAll("/","_").replaceAll("=","")}
  page(device:string,q:URLSearchParams,now:number){return this.storage.transactionSync(()=>{
  for(const key of q.keys())if(!["cursor","snapshot_token","page_cursor","limit"].includes(key))reject(400,"invalid_message");

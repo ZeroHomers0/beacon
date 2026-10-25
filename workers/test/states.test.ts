@@ -9,6 +9,7 @@ it("administers default-source topics without requiring applications and keeps n
  const code=await(await call("/api/admin/binding",admin,{name:"phone"})).json<any>();const d=await(await call("/api/v1/bind","",{binding_code:code.binding_code})).json<any>();
  const application=await(await call("/api/admin/applications",admin,{device_id:d.device_id,name:"monitor",default_priority:5})).json<any>();
  const p={mode:"state",schema_version:1,topic_key:"quota:shared",revision:1,title:"quota",body:"24%"};
+ for(const app of ["",application.id])expect((await call("/api/admin/topics/create",admin,{device_id:d.device_id,application_id:app,topic_key:p.topic_key,name:"quota",request_id:"quota/"+app})).status).toBe(200);
  for(const key of [d.push_key,application.token])expect((await call("/api/v1/push",key,p)).status).toBe(200);
  const listed=await(await call("/api/admin/states/list",admin,{application_id:""})).json<any>();expect(listed.total).toBe(1);expect(listed.topics[0].source_name).toBe("默认来源");
  const id={device_id:d.device_id,application_id:"",topic_key:p.topic_key,revision:1};
@@ -26,6 +27,7 @@ it("administers default-source topics without requiring applications and keeps n
 it("updates state without creating events and synchronizes deletion",async()=>{
  const code=await(await call("/api/admin/binding",admin,{name:"state"})).json<any>();const d=await(await call("/api/v1/bind","",{binding_code:code.binding_code})).json<any>();
  const p={mode:"state",schema_version:1,topic_key:"download:1",revision:1,state_type:"task",status:"running",body:"40%"};
+ expect((await call("/api/admin/topics/create",admin,{device_id:d.device_id,topic_key:p.topic_key,name:"download",request_id:"download"})).status).toBe(200);
  expect((await call("/api/v1/push",d.push_key,p)).status).toBe(200);
  expect((await(await call("/api/v1/push",d.push_key,p)).json<any>()).unchanged).toBe(true);
  const snapshot=await(await call("/api/v1/states",d.receive_token)).json<any>();expect(snapshot.states).toHaveLength(1);

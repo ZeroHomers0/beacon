@@ -48,6 +48,7 @@ enum class AdminAction {
     DELETE_APPLICATION,
     REVOKE_APPLICATION,
     CLEAR_STATE,
+    MUTATE_TOPIC,
 }
 
 data class AdminUiState(
@@ -71,6 +72,7 @@ data class AdminUiState(
     val applications: List<AdminApplication> = emptyList(),
     val secret: AdminSecret? = null,
     val testDeviceId: String = "",
+    val topicCatalog:Boolean = false,
     val topics:List<JSONObject> = emptyList(),
     val topicsTotal:Int = 0,
     val topicsHasMore:Boolean = false,
@@ -108,7 +110,7 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
     fun dismissLogout() { mutableLogoutConfirmation.value = false }
 
     fun showCreation() {
-        if (mutable.value.loggedIn && !mutable.value.busy) mutableCreating.value = true
+        if (mutable.value.loggedIn && !mutable.value.busy) {mutable.value=mutable.value.copy(actionFailure=null);mutableCreating.value = true}
     }
 
     fun dismissCreation() {
@@ -244,7 +246,7 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
     }
 
     private fun topicsResult(client:ServerAdministration,query:JSONObject,base:AdminUiState=mutable.value):AdminUiState {
-        val result=client.stateTopics(query);val rows=result.getJSONArray("topics")
+        val result=if(base.topicCatalog)client.topics(query)else client.stateTopics(query);val rows=result.getJSONArray("topics")
         return base.copy(topics=List(rows.length()){rows.getJSONObject(it)},topicsTotal=result.getInt("total"),topicsHasMore=result.optBoolean("has_more"),topicsQuery=query.toString(),topicsLoaded=true,topicsFailure=null)
     }
     private fun withTopics(client:ServerAdministration,base:AdminUiState):AdminUiState {
@@ -260,6 +262,14 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
     fun clearTopic(identity:JSONObject,query:JSONObject,onSuccess:()->Unit){
         val client=session?:return
         run(R.string.admin_topic_cleared,AdminAction.CLEAR_STATE,onSuccess={onSuccess()}){client.clearStateTopic(identity);topicsResult(client,query).copy(topicDetail=null,awaiting=null,actionFailure=null)}
+    }
+
+    fun mutateTopic(action:String,payload:JSONObject,query:JSONObject,onSuccess:()->Unit){
+        val client=session?:return
+        run(R.string.admin_topic_saved,AdminAction.MUTATE_TOPIC,onSuccess={onSuccess()}){
+            client.mutateTopic(action,payload)
+            topicsResult(client,query).copy(topicDetail=null,awaiting=null,actionFailure=null)
+        }
     }
 
     fun createBinding(name: String) =
@@ -433,6 +443,7 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
                                 401,
                                 403 -> R.string.admin_unauthorized
                                 404 -> R.string.admin_unavailable
+                                409 -> R.string.admin_topic_conflict
                                 429 -> R.string.admin_rate_limited
                                 507 -> R.string.admin_capacity
                                 in 300..399 -> R.string.admin_redirect
@@ -474,6 +485,7 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
             val storage = json.getJSONObject("storage")
             return AdminUiState(
                 overviewLoaded = true,
+                topicCatalog = json.optInt("topic_catalog_protocol")==1,
                 version = json.optString("version", "—"),
                 protocol = json.optInt("protocol", ProtocolContract.MIN_HTTP),
                 serverId = json.getString("server_id"),

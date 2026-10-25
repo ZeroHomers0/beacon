@@ -8,7 +8,8 @@ import kotlin.math.*
 object WidgetRenderer {
     val templates = listOf("numbers", "horizontal_bars", "vertical_bars", "single_ring", "nested_rings", "ring_grid", "segmented_ring", "text_list", "text", "sparkline")
     val names = listOf("纯数字", "横向进度条", "纵向柱状图", "单环", "嵌套环", "独立小环", "占比圆环", "文字列表", "整段文字", "迷你趋势图")
-    fun render(row: JSONObject?, config: JSONObject, width: Int, height: Int, dark: Boolean, density: Float = 1f, maxPixels: Int = 2097152): Bitmap {
+    fun render(row: JSONObject?, inputConfig: JSONObject, width: Int, height: Int, dark: Boolean, density: Float = 1f, maxPixels: Int = 2097152): Bitmap {
+        val config=WidgetConfigRules.resolved(row,inputConfig)
         val w=width.coerceAtLeast(1);val h=height.coerceAtLeast(1)
         val factor=min(density.takeIf{it.isFinite()&&it>0}?.toDouble()?:1.0,sqrt(maxPixels.coerceAtLeast(1).toDouble()/(w.toDouble()*h)))
         val bitmap=Bitmap.createBitmap((w*factor).toInt().coerceAtLeast(1),(h*factor).toInt().coerceAtLeast(1),Bitmap.Config.ARGB_8888)
@@ -33,13 +34,22 @@ object WidgetRenderer {
             c.restore();p.textAlign=Paint.Align.LEFT
         }
 
+        fun placeholder(message:String){
+            val top=pad+26*scale
+            val availableHeight=(h-pad-top).toInt().coerceAtLeast(1)
+            val layout=WidgetPlaceholder.layout(message,(w-2*pad).toInt(),availableHeight,14f*scale,muted)
+            c.save();c.translate(pad,top+((availableHeight-layout.height)/2f).coerceAtLeast(0f))
+            layout.draw(c);c.restore()
+        }
+
         p.color=if(config.optString("background")=="transparent") Color.TRANSPARENT else if(dark)Color.rgb(25,28,34)else Color.rgb(248,249,250)
-        c.drawRoundRect(RectF(0f,0f,w.toFloat(),h.toFloat()),min(w,h)*.15f,min(w,h)*.15f,p)
+        c.drawRoundRect(RectF(0f,0f,w.toFloat(),h.toFloat()),min(27f,min(w,h)*.5f),min(27f,min(w,h)*.5f),p)
         val template=config.optString("template","horizontal_bars")
 
         val now=System.currentTimeMillis();val expired=row!=null&&(row.optLong("expires_at_ms") in 1..now);val stale=row!=null&&(row.optLong("stale_at_ms") in 1..now)
         text(config.optString("title").ifBlank{row?.optString("title")?:"Beacon 数据"},pad,pad+13*scale,13f,bold=true,cap=12)
-        if(row==null||expired){text(if(expired)"已过有效期" else if(config.optString("identity").isBlank())"尚未绑定主题"else"原内容已删除或未同步",pad,h*.55f,14f,color=muted,cap=24);return bitmap}
+        if(row?.optBoolean("_topic_deleted")==true||row?.optBoolean("_waiting")==true){placeholder(if(row.optBoolean("_topic_deleted"))"主题已删除"else"等待数据");return bitmap}
+        if(row==null||expired){placeholder(if(expired)"已过有效期" else if(config.optString("identity").isBlank())WidgetPlaceholder.UNBOUND else"原内容已删除或未同步");return bitmap}
         val selected=WidgetConfigRules.selected(row,config)
         val error=WidgetConfigRules.layoutError(row,config,width,height)
         if(error!=null){text(error,pad,h*.55f,14f,color=muted);return bitmap}

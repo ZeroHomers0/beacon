@@ -26,6 +26,45 @@ class AdminTopicsTest {
     @Test fun defaultSourceManagementWorksWithoutApplicationsInMiuix()=verify(BeaconUiStyle.MIUIX)
     @Test fun defaultSourceManagementWorksWithoutApplicationsInMaterial()=verify(BeaconUiStyle.MATERIAL3)
 
+    @Test fun precreatedTopicsUseExistingControlsInMiuix()=verifyCatalog(BeaconUiStyle.MIUIX)
+    @Test fun precreatedTopicsUseExistingControlsInMaterial()=verifyCatalog(BeaconUiStyle.MATERIAL3)
+    private fun verifyCatalog(style:BeaconUiStyle){
+        val backend=TopicBackend(true);val model=ServerAdminViewModel{_,_->backend}
+        rule.runOnUiThread{
+            model.login("https://example.invalid","a".repeat(64))
+            rule.activity.setContent{BeaconTheme(style){val state by model.state.collectAsState();val bar=rememberBeaconBarBehavior()
+                BeaconScaffold(topBar={BeaconTopBar("数据主题",false,bar,navigationIcon={},actions={
+                    io.github.beacon.app.feature.settings.AdminTopicFilterAction(model.listFilters,state.devices,state.applications,!state.busy)
+                    BeaconActionIcon(io.github.beacon.app.ui.icons.BeaconIcons.Add,"新建数据主题",!state.busy,onClick=model::showCreation)
+                })},bottomBar={}){padding->if(state.loggedIn)AdminTopicsPage(state,model,rememberLazyListState(),Modifier.fillMaxSize().padding(padding))}
+            }}
+        }
+        rule.waitUntil(10000){model.state.value.topicsLoaded&&!model.state.value.busy}
+        rule.onNodeWithContentDescription("新建数据主题").performClick()
+        rule.onNodeWithText("创建",substring=false).assertIsNotEnabled()
+        rule.onNode(hasSetTextAction() and hasAnyAncestor(hasTestTag("topic-name"))).performTextInput("预创建主题")
+        rule.onNodeWithText("创建",substring=false).assertIsEnabled()
+        val folder=requireNotNull(rule.activity.getExternalFilesDir("state-qa"));folder.mkdirs()
+        java.io.File(folder,"topic_create_${style.name}.png").outputStream().use{androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot().compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
+        rule.onNodeWithText("创建",substring=false).performClick()
+        rule.waitUntil(10000){backend.catalogRow!=null&&!model.state.value.busy}
+        rule.onNodeWithText("等待数据",substring=false).assertExists()
+        val title=rule.onNodeWithText("预创建主题").fetchSemanticsNode().boundsInRoot
+        val more=rule.onNodeWithContentDescription(rule.activity.getString(R.string.admin_more_actions)).fetchSemanticsNode().boundsInRoot
+        assertEquals(title.center.y,more.center.y,2f)
+        rule.onNodeWithContentDescription(rule.activity.getString(R.string.admin_more_actions)).performClick()
+        rule.onNodeWithText("修改名称",substring=false).performClick()
+        rule.onNodeWithText("保存",substring=false).assertIsNotEnabled()
+        rule.onNode(hasSetTextAction() and hasAnyAncestor(hasTestTag("topic-name"))).performTextReplacement("新主题名称")
+        rule.onNodeWithText("保存",substring=false).performClick()
+        rule.waitUntil(10000){backend.catalogRow?.optString("name")=="新主题名称"&&!model.state.value.busy}
+        rule.onNodeWithContentDescription(rule.activity.getString(R.string.admin_more_actions)).performClick()
+        rule.onNodeWithText("删除主题",substring=false).performClick()
+        rule.onNodeWithText("删除",substring=false).performClick()
+        rule.waitUntil(10000){backend.catalogRow==null&&!model.state.value.busy}
+        rule.onNodeWithText("新主题名称",substring=false).assertDoesNotExist()
+    }
+
     private fun verify(style:BeaconUiStyle){
         val backend=TopicBackend();val model=ServerAdminViewModel{_,_->backend}
         rule.runOnUiThread{
@@ -66,13 +105,23 @@ class AdminTopicsTest {
         assertEquals("",backend.clearedIdentity.getString("application_id"));assertEquals(3,backend.clearedIdentity.getInt("revision"))
     }
 
-    private class TopicBackend:ServerAdministration {
+    private class TopicBackend(private val catalog:Boolean=false):ServerAdministration {
         override val endpoint="https://example.invalid"
         val query=java.util.concurrent.atomic.AtomicReference(JSONObject())
         val listCalls=java.util.concurrent.atomic.AtomicInteger()
         @Volatile var cleared=false
         var clearedIdentity=JSONObject()
-        override fun overview()=JSONObject("""{"server_id":"test-server","protocol":1,"storage":{"messages":0,"pending":0,"database_allocated_bytes":4096},"devices":[{"device_id":"phone","name":"测试手机","revoked":false}],"applications":[]}""")
+        @Volatile var catalogRow:JSONObject?=null
+        override fun overview()=JSONObject("""{"server_id":"test-server","protocol":1,"storage":{"messages":0,"pending":0,"database_allocated_bytes":4096},"devices":[{"device_id":"phone","name":"测试手机","revoked":false}],"applications":[]}""").put("topic_catalog_protocol",if(catalog)1 else 0)
+        override fun topics(query:JSONObject)=JSONObject().put("topics",catalogRow?.let{JSONArray().put(it)}?:JSONArray()).put("total",if(catalogRow==null)0 else 1).put("has_more",false)
+        override fun mutateTopic(action:String,payload:JSONObject):JSONObject{
+            catalogRow=when(action){
+                "create"->JSONObject(payload.toString()).put("topic_key",payload.optString("topic_key").ifBlank{"generated"}).put("title",payload.getString("name")).put("device_name","测试手机").put("source_name","未关联应用").put("config_version",1).put("revision",0).put("state","waiting")
+                "update"->JSONObject(catalogRow!!.toString()).put("title",payload.getString("name")).put("name",payload.getString("name")).put("config_version",2)
+                "delete"->null
+                else->error(action)
+            };return JSONObject().put("topic",catalogRow)
+        }
         override fun stateTopics(query:JSONObject):JSONObject{
             listCalls.incrementAndGet()
             this.query.set(JSONObject(query.toString()))

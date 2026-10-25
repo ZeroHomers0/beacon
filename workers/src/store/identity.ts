@@ -207,6 +207,8 @@ export class IdentityStore {
       for(const state of this.rows("SELECT device,topic,payload FROM current_states WHERE application=? AND deleted=0",id)){
        const record={...JSON.parse(String(state.payload)),deleted:true,blocks:[],body:"",title:""};this.rows("INSERT INTO state_changes(device,application,topic,payload,created) VALUES(?,?,?,?,?)",state.device,id,state.topic,JSON.stringify(record),Date.now());
       }
+      this.rows("INSERT INTO topic_changes(device,application,topic,payload,created) SELECT device,application,topic,json_set(payload,'$.deleted',json('true'),'$.config_version',version+1),? FROM topic_catalog WHERE application=?",Date.now(),id);
+      this.rows("DELETE FROM topic_catalog WHERE application=?",id);
       this.rows("DELETE FROM current_states WHERE application=?",id);
       this.rows("DELETE FROM applications WHERE id=?", id);
       return count;

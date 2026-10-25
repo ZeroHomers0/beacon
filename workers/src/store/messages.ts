@@ -1,3 +1,4 @@
+import { TopicStore } from "../topics";
 import { StateStore } from "../states";
 import {
   BATCH,
@@ -20,6 +21,10 @@ import { IdentityStore } from "./identity";
 import type { Repository } from "../ports";
 
 export class MessageStore extends IdentityStore implements Repository {
+ topicPage(device:string,q:URLSearchParams,now:number){this.active(device);return new TopicStore(this.storage,this.serverID).page(device,q,now)}
+ adminTopics(p:Record<string,unknown>,now:number){return new TopicStore(this.storage,this.serverID).list(p,now)}
+ adminTopic(p:Record<string,unknown>){return new TopicStore(this.storage,this.serverID).detail(p)}
+ mutateTopic(a:string,p:Record<string,unknown>,now:number){return new TopicStore(this.storage,this.serverID).mutate(a,p,now)}
  saveState(credential:string,p:Record<string,unknown>,digest:string,now:number){return this.storage.transactionSync(()=>new StateStore(this.storage,this.serverID).save(this.sender(credential),p,digest,now))}
  statePage(device:string,q:URLSearchParams,now:number){this.active(device);return new StateStore(this.storage,this.serverID).page(device,q,now)}
  stateMeta(credential:string,topic:string){return new StateStore(this.storage,this.serverID).meta(this.sender(credential),topic)}
@@ -250,7 +255,7 @@ export class MessageStore extends IdentityStore implements Repository {
       if (deleteDevice) {
         for (const table of ["applications", "session_disconnects"])
           this.rows("DELETE FROM " + table + " WHERE device=?", device);
-        for(const table of ["current_states","state_changes","state_snapshots"])this.rows(`DELETE FROM ${table} WHERE device=?`,device);
+        for(const table of ["topic_catalog","topic_changes","topic_snapshots","current_states","state_changes","state_snapshots"])this.rows(`DELETE FROM ${table} WHERE device=?`,device);
         this.rows("DELETE FROM devices WHERE id=?", device);
         this.rows("DELETE FROM rate_buckets WHERE key=?", `device:${device}`);
       }

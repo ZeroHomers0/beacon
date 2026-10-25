@@ -851,7 +851,7 @@ internal fun AdminListCard(
                     actions.forEach { (label, action) ->
                         BeaconDropdownMenuItem({ BeaconText(stringResource(label), color =
                             if (label in setOf(R.string.admin_delete_device, R.string.admin_revoke_device,
-                                R.string.admin_delete_application, R.string.admin_revoke_application, R.string.admin_topic_clear))
+                                R.string.admin_delete_application, R.string.admin_revoke_application, R.string.admin_topic_clear, R.string.admin_topic_delete))
                                 androidx.compose.material3.MaterialTheme.colorScheme.error
                             else androidx.compose.material3.MaterialTheme.colorScheme.onSurface) }) {
                             menuOpen = false
@@ -916,7 +916,7 @@ private fun AdminField(
 }
 
 @Composable
-private fun DevicePicker(
+internal fun DevicePicker(
     devices: List<AdminDevice>,
     selected: String,
     change: (String) -> Unit,

@@ -112,7 +112,7 @@ internal fun AdminTopicFilterAction(filters:AdminListFilterState,devices:List<Ad
     Box{
         BeaconActionIcon(io.github.beacon.app.ui.icons.BeaconIcons.Filter,"筛选数据主题",enabled){filters.topicOpen=true}
         BeaconDropdownMenu(filters.topicOpen,{filters.topicOpen=false}){
-            listOf("all" to "全部状态","active" to "有效","stale" to "数据陈旧","expired" to "已过期","deleted" to "已清空").forEach{(id,label)->
+            listOf("all" to "全部状态","waiting" to "等待数据","active" to "有效","stale" to "数据陈旧","expired" to "已过期").forEach{(id,label)->
                 BeaconDropdownMenuItem({BeaconSelectableRow(label,filters.topicStatus==id)}){filters.topicStatus=id;filters.topicOffset=0;filters.topicOpen=false}
             }
             androidx.compose.material3.HorizontalDivider();SettingsLabel("设备")

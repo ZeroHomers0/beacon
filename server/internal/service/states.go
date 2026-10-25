@@ -66,3 +66,39 @@ func (s *Service) StateDevice(token string) (string, error) {
 	app, err := s.repository.ApplicationForToken(token)
 	return app.DeviceID, err
 }
+
+type topicRepository interface {
+	MutateTopic(string, domain.TopicMutation) (map[string]any, error)
+	AdminTopics(domain.StateAdminQuery) (map[string]any, error)
+	AdminTopic(domain.TopicMutation) (map[string]any, error)
+	TopicPage(string, string, string, string, int) (map[string]any, error)
+}
+
+func (s *Service) MutateTopic(a string, p domain.TopicMutation) (map[string]any, error) {
+	r, ok := s.repository.(topicRepository)
+	if !ok {
+		return nil, domain.ErrRealtimeUnavailable
+	}
+	return r.MutateTopic(a, p)
+}
+func (s *Service) AdminTopics(q domain.StateAdminQuery) (map[string]any, error) {
+	r, ok := s.repository.(topicRepository)
+	if !ok {
+		return nil, domain.ErrRealtimeUnavailable
+	}
+	return r.AdminTopics(q)
+}
+func (s *Service) AdminTopic(q domain.TopicMutation) (map[string]any, error) {
+	r, ok := s.repository.(topicRepository)
+	if !ok {
+		return nil, domain.ErrRealtimeUnavailable
+	}
+	return r.AdminTopic(q)
+}
+func (s *Service) TopicPage(d, c, t, p string, l int) (map[string]any, error) {
+	r, ok := s.repository.(topicRepository)
+	if !ok {
+		return nil, domain.ErrRealtimeUnavailable
+	}
+	return r.TopicPage(d, c, t, p, l)
+}

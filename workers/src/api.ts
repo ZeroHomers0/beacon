@@ -168,9 +168,10 @@ export class API {
         device_id: device,
       });
     }
-    if(path==="/api/v1/push-capabilities"){method(request,"GET");this.store.sender(await hash(bearer(request)));return json({state_protocol:STATE_PROTOCOL,structured_schema_versions:[1],block_kinds:BLOCK_KINDS,state_limits:{topics:500,bytes:8388608,per_application_per_minute:120,per_device_per_minute:300}})}
+    if(path==="/api/v1/push-capabilities"){method(request,"GET");this.store.sender(await hash(bearer(request)));return json({topic_catalog_protocol:1,state_protocol:STATE_PROTOCOL,structured_schema_versions:[1],block_kinds:BLOCK_KINDS,state_limits:{topics:500,bytes:8388608,per_application_per_minute:120,per_device_per_minute:300}})}
     if(path==="/api/v1/states/meta") {method(request,"GET");return json(this.store.stateMeta(await hash(bearer(request)),url.searchParams.get("topic_key")??""))}
     const receivePaths = [
+      "/api/v1/topics",
       "/api/v1/states",
       "/api/v1/capabilities",
       "/api/v1/messages",
@@ -197,6 +198,7 @@ export class API {
       if (path.endsWith("/ack")) await this.transport.arm();
       const device = this.store.receiver(credentialHash);
       const now = Date.now();
+      if(path==="/api/v1/topics"){method(request,"GET");return json(this.store.topicPage(device,url.searchParams,Date.now()))}
       if(path==="/api/v1/states")return json(this.store.statePage(device,url.searchParams,Date.now()));
       if (path.endsWith("/capabilities"))
         return json({
@@ -219,7 +221,7 @@ export class API {
             "actions",
           ],
           structured_schema_versions: [1],
-          state_protocol: STATE_PROTOCOL,
+          topic_catalog_protocol:1,state_protocol: STATE_PROTOCOL,
           state_sync: true,
           block_kinds: BLOCK_KINDS,
           push_idempotency: true,
@@ -373,7 +375,7 @@ export class API {
         server_id: this.store.serverID,
         version: VERSION,
         protocol: HTTP_PROTOCOL,
-        admin_protocol: ADMIN_PROTOCOL,
+        topic_catalog_protocol:1,admin_protocol: ADMIN_PROTOCOL,
       });
     }
     const routes: Record<string, string[]> = {
@@ -389,9 +391,14 @@ export class API {
       "/api/admin/states/detail": ["device_id","application_id","topic_key","revision"],
       "/api/admin/states/clear": ["device_id","application_id","topic_key","revision"],
     };
+    routes["/api/admin/topics/list"]=["device_id","application_id","search","state","limit","offset"];
+    for(const action of ["create","detail","update","delete"])routes["/api/admin/topics/"+action]=["device_id","application_id","topic_key","name","config_version","request_id"];
     if (!routes[path]) reject(404, "not_found");
     method(request, "POST");
     const payload = await body(request, routes[path]);
+    if(path==="/api/admin/topics/list")return json(this.store.adminTopics(payload,Date.now()));
+    if(path==="/api/admin/topics/detail")return json(this.store.adminTopic(payload));
+    if(path.startsWith("/api/admin/topics/")){await this.transport.arm();const result=this.store.mutateTopic(path.split("/").at(-1)!,payload,Date.now());this.transport.topicsChanged?.(String(payload.device_id));if(path.endsWith("/delete"))this.transport.stateChanged?.(String(payload.device_id));return json(result)}
     if(path==="/api/admin/states/list")return json(this.store.adminStates(payload,Date.now()));
     if(path==="/api/admin/states/detail")return json(this.store.adminState(payload));
     if(path==="/api/admin/states/clear"){

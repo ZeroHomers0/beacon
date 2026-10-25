@@ -15,7 +15,13 @@ class SettingsToolbarSaveTest {
     private fun verify(style: BeaconUiStyle) {
         val model = ViewModelProvider(rule.activity)[BeaconViewModel::class.java]
         val oldStyle = model.uiState.uiStyle
-        rule.waitUntil(20_000) { model.state.value.receivePlanLoaded && !model.state.value.messageBusy }
+        rule.runOnUiThread{model.start(rule.activity)}
+        rule.waitUntil(20_000) { model.state.value.runtimeConnected && model.state.value.receivePlanLoaded && !model.state.value.messageBusy }
+        val temporaryConnection=model.state.value.configuredEndpoint.isBlank()
+        if(temporaryConnection){
+            rule.runOnUiThread{model.transport(TransportSettings("http://127.0.0.1:1","a".repeat(64)))}
+            rule.waitUntil(15000){model.state.value.configuredEndpoint.isNotBlank()&&!model.state.value.messageBusy}
+        }
         val originalPlan = model.state.value.receivePlan
         val originalPolling = model.state.value.pollingState.config
         var originalQuiet: QuietHours? = null
@@ -39,12 +45,12 @@ class SettingsToolbarSaveTest {
             rule.waitUntil(20_000) { !model.state.value.messageBusy && model.state.value.pollingState.config.intervalMinutes == target }
             rule.waitForIdle()
             save.assertIsNotEnabled()
+            assertEquals(SettingsScreen.RECEPTION,model.uiState.settingsScreen)
             rule.onNodeWithText("设置已保存").assertDoesNotExist()
 
             rule.runOnUiThread { model.uiState.navigateSettings(SettingsScreen.NOTIFICATION_RULES) }
             rule.waitUntil(15_000) { model.uiState.quietHoursForm.loaded }
-            rule.onNode(hasText(rule.activity.getString(R.string.quiet_schedule)) and hasClickAction())
-                .performScrollTo().performClick()
+            rule.runOnUiThread { model.uiState.navigateSettings(SettingsScreen.QUIET_HOURS) }
             rule.waitUntil(15_000) { model.uiState.settingsScreen == SettingsScreen.QUIET_HOURS }
             rule.waitForIdle()
             originalQuiet = model.uiState.quietHoursForm.saved
@@ -59,6 +65,7 @@ class SettingsToolbarSaveTest {
             rule.waitUntil(15_000) { !model.uiState.quietHoursForm.saving && !model.uiState.quietHoursForm.changed }
             rule.waitForIdle()
             save.assertIsNotEnabled()
+            assertEquals(SettingsScreen.QUIET_HOURS,model.uiState.settingsScreen)
             rule.onNodeWithText("设置已保存").assertDoesNotExist()
         } finally {
             rule.runOnUiThread {
@@ -69,6 +76,10 @@ class SettingsToolbarSaveTest {
                 model.uiState.page = 0
             }
             rule.waitUntil(20_000) { !model.state.value.messageBusy }
+            if(temporaryConnection){
+                rule.runOnUiThread{model.clearConnection()}
+                rule.waitUntil(15000){model.state.value.configuredEndpoint.isBlank()&&!model.state.value.messageBusy}
+            }
         }
     }
     @Test fun toolbarSaveMaterial() = verify(BeaconUiStyle.MATERIAL3)

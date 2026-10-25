@@ -1,3 +1,4 @@
+import { topicSchema } from "../topics";
 import { stateSchema } from "../states";
 import { token } from "../domain";
 
@@ -6,6 +7,7 @@ export function migrate(storage: DurableObjectStorage): void {
   storage.transactionSync(() => {
     const sql = storage.sql;
     stateSchema(sql);
+    topicSchema(sql);
     sql.exec(
       "CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL)",
     );

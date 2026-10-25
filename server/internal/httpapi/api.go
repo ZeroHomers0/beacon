@@ -131,6 +131,7 @@ func (a *API) Handler() http.Handler {
 	v1.Any("/device/revoke", gin.WrapF(a.revokeSelf))
 	v1.Any("/push", gin.WrapF(a.push))
 	v1.Any("/push-capabilities", gin.WrapF(a.pushCapabilities))
+	v1.Any("/topics", gin.WrapF(a.topics))
 	v1.Any("/states", gin.WrapF(a.states))
 	v1.Any("/states/meta", gin.WrapF(a.stateMeta))
 	v1.Any("/messages", gin.WrapF(a.messages))
@@ -179,6 +180,7 @@ func (a *API) capabilities(w http.ResponseWriter, r *http.Request) {
 		"max_message_actions":         1,
 		"structured_schema_versions":  []int{1},
 		"state_protocol":              1,
+		"topic_catalog_protocol":      1,
 		"state_sync":                  true,
 		"block_kinds":                 domain.BlockKinds,
 		"push_idempotency":            true,

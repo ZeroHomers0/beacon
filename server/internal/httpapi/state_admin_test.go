@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"beacon.local/server/internal/domain"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -29,6 +30,14 @@ func TestStateAdministrationDefaultSourceAndIsolation(t *testing.T) {
 			t.Fatal(err)
 		}
 		return result
+	}
+	for _, scope := range []domain.TopicMutation{{Device: d.DeviceID}, {Device: other.DeviceID}, {Device: d.DeviceID, Application: app.ID}} {
+		scope.Topic = "quota:shared"
+		scope.Name = "quota"
+		scope.RequestID = "quota/" + scope.Application
+		if _, err := a.service.MutateTopic("create", scope); err != nil {
+			t.Fatal(err)
+		}
 	}
 	payload := map[string]any{"mode": "state", "schema_version": 1, "topic_key": "quota:shared", "revision": 1, "title": "quota", "body": "24%"}
 	for _, key := range []string{d.PushKey, other.PushKey, app.Token} {

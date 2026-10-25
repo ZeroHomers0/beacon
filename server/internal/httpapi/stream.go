@@ -36,6 +36,7 @@ type streamClient struct {
 	device, token, clientID string
 	write                   sync.Mutex
 	state                   bool
+	topics                  bool
 	batch                   bool
 	pending                 bool
 }
@@ -102,7 +103,7 @@ func (h *StreamHub) Handler(w http.ResponseWriter, r *http.Request) {
 		h.mu.Unlock()
 		return
 	}
-	c := &streamClient{state: r.Header.Get("X-Beacon-State") == "1", conn: conn, device: device, token: token, clientID: domain.ReceiverClientID(device, auth.HashToken(token))}
+	c := &streamClient{topics: r.Header.Get("X-Beacon-Topics") == "1", state: r.Header.Get("X-Beacon-State") == "1", conn: conn, device: device, token: token, clientID: domain.ReceiverClientID(device, auth.HashToken(token))}
 	c.batch = r.Header.Get("X-Beacon-Heartbeat") == "1" && r.Header.Get("X-Beacon-Reception") == "batch"
 	h.clients[c] = struct{}{}
 	h.mu.Unlock()
@@ -254,6 +255,21 @@ func (h *StreamHub) StateChanged(device string) {
 		c.write.Lock()
 		c.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
 		err := c.conn.WriteMessage(websocket.TextMessage, []byte("@beacon/state_changed/1"))
+		c.write.Unlock()
+		if err != nil {
+			c.conn.Close()
+		}
+	}
+}
+
+func (h *StreamHub) TopicsChanged(device string) {
+	for _, c := range h.snapshot() {
+		if c.device != device || !c.topics {
+			continue
+		}
+		c.write.Lock()
+		c.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+		err := c.conn.WriteMessage(websocket.TextMessage, []byte("@beacon/topics_changed/1"))
 		c.write.Unlock()
 		if err != nil {
 			c.conn.Close()

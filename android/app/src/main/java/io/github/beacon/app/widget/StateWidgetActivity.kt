@@ -36,7 +36,7 @@ class StateWidgetActivity : ComponentActivity() {
         setContent {
             BeaconTheme(style.load(),style.loadMode()) {
                 StateWidgetEditor(id,intent.getBooleanExtra("detail",false),intent.getStringExtra("source"),intent.getStringExtra("identity"),intent.getStringExtra("format"),
-                    onExit={finish()},onSaved={setResult(RESULT_OK,Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,id));finish()})
+                    onExit={finish()},onSaved={setResult(RESULT_OK,Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,id))})
             }
         }
     }
@@ -44,10 +44,12 @@ class StateWidgetActivity : ComponentActivity() {
 
 private fun widgetDefaults(raw: String,row: JSONObject?): String {
     val config=runCatching{JSONObject(raw)}.getOrElse{JSONObject()}
-    if(!config.has("template"))config.put("template",WidgetConfigRules.recommend(row?:JSONObject()))
+    if(!config.has("template"))config.put("template",if(row?.optBoolean("_waiting")==true)"auto"else WidgetConfigRules.recommend(row?:JSONObject()))
     if(!config.has("color"))config.put("color","fixed")
     if(!config.has("background"))config.put("background","system")
-    if(!config.has("metrics"))config.put("metrics",JSONArray(WidgetConfigRules.defaults(row?:JSONObject(),config).map{it.optString("id")}))
+    if(!config.has("instance_name"))config.put("instance_name","")
+    if(!config.has("title"))config.put("title","")
+    if(!config.has("metrics")&&row?.optBoolean("_waiting")!=true)config.put("metrics",JSONArray(WidgetConfigRules.defaults(row?:JSONObject(),config).map{it.optString("id")}))
     if(row!=null&&!config.has("source"))config.put("source",row.optString("local_source")).put("identity",row.optString("local_identity"))
     return config.toString()
 }
@@ -68,13 +70,14 @@ internal fun StateWidgetEditor(id:Int, detail:Boolean, source:String?, identity:
     }
     var draft by rememberSaveable{mutableStateOf(initial)}
     var baseline by rememberSaveable{mutableStateOf(initial)}
+    var hasSaved by rememberSaveable{mutableStateOf(stored.isNotBlank())}
     val config=remember(draft,requestedFormat){JSONObject(draft).apply{if(!has("format")&&requestedFormat!=null)put("format",requestedFormat)}}
     val row=rows.firstOrNull{it.optString("local_source")==config.optString("source")&&it.optString("local_identity")==config.optString("identity")}
     var sourceFilter by rememberSaveable{mutableStateOf("*")}
     val sourceIds=listOf("*")+rows.map{it.optString("application_id")}.distinct()
     LaunchedEffect(sourceIds){if(sourceFilter !in sourceIds)sourceFilter="*"}
     val sourceNames=sourceIds.map{key->if(key=="*")"全部应用"else if(key.isBlank())"未关联应用"else rows.firstOrNull{it.optString("application_id")==key}?.optString("application_name").orEmpty().ifBlank{key}}
-    val choices=(rows.filter{sourceFilter=="*"||it.optString("application_id")==sourceFilter}+listOfNotNull(row)).distinctBy{it.optString("local_source")+":"+it.optString("local_identity")}
+    val choices=(rows.filter{!it.optBoolean("_topic_deleted")}.filter{sourceFilter=="*"||it.optString("application_id")==sourceFilter}+listOfNotNull(row)).distinctBy{it.optString("local_source")+":"+it.optString("local_identity")}
     var editing by rememberSaveable{mutableStateOf(!detail)}
     val defaultFormat=remember{requestedFormat?:WidgetInstances.format(context,id).name}
     val formatName=config.optString("format",defaultFormat)
@@ -90,7 +93,7 @@ internal fun StateWidgetEditor(id:Int, detail:Boolean, source:String?, identity:
         rows=kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO){StateCache(context).use{it.all()}}
 
     }
-    val dirty=draft!=baseline
+    val dirty=draft!=baseline||!hasSaved
     fun update(change:(JSONObject)->Unit){draft=JSONObject(draft).apply(change).toString()}
     fun back(){if(editing&&dirty)discard=true else if(editing&&detail)editing=false else onExit()}
     BackHandler{back()}
@@ -100,15 +103,15 @@ internal fun StateWidgetEditor(id:Int, detail:Boolean, source:String?, identity:
         lifecycle.addObserver(observer);onDispose{lifecycle.removeObserver(observer)}
     }
     LaunchedEffect(format){previewSize=WidgetInstances.previewSize(context,id,format)}
-    val error=if(row==null)"暂无可展示的数据，请先由发送方上报。"else WidgetConfigRules.layoutError(row,config,previewSize.width.toInt(),previewSize.height.toInt())
+    val error=if(row==null)"请先选择一个已创建的数据主题。"else WidgetConfigRules.layoutError(row,config,previewSize.width.toInt(),previewSize.height.toInt())
     val save:()->Unit={
         if(error==null&&row!=null){
             try {
                 val saved=JSONObject(draft).put("format",format.name)
                 if(existing){
                     cache.preference("widget:$id",saved.toString());BeaconStateWidget.refresh(context,intArrayOf(id))
-                    draft=saved.toString();baseline=draft
-                    if(detail)editing=false else onSaved()
+                    draft=saved.toString();baseline=draft;hasSaved=true
+                    onSaved()
                 }else{
                     feedback="请长按桌面空白处，打开小组件列表并选择 Beacon。App 仅管理已添加的组件。"
                 }
@@ -122,7 +125,7 @@ internal fun StateWidgetEditor(id:Int, detail:Boolean, source:String?, identity:
             navigationIcon={BeaconIconButton(onClick={back()}){Icon(BeaconIcons.Back,"返回")}},
             actions={if(editing){
                 BeaconIconButton(onClick={scope.launch{scroll.animateScrollToItem(0)}}){Icon(BeaconIcons.Info,"查看预览")}
-                if(existing)BeaconSaveAction("保存设置",dirty||stored.isBlank(),false,error==null&&(dirty||stored.isBlank()),save)
+                if(existing)BeaconSaveAction("保存设置",dirty,false,error==null&&dirty,save)
                 else BeaconActionIcon(BeaconIcons.Info,"桌面添加说明",onClick={feedback="请长按桌面空白处，从小组件列表选择 Beacon。"})
             }})
     },bottomBar={}){padding->
@@ -136,27 +139,28 @@ internal fun StateWidgetEditor(id:Int, detail:Boolean, source:String?, identity:
                         val selected=choices[index]
                         val next=JSONObject(draft).put("source",selected.optString("local_source")).put("identity",selected.optString("local_identity"))
                         next.remove("metrics")
-                        next.put("template",WidgetConfigRules.recommend(selected))
-                        next.put("metrics",JSONArray(WidgetConfigRules.defaults(selected,next).map{it.optString("id")}))
+                        next.put("template",if(selected.optBoolean("_waiting"))"auto"else WidgetConfigRules.recommend(selected))
+                        if(!selected.optBoolean("_waiting"))next.put("metrics",JSONArray(WidgetConfigRules.defaults(selected,next).map{it.optString("id")}))
                         draft=next.toString()
                     }
                     Column(Modifier.padding(horizontal=BeaconUiMetrics.CardInset,vertical=BeaconUiMetrics.Gap8),verticalArrangement=Arrangement.spacedBy(BeaconUiMetrics.Gap8)){
-                        SettingsHint("选项来自本机已收到的数据。筛选仅帮助查找，选择展示内容后才会更换当前绑定。")
+                        SettingsHint("选项来自服务器已创建的主题，尚未上报也可绑定。筛选仅帮助查找，选择展示内容后才会更换当前绑定。")
                         SettingsHint("未关联应用：直接使用设备推送密钥上报，无需创建应用。")
                         if(row!=null&&sourceFilter!="*"&&row.optString("application_id")!=sourceFilter)
                             SettingsHint("当前展示内容不属于筛选的应用，已保留；选择新内容后才会更换。")
                     }
                 }}
                 if(row!=null){
-                    item { WidgetMetricSelector(row,config){next->draft=next.toString()} }
+                    if(!row.optBoolean("_waiting"))item { WidgetMetricSelector(row,WidgetConfigRules.resolved(row,config)){next->draft=next.toString()} }
                     item { SettingsGroup("组件名称与标题") { Column(Modifier.padding(BeaconUiMetrics.CardInset)){
                         BeaconTextField(config.optString("instance_name"),{value->update{it.put("instance_name",WidgetTextLimits.cap(value,24))}},Modifier.fillMaxWidth(),label={BeaconText("组件名称")},labelText="组件名称",singleLine=true,placeholder="仅用于区分桌面实例")
                         BeaconTextField(config.optString("title"),{value->update{it.put("title",if(value.codePointCount(0,value.length)>12)value.substring(0,value.offsetByCodePoints(0,12))else value)}},Modifier.fillMaxWidth(),label={BeaconText("自定义短标题")},labelText="自定义短标题",singleLine=true,placeholder="留空使用主题名称")
                         SettingsHint("最多12个字符，桌面按实际宽度省略显示。")
                     }}}
-                    item { WidgetTemplateSelector(row,config,previewSize){value->update{it.put("template",value)}} }
-                    item { WidgetListSettings(config){next->draft=next.toString()} }
-                    item { WidgetTuningSettings(config){next->draft=next.toString()} }
+                    if(row.optBoolean("_waiting"))item{SettingsGroup("展示样式"){Column(Modifier.padding(BeaconUiMetrics.CardInset)){SettingsHint("收到数据后自动匹配。首次上报前可设置名称与背景。")}}}
+                    else item { WidgetTemplateSelector(row,WidgetConfigRules.resolved(row,config),previewSize){value->update{val suggested=WidgetConfigRules.resolved(row,it);it.put("template",value);if(!it.has("metrics"))it.put("metrics",suggested.optJSONArray("metrics")?:JSONArray(WidgetConfigRules.defaults(row,it).map{block->block.optString("id")}))}} }
+                    if(!row.optBoolean("_waiting"))item { WidgetListSettings(WidgetConfigRules.resolved(row,config)){next->draft=next.toString()} }
+                    if(!row.optBoolean("_waiting"))item { WidgetTuningSettings(WidgetConfigRules.resolved(row,config)){next->draft=next.toString()} }
                     item { WidgetSimpleAppearance(row,config){next->draft=next.toString()} }
                     item { WidgetMoreSettings(row,config){next->draft=next.toString()} }
                     item { SettingsGroup("刷新与状态"){

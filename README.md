@@ -415,15 +415,19 @@ Beacon 项目本身以 [MIT License](LICENSE) 发布。
 
 ### 主题、应用与设备
 
-主题属于设备。应用只是可选的来源范围：绑定设备后，直接使用设备推送密钥就能上报未关联应用的主题，不必创建应用。使用应用令牌时，主题归入该应用来源。主题身份由 **设备 + 来源 + topic_key** 共同确定，不同来源可使用相同的 `topic_key`。主题在首次有效上报时自动出现。
+主题属于设备。应用只是可选的来源范围：绑定设备后，直接使用设备推送密钥就能上报未关联应用的主题，不必创建应用。使用应用令牌时，主题归入该应用来源。主题身份由 **设备 + 来源 + topic_key** 共同确定，不同来源可使用相同的 `topic_key`。主题必须先由管理员创建，推送密钥和应用令牌只能更新已登记主题，不能创建主题。升级时现有主题会自动迁移到目录。
 
-手机「设置 → 服务器管理 → 数据主题」可按设备、来源、状态和关键词筛选，查看最新数据并清空当前状态。清空会同步到手机，保留版本水位，不能代替停止外部采集。持续主题被清空后，更高版本的上报仍可重新显示；任务类型沿用终态与删除限制。
+手机「设置 → 服务器管理 → 数据主题」可按设备、来源、状态和关键词筛选，创建主题、修改名称、复制标识与上报示例，查看最新数据并清空当前状态或删除主题。清空会同步到手机，保留版本水位，不能代替停止外部采集。持续主题被清空后，更高版本的上报仍可重新显示；任务类型沿用终态与删除限制。
 
 ### 添加与编辑
 
 - 请长按桌面空白处，从小组件列表选择 Beacon 的 2×2、3×2、4×2 或 4×4；按桌面配置流程选择主题、内容和样式。App 内已移除添加入口，仅管理已有小组件。
+- 大号组件声明为4×4，最小尺寸250dp×250dp，实际预览按桌面返回的尺寸绘制；各规格使用相同27dp圆角，实际占格由桌面网格决定。旧实例若仍占5行，请从桌面移除后重新添加。
+- 系统小组件选择器为2×2、3×2、4×2、4×4提供独立预览图，Android 12及以上使用可缩放预览布局；预览为示例数据，添加后选择实际主题。
+- 未绑定时完整显示创建主题的操作指引，窄卡自动换行并适配字号，不使用省略号；已绑定但未上报时显示“等待数据”。
 - 新组件统一从系统桌面添加，App 内不提供复制组件功能。每个实例独立绑定主题、顺序、颜色、字号和样式，可同时展示不同进度。
 - 单击桌面小组件不会进入编辑。修改设置请在桌面长按后选择编辑，或从 App 的小组件管理进入。
+- 所有右上角保存按钮在没有有效未保存改动时灰显，有改动且可保存时使用深色。保存成功后留在当前页面并恢复灰色，失败保留草稿以便重试。小组件首次从桌面配置时，保存后仍可继续编辑，手动返回后完成宿主添加流程。
 - 编辑已有组件时按桌面返回的实际 dp 尺寸等比预览；尚未添加时使用规格默认尺寸。系统网格、屏幕密度和桌面设置决定最终占用，格数并非固定像素。
 - 不支持当前数据或空间不足的样式置灰，展示原因。数据以后发生变化而不再兼容时显示提示，保留原绑定配置。
 
@@ -447,7 +451,7 @@ Beacon 项目本身以 [MIT License](LICENSE) 发布。
 
 小组件没有单独的上传地址。发送方把**数据主题的完整最新内容**提交到 `POST /api/v1/push`，手机收到后，再在小组件设置中选择展示内容与模板。仅发送普通通知不会自动生成小组件数据。
 
-接入顺序：绑定设备 → 获取设备推送密钥（或创建应用并获取应用令牌）→ 上报数据主题 → 手机同步 → 长按桌面添加 Beacon 小组件 → 选择该主题和模板。详见[字段说明](#上报字段)、[各类数据格式](#数据块格式与模板对应关系)、[更新与删除](#更新版本任务与删除)、[接口及错误](#同步管理与错误处理)。
+接入顺序：绑定设备 → 管理员创建数据主题（关联应用可选）→ 手机同步目录 → 长按桌面添加 Beacon 小组件并绑定主题 → 获取对应推送密钥并上报数据。尚未上报时显示“等待数据”，收到数据后自动匹配样式。详见[字段说明](#上报字段)、[各类数据格式](#数据块格式与模板对应关系)、[更新与删除](#更新版本任务与删除)、[接口及错误](#同步管理与错误处理)。
 
 #### 可直接运行的 curl 示例
 
@@ -461,7 +465,8 @@ export BEACON_PUSH_KEY='替换为设备推送密钥或应用令牌'
 curl --fail-with-body "$BEACON_URL/api/v1/push-capabilities" \
   -H "Authorization: Bearer $BEACON_PUSH_KEY"
 
-# 第一次使用 widget/demo-progress 时 revision=1；再次运行需提高版本。
+# 使用前先在「服务器管理 → 数据主题」创建 widget/demo-progress。
+# 第一次上报 revision=1；再次运行需查询版本并递增。
 # 当前采样时间用于计算“数据陈旧”，必须随每次新数据一起更新。
 OBSERVED_AT_MS="$(($(date +%s) * 1000))"
 curl --fail-with-body -X POST "$BEACON_URL/api/v1/push" \
@@ -636,7 +641,7 @@ curl --fail-with-body "$BEACON_URL/api/v1/states/meta?topic_key=widget%2Fdemo-pr
   -H "Authorization: Bearer $BEACON_PUSH_KEY"
 ```
 
-查询返回 `revision/deleted/status`。新写入使用更高版本；单一发送方可读取版本后加一，并持久化待重试的请求。**这不是原子版本申请**，多个发送方必须自行协调或使用不同主题。网络超时时原样重试同一版本和同一内容，包括原采样时间；同版本相同内容返回 `unchanged:true`，同版本不同内容返回409，旧版本也返回409。数据主题不使用普通事件的 `Idempotency-Key` 去重。
+已登记但未上报时返回 `revision:0`；未登记或已被管理员删除返回404 `topic_not_found`。查询返回 `revision/deleted/status`。新写入使用更高版本；单一发送方可读取版本后加一，并持久化待重试的请求。**这不是原子版本申请**，多个发送方必须自行协调或使用不同主题。网络超时时原样重试同一版本和同一内容，包括原采样时间；同版本相同内容返回 `unchanged:true`，同版本不同内容返回409，旧版本也返回409。数据主题不使用普通事件的 `Idempotency-Key` 去重。
 
 下载等有生命周期的任务增加 `state_type:"task"`，`status` 支持 `running/paused/completed/failed/cancelled`：
 
@@ -658,6 +663,26 @@ curl --fail-with-body "$BEACON_URL/api/v1/states/meta?topic_key=widget%2Fdemo-pr
 
 这里的3仅为示例，若当前版本已达到3或更高需继续递增。TTL 到期会移除数据，但不会遗忘版本水位；持续主题可用更高版本重新上报，旧版本重试不会复活它。`fresh_for_seconds` 过期只显示陈旧提示、保留最后数据，与 TTL 删除不同。
 
+#### 预创建主题与删除规则
+
+主题身份是 `device_id + application_id + topic_key`，创建后不修改；名称最多80个字符，可随时修改，不消耗数据 revision。未关联应用时 `application_id` 为空，使用设备推送密钥；关联应用时使用该应用令牌。推送凭据、接收凭据均无权修改主题目录。
+
+管理员创建请求示例：
+
+```json
+{"device_id":"设备ID","application_id":"","name":"账户额度","topic_key":"widget/demo-progress","request_id":"调用方生成的唯一请求ID"}
+```
+
+使用管理令牌 POST 到 `/api/admin/topics/create`。`request_id` 必填，1–128字符；同设备下重试保持相同ID和内容，返回原主题，内容冲突返回409。`topic_key` 可省略，由服务端生成，或使用现有协议允许的1–128字节非控制字符。返回 `{"topic":{...}}`，含 `config_version`（初始1）、创建与更新时间；预创建不写伪造状态数据，数据 revision 初始0。
+
+`update` 请求使用 `device_id/application_id/topic_key/config_version/name`；`delete` 使用相同身份和 `config_version`，返回删除事件摘要。`detail` 仅需身份字段。配置版本变化返回409。`topics/list` 的筛选分页与下表 states/list 相同，`state` 支持 `all/waiting/active/stale/expired`，返回目录名称、配置版本和数据摘要。设备接收目录快照不含已删除主题。
+
+- **清空数据**：旧 `operation:"delete"` 或 `/api/admin/states/clear` 保留主题身份、绑定和数据版本水位；列表显示等待数据或已过期，允许按原任务规则续报。
+- **删除主题**：管理员确认后直接删除目录、当前数据和该身份的版本水位，列表不保留“已删除”项，没有恢复入口。脚本此后上报或查询版本返回404；只有管理员能手动重新创建。新建同一标识属于新一轮数据，revision 可从1开始。仍在桌面上的旧绑定显示内容不可用，可重新选择主题。
+- **兼容**：升级时已有数据和水位一次性迁移到目录。原脚本继续更新已登记主题；使用新标识前必须先创建。新客户端连接旧服务端隐藏预创建入口；旧客户端仍可接收数据，但重新创建同标识从低版本上报时应升级客户端以同步清除旧缓存水位。
+
+`GET /api/v1/topics` 使用与 states 相同的 `cursor/snapshot_token/page_cursor/limit`，返回 `topics` 数组和 `server_id/has_more/next_cursor`；目录游标与数据游标分别保存。名称变化和删除通过增量同步；删除事件仅用于清除本机缓存，不占用主题名额。游标失效返回410 `state_cursor_expired` 并重新拉取快照。WebSocket 客户端以 `X-Beacon-Topics:1` 协商 `@beacon/topics_changed/1` 提示，再通过HTTP同步目录。
+
 #### 同步、管理与错误处理
 
 | 接口 | 凭据与用途 |
@@ -665,6 +690,12 @@ curl --fail-with-body "$BEACON_URL/api/v1/states/meta?topic_key=widget%2Fdemo-pr
 | `POST /api/v1/push` | 推送密钥：上报事件或最新状态 |
 | `GET /api/v1/states/meta?topic_key=...` | 推送密钥：查询该来源的版本水位 |
 | `GET /api/v1/push-capabilities` | 推送密钥：协议、数据块与额度能力 |
+| `GET /api/v1/topics` | 设备接收凭据：主题目录快照与游标增量同步 |
+| `POST /api/admin/topics/create` | 管理令牌：预创建主题，支持幂等重试 |
+| `POST /api/admin/topics/list` | 管理令牌：目录和最新数据摘要，含等待数据的主题 |
+| `POST /api/admin/topics/detail` | 管理令牌：读取主题配置 |
+| `POST /api/admin/topics/update` | 管理令牌：携带 config_version 修改名称 |
+| `POST /api/admin/topics/delete` | 管理令牌：携带 config_version 硬删除主题和数据 |
 | `GET /api/v1/states` | 设备接收凭据：快照与游标增量同步，由客户端管理分页与游标 |
 | `POST /api/admin/states/list` | 管理令牌：筛选和分页，默认 50 条、最多 100 条 |
 | `POST /api/admin/states/detail` | 管理令牌：读取指定身份的最新内容 |
@@ -672,19 +703,21 @@ curl --fail-with-body "$BEACON_URL/api/v1/states/meta?topic_key=widget%2Fdemo-pr
 
 管理接口使用 `Authorization: Bearer <管理令牌>`，不支持查询参数。`list` 请求体可含 `device_id`、`application_id`、`search`、`state`、`limit`、`offset`；省略 `application_id` 表示全部来源，空字符串表示未关联应用。`state` 支持 `all/active/stale/expired/deleted`。返回 `topics/total/has_more/next_offset`。详情与清空请求体使用 `device_id/application_id/topic_key`，清空还必须包含 `revision`。这些接口在 Go 与 Workers 上保持一致。
 
-能力探测应返回 `state_protocol:1`、`structured_schema_versions:[1]` 和支持的 `block_kinds`。旧服务端404或不支持时先升级服务端；普通 Bark 文本接口不能代替数据主题接口。
+能力探测新增 `topic_catalog_protocol:1`，并返回 `state_protocol:1`、`structured_schema_versions:[1]` 和支持的 `block_kinds`。旧服务端404或不支持时先升级服务端；普通 Bark 文本接口不能代替数据主题接口。
 
 | HTTP / 错误码 | 处理方式 |
 | --- | --- |
 | 400 `invalid_message` | 核对必填正文、`schema_version`、类型/范围、块内唯一ID和未支持字段；数值不要传成字符串 |
 | 401 `unauthorized` | 使用有效的设备推送密钥或应用令牌，核对是否撤销；不要使用接收或管理凭据 |
+| 404 `topic_not_found` | 管理员先创建主题，核对设备及应用归属；删除后脚本不能自动重建 |
+| 409 `topic_config_conflict` | 配置版本冲突或创建幂等键冲突，刷新目录后再操作 |
 | 409 `stale_state_revision` | 查询元数据，避免旧采样覆盖较新数据，按实际需要生成更高版本 |
 | 409 `state_revision_conflict` | 同版本内容不同；确认是否有多个写入者或重试时修改了采样时间 |
 | 409 `invalid_state_transition` | 检查任务终态、删除后重启或任务/持续类型切换；新任务使用新主题 |
 | 429 `push_rate_limited` | 遵循 `Retry-After`，退避并合并为最新快照 |
 | 507 `storage_capacity_reached` | 检查主题数量、水位与存储容量，不要为每次采样创建一个新主题 |
 
-当前每设备最多500个主题水位（含已删除主题）、有效负载合计最多8 MiB；每应用每设备每分钟最多120次状态写入，每设备每分钟最多300次。桌面刷新不是上传频率保证；合并高频采样，进度通常按数秒节流。数据未变时也应按新鲜度和 TTL 计划定期续报，提高版本并使用新的采样时间。
+当前每设备最多500个已登记主题（含等待数据、已清空或已过期主题；管理员删除主题后释放名额）、有效负载合计最多8 MiB；每应用每设备每分钟最多120次状态写入，每设备每分钟最多300次。桌面刷新不是上传频率保证；合并高频采样，进度通常按数秒节流。数据未变时也应按新鲜度和 TTL 计划定期续报，提高版本并使用新的采样时间。
 
 `GET /api/v1/states` 是客户端接收接口：首次无游标读取固定快照，分页使用返回的 `snapshot_token/page_cursor`，最后一页获得 `next_cursor` 后再用 `cursor` 增量同步；HTTP 410 `state_cursor_expired` 时重新读取快照。脚本通常只需上报和版本查询，不需要实现此接收流程。
 
@@ -710,4 +743,4 @@ curl --fail-with-body "$BEACON_URL/api/v1/states/meta?topic_key=widget%2Fdemo-pr
 
 ### 小组件数据选择
 
-「数据主题」是发送方按 `topic_key` 持续更新的一组内容，可包含进度、数值、榜单或文字。小组件「数据选择」中的「按发送应用筛选」只帮助查找，「选择展示内容」才会改变绑定。选项来自手机已接收并缓存的主题，不会列出尚未上报数据的空应用。「未关联应用」表示直接使用设备推送密钥上报，`application_id` 为空，无需先创建应用。旧文档中的“状态主题”“默认来源”分别对应现在的“数据主题”“未关联应用”；接口路径与字段不变。
+「数据主题」是发送方按 `topic_key` 持续更新的一组内容，可包含进度、数值、榜单或文字。小组件「数据选择」中的「按发送应用筛选」只帮助查找，「选择展示内容」才会改变绑定。选项来自手机同步的主题目录，已创建但尚未上报的主题也可提前绑定；目录与最新数据分开缓存，连接旧服务端时沿用已有数据。「未关联应用」表示直接使用设备推送密钥上报，`application_id` 为空，无需先创建应用。旧文档中的“状态主题”“默认来源”分别对应现在的“数据主题”“未关联应用”；接口路径与字段不变。

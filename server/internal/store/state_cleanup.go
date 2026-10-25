@@ -40,6 +40,12 @@ func deleteApplicationStates(tx *sql.Tx, application string) error {
 			return err
 		}
 	}
+	if _, err = tx.Exec(`INSERT INTO topic_changes(device,application,topic,payload,created) SELECT device,application,topic,json_set(payload,'$.deleted',json('true'),'$.config_version',version+1),? FROM topic_catalog WHERE application=?`, time.Now().UnixMilli(), application); err != nil {
+		return err
+	}
+	if _, err = tx.Exec("DELETE FROM topic_catalog WHERE application=?", application); err != nil {
+		return err
+	}
 	_, err = tx.Exec("DELETE FROM current_states WHERE application=?", application)
 	return err
 }

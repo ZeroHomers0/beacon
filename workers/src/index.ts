@@ -92,6 +92,7 @@ export class BeaconInstance extends DurableObject<Env> implements Transport {
       device,
       hash,
       control,
+      topics: request.headers.get("X-Beacon-Topics")==="1",
       state: request.headers.get("X-Beacon-State")==="1",
       batch: control && request.headers.get("X-Beacon-Reception") === "batch",
       dirty: false,
@@ -99,6 +100,9 @@ export class BeaconInstance extends DurableObject<Env> implements Transport {
     this.ctx.acceptWebSocket(pair[1], [device]);
     // Client performs HTTP catch-up; do not send before the connection handshake.
     return new Response(null, { status: 101, webSocket: pair[0] });
+  }
+  topicsChanged(device:string):void {
+   for(const ws of this.ctx.getWebSockets(device)){const attachment=ws.deserializeAttachment() as Attachment;if(attachment?.topics&&this.store.authorized(attachment)&&ws.readyState===WebSocket.OPEN){try{ws.send("@beacon/topics_changed/1")}catch{ws.close(1011,"delivery_failed")}}}
   }
   stateChanged(device:string):void {
    for(const ws of this.ctx.getWebSockets(device)){const attachment=ws.deserializeAttachment() as Attachment;if(attachment?.state&&this.store.authorized(attachment)&&ws.readyState===WebSocket.OPEN){try{ws.send("@beacon/state_changed/1")}catch{ws.close(1011,"delivery_failed")}}}

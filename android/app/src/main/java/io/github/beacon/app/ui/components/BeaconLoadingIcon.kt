@@ -90,43 +90,13 @@ fun BeaconSaveAction(
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
-    var pending by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
-    var observedSaving by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
-    var saved by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
-    androidx.compose.runtime.LaunchedEffect(pending, dirty, saving) {
-        if (pending && saving) observedSaving = true
-        if (pending && !saving && !dirty) {
-            pending = false
-            observedSaving = false
-            saved = true
-        } else if (pending && observedSaving && !saving) {
-            pending = false
-            observedSaving = false
-        }
-    }
-    androidx.compose.runtime.LaunchedEffect(saved, dirty) {
-        if (saved) {
-            if (!dirty) kotlinx.coroutines.delay(1200)
-            saved = false
-        }
-    }
-    BeaconIconButton(
-        onClick = { pending = true; saved = false; onClick() },
-        enabled = enabled && !saving,
-    ) {
-        androidx.compose.animation.Crossfade(
-            targetState = saved,
-            animationSpec = tween(BeaconMotion.QuickMs),
-            label = "save-feedback",
-        ) { complete ->
-            Icon(
-                if (complete) io.github.beacon.app.ui.icons.BeaconIcons.Check
-                else io.github.beacon.app.ui.icons.BeaconIcons.Save,
-                if (complete) androidx.compose.ui.res.stringResource(io.github.beacon.app.R.string.settings_save_completed)
-                else description,
-                tint = if (complete) io.github.beacon.app.ui.theme.beaconSuccessColor()
-                else MaterialTheme.colorScheme.onSurface,
-            )
-        }
+    val actionable = dirty && enabled && !saving
+    BeaconIconButton(onClick = onClick, enabled = actionable) {
+        Icon(
+            io.github.beacon.app.ui.icons.BeaconIcons.Save,
+            description,
+            tint = if (actionable) MaterialTheme.colorScheme.onSurface
+                else MaterialTheme.colorScheme.onSurface.copy(alpha = .38f),
+        )
     }
 }

@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"beacon.local/server/internal/domain"
 	"encoding/json"
 	"github.com/gorilla/websocket"
 	"net/http"
@@ -13,6 +14,16 @@ import (
 
 func TestStatePushAndSnapshotSync(t *testing.T) {
 	a, device, _, _ := setupAPI(t)
+	for _, key := range []string{"download:1", "progress"} {
+		if _, err := a.service.MutateTopic("create", domain.TopicMutation{Device: device.DeviceID, Topic: key, Name: key, RequestID: key}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, key := range []string{"download:1", "progress"} {
+		if _, err := a.service.MutateTopic("create", domain.TopicMutation{Device: device.DeviceID, Topic: key, Name: key, RequestID: key}); err != nil {
+			t.Fatal(err)
+		}
+	}
 	payload := map[string]any{"mode": "state", "schema_version": 1, "topic_key": "download:1", "revision": 1, "state_type": "task", "status": "running", "body": "40%", "blocks": []any{map[string]any{"kind": "progress", "id": "download", "value": 40, "max": 100}}}
 	send := func(p any, intended int) map[string]any {
 		t.Helper()
@@ -70,6 +81,16 @@ func TestStatePushAndSnapshotSync(t *testing.T) {
 
 func TestNegotiatedStateHint(t *testing.T) {
 	a, device, _, _ := setupAPI(t)
+	for _, key := range []string{"download:1", "progress"} {
+		if _, err := a.service.MutateTopic("create", domain.TopicMutation{Device: device.DeviceID, Topic: key, Name: key, RequestID: key}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, key := range []string{"download:1", "progress"} {
+		if _, err := a.service.MutateTopic("create", domain.TopicMutation{Device: device.DeviceID, Topic: key, Name: key, RequestID: key}); err != nil {
+			t.Fatal(err)
+		}
+	}
 	a.service = a.service.WithWebSocket()
 	hub := NewStreamHub(a.service)
 	defer hub.Close()

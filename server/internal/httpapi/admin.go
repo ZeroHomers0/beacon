@@ -53,11 +53,51 @@ func (a *API) registerAdmin(router *gin.Engine) {
 			apiError(c.Writer, 500, "storage_error")
 			return
 		}
-		writeJSON(c.Writer, 200, map[string]any{"devices": devices, "applications": applications, "storage": stats, "transport": "websocket", "server_id": a.service.ServerID(), "version": config.Version, "protocol": domain.ProtocolVersion, "admin_protocol": domain.AdminProtocol})
+		writeJSON(c.Writer, 200, map[string]any{"devices": devices, "applications": applications, "storage": stats, "transport": "websocket", "server_id": a.service.ServerID(), "version": config.Version, "protocol": domain.ProtocolVersion, "topic_catalog_protocol": 1, "admin_protocol": domain.AdminProtocol})
 	})
 	admin.GET("/metrics", func(c *gin.Context) {
 		writeJSON(c.Writer, http.StatusOK, a.metrics.snapshot())
 	})
+	admin.POST("/topics/list", func(c *gin.Context) {
+		var q domain.StateAdminQuery
+		if decodeJSON(c.Writer, c.Request, &q) != nil {
+			apiError(c.Writer, 400, "invalid_request")
+			return
+		}
+		result, err := a.service.AdminTopics(q)
+		if err != nil {
+			stateError(c.Writer, err)
+			return
+		}
+		writeJSON(c.Writer, 200, result)
+	})
+	for _, action := range []string{"create", "detail", "update", "delete"} {
+		admin.POST("/topics/"+action, func(c *gin.Context) {
+			var p domain.TopicMutation
+			if decodeJSON(c.Writer, c.Request, &p) != nil {
+				apiError(c.Writer, 400, "invalid_request")
+				return
+			}
+			var result map[string]any
+			var err error
+			if action == "detail" {
+				result, err = a.service.AdminTopic(p)
+			} else {
+				result, err = a.service.MutateTopic(action, p)
+			}
+			if err != nil {
+				stateError(c.Writer, err)
+				return
+			}
+			if action != "detail" && a.stream != nil {
+				a.stream.TopicsChanged(p.Device)
+				if action == "delete" {
+					a.stream.StateChanged(p.Device)
+				}
+			}
+			writeJSON(c.Writer, 200, result)
+		})
+	}
 	admin.POST("/states/list", func(c *gin.Context) {
 		var q domain.StateAdminQuery
 		if decodeJSON(c.Writer, c.Request, &q) != nil {

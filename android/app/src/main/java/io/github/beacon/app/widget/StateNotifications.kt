@@ -19,7 +19,7 @@ object StateNotifications {
         if(manager.getNotificationChannel("beacon_states")==null)manager.createNotificationChannel(NotificationChannel("beacon_states","状态更新",NotificationManager.IMPORTANCE_LOW))
         if(manager.getNotificationChannel("beacon_states_first")==null)manager.createNotificationChannel(NotificationChannel("beacon_states_first","状态首次提醒",NotificationManager.IMPORTANCE_DEFAULT))
         StateCache(context).use{cache->
-            val rows=cache.notificationBindings().mapNotNull{cache.find(it.first,it.second)};val active=rows.map{it.optString("local_source")+":"+it.optString("local_identity")}.toSet()
+            val rows=cache.notificationBindings().mapNotNull{cache.find(it.first,it.second)?.takeUnless{row->row.optBoolean("_waiting")||row.optBoolean("_topic_deleted")}};val active=rows.map{it.optString("local_source")+":"+it.optString("local_identity")}.toSet()
             manager.activeNotifications.filter{it.tag?.startsWith("state:")==true&&it.tag!!.removePrefix("state:") !in active}.forEach{manager.cancel(it.tag,it.id)}
             for(row in rows){val key=row.optString("local_source")+":"+row.optString("local_identity")
                 if(cache.preference("notify:$key")!="1"||cache.preference("dismiss:$key")=="1") {manager.cancel("state:$key",1);continue}

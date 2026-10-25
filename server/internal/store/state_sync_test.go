@@ -19,11 +19,11 @@ func TestStateSnapshotsAndExpiryAreConsistent(t *testing.T) {
 		t.Fatal(err)
 	}
 	p := domain.StatePayload{Mode: "state", SchemaVersion: 1, TopicKey: "a", Revision: 1, Body: "first"}
-	if _, err = s.SaveState(device.PushKey, p); err != nil {
+	if _, err = saveRegisteredState(t, s, device.PushKey, p); err != nil {
 		t.Fatal(err)
 	}
 	p.TopicKey = "b"
-	if _, err = s.SaveState(device.PushKey, p); err != nil {
+	if _, err = saveRegisteredState(t, s, device.PushKey, p); err != nil {
 		t.Fatal(err)
 	}
 	first, err := s.StatePage(device.DeviceID, "", "", "", 1)
@@ -34,7 +34,7 @@ func TestStateSnapshotsAndExpiryAreConsistent(t *testing.T) {
 	page := first["page_cursor"].(string)
 	p.Revision = 2
 	p.Body = "newer"
-	if _, err = s.SaveState(device.PushKey, p); err != nil {
+	if _, err = saveRegisteredState(t, s, device.PushKey, p); err != nil {
 		t.Fatal(err)
 	}
 	second, err := s.StatePage(device.DeviceID, "", token, page, 1)
@@ -66,7 +66,7 @@ func TestStateSnapshotsAndExpiryAreConsistent(t *testing.T) {
 	if len(records) != 1 || !records[0].Deleted {
 		t.Fatal("expiry not synchronized", records)
 	}
-	if _, err = s.SaveState(device.PushKey, p); err != nil {
+	if _, err = saveRegisteredState(t, s, device.PushKey, p); err != nil {
 		t.Fatal("retry of expired revision should remain idempotent", err)
 	}
 	current, err := s.StatePage(device.DeviceID, "", "", "", 100)
@@ -84,10 +84,10 @@ func TestApplicationDeletionRemovesOnlyItsOwnStates(t *testing.T) {
 	device, _ := s.CreateDevice("phone")
 	app, _ := s.CreateApplication(device.DeviceID, "app", 5)
 	p := domain.StatePayload{Mode: "state", SchemaVersion: 1, TopicKey: "same", Revision: 1, Body: "current"}
-	if _, err = s.SaveState(app.Token, p); err != nil {
+	if _, err = saveRegisteredState(t, s, app.Token, p); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = s.SaveState(device.PushKey, p); err != nil {
+	if _, err = saveRegisteredState(t, s, device.PushKey, p); err != nil {
 		t.Fatal(err)
 	}
 	initial, err := s.StatePage(device.DeviceID, "", "", "", 100)

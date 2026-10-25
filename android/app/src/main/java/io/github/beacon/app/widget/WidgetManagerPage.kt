@@ -57,14 +57,13 @@ fun WidgetManagerPage(modifier:Modifier,scroll:LazyListState,padding:PaddingValu
                     Column(Modifier.padding(horizontal=BeaconUiMetrics.CardInset)){
                         SettingsHint(WidgetHealth.description(row,online=WidgetHealth.online(context)))
                         SettingsHint("发送应用："+(if(row==null)"暂无数据"else if(row.optString("application_id").isBlank())"未关联应用"else row.optString("application_name").ifBlank{row.optString("application_id")}))
-                        SettingsHint("最后更新："+if(row==null)"暂无"else java.text.DateFormat.getDateTimeInstance().format(java.util.Date(row.optLong("accepted_at_ms"))))
+                        SettingsHint("最后更新："+if(row==null||row.optLong("accepted_at_ms")==0L)"暂无"else java.text.DateFormat.getDateTimeInstance().format(java.util.Date(row.optLong("accepted_at_ms"))))
                     }
                     WidgetManagerPreview(row,JSONObject(config.toString()).put("format",format.name).put("_offline",!WidgetHealth.online(context)),WidgetInstances.previewSize(context,id,format))
                 }
                 }
             }
         }
-        item{SettingsHint(WidgetPerformance.summary())}
         item{SettingsHint("这里只显示 Beacon 的桌面实例。移除小组件请在桌面长按操作。")}
     }
     }

@@ -3,6 +3,8 @@ package io.github.beacon.app.widget
 import org.json.JSONObject
 
 object WidgetConfigRules {
+    fun resolved(row:JSONObject?,config:JSONObject):JSONObject=if(config.optString("template")=="auto"&&row!=null&&!row.optBoolean("_waiting"))JSONObject(config.toString()).apply{put("template",recommend(row));put("metrics",org.json.JSONArray(defaults(row,this).map{it.optString("id")}))}else config
+
     fun recommend(row:JSONObject):String {
         val blocks=available(row)
         return when { blocks.isEmpty()->"text";blocks.any{it.optString("kind") in listOf("progress","metric")}->if(blocks.filter{it.optString("kind") in listOf("progress","metric")}.all{!it.has("max")})"numbers"else"horizontal_bars";blocks.first().optString("kind")=="list"->"text_list";blocks.first().optString("kind")=="sparkline"->"sparkline";else->"segmented_ring" }
@@ -18,6 +20,9 @@ object WidgetConfigRules {
         return (0 until ids.length()).mapNotNull{i->available.firstOrNull{it.optString("id")==ids.optString(i)}}
     }
     fun error(row:JSONObject,config:JSONObject):String?{
+        if(row.optBoolean("_topic_deleted"))return "主题已删除，请恢复主题或选择其他内容"
+        if(row.optBoolean("_waiting"))return null
+        if(config.optString("template")=="auto")return error(row,resolved(row,config))
         WidgetTuning.error(config)?.let{return it}
         val type=config.optString("template","horizontal_bars")
         if(type=="text")return if(row.optString("body").isBlank())"这条主题没有正文"else null
@@ -40,7 +45,9 @@ object WidgetConfigRules {
     }
 
     fun layoutError(row:JSONObject,config:JSONObject,width:Int,height:Int):String? {
+        if(config.optString("template")=="auto"&&!row.optBoolean("_waiting"))return layoutError(row,resolved(row,config),width,height)
         error(row,config)?.let{return it}
+        if(row.optBoolean("_waiting"))return null
         val blocks=selected(row,config);val type=config.optString("template","horizontal_bars")
         val scale=kotlin.math.min(width/300f,height/220f).coerceAtLeast(.75f)
         val pad=kotlin.math.max(12f,kotlin.math.min(width,height)*(40f/440f))

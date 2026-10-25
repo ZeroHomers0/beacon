@@ -85,6 +85,7 @@ internal class WebSocketTransport(
                 .url(config.streamUrl)
                 .header("Authorization", "Bearer $password")
                 .header("X-Beacon-State", "1")
+                .header("X-Beacon-Topics", "1")
                 .apply {
                     if (controlIntervalSeconds > 0) {
                         header("X-Beacon-Heartbeat", "1")
@@ -104,7 +105,7 @@ internal class WebSocketTransport(
                         }
 
                         override fun onMessage(webSocket: WebSocket, text: String) {
-                            if(text=="@beacon/state_changed/1"){onHeartbeat();return}
+                            if(text=="@beacon/state_changed/1"||text=="@beacon/topics_changed/1"){onHeartbeat();return}
                             if (closed.get()) return
                             if (controlIntervalSeconds > 0 && text == "@beacon/heartbeat_ack/1") {
                                 synchronized(this@WebSocketTransport) {

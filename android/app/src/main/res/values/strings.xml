@@ -568,4 +568,10 @@
     <string name="bark_decryption_remove">移除解密配置</string>
     <string name="bark_decryption_remove_confirm">移除</string>
     <string name="bark_decryption_remove_hint">停止自动解密后续 Bark 加密消息。已解密的历史正文会保留，不会重新加密或删除；服务器绑定不受影响。</string>
+    <string name="admin_topic_saved">数据主题已保存</string>
+    <string name="admin_topic_rename">修改名称</string>
+    <string name="admin_topic_delete">删除主题</string>
+    <string name="admin_topic_copy_id">复制主题标识</string>
+    <string name="admin_topic_copy_example">复制上报示例</string>
+    <string name="admin_topic_conflict">内容或配置版本已变化，请刷新后再试。</string>
 </resources>

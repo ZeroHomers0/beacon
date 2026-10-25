@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
-    android:minWidth="300dp" android:minHeight="110dp"
+    android:minWidth="250dp" android:minHeight="110dp"
     android:targetCellWidth="4" android:targetCellHeight="2"
     android:initialLayout="@layout/state_widget"
-    android:previewImage="@drawable/state_widget_wide_preview"
+    android:previewImage="@drawable/state_widget_wide_preview" android:previewLayout="@layout/state_widget_wide_preview"
     android:configure="io.github.beacon.app.widget.StateWidgetActivity"
     android:resizeMode="none" android:updatePeriodMillis="1800000"
     android:widgetCategory="home_screen" android:widgetFeatures="reconfigurable" />

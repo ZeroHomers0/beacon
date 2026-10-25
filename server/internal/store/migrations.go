@@ -10,7 +10,7 @@ import (
 
 // messageSchemaVersion is the PRAGMA user_version this binary produces and the highest
 // one it accepts. Every migration step below adds exactly one to it.
-const messageSchemaVersion = 13
+const messageSchemaVersion = 14
 
 func migrateMessageSchema(db *sql.DB) error {
 	tx, err := db.Begin()
@@ -222,6 +222,14 @@ func migrateMessageSchema(db *sql.DB) error {
 	}
 	if err = createStateSchema(tx); err != nil {
 		return err
+	}
+	if err = createTopicSchema(tx); err != nil {
+		return err
+	}
+	if version < 14 {
+		if _, err = tx.Exec(`INSERT OR IGNORE INTO topic_catalog(device,application,topic,name,version,created,updated,deleted,request_id,payload) SELECT device,application,topic,'',1,0,0,0,'',json_object('device_id',device,'application_id',application,'topic_key',topic,'name','','application_name','','config_version',1,'created_at_ms',0,'updated_at_ms',0,'deleted',json('false')) FROM current_states`); err != nil {
+			return err
+		}
 	}
 	if _, err = tx.Exec("PRAGMA user_version=" + strconv.Itoa(messageSchemaVersion)); err != nil {
 		return err

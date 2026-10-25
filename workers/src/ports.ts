@@ -9,6 +9,10 @@ export interface Credentials {
 }
 export interface Repository {
   readonly serverID: string;
+  topicPage(device:string,q:URLSearchParams,now:number):Record<string,unknown>;
+  adminTopics(p:Record<string,unknown>,now:number):Record<string,unknown>;
+  adminTopic(p:Record<string,unknown>):Record<string,unknown>;
+  mutateTopic(a:string,p:Record<string,unknown>,now:number):Record<string,unknown>;
   saveState(credential:string,p:Record<string,unknown>,digest:string,now:number):import("./states").StateRecord;
   statePage(device:string,q:URLSearchParams,now:number):Record<string,unknown>;
   stateMeta(credential:string,topic:string):Record<string,unknown>;
@@ -75,6 +79,7 @@ export interface Repository {
   stats(): Record<string, unknown>;
 }
 export interface Transport {
+  topicsChanged?(device:string):void;
   stateChanged?(device:string):void;
   // Arm durable recovery BEFORE a mutation; immediate delivery is an optimization.
   arm(): Promise<void>;

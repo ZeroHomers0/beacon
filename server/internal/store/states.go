@@ -55,6 +55,9 @@ func (s *Store) SaveState(token string, p domain.StatePayload) (domain.StateReco
 	if err != nil {
 		return domain.StateRecord{}, err
 	}
+	if err = checkTopic(tx, device, app, p.TopicKey); err != nil {
+		return domain.StateRecord{}, err
+	}
 	var old domain.StateRecord
 	var previous *domain.StateVersion
 	var raw, digest string
@@ -133,7 +136,7 @@ func (s *Store) SaveState(token string, p domain.StatePayload) (domain.StateReco
 	if err = stateStorageCapacity(tx, int64(len(encoded)*3)+domain.MaxRequestBytes); err != nil {
 		return old, err
 	}
-	if (previous == nil && count >= 500) || used-func() int64 {
+	if used-func() int64 {
 		if previous != nil && !previous.Deleted {
 			return int64(len(raw))
 		}
@@ -168,6 +171,9 @@ func (s *Store) StateMeta(token, topic string) (map[string]any, error) {
 	defer tx.Rollback()
 	device, app, _, err := stateSender(tx, token)
 	if err != nil {
+		return nil, err
+	}
+	if err = checkTopic(tx, device, app, topic); err != nil {
 		return nil, err
 	}
 	var revision int64

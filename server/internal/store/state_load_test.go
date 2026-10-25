@@ -25,7 +25,7 @@ func TestThirtyMinuteStateStreamKeepsOnlyCurrentSnapshots(t *testing.T) {
 	for tick := 0; tick < 180; tick++ {
 		for topic := 0; topic < 20; topic++ {
 			p := domain.StatePayload{Mode: "state", SchemaVersion: 1, TopicKey: fmt.Sprintf("load:%d", topic), Revision: int64(tick + 1), ObservedAt: now, Body: "latest state"}
-			if _, err = s.SaveState(device.PushKey, p); err != nil {
+			if _, err = saveRegisteredState(t, s, device.PushKey, p); err != nil {
 				t.Fatalf("tick %d topic %d: %v", tick, topic, err)
 			}
 		}

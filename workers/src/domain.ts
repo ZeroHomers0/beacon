@@ -151,6 +151,7 @@ export interface Attachment {
   hash: string;
   control?: boolean;
   state?:boolean;
+  topics?:boolean;
   batch?: boolean;
   dirty?: boolean;
 }
