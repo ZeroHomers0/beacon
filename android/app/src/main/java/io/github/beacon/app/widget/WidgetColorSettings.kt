@@ -1,6 +1,8 @@
 package io.github.beacon.app.widget
 
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.ui.res.stringResource
+import io.github.beacon.app.R
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -27,6 +29,7 @@ internal object WidgetColors {
 
 @Composable
 internal fun WidgetColorSettings(row:JSONObject,config:JSONObject,onChange:(JSONObject)->Unit,advanced:Boolean=true){
+    var reset by remember{mutableStateOf(false)}
     SettingsGroup(if(advanced)"单项颜色"else"颜色与背景") {
         if(!advanced)BeaconDropdownPreference("所有内容的颜色",WidgetColors.names.mapIndexed{i,name->if(i==0&&config.optString("color")=="semantic")"自动（按状态变色）"else name},WidgetColors.values.indexOf(config.optString("global_color")).coerceAtLeast(0),settingsRow=true,icon=BeaconIcons.Palette,itemLeading={ColorDot(it)}){index->
             onChange(JSONObject(config.toString()).put("global_color",WidgetColors.values[index]).apply{remove("content_colors")})
@@ -47,8 +50,17 @@ internal fun WidgetColorSettings(row:JSONObject,config:JSONObject,onChange:(JSON
             }
             BeaconDropdownPreference("内容配色",listOf("自选颜色","按状态变色"),if(config.optString("color")=="semantic")1 else 0,settingsRow=true,icon=BeaconIcons.Palette){i->onChange(JSONObject(config.toString()).put("color",if(i==0)"fixed"else"semantic"))}
             BeaconDropdownPreference("卡片背景",listOf("跟随手机主题","浅色","深色","透明"),listOf("system","light","dark","transparent").indexOf(config.optString("background","system")),settingsRow=true,icon=BeaconIcons.ThemeMode){i->onChange(JSONObject(config.toString()).put("background",listOf("system","light","dark","transparent")[i]))}
+            val defaults=WidgetConfiguration.resetAppearance(config.toString())
+            SettingsRow(stringResource(R.string.widget_restore_appearance),stringResource(R.string.widget_restore_appearance_hint),
+                BeaconIcons.ThemeMode,iconTint=MaterialTheme.colorScheme.onSurface,
+                enabled=!WidgetConfiguration.equivalent(config.toString(),defaults.toString(),config.optString("format")),
+                command=true,onClick={reset=true})
         }
     }
+    if(reset)BeaconConfirmDialog(stringResource(R.string.widget_restore_appearance),
+        stringResource(R.string.widget_restore_appearance_confirm),onDismiss={reset=false},
+        onConfirm={reset=false;onChange(WidgetConfiguration.resetAppearance(config.toString()))},
+        confirmText=stringResource(R.string.widget_restore_defaults),danger=false)
 }
 
 @Composable private fun ColorDot(index:Int){

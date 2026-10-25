@@ -77,8 +77,11 @@ export interface Repository {
   ack(device: string, ids: string[], now: number): void;
   clearMessages(device?: string, deleteDevice?: boolean): number;
   stats(): Record<string, unknown>;
+  operationalStats?(now:number):Record<string,number>;
+  ready?():boolean;
 }
 export interface Transport {
+  activeConnections?():number;
   topicsChanged?(device:string):void;
   stateChanged?(device:string):void;
   // Arm durable recovery BEFORE a mutation; immediate delivery is an optimization.

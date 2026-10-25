@@ -21,6 +21,8 @@ import io.github.beacon.app.ui.icons.BeaconIcons
 import io.github.beacon.app.widget.StateWidgetActivity
 import kotlinx.coroutines.CancellationException
 import org.json.JSONObject
+import io.github.beacon.app.data.remote.topicSnapshot
+import io.github.beacon.app.core.labelResource
 
 @Composable
 internal fun StatesFilterAction(showHidden: Boolean, onChange: (Boolean) -> Unit) {
@@ -122,12 +124,7 @@ internal fun StatesPage(
 @Composable
 internal fun StateListCard(row: JSONObject, onOpen: () -> Unit) {
     val now=System.currentTimeMillis()
-    val status=when {
-        row.optBoolean("_waiting") -> "等待数据"
-        row.optLong("expires_at_ms") in 1..now -> "已过期"
-        row.optLong("stale_at_ms") in 1..now -> "数据较旧"
-        else -> "数据有效"
-    }
+    val status=androidx.compose.ui.res.stringResource(row.topicSnapshot().status(now).labelResource)
     BeaconCard(onClick=onOpen,modifier=Modifier.fillMaxWidth(),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surfaceContainerLow)) {
         BeaconListCardColumn(verticalInset=BeaconUiMetrics.MessageCardVerticalInset) {
             BeaconText(row.optString("title").ifBlank{row.optString("topic_key")},

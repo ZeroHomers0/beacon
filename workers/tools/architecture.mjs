@@ -5,6 +5,7 @@ import { dirname, posix } from "node:path";
 // Explicit dependency policy: API depends on ports, storage never owns HTTP.
 const policy = {
   "domain.ts": [],
+  "observability.ts": [],
   "state-version.ts": [],
   "blocks.ts": ["domain.ts", "state-version.ts"],
   "protocol.ts": [],
@@ -13,7 +14,7 @@ const policy = {
   "ports.ts": ["domain.ts", "states.ts"],
   "http.ts": ["domain.ts"],
   "bark.ts": ["domain.ts", "http.ts"],
-  "api.ts": ["blocks.ts", "domain.ts", "protocol.ts", "ports.ts", "http.ts", "bark.ts"],
+  "api.ts": ["observability.ts", "blocks.ts", "domain.ts", "protocol.ts", "ports.ts", "http.ts", "bark.ts"],
   "store/schema.ts": ["domain.ts", "states.ts", "topics.ts"],
   "store/identity.ts": ["domain.ts", "protocol.ts"],
   "store/messages.ts": ["topics.ts", "states.ts", "domain.ts", "ports.ts", "store/identity.ts"],

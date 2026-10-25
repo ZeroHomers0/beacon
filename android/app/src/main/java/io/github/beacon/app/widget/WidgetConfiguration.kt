@@ -13,6 +13,12 @@ internal object WidgetConfiguration {
         "text_size" to 16, "list_start" to 1, "list_count" to 12, "list_lines" to 1, "list_rank" to true,
     )
 
+    /** Restore only inherited visual defaults. Binding, content order, template and refresh stay intact. */
+    fun resetAppearance(raw: String): JSONObject = JSONObject(raw).apply {
+        listOf("color","background","bands","global_color","content_colors","number_scale",
+            "label_scale","stroke_scale","text_size").forEach { remove(it) }
+    }
+
     fun equivalent(first: String, second: String, format: String): Boolean =
         canonical(normalize(first, format)) == canonical(normalize(second, format))
 

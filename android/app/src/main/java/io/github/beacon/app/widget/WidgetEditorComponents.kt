@@ -32,6 +32,8 @@ import io.github.beacon.app.ui.components.*
 import io.github.beacon.app.ui.icons.BeaconIcons
 import org.json.JSONArray
 import org.json.JSONObject
+import io.github.beacon.app.data.remote.topicSnapshot
+import io.github.beacon.app.core.labelResource
 
 @Composable
 internal fun WidgetPreview(row:JSONObject?,config:JSONObject,size:SizeF,actual:Boolean,format:WidgetFormat,error:String?=null) {
@@ -107,7 +109,7 @@ internal fun WidgetMetricSelector(row:JSONObject,config:JSONObject,onChange:(JSO
 
 @Composable
 internal fun WidgetTemplateSelector(row:JSONObject,config:JSONObject,size:SizeF,onSelect:(String)->Unit){
-    SettingsGroup("模板样式"){
+    SettingsGroup(androidx.compose.ui.res.stringResource(io.github.beacon.app.R.string.widget_display_style)){
         Column(Modifier.padding(BeaconUiMetrics.CardInset),verticalArrangement=Arrangement.spacedBy(BeaconUiMetrics.Gap8)){
             WidgetRenderer.templates.sortedBy{WidgetConfigRules.layoutError(row,JSONObject(config.toString()).put("template",it),size.width.toInt(),size.height.toInt())!=null}.chunked(2).forEach{pair->
                 Row(horizontalArrangement=Arrangement.spacedBy(BeaconUiMetrics.Gap8)){
@@ -181,7 +183,7 @@ internal fun WidgetStateDetail(row:JSONObject,id:Int,cache:StateCache,onEdit:()-
     val progress=(0 until array.length()).map{array.getJSONObject(it)}.filter{it.optString("kind")=="progress"}
     var primary by remember(key){mutableStateOf(cache.preference("primary:$key"))}
     val now=System.currentTimeMillis()
-    val status=when{row.optBoolean("_waiting")->"等待数据";row.optLong("expires_at_ms") in 1..now->"已过期";row.optLong("stale_at_ms") in 1..now->"数据较旧";else->"数据有效"}
+    val status=androidx.compose.ui.res.stringResource(row.topicSnapshot().status(now).labelResource)
     Column(verticalArrangement=Arrangement.spacedBy(BeaconUiMetrics.SettingsGroupGap)){
         SettingsGroup("状态概览"){
             Column(Modifier.padding(BeaconUiMetrics.CardInset),verticalArrangement=Arrangement.spacedBy(BeaconUiMetrics.Gap8)){
@@ -202,6 +204,10 @@ internal fun WidgetStateDetail(row:JSONObject,id:Int,cache:StateCache,onEdit:()-
             Column(Modifier.padding(horizontal=BeaconUiMetrics.CardInset)){
                 BeaconPreferenceToggle("显示静默状态通知","仅更新这一主题的通知",notify){value->notify=value;cache.preference("notify:$key",if(value)"1"else"0");cache.preference("dismiss:$key","");StateNotifications.refresh(context);StateRefreshReceiver.schedule(context)}
             }
+            io.github.beacon.app.feature.settings.TemporaryMuteAction(
+                io.github.beacon.app.domain.model.MuteScope(io.github.beacon.app.domain.model.MuteKind.TOPIC,
+                    row.optString("local_source"),row.optString("local_identity")),
+                androidx.compose.ui.res.stringResource(io.github.beacon.app.R.string.mute_topic))
             if(progress.isNotEmpty())BeaconDropdownPreference("通知主内容",progress.map{it.optString("label",it.optString("id"))},progress.indexOfFirst{it.optString("id")==primary}.coerceAtLeast(0),settingsRow=true,icon=BeaconIcons.Tune){index->primary=progress[index].optString("id");cache.preference("primary:$key",primary);StateNotifications.refresh(context)}
         }
         SettingsGroup("主题显示"){

@@ -63,6 +63,23 @@ class AdminTopicsTest {
         assertNull(model.state.value.actionFailure)
         assertNotNull(model.state.value.topicsFailure)
     }
+    @Test fun destructiveOverviewMutationDoesNotReplayWhenRefreshFails() {
+        val backend=TopicBackend(true)
+        val model=ServerAdminViewModel{_,_->backend}
+        rule.runOnUiThread{model.login("https://example.invalid","a".repeat(64))}
+        rule.waitUntil(10000){model.state.value.loggedIn&&!model.state.value.busy}
+        backend.failOverviewAfterMutation=true
+        for(operation in listOf<()->Unit>({model.clearMessages()},{model.deleteDevice("phone")},{model.deleteApplication("application")})) {
+            rule.runOnUiThread{operation()}
+            rule.waitUntil(10000){!model.state.value.busy}
+            assertNull(model.state.value.actionFailure)
+            assertNull(model.state.value.awaiting)
+            assertNotNull(model.state.value.refreshFailure)
+            assertEquals(R.string.admin_topic_refresh_after_success_failed,model.state.value.feedback)
+        }
+        assertEquals(3,backend.overviewMutations)
+    }
+
     @Test fun defaultSourceManagementWorksWithoutApplicationsInMiuix()=verify(BeaconUiStyle.MIUIX)
     @Test fun defaultSourceManagementWorksWithoutApplicationsInMaterial()=verify(BeaconUiStyle.MATERIAL3)
 
@@ -84,10 +101,14 @@ class AdminTopicsTest {
         rule.onNodeWithText("创建",substring=false).assertIsNotEnabled()
         rule.onNode(hasSetTextAction() and hasAnyAncestor(hasTestTag("topic-name"))).performTextInput("预创建主题")
         rule.onNodeWithText("创建",substring=false).assertIsEnabled()
-        val cancelBounds=rule.onNode(hasText("取消") and hasClickAction()).fetchSemanticsNode().boundsInRoot
-        val createBounds=rule.onNode(hasText("创建") and hasClickAction()).fetchSemanticsNode().boundsInRoot
-        assertEquals(cancelBounds.width,createBounds.width,1f)
-        assertEquals(cancelBounds.center.y,createBounds.center.y,1f)
+        val buttons=rule.onAllNodes((hasText("取消") or hasText("创建")) and hasClickAction()).fetchSemanticsNodes()
+        // Read both positions in one frame; the IME can move the MIUIX dialog between reads.
+        rule.runOnIdle{
+            val cancelBounds=buttons.single{it.config[androidx.compose.ui.semantics.SemanticsProperties.Text].any{value->value.text=="取消"}}.boundsInRoot
+            val createBounds=buttons.single{it.config[androidx.compose.ui.semantics.SemanticsProperties.Text].any{value->value.text=="创建"}}.boundsInRoot
+            assertEquals(cancelBounds.width,createBounds.width,1f)
+            assertEquals(cancelBounds.center.y,createBounds.center.y,1f)
+        }
         val folder=requireNotNull(rule.activity.getExternalFilesDir("state-qa"));folder.mkdirs()
         java.io.File(folder,"topic_create_${style.name}.png").outputStream().use{androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot().compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
         rule.onNodeWithText("创建",substring=false).performClick()
@@ -143,7 +164,7 @@ class AdminTopicsTest {
         val folder=requireNotNull(rule.activity.getExternalFilesDir("state-qa"));folder.mkdirs()
         java.io.File(folder,"admin_topics_${style.name}.png").outputStream().use{rule.onRoot().captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
         rule.onNodeWithContentDescription(rule.activity.getString(R.string.admin_more_actions)).performClick()
-        rule.onNodeWithText("清空当前状态").performClick()
+        rule.onNodeWithText(rule.activity.getString(R.string.admin_topic_clear)).performClick()
         rule.onNodeWithText("清空",substring=false).performClick()
         rule.waitUntil(10000){backend.cleared&&!model.state.value.busy}
         assertEquals("",backend.clearedIdentity.getString("application_id"));assertEquals(3,backend.clearedIdentity.getInt("revision"))
@@ -159,7 +180,17 @@ class AdminTopicsTest {
         @Volatile var cleared=false
         var clearedIdentity=JSONObject()
         @Volatile var catalogRow:JSONObject?=null
-        override fun overview()=JSONObject("""{"server_id":"test-server","protocol":1,"storage":{"messages":0,"pending":0,"database_allocated_bytes":4096},"devices":[{"device_id":"phone","name":"测试手机","revoked":false}],"applications":[]}""").put("topic_catalog_protocol",if(catalog)1 else 0)
+        @Volatile var failOverviewAfterMutation=false
+        @Volatile var failOverview=false
+        var overviewMutations=0
+        override fun clearMessages():JSONObject {overviewMutations++;failOverview=failOverviewAfterMutation;return JSONObject()}
+        override fun deleteDevice(id:String):JSONObject {overviewMutations++;failOverview=failOverviewAfterMutation;return JSONObject()}
+        override fun deleteApplication(id:String):JSONObject {overviewMutations++;failOverview=failOverviewAfterMutation;return JSONObject()}
+        override fun overview():JSONObject {
+            if(failOverview)throw java.io.IOException("read failed")
+            return overviewResult()
+        }
+        private fun overviewResult()=JSONObject("""{"server_id":"test-server","protocol":1,"storage":{"messages":0,"pending":0,"database_allocated_bytes":4096},"devices":[{"device_id":"phone","name":"测试手机","revoked":false}],"applications":[]}""").put("topic_catalog_protocol",if(catalog)1 else 0)
         override fun topics(query:JSONObject):JSONObject {
             if(failReads)throw java.io.IOException("read failed")
             return JSONObject().put("topics",catalogRow?.let{JSONArray().put(it)}?:JSONArray()).put("total",if(catalogRow==null)0 else 1).put("has_more",false)

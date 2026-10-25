@@ -2,6 +2,8 @@ package io.github.beacon.app.widget
 
 import android.graphics.*
 import org.json.JSONObject
+import io.github.beacon.app.data.remote.topicSnapshot
+import io.github.beacon.app.domain.model.DataStatus
 import kotlin.math.*
 
 /** Shared by native desktop RemoteViews and the configuration preview. No network assets. */
@@ -48,7 +50,7 @@ object WidgetRenderer {
         c.drawRoundRect(RectF(0f,0f,w.toFloat(),h.toFloat()),cornerRadius,cornerRadius,p)
         val template=config.optString("template","horizontal_bars")
 
-        val now=System.currentTimeMillis();val expired=row!=null&&(row.optLong("expires_at_ms") in 1..now);val stale=row!=null&&(row.optLong("stale_at_ms") in 1..now)
+        val now=System.currentTimeMillis();val dataStatus=row?.topicSnapshot()?.status(now) ?: DataStatus.MISSING;val expired=dataStatus==DataStatus.EXPIRED;val stale=dataStatus==DataStatus.STALE
         text(config.optString("title").ifBlank{row?.optString("title")?:"Beacon 数据"},pad,pad+13*scale,13f,bold=true,cap=12)
         if(row?.optBoolean("_topic_deleted")==true||row?.optBoolean("_waiting")==true){placeholder(if(row.optBoolean("_topic_deleted"))"主题已删除"else"等待数据");return bitmap}
         if(row==null||expired){placeholder(if(expired)"已过期" else if(config.optString("identity").isBlank())WidgetPlaceholder.UNBOUND else"内容已删除或尚未同步");return bitmap}

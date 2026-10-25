@@ -6,19 +6,25 @@ import androidx.compose.ui.Modifier
 import io.github.beacon.app.ui.components.*
 import io.github.beacon.app.ui.icons.BeaconIcons
 import org.json.JSONObject
+import io.github.beacon.app.data.remote.topicSnapshot
+import io.github.beacon.app.domain.model.DataStatus
 
 object WidgetHealth {
     fun online(context:android.content.Context):Boolean=runCatching{
         val manager=context.getSystemService(android.net.ConnectivityManager::class.java)
         manager.activeNetwork!=null
     }.getOrDefault(true)
-    fun description(row:JSONObject?,now:Long=System.currentTimeMillis(),online:Boolean=true):String=when{
-        row==null->"内容已删除或尚未同步，请重新选择主题"
-        row.optBoolean("_waiting")->"等待数据"
-        row.optLong("expires_at_ms") in 1..now->"已过期，等待新数据"
-        row.optLong("stale_at_ms") in 1..now->"数据较旧，展示最后一次结果"
+    fun description(row:JSONObject?,now:Long=System.currentTimeMillis(),online:Boolean=true):String {
+        val status=row?.topicSnapshot()?.status(now) ?: DataStatus.MISSING
+        return when{
+        status==DataStatus.MISSING->"内容已删除或尚未同步，请重新选择主题"
+        status==DataStatus.WAITING->"等待数据"
+        status==DataStatus.EXPIRED->"已过期，等待新数据"
+        status==DataStatus.STALE->"数据较旧，展示最后一次结果"
+        status==DataStatus.CLEARED->"数据已清空，等待新数据"
         !online->"网络未连通，展示最后一次结果"
         else->"数据有效"
+        }
     }
 }
 

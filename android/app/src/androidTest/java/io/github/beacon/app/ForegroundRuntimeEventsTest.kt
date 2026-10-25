@@ -26,6 +26,34 @@ class ForegroundRuntimeEventsTest {
 
     private fun main(action: () -> Unit) = instrumentation.runOnMainSync(action)
 
+    @Test fun arrivalsKeepHistoryUntilAnExplicitLatestRead() {
+        val source="new-arrivals-${java.util.UUID.randomUUID()}"
+        val repository=RuntimeRepository()
+        RuntimeMessageStore(context).use { store ->
+            try {
+                store.save(IncomingMessage(source,"old","Older","body",priority=0))
+                main{repository.start(context)}
+                await("bound"){repository.state.value.receivePlanLoaded&&!repository.state.value.messageBusy}
+                main{repository.readMessages(serverId=source,showStatus=false)}
+                await("history"){repository.state.value.messageQuery.serverId==source&&!repository.state.value.messageBusy}
+                main{repository.setMessageReading(true)}
+                store.save(IncomingMessage(source,"new","New","body",priority=0))
+                // A real runtime mutation publishes the same event-driven list invalidation.
+                context.sendBroadcast(NotificationNavigation.intent(context,MessageKey(source,"new"))
+                    .setClass(context,NotificationReadReceiver::class.java).setAction(NotificationReadReceiver.MARK_READ)
+                    .putExtra(NotificationReadReceiver.TAG,"beacon.batch.arrival-test"))
+                await("new count"){repository.state.value.newMessageCount==1L&&!repository.state.value.messageBusy}
+                assertEquals(listOf("old"),repository.state.value.messages.map{it.id})
+                main{repository.readMessages(showStatus=false)}
+                await("latest"){repository.state.value.newMessageCount==0L&&!repository.state.value.messageBusy&&repository.state.value.messages.firstOrNull()?.id=="new"}
+            }finally{
+                main{repository.close()}
+                for(table in listOf("messages","pending_ack","receipt_times","notification_intents"))
+                    store.writableDatabase.delete(table,"server=?",arrayOf(source))
+            }
+        }
+    }
+
     private fun await(label: String, timeoutMs: Long = 10_000, predicate: () -> Boolean) {
         val deadline = android.os.SystemClock.elapsedRealtime() + timeoutMs
         while (!predicate()) {

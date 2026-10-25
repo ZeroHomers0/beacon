@@ -77,6 +77,15 @@ func TestDeliveryFailureDoesNotUndoAcceptanceOrBlockOtherDevices(t *testing.T) {
 }
 
 func TestShutdownPreservesUnprocessedLeases(t *testing.T) {
+	for _, test := range []struct {
+		name  string
+		drain func(context.Context, service.DeliveryQueue, service.Publisher, int) (service.DeliveryResult, error)
+	}{{"serial", service.DrainDelivery}, {"isolated", service.DrainDeliveryIsolated}} {
+		t.Run(test.name, func(t *testing.T) { shutdownPreservesLeases(t, test.drain) })
+	}
+}
+
+func shutdownPreservesLeases(t *testing.T, drain func(context.Context, service.DeliveryQueue, service.Publisher, int) (service.DeliveryResult, error)) {
 	repository, err := store.Open(filepath.Join(t.TempDir(), "shutdown.db"))
 	if err != nil {
 		t.Fatal(err)
@@ -95,7 +104,7 @@ func TestShutdownPreservesUnprocessedLeases(t *testing.T) {
 	defer cancel()
 	calls := 0
 	publisher := testPublisher(func(ctx context.Context, _, _ string, _ domain.Message) error { calls++; cancel(); return ctx.Err() })
-	result, err := service.DrainDelivery(ctx, repository, publisher, 10)
+	result, err := drain(ctx, repository, publisher, 10)
 	if !errors.Is(err, context.Canceled) || result.Claimed != 2 || result.Retrying != 1 || calls != 1 {
 		t.Fatalf("bad shutdown: %+v %v", result, err)
 	}
@@ -106,6 +115,32 @@ func TestShutdownPreservesUnprocessedLeases(t *testing.T) {
 	tasks, err := repository.ClaimPublish(time.Now().Add(time.Minute).UnixMilli(), 10)
 	if err != nil || len(tasks) != 2 {
 		t.Fatal("shutdown work cannot be recovered")
+	}
+}
+
+func TestIsolatedDeliveryRechecksRevocationInsideDeviceGroup(t *testing.T) {
+	repository, err := store.Open(filepath.Join(t.TempDir(), "isolated-revoke.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer repository.Close()
+	device, err := repository.CreateDevice("phone")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 2; i++ {
+		if _, err = repository.SaveMessage(device.DeviceID, "title", "", "body"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	calls := 0
+	publisher := testPublisher(func(_ context.Context, _, deviceID string, _ domain.Message) error {
+		calls++
+		return repository.RevokeDevice(deviceID)
+	})
+	result, err := service.DrainDeliveryIsolated(context.Background(), repository, publisher, 4)
+	if err != nil || calls != 1 || result.Published != 0 || result.Skipped != 2 {
+		t.Fatalf("revoked group published stale work: %+v calls=%d error=%v", result, calls, err)
 	}
 }
 

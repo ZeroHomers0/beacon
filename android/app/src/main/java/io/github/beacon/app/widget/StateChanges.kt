@@ -11,14 +11,10 @@ import androidx.lifecycle.repeatOnLifecycle
 
 /** Package-scoped invalidation works across the UI and reception processes without polling. */
 object StateChanges {
-    const val ACTION="io.github.beacon.STATE_CACHE_CHANGED"
-    fun ui(context:Context){context.sendBroadcast(Intent(ACTION).setPackage(context.packageName))}
-    fun data(context:Context,source:String,identities:List<String>?){
-        // UI invalidation is emitted once by the receiver after the merged refresh.
-        context.sendBroadcast(Intent(context,StateRefreshReceiver::class.java).putExtra("source",source).apply{
-            identities?.let{putStringArrayListExtra("identities",ArrayList(it))}
-        })
-    }
+    const val ACTION=io.github.beacon.app.core.TopicChanges.UI_CHANGED
+    fun ui(context:Context)=io.github.beacon.app.core.TopicChanges.ui(context)
+    fun data(context:Context,source:String,identities:List<String>?)=
+        io.github.beacon.app.core.TopicChanges.data(context,source,identities)
 }
 
 /** A single suspended deadline for visible content; cancellation on STOP leaves no UI timer. */

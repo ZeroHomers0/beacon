@@ -132,7 +132,7 @@ internal constructor(
         if (stopped.get() || terminal) return
         retire()
         diagnostics =
-            diagnostics.copy(attempts = (diagnostics.attempts + 1).coerceAtMost(Int.MAX_VALUE - 1))
+            diagnostics.copy(attempts = (diagnostics.attempts + 1).coerceAtMost(Int.MAX_VALUE - 1),nextRetryAtMs=0)
         val epoch = attempt
         state(State.CONNECTING)
         try {
@@ -170,6 +170,8 @@ internal constructor(
                     failure = RealtimeFailure.NONE,
                     retries = failures,
                     connectedAtMs = System.currentTimeMillis(),
+                    nextRetryAtMs=0,
+                    disconnectedSinceMs=0,
                 )
             state(State.CONNECTED)
             onSubscribed()
@@ -191,7 +193,8 @@ internal constructor(
             )
         retire()
         val cause = RealtimeFailureClassifier.classify(error)
-        diagnostics = diagnostics.copy(failure = cause)
+        diagnostics = diagnostics.copy(failure = cause,nextRetryAtMs=0,
+            disconnectedSinceMs=diagnostics.disconnectedSinceMs.takeIf{it>0}?:System.currentTimeMillis())
         when {
             cause == RealtimeFailure.AUTH -> {
                 terminal = true
@@ -216,17 +219,16 @@ internal constructor(
                 if (connectedAtMs?.let { nowMs() - it >= stableAfterMs } == true) failures = 0
                 connectedAtMs = null
                 failures = (failures + 1).coerceAtMost(100)
-                diagnostics = diagnostics.copy(retries = failures)
+                val delay=maxOf(RealtimeReconnectPolicy.jitteredDelayMs(failures),
+                    io.github.beacon.app.domain.receive.RetryAfterPolicy.from(error) ?: 0L)
+                diagnostics = diagnostics.copy(retries = failures,nextRetryAtMs=System.currentTimeMillis()+delay)
                 state(State.RETRYING)
                 // The executor keeps its 15-second idle release even across a distant retry
                 // deadline; a parked thread would otherwise outlive the whole backoff.
                 retry =
                     executor.schedule(
                         ::connect,
-                        maxOf(
-                            RealtimeReconnectPolicy.jitteredDelayMs(failures),
-                            io.github.beacon.app.domain.receive.RetryAfterPolicy.from(error) ?: 0L,
-                        ),
+                        delay,
                         TimeUnit.MILLISECONDS,
                     )
             }

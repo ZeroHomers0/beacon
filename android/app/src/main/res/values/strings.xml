@@ -1,4 +1,5 @@
 <resources>
+    <string name="msg_new_arrivals">有 %1$d 条新消息 · 查看</string>
     <string name="settings_save_completed">已保存</string>
     <string name="settings_danger_section_title">危险操作</string>
     <string name="ui_mark_all_read_action">全部已读</string>
@@ -577,4 +578,33 @@
     <string name="action_create">创建</string>
     <string name="action_send_test">发送测试</string>
     <string name="admin_topic_refresh_after_success_failed">操作已完成，列表刷新失败，请下拉刷新。</string>
+    <string name="data_status_missing">内容已删除或尚未同步</string>
+    <string name="data_status_waiting">等待数据</string>
+    <string name="data_status_active">数据有效</string>
+    <string name="data_status_stale">数据较旧</string>
+    <string name="data_status_expired">已过期</string>
+    <string name="data_status_cleared">数据已清空</string>
+    <string name="mute_title">临时静音</string>
+    <string name="mute_application">临时静音此应用</string>
+    <string name="mute_topic">临时静音此主题</string>
+    <string name="mute_action_hint">选择时长，立即生效</string>
+    <string name="mute_explanation">只暂停提醒，消息仍会保存，桌面组件继续更新；重要通知也会静音。到期后恢复新提醒，不补发静音期间的旧提醒。</string>
+    <string name="mute_duration">静音时长</string>
+    <string name="mute_not_active">未设置临时静音</string>
+    <string name="mute_until">静音至 %1$s</string>
+    <string name="mute_restore">恢复提醒</string>
+    <string name="mute_one_hour">静音1小时</string>
+    <string name="mute_eight_hours">静音8小时</string>
+    <string name="mute_morning">静音到明早8点</string>
+    <string name="mute_global_still_active">全局临时静音仍生效。恢复此范围的提醒不会取消其他范围的静音。</string>
+    <string name="mute_failed">静音设置读取或保存未完成，请重试核对当前设置。</string>
+    <string name="realtime_next_retry">下次连接重试</string>
+    <string name="realtime_no_retry">当前没有安排重试</string>
+    <string name="mute_group">提醒控制</string>
+    <string name="widget_display_style">显示样式</string>
+    <string name="widget_update_hints">更新与提示</string>
+    <string name="widget_restore_appearance">恢复默认外观</string>
+    <string name="widget_restore_defaults">恢复默认</string>
+    <string name="widget_restore_appearance_hint">背景跟随手机主题，颜色自动选择</string>
+    <string name="widget_restore_appearance_confirm">仅恢复颜色、背景、字号与图形粗细。绑定内容、顺序、模板和更新策略保持不变，保存后应用到桌面。</string>
 </resources>

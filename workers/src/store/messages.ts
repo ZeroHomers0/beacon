@@ -262,6 +262,14 @@ export class MessageStore extends IdentityStore implements Repository {
       return count;
     });
   }
+  ready():boolean { return Number(this.first("SELECT 1 AS ready")?.ready)===1; }
+  operationalStats(now:number):Record<string,number> {
+    const row=this.first(`SELECT count(*) AS queued,coalesce(min(m.created),0) AS oldest,
+      coalesce(sum(o.attempts>0),0) AS retrying FROM publish_outbox o JOIN messages m ON m.seq=o.message_seq`)!;
+    const oldest=Number(row.oldest);
+    return {sampled_at_ms:now,queued_realtime_messages:Number(row.queued),
+      oldest_realtime_age_ms:oldest>0?Math.max(0,now-oldest):0,retrying_realtime_messages:Number(row.retrying)};
+  }
   stats() {
     const counts = this
       .first(`SELECT count(*) AS messages,coalesce(sum(acked=0),0) AS pending,coalesce(sum(acked=1),0) AS confirmed,

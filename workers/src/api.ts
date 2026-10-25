@@ -1,3 +1,4 @@
+import { RequestMetrics } from "./observability";
 import { BLOCK_KINDS, validateBlocks } from "./blocks";
 import {
   validateMessageActions,
@@ -24,6 +25,8 @@ import {
 } from "./protocol";
 import type { Repository, Transport } from "./ports";
 export class API {
+  private metrics=new RequestMetrics();
+  private operational:{until:number;sample:Record<string,number>}|null=null;
   constructor(
     private store: Repository,
     private transport: Transport,
@@ -38,7 +41,18 @@ export class API {
       /* Persisted outbox + alarm retry. */
     }
   }
-  async handle(request: Request): Promise<Response> {
+  async handle(request:Request):Promise<Response> {
+    const start=performance.now();
+    try {
+      const response=await this.handleRequest(request);
+      this.metrics.observe(new URL(request.url).pathname,response.status,performance.now()-start);
+      return response;
+    } catch(error) {
+      this.metrics.observe(new URL(request.url).pathname,(error as {status?:number}).status??500,performance.now()-start);
+      throw error;
+    }
+  }
+  private async handleRequest(request: Request): Promise<Response> {
     const url = new URL(request.url);
     const path = url.pathname;
     if (path === "/healthz") {
@@ -365,6 +379,22 @@ export class API {
       difference |= actual.charCodeAt(i) ^ expected.charCodeAt(i);
     if (!this.admin || difference) reject(401, "unauthorized");
     if (url.search) reject(400, "invalid_query");
+    if(path==="/api/admin/ready") {
+      method(request,"GET");
+      if(!this.store.ready?.())reject(503,"not_ready");
+      return json({ready:true});
+    }
+    if(path==="/api/admin/metrics") {
+      method(request,"GET");
+      const now=Date.now(),tick=performance.now();
+      if(!this.operational||this.operational.until<=tick){
+        const sample=this.store.operationalStats?.(now);
+        if(!sample)reject(503,"observability_unavailable");
+        this.operational={until:tick+5000,sample};
+      }
+      return json({...this.metrics.snapshot(),delivery:this.operational.sample,
+        active_connections:this.transport.activeConnections?.()??0});
+    }
     if (path === "/api/admin/overview") {
       method(request, "GET");
       return json({

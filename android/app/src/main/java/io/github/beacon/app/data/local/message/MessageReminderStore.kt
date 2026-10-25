@@ -3,6 +3,8 @@ package io.github.beacon.app.data.local.message
 import android.database.sqlite.SQLiteOpenHelper
 import io.github.beacon.app.data.local.sql.MessageManagementSql
 import io.github.beacon.app.domain.model.MessageKey
+import io.github.beacon.app.domain.model.MuteScope
+import io.github.beacon.app.domain.model.MuteKind
 import io.github.beacon.app.domain.receive.NotificationIntent
 
 /** SQLite's compiled statement-variable ceiling; chunked so a large batch stays one commit. */
@@ -11,10 +13,27 @@ private const val SQLITE_MAX_VARIABLES = 500
 /** Durable message reminders, their consumption and notification-driven read marking. */
 internal class MessageReminderStore(private val helper: SQLiteOpenHelper) {
 
+    /** Suppress the whole scoped backlog, not just the first 200 visible reminders. */
+    fun suppressNotifications(scopes:List<MuteScope>) {
+        require(scopes.size<=1000)
+        scopes.forEach{it.validate()}
+        val eventScopes=scopes.filter{it.kind!=MuteKind.TOPIC}
+        if(eventScopes.isEmpty())return
+        val db=helper.writableDatabase
+        db.beginTransaction()
+        try {
+            if(eventScopes.any{it.kind==MuteKind.GLOBAL})db.delete("notification_intents",null,null)
+            else for(scope in eventScopes)db.execSQL(
+                "DELETE FROM notification_intents WHERE server=? AND id IN (SELECT id FROM messages WHERE server=? AND application_id=?)",
+                arrayOf(scope.source,scope.source,scope.identity))
+            db.setTransactionSuccessful()
+        }finally{db.endTransaction()}
+    }
+
     fun pendingNotifications(): List<NotificationIntent> =
         helper.readableDatabase
             .rawQuery(
-                "SELECT n.seq,m.source_created,m.title,m.body,m.server,m.id,m.priority FROM notification_intents n JOIN messages m ON m.server=n.server AND m.id=n.id WHERE m.delete_token='' ORDER BY n.seq LIMIT 200",
+                "SELECT n.seq,m.source_created,m.title,m.body,m.server,m.id,m.priority,m.application_id FROM notification_intents n JOIN messages m ON m.server=n.server AND m.id=n.id WHERE m.delete_token='' ORDER BY n.seq LIMIT 200",
                 null,
             )
             .use { cursor ->
@@ -30,6 +49,7 @@ internal class MessageReminderStore(private val helper: SQLiteOpenHelper) {
                                 cursor.getString(5),
                             ),
                             priority = cursor.getInt(6),
+                            applicationId = cursor.getString(7),
                         )
                     )
                 }
@@ -58,6 +78,8 @@ internal class MessageReminderStore(private val helper: SQLiteOpenHelper) {
                                 cursor.getString(2),
                                 cursor.getString(3),
                                 key,
+                                priority=cursor.getInt(4),
+                                applicationId=cursor.getString(5),
                             )
                         else null
                     }

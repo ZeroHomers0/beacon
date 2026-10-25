@@ -55,7 +55,11 @@ fun MessageDetailScreen(
         var raw by rememberSaveable { mutableStateOf(false) }
         var rawInfo by rememberSaveable { mutableStateOf(false) }
         var menu by remember { mutableStateOf(false) }
+        var muteApplication by rememberSaveable { mutableStateOf(false) }
         var shareFailed by remember { mutableStateOf(false) }
+        if(muteApplication&&message.applicationId.isNotBlank())io.github.beacon.app.feature.settings.TemporaryMuteDialog(
+            io.github.beacon.app.domain.model.MuteScope(io.github.beacon.app.domain.model.MuteKind.APPLICATION,message.server,message.applicationId),
+            stringResource(R.string.mute_application)){muteApplication=false}
         val missing = stringResource(R.string.msg_detail_not_provided_label)
         Column(
             modifier
@@ -114,6 +118,8 @@ fun MessageDetailScreen(
                                     )
                                 }
                                 BeaconDropdownMenu(menu && !busy, { menu = false }) {
+                                    if(message.applicationId.isNotBlank())BeaconDropdownMenuItem(
+                                        {BeaconText(stringResource(R.string.mute_application))}){menu=false;muteApplication=true}
                                     MessageMenuItems(
                                         message.isRead,
                                         onToggleRead = {

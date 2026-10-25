@@ -8,13 +8,16 @@ import android.os.Build
 import io.github.beacon.app.R
 import io.github.beacon.app.data.local.StateCache
 import org.json.JSONObject
+import io.github.beacon.app.data.remote.topicSnapshot
+import io.github.beacon.app.domain.model.DataStatus
+import io.github.beacon.app.domain.policy.StateNotificationPolicy
 
 class StateDismissReceiver: BroadcastReceiver(){
     override fun onReceive(context:Context,intent:Intent){val key=intent.getStringExtra("key")?:return;StateCache(context).use{it.preference("dismiss:$key","1")}}
 }
 object StateNotifications {
     @Synchronized fun refresh(context:Context,changes:Map<String,Set<String>?>?=null){
-        if(Build.VERSION.SDK_INT>=33&&context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)return
+        val postable=Build.VERSION.SDK_INT<33||context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)==PackageManager.PERMISSION_GRANTED
         val manager=context.getSystemService(NotificationManager::class.java)
         if(manager.getNotificationChannel("beacon_states")==null)manager.createNotificationChannel(NotificationChannel("beacon_states","状态更新",NotificationManager.IMPORTANCE_LOW))
         if(manager.getNotificationChannel("beacon_states_first")==null)manager.createNotificationChannel(NotificationChannel("beacon_states_first","状态首次提醒",NotificationManager.IMPORTANCE_DEFAULT))
@@ -23,6 +26,7 @@ object StateNotifications {
             val active=bindings.map{it.first+":"+it.second}.toSet()
             val activeNotifications=manager.activeNotifications
             activeNotifications.filter{it.tag?.startsWith("state:")==true&&it.tag!!.removePrefix("state:") !in active}.forEach{manager.cancel(it.tag,it.id)}
+            val mutes=io.github.beacon.app.data.local.TemporaryMuteStore(context).rules()
             val quiet=io.github.beacon.app.data.local.QuietHoursStore(context).load()
             val offline=!WidgetHealth.online(context)
             val interactive=context.getSystemService(android.os.PowerManager::class.java).isInteractive
@@ -30,13 +34,23 @@ object StateNotifications {
                 if(changes!=null&&(!changes.containsKey(source)||changes[source]?.let{identity !in it}==true))continue
                 val key=source+":"+identity
                 val row=cache.find(source,identity)
-                if(row==null||row.optBoolean("_waiting")||row.optBoolean("_topic_deleted")){manager.cancel("state:$key",1);continue}
-                if(cache.preference("notify:$key")!="1"||cache.preference("dismiss:$key")=="1") {manager.cancel("state:$key",1);continue}
-                val now=System.currentTimeMillis();
-                val priority=row.optInt("priority",5)
-                if(priority<=1||quiet.active(now,java.time.ZoneId.systemDefault())&&quiet.behavior==io.github.beacon.app.domain.model.QuietHoursBehavior.SAVE_ONLY){manager.cancel("state:$key",1);continue}
-if(row.optLong("expires_at_ms") in 1..now){manager.cancel("state:$key",1);continue}
-                val stale=row.optLong("stale_at_ms") in 1..now
+                val now=System.currentTimeMillis()
+                val dataStatus=row?.topicSnapshot()?.status(now) ?: DataStatus.MISSING
+                val priority=row?.optInt("priority",5) ?: 5
+                // Consume a muted snapshot even without notification permission. Expiry must not
+                // turn an old snapshot into a first alert; only a newer accepted update may resume.
+                val stamp=row?.let{"${it.optLong("revision")}:${it.optLong("accepted_at_ms")}"}.orEmpty()
+                if(mutes.muted(source,row?.optString("application_id").orEmpty(),identity,now)){
+                    cache.preference("muted-snapshot:$key",stamp)
+                    manager.cancel("state:$key",1);continue
+                }
+                if(row==null)cache.preference("muted-snapshot:$key","")
+                if((stamp.isNotEmpty()&&cache.preference("muted-snapshot:$key")==stamp) || StateNotificationPolicy.shouldCancel(dataStatus,cache.preference("notify:$key")=="1",
+                        cache.preference("dismiss:$key")=="1",priority,quiet,now,java.time.ZoneId.systemDefault())) {
+                    manager.cancel("state:$key",1);continue
+                }
+                if(row==null||!postable)continue
+                val stale=dataStatus==DataStatus.STALE
                 val selected=cache.preference("primary:$key");val blocks=row.optJSONArray("blocks")
                 val block=(0 until (blocks?.length()?:0)).mapNotNull{blocks?.optJSONObject(it)}.firstOrNull{it.optString("kind")=="progress"&&(selected.isEmpty()||it.optString("id")==selected)}
                 val intent=Intent(context,StateWidgetActivity::class.java).putExtra("source",row.optString("local_source")).putExtra("identity",row.optString("local_identity")).putExtra("detail",true).setData(android.net.Uri.parse("beacon://state/"+android.net.Uri.encode(key)))
@@ -62,7 +76,7 @@ if(row.optLong("expires_at_ms") in 1..now){manager.cancel("state:$key",1);contin
                 val interval=if(interactive)5000L else 60000L
                 val terminal=status in listOf("completed","failed","cancelled")
                 if(!terminal&&exists&&now>=lastAt&&now-lastAt<interval){StateRefreshReceiver.after(context,interval-(now-lastAt));continue}
-                val channel=if(last.isEmpty()&&priority>=4&&!quiet.active(now,java.time.ZoneId.systemDefault()))"beacon_states_first"else"beacon_states"
+                val channel=if(StateNotificationPolicy.shouldAlert(last.isEmpty(),priority,quiet,now,java.time.ZoneId.systemDefault()))"beacon_states_first"else"beacon_states"
                 val builder=Notification.Builder(context,channel).setSmallIcon(R.drawable.ic_notification).setContentTitle(row.optString("title")).setContentText(summary).setStyle(Notification.BigTextStyle().bigText(summary)).setOnlyAlertOnce(true).setContentIntent(open).setDeleteIntent(dismiss).setVisibility(Notification.VISIBILITY_PRIVATE)
                 if(block!=null&&!stale&&row.optString("status") !in listOf("completed","failed","cancelled")){if(block.optBoolean("indeterminate"))builder.setProgress(0,0,true)else{val min=block.optDouble("min",0.0);val max=block.optDouble("max");val value=block.optDouble("value");if(max>min&&value.isFinite())builder.setProgress(10000,(((value-min)/(max-min))*10000).toInt().coerceIn(0,10000),false)}}
                 action?.let{action->

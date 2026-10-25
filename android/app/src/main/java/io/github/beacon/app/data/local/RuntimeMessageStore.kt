@@ -265,6 +265,9 @@ class RuntimeMessageStore(
     override fun pendingNotifications(): List<NotificationIntent> =
         reminderStore.pendingNotifications()
 
+    fun suppressNotifications(scopes:List<io.github.beacon.app.domain.model.MuteScope>) =
+        reminderStore.suppressNotifications(scopes)
+
     /** Durable single-message reminder; never changes unread state or receive confirmations. */
     fun requestReminder(key: MessageKey): NotificationIntent? = reminderStore.requestReminder(key)
 

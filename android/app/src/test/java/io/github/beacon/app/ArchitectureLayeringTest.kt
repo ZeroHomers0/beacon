@@ -32,6 +32,13 @@ class ArchitectureLayeringTest {
     }
 
     @Test
+    fun dataDoesNotReferenceWidgetExecutorsEvenWithFullyQualifiedCalls() {
+        val offenders=File(sourceRoot(),DATA).walkTopDown().filter{it.isFile&&it.extension=="kt"}
+            .filter{it.readText().contains("io.github.beacon.app.widget.")}.toList()
+        assertTrue("Storage reports changes; outer layers select widget executors: $offenders",offenders.isEmpty())
+    }
+
+    @Test
     fun runtimeDoesNotDependOnUi() {
         val offenders =
             importsFrom(RUNTIME, forbidden = setOf("io.github.beacon.app.ui.", "io.github.beacon.app.feature."))

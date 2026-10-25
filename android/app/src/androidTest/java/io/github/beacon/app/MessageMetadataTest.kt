@@ -47,7 +47,10 @@ class MessageMetadataTest {
     @Test fun versionTwelveUpgradePreservesHistoryReceiptsAndReminders() = withContext { context ->
         RuntimeMessageStore(context).use { it.save(IncomingMessage("server", "legacy", "title", "body")) }
         SQLiteDatabase.openDatabase(context.getDatabasePath("beacon-messages.db").path, null, SQLiteDatabase.OPEN_READWRITE).use { db ->
-            for (column in listOf("application_id", "application_name", "message_group", "expires_at")) db.execSQL("ALTER TABLE messages DROP COLUMN $column")
+            // The fixture starts from today's schema; v12 did not contain these indexes.
+            db.execSQL("DROP INDEX IF EXISTS messages_application")
+            db.execSQL("DROP INDEX IF EXISTS messages_group")
+            for (column in listOf("application_id", "application_name", "message_group", "expires_at", "actions", "blocks")) db.execSQL("ALTER TABLE messages DROP COLUMN $column")
             db.version = 12
         }
         RuntimeMessageStore(context).use { store ->
@@ -66,5 +69,24 @@ class MessageMetadataTest {
             assertEquals(original, parcel.readMessage())
             assertEquals(0, parcel.dataAvail())
         } finally { parcel.recycle() }
+    }
+    @Test fun scopedMuteConsumesMoreThanOnePageWithoutChangingHistoryOrAck() = withContext { context ->
+        RuntimeMessageStore(context).use { store ->
+            val app="a".repeat(64)
+            val messages=(1..201).map{IncomingMessage("server","muted-$it","title","body",applicationId=app)}+
+                IncomingMessage("server","other-app","title","body",applicationId="b".repeat(64))+
+                IncomingMessage("other-server","other-source","title","body",applicationId=app)
+            messages.chunked(io.github.beacon.app.domain.receive.ReceiveBatchPipeline.MAX_BATCH_SIZE).forEach{store.saveBatch(it){true}}
+            assertEquals(203L,store.pendingReminderCount())
+            store.suppressNotifications(listOf(io.github.beacon.app.domain.model.MuteScope(
+                io.github.beacon.app.domain.model.MuteKind.APPLICATION,"server",app)))
+            assertEquals(2L,store.pendingReminderCount())
+            assertEquals(setOf("other-app","other-source"),store.pendingNotifications().map{it.key!!.id}.toSet())
+            for(table in listOf("messages","pending_ack"))store.readableDatabase.rawQuery("SELECT count(*) FROM $table",null).use{
+                assertTrue(it.moveToFirst());assertEquals(203,it.getInt(0))
+            }
+            store.suppressNotifications(listOf(io.github.beacon.app.domain.model.MuteScope.GLOBAL))
+            assertEquals(0L,store.pendingReminderCount())
+        }
     }
 }

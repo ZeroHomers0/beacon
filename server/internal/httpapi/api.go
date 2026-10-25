@@ -32,6 +32,7 @@ type API struct {
 	stream       *StreamHub
 	adminToken   string
 	metrics      *requestMetrics
+	observation  observationCache
 }
 
 func New(service *service.Service) *API {

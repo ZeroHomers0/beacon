@@ -360,17 +360,32 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
             )
         }
 
-    fun clearMessages() =
-        authenticated(R.string.admin_messages_cleared, AdminAction.CLEAR_MESSAGES) { client ->
-            client.clearMessages()
-            parseOverview(client.overview()).copy(endpoint = client.endpoint, loggedIn = true)
+    /** Confirmed mutation and best-effort overview refresh have independent outcomes. */
+    private fun mutateOverview(success: Int, action: AdminAction,
+        optimistic: (AdminUiState) -> AdminUiState = { it }, work: (ServerAdministration) -> Unit) {
+        val client=session ?: return
+        run(success,action,onSuccess={
+            try {
+                val result=withContext(Dispatchers.IO){parseOverview(client.overview())}
+                if(session===client) mutable.value=result.copy(endpoint=client.endpoint,loggedIn=true,busy=true,feedback=success)
+            } catch(cancelled:CancellationException){throw cancelled}
+            catch(_:Exception){
+                if(session===client) mutable.value=mutable.value.copy(
+                    refreshFailure=R.string.admin_request_failed,
+                    feedback=R.string.admin_topic_refresh_after_success_failed)
+            }
+        }) {
+            work(client)
+            optimistic(mutable.value).copy(awaiting=null,actionFailure=null)
         }
+    }
 
-    fun deleteDevice(id: String) =
-        authenticated(R.string.admin_device_deleted, AdminAction.DELETE_DEVICE) { client ->
-            client.deleteDevice(id)
-            parseOverview(client.overview()).copy(endpoint = client.endpoint, loggedIn = true)
-        }
+    fun clearMessages() = mutateOverview(R.string.admin_messages_cleared,AdminAction.CLEAR_MESSAGES,
+        optimistic={it.copy(messages=0,pending=0)}) { it.clearMessages() }
+
+    fun deleteDevice(id: String) = mutateOverview(R.string.admin_device_deleted,AdminAction.DELETE_DEVICE,
+        optimistic={current->current.copy(devices=current.devices.filterNot{it.id==id},
+            applications=current.applications.filterNot{it.deviceId==id},topicsLoaded=false)}) { it.deleteDevice(id) }
 
     fun revokeDevice(id: String) =
         authenticated(R.string.admin_device_revoked, AdminAction.REVOKE_DEVICE) { client ->
@@ -398,12 +413,8 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
             )
         }
 
-    fun deleteApplication(id: String) =
-        authenticated(R.string.admin_application_deleted, AdminAction.DELETE_APPLICATION) { client ->
-            client.deleteApplication(id)
-            // The application's messages are gone, so the overview counts are stale too.
-            parseOverview(client.overview()).copy(endpoint = client.endpoint, loggedIn = true)
-        }
+    fun deleteApplication(id: String) = mutateOverview(R.string.admin_application_deleted,AdminAction.DELETE_APPLICATION,
+        optimistic={current->current.copy(applications=current.applications.filterNot{it.id==id},topicsLoaded=false)}) { it.deleteApplication(id) }
 
     fun test(device: String, title: String, body: String, priority: Int) =
         authenticated(R.string.admin_test_accepted) { client ->

@@ -32,4 +32,5 @@ data class MessagePage(
     val nextBefore: Long?,
     val unread: Long = 0,
     val undo: DeleteUndo? = null,
+    val newerCount: Long = 0,
 )

@@ -51,6 +51,7 @@ export class BeaconInstance extends DurableObject<Env> implements Transport {
       return await negotiated(request, error(e));
     }
   }
+  activeConnections():number { return this.ctx.getWebSockets().filter(ws=>ws.readyState===WebSocket.OPEN).length; }
   async arm(): Promise<void> {
     // An alarm is committed before any state mutation. A crash after SQL commit
     // but before dispatch therefore always has a durable recovery wakeup.

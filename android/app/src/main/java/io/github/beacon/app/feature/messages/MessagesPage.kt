@@ -15,6 +15,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
@@ -33,6 +35,7 @@ import io.github.beacon.app.domain.policy.MessagePresentation
 import io.github.beacon.app.ipc.RuntimeActions
 import io.github.beacon.app.ui.components.ActionFlow
 import io.github.beacon.app.ui.components.BeaconEmptyState
+import io.github.beacon.app.ui.components.BeaconButton
 import io.github.beacon.app.ui.components.BeaconMotion
 import io.github.beacon.app.ui.components.BeaconPullToRefresh
 import io.github.beacon.app.ui.components.BeaconSearchBox
@@ -44,6 +47,7 @@ import io.github.beacon.app.ui.components.BeaconUiMetrics
 import io.github.beacon.app.ui.components.MessageItem
 import io.github.beacon.app.ui.icons.BeaconIcons
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 /**
  * Tag for the message list itself. Tests used to find it by the surrounding copy, which meant any
@@ -126,6 +130,20 @@ private fun MessagesContent(
     // The shared title only folds once the list has actually scrolled.
     val titleCollapsed by remember { derivedStateOf { scroll.firstVisibleItemIndex > 0 } }
     val busy = runtimeState.messageBusy
+    var jumpToLatest by remember { mutableStateOf(false) }
+    LaunchedEffect(jumpToLatest,busy,runtimeState.newMessageCount,runtimeState.messageLoadFailed) {
+        if(jumpToLatest && !busy) {
+            if(runtimeState.newMessageCount==0L) {
+                scroll.scrollToItem(0)
+                jumpToLatest=false
+            } else if(runtimeState.messageLoadFailed)jumpToLatest=false
+        }
+    }
+    LaunchedEffect(scroll,actions) {
+        snapshotFlow { scroll.firstVisibleItemIndex>0 || scroll.firstVisibleItemScrollOffset>0 }
+            .distinctUntilChanged().collect(actions::setMessageReading)
+    }
+    DisposableEffect(actions) { onDispose { actions.setMessageReading(false) } }
     // The pinned filter row and the chips read the same applied query, so they never disagree.
     val applied = runtimeState.messageQuery
     val pageState = io.github.beacon.app.domain.model.AsyncPageState.resolve(
@@ -327,209 +345,230 @@ private fun MessagesContent(
             },
             Modifier.fillMaxWidth().weight(1f),
         ) {
-            LazyColumn(
-                state = scroll,
-                modifier =
-                    Modifier.fillMaxSize().then(scrollModifier).testTag(MESSAGE_LIST_TAG),
-                contentPadding =
-                    PaddingValues(
-                        start = padding.calculateStartPadding(layoutDirection),
-                        end = padding.calculateEndPadding(layoutDirection),
-                        top = BeaconUiMetrics.Gap4,
-                        bottom = padding.calculateBottomPadding(),
-                    ),
-                verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.MessageCardGap),
-            ) {
-                if (selectionHint.isNotBlank())
-                    item(key = "selection-hint", contentType = "hint") {
-                        io.github.beacon.app.ui.components.SettingsNotice(selectionHint)
-                    }
-                if (runtimeState.messages.isEmpty())
-                    item(key = "empty", contentType = "empty") {
-                        // One key per visual state: loading, failure, and empty now fade into
-                        // each other instead of swapping content inside a single item.
-                        val emptyKey =
-                            when {
-                                awaitingMessages && showLoading -> "loading"
-                                pageState ==
-                                    io.github.beacon.app.domain.model.AsyncPageState
-                                        .INITIAL_ERROR ||
+            Column(Modifier.fillMaxSize()) {
+                LazyColumn(
+                    state = scroll,
+                    modifier =
+                        Modifier.fillMaxWidth().weight(1f).then(scrollModifier).testTag(MESSAGE_LIST_TAG),
+                    contentPadding =
+                        PaddingValues(
+                            start = padding.calculateStartPadding(layoutDirection),
+                            end = padding.calculateEndPadding(layoutDirection),
+                            top = BeaconUiMetrics.Gap4,
+                            bottom = padding.calculateBottomPadding(),
+                        ),
+                    verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.MessageCardGap),
+                ) {
+                    if (selectionHint.isNotBlank())
+                        item(key = "selection-hint", contentType = "hint") {
+                            io.github.beacon.app.ui.components.SettingsNotice(selectionHint)
+                        }
+                    if (runtimeState.messages.isEmpty())
+                        item(key = "empty", contentType = "empty") {
+                            // One key per visual state: loading, failure, and empty now fade into
+                            // each other instead of swapping content inside a single item.
+                            val emptyKey =
+                                when {
+                                    awaitingMessages && showLoading -> "loading"
                                     pageState ==
                                         io.github.beacon.app.domain.model.AsyncPageState
-                                            .REFRESH_ERROR -> "failed"
-                                awaitingMessages ||
-                                    pageState ==
-                                        io.github.beacon.app.domain.model.AsyncPageState.IDLE -> "idle"
-                                else -> "empty"
-                            }
-                        Crossfade(
-                            targetState = emptyKey,
-                            animationSpec = tween(BeaconMotion.StandardMs),
-                            label = "message-empty-state",
-                        ) { key ->
-                            when (key) {
-                                "loading" ->
-                                    BeaconEmptyState(
-                                        BeaconIcons.Messages,
-                                        stringResource(R.string.msg_loading),
-                                        stringResource(R.string.msg_loading_local_list),
-                                        loading = true,
-                                    )
+                                            .INITIAL_ERROR ||
+                                        pageState ==
+                                            io.github.beacon.app.domain.model.AsyncPageState
+                                                .REFRESH_ERROR -> "failed"
+                                    awaitingMessages ||
+                                        pageState ==
+                                            io.github.beacon.app.domain.model.AsyncPageState.IDLE -> "idle"
+                                    else -> "empty"
+                                }
+                            Crossfade(
+                                targetState = emptyKey,
+                                animationSpec = tween(BeaconMotion.StandardMs),
+                                label = "message-empty-state",
+                            ) { key ->
+                                when (key) {
+                                    "loading" ->
+                                        BeaconEmptyState(
+                                            BeaconIcons.Messages,
+                                            stringResource(R.string.msg_loading),
+                                            stringResource(R.string.msg_loading_local_list),
+                                            loading = true,
+                                        )
 
-                                "failed" ->
-                                    BeaconEmptyState(
-                                        BeaconIcons.Warning,
-                                        stringResource(R.string.ui_list_load_failed),
-                                        stringResource(R.string.ui_list_load_failed_hint),
-                                    ) {
-                                        BeaconTextButton(onClick = { actions.readMessages() }) {
-                                            BeaconText(stringResource(R.string.action_retry))
+                                    "failed" ->
+                                        BeaconEmptyState(
+                                            BeaconIcons.Warning,
+                                            stringResource(R.string.ui_list_load_failed),
+                                            stringResource(R.string.ui_list_load_failed_hint),
+                                        ) {
+                                            BeaconTextButton(onClick = { actions.readMessages() }) {
+                                                BeaconText(stringResource(R.string.action_retry))
+                                            }
                                         }
-                                    }
 
-                                "idle" -> Unit
+                                    "idle" -> Unit
 
-                                else -> {
-                                    val filtered =
-                                        search.isNotBlank() ||
-                                            readFilter != MessageReadFilter.ALL ||
-                                            runtimeState.messageQuery.serverId.isNotBlank()
-                                    val unconfigured = runtimeState.configuredEndpoint.isBlank()
-                                    BeaconEmptyState(
-                                        BeaconIcons.Messages,
-                                        stringResource(
-                                            when {
-                                                filtered -> R.string.msg_empty_no_match
-                                                unconfigured -> R.string.msg_empty_unconfigured
-                                                else -> R.string.msg_empty_no_messages
-                                            }
-                                        ),
-                                        stringResource(
-                                            when {
-                                                filtered -> R.string.msg_empty_filter_hint
-                                                unconfigured ->
-                                                    R.string.msg_empty_unconfigured_hint
-                                                else -> R.string.msg_empty_no_messages_hint
-                                            }
-                                        ),
-                                    ) {
-                                        BeaconTextButton(onClick = {
-                                            when {
-                                                filtered -> onApplyFilter("", MessageReadFilter.ALL)
-                                                unconfigured -> onConnectionSettings()
-                                                else -> actions.transport()
-                                            }
-                                        }) {
-                                            BeaconText(
-                                                stringResource(
-                                                    when {
-                                                        filtered -> R.string.msg_clear_filters_action
-                                                        unconfigured ->
-                                                            R.string.ui_v2_server_config_title
-                                                        else -> R.string.action_sync_now
-                                                    }
+                                    else -> {
+                                        val filtered =
+                                            search.isNotBlank() ||
+                                                readFilter != MessageReadFilter.ALL ||
+                                                runtimeState.messageQuery.serverId.isNotBlank()
+                                        val unconfigured = runtimeState.configuredEndpoint.isBlank()
+                                        BeaconEmptyState(
+                                            BeaconIcons.Messages,
+                                            stringResource(
+                                                when {
+                                                    filtered -> R.string.msg_empty_no_match
+                                                    unconfigured -> R.string.msg_empty_unconfigured
+                                                    else -> R.string.msg_empty_no_messages
+                                                }
+                                            ),
+                                            stringResource(
+                                                when {
+                                                    filtered -> R.string.msg_empty_filter_hint
+                                                    unconfigured ->
+                                                        R.string.msg_empty_unconfigured_hint
+                                                    else -> R.string.msg_empty_no_messages_hint
+                                                }
+                                            ),
+                                        ) {
+                                            BeaconTextButton(onClick = {
+                                                when {
+                                                    filtered -> onApplyFilter("", MessageReadFilter.ALL)
+                                                    unconfigured -> onConnectionSettings()
+                                                    else -> actions.transport()
+                                                }
+                                            }) {
+                                                BeaconText(
+                                                    stringResource(
+                                                        when {
+                                                            filtered -> R.string.msg_clear_filters_action
+                                                            unconfigured ->
+                                                                R.string.ui_v2_server_config_title
+                                                            else -> R.string.action_sync_now
+                                                        }
+                                                    )
                                                 )
-                                            )
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
-                    }
-                runtimeState.messages.forEachIndexed { index, message ->
-                    val date = dates[index]
-                    if (index == 0 || date != dates[index - 1]) {
-                        item(key = "date.${message.server.length}:${message.server}${message.id}", contentType = "date") {
-                            BeaconText(
-                                when (date) {
-                                    null -> stringResource(R.string.message_unknown_date)
-                                    else -> date.toString()
+                    runtimeState.messages.forEachIndexed { index, message ->
+                        val date = dates[index]
+                        if (index == 0 || date != dates[index - 1]) {
+                            item(key = "date.${message.server.length}:${message.server}${message.id}", contentType = "date") {
+                                BeaconText(
+                                    when (date) {
+                                        null -> stringResource(R.string.message_unknown_date)
+                                        else -> date.toString()
+                                    },
+                                    Modifier.padding(start = BeaconUiMetrics.Gap4, top = BeaconUiMetrics.Gap4)
+                                    .semantics { heading() },
+                                    // A date is a divider, not a heading competing with the cards under
+                                    // it; at labelLarge it read as loudly as a message title.
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        item(key = MessageKey(message.server, message.id), contentType = "message") {
+                            val key = MessageKey(message.server, message.id)
+                            MessageItem(
+                                message,
+                                selectionMode,
+                                key in selectedKeys,
+                                // Arriving, read and selection changes settle into place instead of
+                                // snapping, which is what made a synced batch look like a redraw.
+                                modifier = Modifier.animateItem(),
+                                onSelect = { checked ->
+                                    if (!checked) onSelectionChange(selectedKeys - key)
+                                    else if (selectedKeys.size < 100) {
+                                        onSelectionChange((selectedKeys + key).distinct())
+                                        onSelectionHint("")
+                                    } else onSelectionHint(maxSelectionHint)
                                 },
-                                Modifier.padding(start = BeaconUiMetrics.Gap4, top = BeaconUiMetrics.Gap4)
-                                .semantics { heading() },
-                                // A date is a divider, not a heading competing with the cards under
-                                // it; at labelLarge it read as loudly as a message title.
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                onCopy = { body ->
+                                    if (body)
+                                        actions.loadDetail(message) { full ->
+                                            onCopyText(full.body, true)
+                                        }
+                                    else onCopyText(message.title, false)
+                                },
+                                onDelete = { onRequestDelete(listOf(key)) },
+                                busy = busy,
+                                onOpen = { actions.loadDetail(message) },
+                                onShare = {
+                                    actions.loadDetail(message) { full ->
+                                        runCatching { shareMessage(context, full) }
+                                            .onFailure { onSelectionHint(shareFailureHint) }
+                                    }
+                                },
+                                onRemind = { actions.remindMessage(key) },
+                                onFilterGroup = {
+                                    val value = "group:${message.group}"
+                                    onSearch(value)
+                                    onApplyFilter(value, readFilter)
+                                },
+                                onFilterApplication = {
+                                    val value = "app:${message.applicationId}"
+                                    onSearch(value)
+                                    onApplyFilter(value, readFilter)
+                                },
+                                onLongPress = { onEnterSelection(key) },
+                                onToggleRead = {
+                                    actions.manageMessages(
+                                        if (message.isRead) MessageAction.MARK_UNREAD
+                                        else MessageAction.MARK_READ,
+                                        listOf(key),
+                                        preservePage = true,
+                                    )
+                                },
                             )
                         }
                     }
-                    item(key = MessageKey(message.server, message.id), contentType = "message") {
-                        val key = MessageKey(message.server, message.id)
-                        MessageItem(
-                            message,
-                            selectionMode,
-                            key in selectedKeys,
-                            // Arriving, read and selection changes settle into place instead of
-                            // snapping, which is what made a synced batch look like a redraw.
-                            modifier = Modifier.animateItem(),
-                            onSelect = { checked ->
-                                if (!checked) onSelectionChange(selectedKeys - key)
-                                else if (selectedKeys.size < 100) {
-                                    onSelectionChange((selectedKeys + key).distinct())
-                                    onSelectionHint("")
-                                } else onSelectionHint(maxSelectionHint)
-                            },
-                            onCopy = { body ->
-                                if (body)
-                                    actions.loadDetail(message) { full ->
-                                        onCopyText(full.body, true)
-                                    }
-                                else onCopyText(message.title, false)
-                            },
-                            onDelete = { onRequestDelete(listOf(key)) },
-                            busy = busy,
-                            onOpen = { actions.loadDetail(message) },
-                            onShare = {
-                                actions.loadDetail(message) { full ->
-                                    runCatching { shareMessage(context, full) }
-                                        .onFailure { onSelectionHint(shareFailureHint) }
+                    item(key = "history-loading", contentType = "loading") {
+                        Box(
+                            Modifier.fillMaxWidth().padding(BeaconUiMetrics.SectionGap),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (runtimeState.dataBusy && runtimeState.messages.isNotEmpty())
+                                CircularProgressIndicator(Modifier.size(BeaconUiMetrics.IconMedium), strokeWidth = 2.dp)
+                            else if (runtimeState.nextMessageCursor != null)
+                                BeaconTextButton(enabled = !busy, onClick = actions::nextMessages) {
+                                    BeaconText(
+                                        if (runtimeState.messageLoadFailed)
+                                            stringResource(R.string.msg_history_retry)
+                                        else stringResource(R.string.msg_history_more)
+                                    )
                                 }
-                            },
-                            onRemind = { actions.remindMessage(key) },
-                            onFilterGroup = {
-                                val value = "group:${message.group}"
-                                onSearch(value)
-                                onApplyFilter(value, readFilter)
-                            },
-                            onFilterApplication = {
-                                val value = "app:${message.applicationId}"
-                                onSearch(value)
-                                onApplyFilter(value, readFilter)
-                            },
-                            onLongPress = { onEnterSelection(key) },
-                            onToggleRead = {
-                                actions.manageMessages(
-                                    if (message.isRead) MessageAction.MARK_UNREAD
-                                    else MessageAction.MARK_READ,
-                                    listOf(key),
-                                    preservePage = true,
+                            else if (runtimeState.messages.isNotEmpty())
+                                BeaconText(
+                                    stringResource(R.string.msg_history_exhausted),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
-                            },
-                        )
+                        }
                     }
                 }
-                item(key = "history-loading", contentType = "loading") {
+                if (runtimeState.newMessageCount > 0 && !selectionMode) {
                     Box(
-                        Modifier.fillMaxWidth().padding(BeaconUiMetrics.SectionGap),
+                        Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background)
+                            .padding(horizontal = BeaconUiMetrics.PageInset, vertical = BeaconUiMetrics.Gap8),
                         contentAlignment = Alignment.Center,
                     ) {
-                        if (runtimeState.dataBusy && runtimeState.messages.isNotEmpty())
-                            CircularProgressIndicator(Modifier.size(BeaconUiMetrics.IconMedium), strokeWidth = 2.dp)
-                        else if (runtimeState.nextMessageCursor != null)
-                            BeaconTextButton(enabled = !busy, onClick = actions::nextMessages) {
-                                BeaconText(
-                                    if (runtimeState.messageLoadFailed)
-                                        stringResource(R.string.msg_history_retry)
-                                    else stringResource(R.string.msg_history_more)
-                                )
-                            }
-                        else if (runtimeState.messages.isNotEmpty())
-                            BeaconText(
-                                stringResource(R.string.msg_history_exhausted),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                        BeaconButton(
+                            onClick = {
+                                focus.clearFocus()
+                                jumpToLatest = true
+                                actions.readMessages(showStatus = false)
+                            },
+                            modifier = Modifier.testTag("message-new-arrivals"),
+                            enabled = !busy,
+                        ) {
+                            BeaconText(stringResource(R.string.msg_new_arrivals, runtimeState.newMessageCount))
+                        }
                     }
                 }
             }

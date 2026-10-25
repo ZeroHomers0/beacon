@@ -57,6 +57,8 @@ class RealtimeClientTest {
         try {
             client.start()
             assertTrue(retrying.await(1, TimeUnit.SECONDS))
+            assertTrue(client.diagnostics.nextRetryAtMs>=System.currentTimeMillis()+55_000)
+            assertTrue(client.diagnostics.disconnectedSinceMs>0)
             // Normal first retry is <= 1 second. Retry-After must override that deadline.
             Thread.sleep(1_200)
             assertEquals(1, factories.get())

@@ -151,6 +151,10 @@ internal fun LazyListScope.receptionSettingsItems(
                             .first()
                 },
             )
+            SettingsOverviewField(stringResource(R.string.realtime_next_retry),
+                if(runtimeState.realtimeDiagnostics.nextRetryAtMs>0 && !runtimeState.realtimeRunning)
+                    formatMessageTime(runtimeState.realtimeDiagnostics.nextRetryAtMs)
+                else stringResource(R.string.realtime_no_retry))
             SettingsOverviewField(
                 stringResource(R.string.settings_last_sync_success_desc) +
                     (polling.lastSuccessInserted?.let {

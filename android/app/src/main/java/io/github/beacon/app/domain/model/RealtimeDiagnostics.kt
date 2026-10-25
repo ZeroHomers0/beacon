@@ -22,8 +22,10 @@ data class RealtimeDiagnostics(
     val attempts: Int = 0,
     val retries: Int = 0,
     val connectedAtMs: Long = 0,
+    val nextRetryAtMs: Long = 0,
+    val disconnectedSinceMs: Long = 0,
 ) {
     fun validate() {
-        require(attempts >= 0 && retries in 0..100 && connectedAtMs >= 0)
+        require(attempts >= 0 && retries in 0..100 && connectedAtMs >= 0 && nextRetryAtMs >= 0 && disconnectedSinceMs >= 0)
     }
 }

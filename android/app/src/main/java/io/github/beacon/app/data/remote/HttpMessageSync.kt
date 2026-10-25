@@ -63,7 +63,7 @@ class HttpMessageSync(
             if (status == 401 || status == 403) {
                 (store as? io.github.beacon.app.data.local.RuntimeMessageStore)?.let { local ->
                     val source=local.stateCache.preference("source-for:"+settings.endpoint)
-                    if(source.isNotEmpty()){local.stateCache.forget(source);io.github.beacon.app.widget.BeaconStateWidget.refresh(local.stateContext);io.github.beacon.app.widget.StateNotifications.refresh(local.stateContext)}
+                    if(source.isNotEmpty()){local.stateCache.forget(source)}
                 }
                 throw SyncAuthenticationException(status, stage)
             }

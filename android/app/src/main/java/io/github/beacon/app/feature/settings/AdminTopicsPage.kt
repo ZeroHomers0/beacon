@@ -13,6 +13,8 @@ import io.github.beacon.app.feature.messages.StructuredBlocksPanel
 import io.github.beacon.app.ui.components.*
 import io.github.beacon.app.ui.icons.BeaconIcons
 import org.json.JSONObject
+import io.github.beacon.app.data.remote.topicSnapshot
+import io.github.beacon.app.core.labelResource
 
 internal fun topicIdentity(row:JSONObject)=JSONObject().put("device_id",row.getString("device_id")).put("application_id",row.optString("application_id")).put("topic_key",row.getString("topic_key")).put("revision",row.getLong("revision"))
 
@@ -94,7 +96,7 @@ internal fun AdminTopicsPage(state:AdminUiState,model:ServerAdminViewModel,scrol
         BeaconAlertDialog(onDismissRequest={detailOpen=false;model.dismissTopic()},title={BeaconText(record.optString("title").ifBlank{record.optString("topic_key")})},text={
             Column(verticalArrangement=Arrangement.spacedBy(BeaconUiMetrics.Gap8)){
                 BeaconText(record.optString("body").ifBlank{"当前数据已清空。"})
-                SettingsHint(if(record.optBoolean("deleted"))"数据已清空"else if(record.optLong("expires_at_ms") in 1..System.currentTimeMillis())"已过期，以下为最后记录"else if(record.optLong("stale_at_ms") in 1..System.currentTimeMillis())"数据较旧，以下为最后记录"else"数据有效")
+                SettingsHint(stringResource(record.topicSnapshot().status(System.currentTimeMillis()).labelResource))
                 SettingsHint("发送应用："+(if(record.optString("application_id").isBlank())"未关联应用"else record.optString("application_name").ifBlank{record.optString("application_id")}))
                 SettingsHint("采样时间："+topicTime(record.optLong("observed_at_ms")))
                 SettingsHint("更新时间："+topicTime(record.optLong("accepted_at_ms")))

@@ -312,6 +312,8 @@ internal class RealtimeRuntimeController(
     }
 
     fun save(plan: ReceivePlan) {
+        plan.validate()
+        if (plan == this.plan) return
         preferences.save(plan)
         this.plan = plan
 

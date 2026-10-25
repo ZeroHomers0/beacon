@@ -13,6 +13,8 @@ import io.github.beacon.app.runtime.notification.MessageNotifications
 /** One policy snapshot per batch for HTTP, realtime and manual pending-notification handling. */
 internal fun flushNotifications(context: Context, store: RuntimeMessageStore): String {
     val settings = NotificationSettingsStore(context).load()
+    val mutes=io.github.beacon.app.data.local.TemporaryMuteStore(context).rules()
+    store.suppressNotifications(mutes.activeScopes(System.currentTimeMillis()))
     return flushPendingNotifications(
         store,
         settings,
@@ -20,6 +22,7 @@ internal fun flushNotifications(context: Context, store: RuntimeMessageStore): S
         System.currentTimeMillis(),
         { MessageNotifications.postable(context) },
         { batch -> MessageNotifications(context, settings) { store.detail(it.server, it.id) }.post(batch) },
+        muted={intent,now->mutes.muted(intent.key?.server.orEmpty(),intent.applicationId,nowMs=now)},
     )
 }
 
@@ -32,12 +35,14 @@ internal fun flushPendingNotifications(
     postable: () -> Boolean,
     post: (io.github.beacon.app.domain.receive.NotificationBatch) -> Boolean,
     zone: () -> java.time.ZoneId = java.time.ZoneId::systemDefault,
+    muted: (NotificationIntent, Long) -> Boolean = {_,_->false},
 ): String = NotificationPipeline(
     store,
     { batch -> postable() && post(batch) },
     quietHours,
     zone,
     settings,
+    muted,
 ).flush(nowMs)
 
 /** Reuse normal rules, but never consume another message's pending reminder. */
@@ -51,11 +56,13 @@ internal fun remindMessage(context: Context, store: RuntimeMessageStore, key: Me
                 store.notificationsPosted(intents)
         }
     val settings = NotificationSettingsStore(context).load()
+    val mutes=io.github.beacon.app.data.local.TemporaryMuteStore(context).rules()
     return NotificationPipeline(
             single,
             MessageNotifications(context, settings) { store.detail(it.server, it.id) }::post,
             QuietHoursStore(context).load(),
             settings = settings,
+            muted={item,now->mutes.muted(item.key?.server.orEmpty(),item.applicationId,nowMs=now)},
         )
         .flush(System.currentTimeMillis())
 }

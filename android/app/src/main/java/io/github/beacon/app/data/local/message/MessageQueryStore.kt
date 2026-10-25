@@ -31,22 +31,23 @@ internal class MessageQueryStore(private val helper: SQLiteOpenHelper) {
     fun page(query: MessageQuery): MessagePage {
         query.validate()
         val db = helper.readableDatabase
-        val anchored =
+        val anchorRow =
             query.anchor?.let { key ->
                 db.rawQuery(
                         "SELECT rowid FROM messages WHERE server=? AND id=? AND delete_token=''",
                         arrayOf(key.server, key.id),
                     )
                     .use {
-                        if (it.moveToFirst()) query.copy(before = it.getLong(0) + 1, anchor = null)
+                        if (it.moveToFirst()) it.getLong(0)
                         else null
                     }
-            } ?: query
-        val (countSql, countArgs) = MessageQuerySql.counts(query)
-        val (total, unread) =
+            }
+        val anchored = anchorRow?.let { query.copy(before = it + 1, anchor = null) } ?: query
+        val (countSql, countArgs) = MessageQuerySql.counts(query, anchorRow ?: Long.MAX_VALUE)
+        val (total, unread, newer) =
             db.rawQuery(countSql, countArgs).use {
                 it.moveToFirst()
-                it.getLong(0) to it.getLong(1)
+                Triple(it.getLong(0),it.getLong(1),it.getLong(2))
             }
         val (pageSql, pageArgs) = MessageQuerySql.page(anchored)
         val rows =
@@ -81,6 +82,7 @@ internal class MessageQueryStore(private val helper: SQLiteOpenHelper) {
             if (rows.size > MessageQuery.PAGE_SIZE) visible.last().first else null,
             unread,
             null,
+            newer,
         )
     }
 

@@ -5,12 +5,12 @@ import (
 	"time"
 )
 
-// RunDelivery owns one serial worker; the database controls per-message retry deadlines.
+// RunDelivery owns one bounded round at a time; the database controls retry deadlines.
 func RunDelivery(ctx context.Context, queue DeliveryQueue, publisher Publisher, interval time.Duration, observe func(DeliveryResult, error)) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 	for {
-		result, err := DrainDelivery(ctx, queue, publisher, 1)
+		result, err := DrainDeliveryIsolated(ctx, queue, publisher, deliveryParallelism)
 		if observe != nil && (err != nil || result.Claimed > 0) {
 			observe(result, err)
 		}

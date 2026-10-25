@@ -36,6 +36,26 @@ class TopicCatalogTest {
   for(y in 0 until 27)for(x in 0 until 27)assertEquals("corner $x/$y",Color.alpha(small.getPixel(x,y)),Color.alpha(large.getPixel(x,y)))
   small.recycle();large.recycle()
  }
+ @Test fun syncPreservesLocalAppearanceAndReplayedRevisionsDoNotReplaceData(){
+  StateCache(context).use{cache->
+   val source="ntfy-owner-test";cache.forget(source)
+   try {
+    val topic=JSONObject().put("application_id","").put("topic_key","test").put("name","First").put("config_version",1)
+    cache.applyTopics(source,listOf(topic),"c1",true,"")
+    val row=JSONObject().put("schema_version",1).put("application_id","").put("topic_key","test")
+     .put("title","Reported").put("revision",1).put("body","first").put("blocks",JSONArray())
+    cache.apply(source,listOf(row),"s1",false,"")
+    val preference="""{"source":"ntfy-owner-test","identity":":test","global_color":"#3478F6","metrics":["b","a"]}"""
+    cache.preference("widget:9411",preference)
+    cache.applyTopics(source,listOf(JSONObject(topic.toString()).put("name","Renamed").put("config_version",2)),"c2",false,"c1")
+    assertEquals("Renamed",cache.find(source,":test")!!.getString("title"))
+    assertEquals(preference,cache.preference("widget:9411"))
+    cache.apply(source,listOf(JSONObject(row.toString()).put("body","replay must not replace")),"s2",false,"s1")
+    assertEquals("first",cache.find(source,":test")!!.getString("body"))
+    assertEquals("s2",cache.cursor(source))
+   }finally{cache.forget(source);cache.writableDatabase.delete("preferences","key=?",arrayOf("widget:9411"))}
+  }
+ }
  @Test fun catalogSeparatesWaitingFromDataAndHardDeletionRemovesChoices(){
   StateCache(context).use{cache->val source="catalog-test";cache.forget(source)
    try{

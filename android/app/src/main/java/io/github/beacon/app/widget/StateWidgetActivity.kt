@@ -209,13 +209,13 @@ private fun StateWidgetEditorContent(id:Int, detail:Boolean, source:String?, ide
                         BeaconTextField(config.optString("title"),{value->update{it.put("title",if(value.codePointCount(0,value.length)>12)value.substring(0,value.offsetByCodePoints(0,12))else value)}},Modifier.fillMaxWidth(),label={BeaconText("自定义短标题")},labelText="自定义短标题",singleLine=true,placeholder="留空使用主题名称")
                         SettingsHint("最多12个字符，桌面按实际宽度省略显示。")
                     }}}
-                    if(row.optBoolean("_waiting"))item{SettingsGroup("展示样式"){Column(Modifier.padding(BeaconUiMetrics.CardInset)){SettingsHint("收到数据后自动匹配。首次上报前可设置名称与背景。")}}}
+                    if(row.optBoolean("_waiting"))item{SettingsGroup(androidx.compose.ui.res.stringResource(io.github.beacon.app.R.string.widget_display_style)){Column(Modifier.padding(BeaconUiMetrics.CardInset)){SettingsHint("收到数据后自动匹配。首次上报前可设置名称与背景。")}}}
                     else item { WidgetTemplateSelector(row,WidgetConfigRules.resolved(row,config),previewSize){value->update{val suggested=WidgetConfigRules.resolved(row,it);it.put("template",value);if(!it.has("metrics"))it.put("metrics",suggested.optJSONArray("metrics")?:JSONArray(WidgetConfigRules.defaults(row,it).map{block->block.optString("id")}))}} }
                     if(!row.optBoolean("_waiting"))item { WidgetListSettings(WidgetConfigRules.resolved(row,config)){next->draft=next.toString()} }
                     if(!row.optBoolean("_waiting"))item { WidgetTuningSettings(WidgetConfigRules.resolved(row,config)){next->draft=next.toString()} }
                     item { WidgetSimpleAppearance(row,config){next->draft=next.toString()} }
-                    item { WidgetMoreSettings(row,config){next->draft=next.toString()} }
-                    item { SettingsGroup("刷新与状态"){
+                    if(!row.optBoolean("_waiting"))item { WidgetMoreSettings(row,config){next->draft=next.toString()} }
+                    item { SettingsGroup(androidx.compose.ui.res.stringResource(io.github.beacon.app.R.string.widget_update_hints)){
                         BeaconDropdownPreference("刷新策略",listOf("及时更新（约5秒）","均衡（任务约5秒，其他约15秒）","省电（约1分钟）"),listOf("fast","balanced","economy").indexOf(config.optString("refresh","balanced")).coerceAtLeast(0),settingsRow=true,icon=BeaconIcons.Sync){index->update{it.put("refresh",listOf("fast","balanced","economy")[index])}}
                         Column(Modifier.padding(horizontal=BeaconUiMetrics.CardInset)){
                             BeaconPreferenceToggle("显示更新时间","紧凑尺寸下优先保证内容可读",config.optBoolean("updated",true)){value->update{it.put("updated",value)}}

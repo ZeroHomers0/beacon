@@ -12,6 +12,7 @@ data class RuntimeState(
     val messagesLoaded: Boolean = false,
     val messageTotal: Long = 0L,
     val messageUnread: Long = 0L,
+    val newMessageCount: Long = 0L,
     val messageQuery: MessageQuery = MessageQuery(),
     val messagePageIndex: Int = 0,
     val dataBusy: Boolean = false,

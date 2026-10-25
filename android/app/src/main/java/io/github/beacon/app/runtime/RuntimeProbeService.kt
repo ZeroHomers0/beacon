@@ -492,6 +492,7 @@ class RuntimeProbeService : Service() {
                             io.github.beacon.app.ipc.RuntimeProtocol.PENDING_REMINDERS,
                             io.github.beacon.app.ipc.RuntimeProtocol.GET_STATUS,
                             io.github.beacon.app.ipc.RuntimeProtocol.SYNC_WIDGET_TOPICS,
+                            io.github.beacon.app.ipc.RuntimeProtocol.TEMPORARY_MUTE,
                         )
                 )
                     return super.onTransact(code, data, reply, flags)
@@ -888,6 +889,8 @@ class RuntimeProbeService : Service() {
                                     realtime.plan.heartbeatSeconds.toString(),
                                     if (realtime.plan.adaptiveHeartbeat) "1" else "0",
                                     if (realtime.plan.batchOrdinaryMessages) "1" else "0",
+                                    diagnostics.nextRetryAtMs.toString(),
+                                    diagnostics.disconnectedSinceMs.toString(),
                                 )
                             }
                             .get(45, java.util.concurrent.TimeUnit.SECONDS)
@@ -908,7 +911,28 @@ class RuntimeProbeService : Service() {
                         writeLong(snapshot[12].toLong())
                         writeInt(snapshot[13].toInt())
                         for (index in 14..22) writeInt(snapshot[index].toInt())
+                        writeLong(snapshot[23].toLong())
+                        writeLong(snapshot[24].toLong())
                     }
+                    return true
+                }
+                if(code==io.github.beacon.app.ipc.RuntimeProtocol.TEMPORARY_MUTE) {
+                    val scope=io.github.beacon.app.domain.model.MuteScope(
+                        io.github.beacon.app.domain.model.MuteKind.valueOf(requireNotNull(data.readString())),
+                        requireNotNull(data.readString()),requireNotNull(data.readString())).also{it.validate()}
+                    val writing=data.readInt().also{require(it in 0..1)}==1
+                    val until=if(writing)data.readLong().also{require(it>=0)}else null
+                    require(data.dataAvail()==0)
+                    val value=worker.submit<io.github.beacon.app.domain.model.MuteSnapshot>{
+                        val preferences=io.github.beacon.app.data.local.TemporaryMuteStore(this@RuntimeProbeService)
+                        if(until!=null){
+                            preferences.save(scope,until)
+                            if(until>System.currentTimeMillis())flushNotifications(this@RuntimeProbeService,store)
+                            io.github.beacon.app.widget.StateRefreshReceiver.request(this@RuntimeProbeService)
+                        }
+                        preferences.snapshot(scope)
+                    }.get(45,java.util.concurrent.TimeUnit.SECONDS)
+                    requireNotNull(reply).apply{writeNoException();writeLong(value.localUntilMs);writeLong(value.globalUntilMs)}
                     return true
                 }
                 if (code == io.github.beacon.app.ipc.RuntimeProtocol.NOTIFICATION_SETTINGS) {
@@ -1508,6 +1532,7 @@ class RuntimeProbeService : Service() {
                             writeString(page.undo?.token ?: "")
                             writeLong(page.undo?.expiresAtMs ?: 0)
                             writeInt(page.undo?.count ?: 0)
+                            writeLong(page.newerCount)
                         } else {
                             val message = result as IncomingMessage?
                             writeInt(if (message == null) 0 else 1)

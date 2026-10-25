@@ -19,6 +19,7 @@ internal data class MessageListState(
     val nextMessageCursor: Long?,
     val runtimeConnected: Boolean,
     val configuredEndpoint: String,
+    val newMessageCount: Long,
 )
 
 @Composable
@@ -27,10 +28,12 @@ internal fun rememberMessageListState(state: RuntimeState): MessageListState =
         state.messages, state.messagesLoaded, state.messageTotal, state.messageUnread,
         state.messageQuery, state.messageBusy, state.dataBusy, state.messageLoadFailed,
         state.nextMessageCursor, state.runtimeConnected, state.configuredEndpoint,
+        state.newMessageCount,
     ) {
         MessageListState(
             state.messages, state.messagesLoaded, state.messageTotal, state.messageUnread,
             state.messageQuery, state.messageBusy, state.dataBusy, state.messageLoadFailed,
             state.nextMessageCursor, state.runtimeConnected, state.configuredEndpoint,
+            state.newMessageCount,
         )
     }

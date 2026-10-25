@@ -59,6 +59,9 @@ internal fun NotificationSettingsPanel(
                     )
                 }
             }
+            SettingsGroup(stringResource(R.string.mute_group)) {
+                TemporaryMuteAction(MuteScope.GLOBAL,enabled=state.runtimeConnected&&!saving&&!rulesSaving)
+            }
             if (failed && rulesFailure == null) {
                 SettingsRetryFeedback(
                     stringResource(R.string.settings_data_failed), failed = true,

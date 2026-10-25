@@ -36,9 +36,13 @@ func DrainDelivery(ctx context.Context, queue DeliveryQueue, publisher Publisher
 	if err != nil {
 		return result, err
 	}
-	result.Claimed = len(tasks)
+	return drainClaimed(ctx, queue, publisher, tasks)
+}
+
+func drainClaimed(ctx context.Context, queue DeliveryQueue, publisher Publisher, tasks []domain.PublishTask) (DeliveryResult, error) {
+	result := DeliveryResult{Claimed: len(tasks)}
 	for _, task := range tasks {
-		if err = ctx.Err(); err != nil {
+		if err := ctx.Err(); err != nil {
 			// Remaining leases expire naturally; shutdown never deletes unprocessed work.
 			return result, err
 		}

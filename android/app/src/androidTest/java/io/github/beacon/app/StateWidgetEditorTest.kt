@@ -81,7 +81,7 @@ class StateWidgetEditorTest {
                     scrollTo("卡片背景")
                     rule.onNodeWithText("卡片背景").performClick()
                     rule.onNodeWithText("跟随手机主题").performClick()
-                    scrollTo("模板样式")
+                    scrollTo(context.getString(R.string.widget_display_style))
                     java.io.File(folder,"widget_templates_${style.name}.png").outputStream().use{stream->rule.onRoot().captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG,100,stream)}
                     // Back uses the same unsaved-change dialog, never an inserted banner.
                     rule.onNodeWithContentDescription("返回").performClick()

@@ -97,6 +97,9 @@ interface RuntimeActions {
 
     fun nextMessages()
 
+    /** Keep the currently loaded history stable while arrivals update only its new-message count. */
+    fun setMessageReading(readingHistory: Boolean)
+
     fun previousMessages()
 
     fun closeDetail()

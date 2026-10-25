@@ -55,9 +55,8 @@ func (a *API) registerAdmin(router *gin.Engine) {
 		}
 		writeJSON(c.Writer, 200, map[string]any{"devices": devices, "applications": applications, "storage": stats, "transport": "websocket", "server_id": a.service.ServerID(), "version": config.Version, "protocol": domain.ProtocolVersion, "topic_catalog_protocol": 1, "admin_protocol": domain.AdminProtocol})
 	})
-	admin.GET("/metrics", func(c *gin.Context) {
-		writeJSON(c.Writer, http.StatusOK, a.metrics.snapshot())
-	})
+	admin.GET("/metrics", a.metricsHandler)
+	admin.GET("/ready", a.readyHandler)
 	admin.POST("/topics/list", func(c *gin.Context) {
 		var q domain.StateAdminQuery
 		if decodeJSON(c.Writer, c.Request, &q) != nil {

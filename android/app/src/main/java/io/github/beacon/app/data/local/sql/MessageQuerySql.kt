@@ -69,10 +69,11 @@ object MessageQuerySql {
         return clauses.joinToString(" AND ") to args.toTypedArray()
     }
 
-    fun counts(query: MessageQuery): Pair<String, Array<String>> {
+    fun counts(query: MessageQuery, anchorRow: Long = Long.MAX_VALUE): Pair<String, Array<String>> {
         val (where, args) = filter(query)
-        return "SELECT count(*),coalesce(sum(CASE WHEN is_read=0 THEN 1 ELSE 0 END),0)" +
-            " FROM messages WHERE $where" to args
+        return "SELECT count(*),coalesce(sum(CASE WHEN is_read=0 THEN 1 ELSE 0 END),0)," +
+            "coalesce(sum(CASE WHEN rowid>? THEN 1 ELSE 0 END),0)" +
+            " FROM messages WHERE $where" to (arrayOf(anchorRow.toString()) + args)
     }
 
     fun page(query: MessageQuery): Pair<String, Array<String>> {

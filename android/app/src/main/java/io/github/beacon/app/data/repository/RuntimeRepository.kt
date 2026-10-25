@@ -33,6 +33,14 @@ class RuntimeRepository : RuntimeActions {
     private var backgroundAnchor: MessageKey? = null
     private var backgroundListReleased = false
     private var preserveReadingWindow = false
+    private var readingHistory = false
+    private var newMessageAnchor: MessageKey? = null
+
+    override fun setMessageReading(readingHistory: Boolean) {
+        this.readingHistory=readingHistory
+        if(!readingHistory && state.value.newMessageCount==0L)newMessageAnchor=null
+        if(readingHistory && newMessageAnchor==null)newMessageAnchor=state.value.messages.firstOrNull()?.let{MessageKey(it.server,it.id)}
+    }
     private var receivePlanInFlight = false
     private var receivePlanRefreshPending = false
     private var receivePlanRefreshJob: kotlinx.coroutines.Job? = null
@@ -717,7 +725,10 @@ class RuntimeRepository : RuntimeActions {
         readFilter: MessageReadFilter,
         showStatus: Boolean,
     ) {
-        if (!state.value.messageBusy) preserveReadingWindow = false
+        if (!state.value.messageBusy) {
+            preserveReadingWindow = false
+            newMessageAnchor = null
+        }
         loadPage(
             MessageQuery(search, serverId, readFilter = readFilter),
             listOf(Long.MAX_VALUE),
@@ -773,6 +784,7 @@ class RuntimeRepository : RuntimeActions {
             },
             { result ->
                 if (!retainWindow) pageHistory = history
+                if (!retainWindow && index==0)newMessageAnchor=null
                 mutableState.update {
                     it.copy(
                         messages =
@@ -791,6 +803,7 @@ class RuntimeRepository : RuntimeActions {
                             else result.page.items,
                         messageTotal = result.page.total,
                         messageUnread = result.page.unread,
+                        newMessageCount = if(retainWindow)result.page.newerCount else if(index>it.messagePageIndex)it.newMessageCount else 0L,
                         nextMessageCursor = if (retainWindow) it.nextMessageCursor else result.page.nextBefore,
                         messageQuery = query.copy(before = Long.MAX_VALUE, anchor = null),
                         messagePageIndex = if (retainWindow) it.messagePageIndex else index,
@@ -1408,8 +1421,8 @@ class RuntimeRepository : RuntimeActions {
                 if (changed && !state.value.messageBusy) {
                     val current = state.value
                     val anchor =
-                        if (preserveReadingWindow) {
-                            current.messages.firstOrNull()?.let { MessageKey(it.server, it.id) }
+                        if (preserveReadingWindow || readingHistory || current.messagePageIndex>0) {
+                            newMessageAnchor ?: current.messages.firstOrNull()?.let { MessageKey(it.server, it.id) }
                         } else null
                     loadPage(
                         current.messageQuery.copy(anchor = anchor),
@@ -1417,7 +1430,7 @@ class RuntimeRepository : RuntimeActions {
                         0,
                         showStatus = false,
                         deliveryRevision = result.deliveryRevision,
-                        retainWindow = current.messagePageIndex > 0 && current.messages.isNotEmpty(),
+                        retainWindow = (preserveReadingWindow || readingHistory || current.messagePageIndex>0) && current.messages.isNotEmpty(),
                     )
                 }
                 if (refreshAgain) scheduleReceivePlanRefresh()

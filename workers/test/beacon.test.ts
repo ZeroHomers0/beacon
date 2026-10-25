@@ -888,3 +888,21 @@ it("revoked application deletion removes only its own messages and receipts", as
     ),
   ).toHaveLength(0);
 });
+
+
+describe("operational observability",()=>{
+  it("protects metrics and readiness and masks unknown paths",async()=>{
+    expect((await call("/api/admin/metrics","invalid")).status).toBe(401);
+    expect((await call("/api/admin/ready","invalid")).status).toBe(401);
+    expect((await call("/api/admin/ready")).status).toBe(200);
+    await call("/private-secret-path","");
+    const response=await call("/api/admin/metrics");
+    expect(response.status).toBe(200);
+    const payload=await response.json<{delivery:Record<string,number>;routes:Record<string,unknown>;active_connections:number}>();
+    expect(payload.delivery.queued_realtime_messages).toBe(0);
+    expect(payload.delivery.oldest_realtime_age_ms).toBe(0);
+    expect(payload.active_connections).toBe(0);
+    expect(JSON.stringify(payload)).not.toContain("private-secret-path");
+    expect(payload.routes.unmatched).toBeDefined();
+  });
+});

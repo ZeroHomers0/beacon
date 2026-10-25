@@ -9,6 +9,31 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ContinuousHistoryTest {
+    @Test fun anchoredCountsIgnorePaginationDeletionAndUnmatchedArrivals() {
+        val context=InstrumentationRegistry.getInstrumentation().targetContext
+        val namespace="arrival-count-${java.util.UUID.randomUUID()}"
+        RuntimeMessageStore(context).use { store ->
+            fun save(id:String,text:String="matching",read:Boolean=false) = store.save(
+                io.github.beacon.app.domain.model.IncomingMessage(namespace,id,text,"body",isRead=read))
+            try {
+                save("older");save("anchor")
+                val query=MessageQuery(search="matching",serverId=namespace,
+                    anchor=io.github.beacon.app.domain.model.MessageKey(namespace,"anchor"))
+                assertEquals(0L,store.page(query).newerCount)
+                save("new-one");save("new-two",read=true);save("unmatched","something else")
+                store.writableDatabase.execSQL("UPDATE messages SET is_read=1 WHERE server=? AND id='new-two'",arrayOf(namespace))
+                store.writableDatabase.delete("messages","server=? AND id=?",arrayOf(namespace,"older"))
+                val page=store.page(query)
+                assertEquals(2L,page.newerCount)
+                assertEquals(listOf("anchor"),page.items.map{it.id})
+                assertEquals(1L,store.page(query.copy(readFilter=MessageReadFilter.UNREAD)).newerCount)
+                assertEquals(0L,store.page(query.copy(anchor=null)).newerCount)
+            }finally{
+                for(table in listOf("messages","pending_ack","receipt_times","notification_intents"))
+                    store.writableDatabase.delete(table,"server=?",arrayOf(namespace))
+            }
+        }
+    }
     @Test
     fun workerPagesAppendWithoutDuplicatesAndRefreshResets() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()

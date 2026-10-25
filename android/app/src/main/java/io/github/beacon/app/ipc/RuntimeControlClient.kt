@@ -69,6 +69,14 @@ internal class RuntimeControlClient(private val binder: IBinder) {
             requireNotNull(it.readString()).also { result -> require(result.length <= 4096) }
         }
 
+    fun temporaryMute(scope:io.github.beacon.app.domain.model.MuteScope,untilMs:Long?=null):io.github.beacon.app.domain.model.MuteSnapshot {
+        scope.validate();require(untilMs==null||untilMs>=0)
+        return binder.request(RuntimeProtocol.TEMPORARY_MUTE,write={
+            it.writeString(scope.kind.name);it.writeString(scope.source);it.writeString(scope.identity)
+            it.writeInt(if(untilMs==null)0 else 1);untilMs?.let{until->it.writeLong(until)}
+        }) {io.github.beacon.app.domain.model.MuteSnapshot(it.readLong(),it.readLong())}
+    }
+
     fun notificationSettings(value: NotificationSettings?): NotificationSettings =
         binder.request(
             RuntimeProtocol.NOTIFICATION_SETTINGS,
@@ -135,7 +143,10 @@ internal class RuntimeControlClient(private val binder: IBinder) {
                         )
                         .also { value -> value.validate() },
                 )
-            result.copy(plan = ReceivePlanWire.readExtras(it, result.plan))
+            val plan=ReceivePlanWire.readExtras(it,result.plan)
+            val diagnostics=if(it.dataAvail()>=16)result.diagnostics.copy(nextRetryAtMs=it.readLong(),
+                disconnectedSinceMs=it.readLong()).also{value->value.validate()}else result.diagnostics
+            result.copy(plan=plan,diagnostics=diagnostics)
         }
 
     fun bindDevice(request: BindingRequest): RuntimeControlReply {

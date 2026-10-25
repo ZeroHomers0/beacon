@@ -134,9 +134,10 @@ internal class RuntimeMessageClient(private val binder: IBinder) {
             check(total >= 0 && unread in 0..total && count in 0..MessageQuery.PAGE_SIZE)
             check(next == -1L || next in 1 until query.before)
             val messages = List(count) { reply.readMessage() }
-            RuntimeMessagePage(
-                MessagePage(messages, total, next.takeIf { it > 0 }, unread, reply.readUndo())
-            )
+            val undo=reply.readUndo()
+            val newer=if(reply.dataAvail()>=8)reply.readLong()else 0L
+            check(newer in 0..total)
+            RuntimeMessagePage(MessagePage(messages,total,next.takeIf{it>0},unread,undo,newer))
         }
 
     fun injectOrDelete(message: IncomingMessage?) {

@@ -166,7 +166,8 @@ curl -X POST 'https://push.example.com/push' \
 | POST | `/api/v1/receipts/status` | 设备接收凭据 | 查询消息回执，请求体为 `{"ids":["消息 ID"]}` |
 | POST | `/api/v1/device/revoke` | 设备接收凭据 | 撤销当前设备 |
 | GET | `/api/admin/overview` | 管理令牌 | 查询设备、应用和存储概况 |
-| GET | `/api/admin/metrics` | 管理令牌 | 按路由模板聚合的请求量、5xx 数与延迟分桶（用于排查慢接口，不含路径参数与凭证） |
+| GET | `/api/admin/metrics` | 管理令牌 | 按路由模板聚合请求量、5xx与延迟，以及投递队列快照和活动连接数（Go/Workers；不含设备身份、路径参数或凭证） |
+| GET | `/api/admin/ready` | 管理令牌 | 就绪检查；200返回`{"ready":true}`，不可用返回503 `not_ready`；不替代healthz |
 | POST | `/api/admin/binding` | 管理令牌 | 创建绑定码，字段为 `name` |
 | POST | `/api/admin/test` | 管理令牌 | 向设备发送测试消息，字段为 `device_id`、`title`、`subtitle`、`body`、`priority` |
 | POST | `/api/admin/revoke` | 管理令牌 | 撤销设备，字段为 `device_id` |
@@ -474,6 +475,7 @@ curl --fail-with-body "$BEACON_URL/api/v1/states/meta?topic_key=widget%2Fdemo-pr
 | --- | --- | --- |
 | `GET /api/admin/overview` | 无 | 200；`devices/applications/storage/server_id/version/protocol/admin_protocol/topic_catalog_protocol` |
 | `GET /api/admin/metrics` | 无 | 200；按路由模板统计，不能含密钥或正文 |
+| `GET /api/admin/ready` | 无 | 200 `ready:true`；503 `not_ready`；独立管理鉴权，查询参数被拒绝 |
 | `POST /api/admin/binding` | `{"name":"我的手机"}` | 201；`binding_code/device_name/expires_at_ms` |
 | `POST /api/admin/test` | `device_id/title/subtitle/body/priority`；正文必填，priority省略为5 | 201；已保存消息 |
 | `POST /api/admin/revoke` | `{"device_id":"设备ID"}` | 200；`revoked:true` |
@@ -528,3 +530,18 @@ curl --fail-with-body "$BEACON_URL/api/v1/states/meta?topic_key=widget%2Fdemo-pr
 - [Go路由](server/internal/httpapi/api.go)、[管理路由](server/internal/httpapi/admin.go)、[数据模型与限制](server/internal/domain/model.go)、[主题实现](server/internal/store/topics.go)。
 - [Workers路由](workers/src/api.ts)、[协议号](workers/src/protocol.ts)、[结构化校验](workers/src/blocks.ts)。
 - [共享协议样例](contract/)、[可运行结构化示例](examples/structured/README.md)。新增接口或修改语义时同步更新本文及两种后端的测试。
+
+### 运维统计快照
+
+`GET /api/admin/metrics` 的既有 `uptime_seconds/requests/server_errors/routes` 保留，Go与Workers均提供。
+`routes`仅保存固定路由模板或`unmatched/other`，每项包含`requests/server_errors/mean_ms/slowest_ms/under_100ms/under_1s`。
+延迟分桶互斥：小于100ms、小于1s但不少于100ms，其余为不少于1s；不能当成累计直方图。请求统计从进程/DO实例初始化后累计，重启/休眠重建后可重置。
+
+新增`active_connections`为当前活动连接数，`delivery`为最多缓存5秒的数据库队列快照：
+
+- `sampled_at_ms`：实际采样时间，Unix毫秒。
+- `queued_realtime_messages`：待实时发布任务数；不等于待客户端确认消息数。
+- `oldest_realtime_age_ms`：队列中最早消息接受至采样的时间；空队列为0。
+- `retrying_realtime_messages`：已经发生投递重试的排队任务数。
+
+快照读取失败返回503 `observability_unavailable`（底层不可恢复存储错误仍可能映射500 `storage_error`），不会改变已提交消息；客户端ACK仍使用原接口独立确认。`/healthz`为轻量存活检查；管理员就绪检查只做轻量DB可读检查及Go连接hub退出状态，不是写入/容量保证，不执行写探针或全表扫描。两个新管理能力均不接受URL凭据，沿用管理请求的无缓存策略。

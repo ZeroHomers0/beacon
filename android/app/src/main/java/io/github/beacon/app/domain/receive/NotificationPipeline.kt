@@ -14,6 +14,7 @@ data class NotificationIntent(
     val body: String = "",
     val key: MessageKey? = null,
     val priority: Int = 5,
+    val applicationId: String = "",
 )
 
 interface NotificationIntentStore {
@@ -81,6 +82,7 @@ class NotificationPipeline(
     private val quietHours: QuietHours,
     private val zone: () -> ZoneId = ZoneId::systemDefault,
     private val settings: NotificationSettings = NotificationSettings(),
+    private val muted: (NotificationIntent, Long) -> Boolean = { _, _ -> false },
 ) {
     constructor(
         store: NotificationIntentStore,
@@ -88,8 +90,13 @@ class NotificationPipeline(
     ) : this(store, post, QuietHours())
 
     fun flush(nowMs: Long): String {
-        val intents = store.pendingNotifications()
-        if (intents.isEmpty()) return ""
+        val pending = store.pendingNotifications()
+        if (pending.isEmpty()) return ""
+        val suppressed = pending.filter { muted(it,nowMs) }
+        if(suppressed.isNotEmpty())store.notificationsPosted(suppressed)
+        val suppressedIds=suppressed.mapTo(mutableSetOf()){it.sequence}
+        val intents=pending.filterNot{it.sequence in suppressedIds}
+        if(intents.isEmpty())return "临时静音：消息已保存"
         settings.validate()
         NotificationPolicy.batch(intents, nowMs, settings.freshWindowMs)
         val quiet = quietHours.active(nowMs, zone())

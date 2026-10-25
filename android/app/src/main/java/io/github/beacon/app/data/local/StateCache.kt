@@ -25,8 +25,9 @@ class StateCache(private val context: Context) : SQLiteOpenHelper(context, "stat
     }
     fun preference(key: String): String = readableDatabase.rawQuery("SELECT value FROM preferences WHERE key=?", arrayOf(key)).use { if (it.moveToFirst()) it.getString(0) else "" }
     fun preference(key: String, value: String) {
+        if (preference(key) == value) return
         writableDatabase.insertWithOnConflict("preferences", null, ContentValues().apply { put("key", key); put("value", value) }, SQLiteDatabase.CONFLICT_REPLACE)
-        if(key.startsWith("widget:"))io.github.beacon.app.widget.StateChanges.ui(context)
+        if(key.startsWith("widget:"))io.github.beacon.app.core.TopicChanges.ui(context)
     }
     private fun dataRow(source:String,identity:String):JSONObject?=readableDatabase.rawQuery("SELECT payload FROM states WHERE source=? AND identity=?",arrayOf(source,identity)).use{if(it.moveToFirst())JSONObject(it.getString(0)).put("local_source",source).put("local_identity",identity)else null}
     private fun merge(data:JSONObject?,topic:JSONObject):JSONObject {
@@ -80,13 +81,14 @@ class StateCache(private val context: Context) : SQLiteOpenHelper(context, "stat
             db.insertWithOnConflict("topic_cursors",null,ContentValues().apply{put("source",source);put("cursor",cursor)},SQLiteDatabase.CONFLICT_REPLACE)
             db.setTransactionSuccessful()
         }finally{db.endTransaction()}
-        if(changed)io.github.beacon.app.widget.StateChanges.data(context,source,null)
+        if(changed)io.github.beacon.app.core.TopicChanges.data(context,source,null)
     }
     fun notificationBindings():List<Pair<String,String>> = readableDatabase.rawQuery("SELECT key FROM preferences WHERE key LIKE 'notify:%' AND value='1'",null).use{cursor->buildList{while(cursor.moveToNext()){val parts=cursor.getString(0).removePrefix("notify:").split(":",limit=2);if(parts.size==2)add(parts[0] to parts[1])}}}
-    fun forget(source: String) {val db=writableDatabase;db.beginTransaction();try{for(table in listOf("states","cursors","watermarks","topics","topic_cursors"))db.delete(table,"source=?",arrayOf(source));db.setTransactionSuccessful()}finally{db.endTransaction()};io.github.beacon.app.widget.StateChanges.data(context,source,null)}
+    fun forget(source: String) {val db=writableDatabase;db.beginTransaction();try{for(table in listOf("states","cursors","watermarks","topics","topic_cursors"))db.delete(table,"source=?",arrayOf(source));db.setTransactionSuccessful()}finally{db.endTransaction()};io.github.beacon.app.core.TopicChanges.data(context,source,null)}
     fun apply(source: String, records: List<JSONObject>, cursor: String, replace: Boolean, expectedCursor:String?=null) {
         require(records.size <= 10000 && cursor.length <= 1024)
         val db = writableDatabase; db.beginTransaction()
+        val changedIdentities = mutableListOf<String>()
         try {
             if(expectedCursor!=null){val current=db.rawQuery("SELECT cursor FROM cursors WHERE source=?",arrayOf(source)).use{if(it.moveToFirst())it.getString(0)else ""};if(current!=expectedCursor)return}
             if (replace) db.delete("states", "source=?", arrayOf(source))
@@ -99,6 +101,9 @@ class StateCache(private val context: Context) : SQLiteOpenHelper(context, "stat
                 val deleted=row.optBoolean("deleted")
                 val prior=db.rawQuery("SELECT revision,deleted FROM watermarks WHERE source=? AND identity=?",arrayOf(source,identity)).use{if(it.moveToFirst())it.getLong(0) to (it.getInt(1)==1)else 0L to false}
                 if(prior.first>revision||prior.first==revision&&prior.second&&!deleted)continue
+                // Revisions are immutable. Replays advance the cursor, not the visible record.
+                if(prior.first==revision && (prior.second && deleted || !prior.second && !deleted && dataRow(source,identity)!=null))continue
+                changedIdentities.add(identity)
                 db.insertWithOnConflict("watermarks",null,ContentValues().apply{put("source",source);put("identity",identity);put("revision",revision);put("deleted",if(deleted)1 else 0)},SQLiteDatabase.CONFLICT_REPLACE)
                 if(deleted){db.delete("states","source=? AND identity=?",arrayOf(source,identity));continue}
                 require(row.getString("body").toByteArray().size <= 65536 && row.toString().toByteArray().size <= 524288)
@@ -109,6 +114,6 @@ class StateCache(private val context: Context) : SQLiteOpenHelper(context, "stat
             db.insertWithOnConflict("cursors",null,ContentValues().apply { put("source",source);put("cursor",cursor) },SQLiteDatabase.CONFLICT_REPLACE)
             db.setTransactionSuccessful()
         } finally { db.endTransaction() }
-        if(replace||records.isNotEmpty())io.github.beacon.app.widget.StateChanges.data(context,source,if(replace)null else records.map{it.optString("application_id")+":"+it.optString("topic_key")})
+        if(replace||changedIdentities.isNotEmpty())io.github.beacon.app.core.TopicChanges.data(context,source,if(replace)null else changedIdentities)
     }
 }
