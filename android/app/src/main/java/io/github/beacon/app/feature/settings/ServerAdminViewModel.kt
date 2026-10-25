@@ -418,7 +418,8 @@ class ServerAdminViewModel(private val createClient: (String, String) -> ServerA
             try {
                 val result = withContext(Dispatchers.IO) { work() }
                 if (captured == generation) {
-                    mutable.value = result.copy(busy = true, feedback = success)
+                    // Work may return a copy of the in-flight state. Never retain its pending action.
+                    mutable.value = result.copy(busy = true, feedback = success, awaiting = null, actionFailure = null)
                     onSuccess()
                     if (captured == generation) mutable.value = mutable.value.copy(busy = false)
                 }

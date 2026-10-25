@@ -758,7 +758,7 @@ internal fun ServerAdminPage(
  * the dialog keeps both actions busy until the server answers and only then dismisses itself.
  */
 @Composable
-private fun AdminActionConfirm(
+internal fun AdminActionConfirm(
     title: String,
     description: String,
     state: AdminUiState,
@@ -767,8 +767,8 @@ private fun AdminActionConfirm(
 ) {
     var submitted by remember { mutableStateOf(false) }
     var failure by remember { mutableStateOf<Int?>(null) }
-    LaunchedEffect(state.awaiting, state.actionFailure) {
-        if (submitted && state.awaiting == null) {
+    LaunchedEffect(submitted, state.busy, state.awaiting, state.actionFailure) {
+        if (submitted && !state.busy && state.awaiting == null) {
             submitted = false
             failure = state.actionFailure
             if (failure == null) onDismiss()
@@ -778,11 +778,11 @@ private fun AdminActionConfirm(
         title = title,
         description = description,
         danger = true,
-        enabled = state.awaiting == null,
-        dismissEnabled = state.awaiting == null,
+        enabled = !state.busy && state.awaiting == null,
+        dismissEnabled = !state.busy && state.awaiting == null,
         errorText = failure?.let { stringResource(it) },
-        statusText = stringResource(if (state.awaiting != null) R.string.admin_loading else R.string.settings_form_ready),
-        onDismiss = { if (state.awaiting == null) onDismiss() },
+        statusText = stringResource(if (state.busy || state.awaiting != null) R.string.admin_loading else R.string.settings_form_ready),
+        onDismiss = { if (!state.busy && state.awaiting == null) onDismiss() },
         onConfirm = {
             failure = null
             submitted = true

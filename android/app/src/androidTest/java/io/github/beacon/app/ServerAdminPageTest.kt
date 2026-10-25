@@ -353,7 +353,72 @@ class ServerAdminPageTest {
     @Test fun refinedMaterialPages() = refinedPages(BeaconUiStyle.MATERIAL3)
     @Test fun refinedMiuixPages() = refinedPages(BeaconUiStyle.MIUIX)
 
-    private class FixtureAdmin(private val includeApplications: Boolean = false) : ServerAdministration {
+    private fun unbindDialog(style: BeaconUiStyle, failFirst: Boolean) {
+        val calls=java.util.concurrent.atomic.AtomicInteger()
+        val entered=java.util.concurrent.CountDownLatch(1)
+        val release=java.util.concurrent.CountDownLatch(if(failFirst)0 else 1)
+        val backend=FixtureAdmin(revokeWork={
+            val attempt=calls.incrementAndGet()
+            entered.countDown()
+            check(release.await(10,java.util.concurrent.TimeUnit.SECONDS))
+            if(failFirst&&attempt==1)throw java.io.IOException("offline fixture")
+        })
+        val model=ServerAdminViewModel{_,_->backend}
+        val shown=androidx.compose.runtime.mutableStateOf(true)
+        rule.runOnUiThread {
+            rule.activity.setContent {
+                BeaconTheme(style) {
+                    val state=model.state.collectAsState().value
+                    if(shown.value&&state.loggedIn)io.github.beacon.app.feature.settings.AdminActionConfirm(
+                        title="解绑设备", description="解绑测试手机", state=state,
+                        onDismiss={shown.value=false;model.dismissAction()},
+                        onConfirm={model.revokeDevice("phone-1")},
+                    )
+                }
+            }
+            model.login("https://example.invalid","a".repeat(64))
+        }
+        try {
+            rule.waitUntil(5000){model.state.value.loggedIn&&!model.state.value.busy}
+            rule.onNodeWithText("确认").performClick()
+            if(failFirst){
+                rule.waitUntil(5000){model.state.value.actionFailure!=null&&!model.state.value.busy}
+                rule.onNodeWithText(rule.activity.getString(R.string.admin_network_failed)).assertIsDisplayed()
+                rule.onNodeWithText("取消").assertIsEnabled()
+                rule.onNodeWithText("确认").assertIsEnabled().performClick()
+            }else{
+                assertTrue(entered.await(3,java.util.concurrent.TimeUnit.SECONDS))
+                rule.waitUntil(5000){model.state.value.awaiting!=null}
+                rule.onNodeWithText("确认").assertIsNotEnabled()
+                rule.onNodeWithText("取消").assertIsNotEnabled()
+                android.os.ParcelFileDescriptor.AutoCloseInputStream(
+                    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("input keyevent 4")
+                ).use{it.readBytes()}
+                rule.onNodeWithText("解绑测试手机").assertIsDisplayed()
+                release.countDown()
+            }
+            rule.waitUntil(5000){!model.state.value.busy&&model.state.value.devices.single().revoked}
+            rule.waitUntil(5000){!shown.value}
+            assertNull("Successful mutation must release the dialog gate",model.state.value.awaiting)
+            assertNull(model.state.value.actionFailure)
+            assertEquals(if(failFirst)2 else 1,calls.get())
+            rule.onNodeWithText("解绑测试手机").assertDoesNotExist()
+            // A subsequent dialog must be usable and Back must dismiss it normally.
+            rule.runOnIdle{shown.value=true}
+            rule.onNodeWithText("取消").assertIsEnabled()
+            android.os.ParcelFileDescriptor.AutoCloseInputStream(
+                    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("input keyevent 4")
+                ).use{it.readBytes()}
+            rule.waitUntil(5000){!shown.value}
+        }finally{release.countDown()}
+    }
+
+    @Test fun materialUnbindCompletesAndBackRecovers()=unbindDialog(BeaconUiStyle.MATERIAL3,false)
+    @Test fun miuixUnbindCompletesAndBackRecovers()=unbindDialog(BeaconUiStyle.MIUIX,false)
+    @Test fun materialUnbindFailureCanRetryImmediately()=unbindDialog(BeaconUiStyle.MATERIAL3,true)
+    @Test fun miuixUnbindFailureCanRetryImmediately()=unbindDialog(BeaconUiStyle.MIUIX,true)
+
+    private class FixtureAdmin(private val includeApplications: Boolean = false, private val revokeWork: () -> Unit = {}) : ServerAdministration {
         val overviewCalls = java.util.concurrent.atomic.AtomicInteger()
         var bindingCalls = 0
         override val endpoint = "https://example.invalid"
@@ -379,7 +444,7 @@ class ServerAdminPageTest {
                 .put("expires_at_ms", System.currentTimeMillis() + 600000)
         }
 
-        override fun revokeDevice(id: String) = JSONObject().put("revoked", true)
+        override fun revokeDevice(id: String): JSONObject { revokeWork(); return JSONObject().put("revoked", true) }
 
         override fun test(id: String, title: String, body: String, priority: Int) =
             JSONObject().put("id", "message-1")
