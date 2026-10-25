@@ -181,7 +181,7 @@ internal fun WidgetStateDetail(row:JSONObject,id:Int,cache:StateCache,onEdit:()-
     val progress=(0 until array.length()).map{array.getJSONObject(it)}.filter{it.optString("kind")=="progress"}
     var primary by remember(key){mutableStateOf(cache.preference("primary:$key"))}
     val now=System.currentTimeMillis()
-    val status=when{row.optBoolean("_waiting")->"等待数据";row.optLong("expires_at_ms") in 1..now->"已失效";row.optLong("stale_at_ms") in 1..now->"数据已过期";else->"数据有效"}
+    val status=when{row.optBoolean("_waiting")->"等待数据";row.optLong("expires_at_ms") in 1..now->"已过期";row.optLong("stale_at_ms") in 1..now->"数据较旧";else->"数据有效"}
     Column(verticalArrangement=Arrangement.spacedBy(BeaconUiMetrics.SettingsGroupGap)){
         SettingsGroup("状态概览"){
             Column(Modifier.padding(BeaconUiMetrics.CardInset),verticalArrangement=Arrangement.spacedBy(BeaconUiMetrics.Gap8)){

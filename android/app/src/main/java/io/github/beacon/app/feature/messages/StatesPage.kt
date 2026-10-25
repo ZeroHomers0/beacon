@@ -124,7 +124,7 @@ internal fun StateListCard(row: JSONObject, onOpen: () -> Unit) {
     val now=System.currentTimeMillis()
     val status=when {
         row.optBoolean("_waiting") -> "等待数据"
-        row.optLong("expires_at_ms") in 1..now -> "已失效"
+        row.optLong("expires_at_ms") in 1..now -> "已过期"
         row.optLong("stale_at_ms") in 1..now -> "数据较旧"
         else -> "数据有效"
     }

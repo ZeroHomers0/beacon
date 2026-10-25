@@ -13,7 +13,7 @@ internal class WidgetTopicSync(context: Context, private val onResult: (String) 
     private val connection = RuntimeConnection(
         RuntimeProbeService::class.java,
         onStatus = { status, _ ->
-            if (!closed && status.kind == OperationKind.CONNECTION_LOST) onResult("无法同步主题，请重试；本地选项保留。")
+            if (!closed && status.kind == OperationKind.CONNECTION_LOST) onResult("主题同步失败，请重试；已保留本地选项。")
         },
         onConnected = { request() },
     )
@@ -25,7 +25,7 @@ internal class WidgetTopicSync(context: Context, private val onResult: (String) 
         connection.execute(
             operation = { RuntimeControlClient(it).syncWidgetTopics() },
             onResult = { if(!closed)onResult(it) },
-            onError = { if(!closed)onResult("主题同步未完成，请重试；本地选项保留。") },
+            onError = { if(!closed)onResult("主题同步失败，请重试；已保留本地选项。") },
         )
     }
     override fun close() { closed = true; connection.close() }

@@ -46,7 +46,7 @@ internal fun AdminTopicsPage(state:AdminUiState,model:ServerAdminViewModel,scrol
         }
     }
     val states=if(state.topicCatalog)listOf("all","waiting","active","stale","expired")else listOf("all","active","stale","expired","deleted")
-    val labels=if(state.topicCatalog)listOf("全部状态","等待数据","有效","数据陈旧","已过期")else listOf("全部状态","有效","数据陈旧","已过期","已清空")
+    val labels=if(state.topicCatalog)listOf("全部状态","等待数据","数据有效","数据较旧","已过期")else listOf("全部状态","数据有效","数据较旧","已过期","已清空")
     SettingsRetryFeedback("数据主题加载失败",state.refreshFailure!=null||state.topicsFailure!=null,onRetry={reload++})
     SettingsRetryFeedback("详情加载失败",detailOpen&&state.topicDetailFailure!=null,onRetry={detailIdentity?.let(model::loadTopic)})
     val direction=androidx.compose.ui.platform.LocalLayoutDirection.current
@@ -93,8 +93,8 @@ internal fun AdminTopicsPage(state:AdminUiState,model:ServerAdminViewModel,scrol
         val record=state.topicDetail
         BeaconAlertDialog(onDismissRequest={detailOpen=false;model.dismissTopic()},title={BeaconText(record.optString("title").ifBlank{record.optString("topic_key")})},text={
             Column(verticalArrangement=Arrangement.spacedBy(BeaconUiMetrics.Gap8)){
-                BeaconText(record.optString("body").ifBlank{"当前状态已清空或过期。"})
-                SettingsHint(if(record.optBoolean("deleted"))"已清空或过期"else if(record.optLong("expires_at_ms") in 1..System.currentTimeMillis())"已过期，以下为最后记录"else if(record.optLong("stale_at_ms") in 1..System.currentTimeMillis())"数据陈旧，以下为最后记录"else"数据有效")
+                BeaconText(record.optString("body").ifBlank{"当前数据已清空。"})
+                SettingsHint(if(record.optBoolean("deleted"))"数据已清空"else if(record.optLong("expires_at_ms") in 1..System.currentTimeMillis())"已过期，以下为最后记录"else if(record.optLong("stale_at_ms") in 1..System.currentTimeMillis())"数据较旧，以下为最后记录"else"数据有效")
                 SettingsHint("发送应用："+(if(record.optString("application_id").isBlank())"未关联应用"else record.optString("application_name").ifBlank{record.optString("application_id")}))
                 SettingsHint("采样时间："+topicTime(record.optLong("observed_at_ms")))
                 SettingsHint("更新时间："+topicTime(record.optLong("accepted_at_ms")))
@@ -139,7 +139,7 @@ internal fun AdminTopicsPage(state:AdminUiState,model:ServerAdminViewModel,scrol
         model.mutateTopic("delete",payload,query){deleting=null;offset=0}
     },confirmText="删除",enabled=!state.busy,dismissEnabled=!state.busy,errorText=state.actionFailure?.let{stringResource(it)})}
 
-    pending?.let{row->BeaconConfirmDialog("清空当前状态？","将同步移除手机中的当前状态，保留版本水位。脚本继续以更高版本上报时，持续主题会重新出现。此操作不停止采集脚本。",onDismiss={if(!state.busy)pending=null},onConfirm={model.clearTopic(topicIdentity(row),query){pending=null;offset=0}},confirmText="清空",enabled=!state.busy,dismissEnabled=!state.busy,errorText=state.actionFailure?.let{stringResource(it)})}
+    pending?.let{row->BeaconConfirmDialog("清空当前数据？","将清空手机中的当前数据，保留主题的版本记录。脚本上报更高版本后会再次显示数据。此操作不会停止采集脚本。",onDismiss={if(!state.busy)pending=null},onConfirm={model.clearTopic(topicIdentity(row),query){pending=null;offset=0}},confirmText="清空",enabled=!state.busy,dismissEnabled=!state.busy,errorText=state.actionFailure?.let{stringResource(it)})}
 }
 
 private fun topicTime(time:Long)=if(time<=0)"暂无记录"else java.text.DateFormat.getDateTimeInstance().format(java.util.Date(time))

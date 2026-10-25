@@ -51,7 +51,7 @@ object WidgetRenderer {
         val now=System.currentTimeMillis();val expired=row!=null&&(row.optLong("expires_at_ms") in 1..now);val stale=row!=null&&(row.optLong("stale_at_ms") in 1..now)
         text(config.optString("title").ifBlank{row?.optString("title")?:"Beacon 数据"},pad,pad+13*scale,13f,bold=true,cap=12)
         if(row?.optBoolean("_topic_deleted")==true||row?.optBoolean("_waiting")==true){placeholder(if(row.optBoolean("_topic_deleted"))"主题已删除"else"等待数据");return bitmap}
-        if(row==null||expired){placeholder(if(expired)"已过有效期" else if(config.optString("identity").isBlank())WidgetPlaceholder.UNBOUND else"原内容已删除或未同步");return bitmap}
+        if(row==null||expired){placeholder(if(expired)"已过期" else if(config.optString("identity").isBlank())WidgetPlaceholder.UNBOUND else"内容已删除或尚未同步");return bitmap}
         val selected=WidgetConfigRules.selected(row,config)
         val error=WidgetConfigRules.layoutError(row,config,width,height)
         if(error!=null){text(error,pad,h*.55f,14f,color=muted);return bitmap}
@@ -144,7 +144,7 @@ object WidgetRenderer {
             "segmented_ring"->{val b=selected.first();val items=b.optJSONArray("items");val total=b.optDouble("total");val radius=min(w*.26f,contentH*.4f);val x=pad+radius;val y=top+contentH/2;p.style=Paint.Style.STROKE;p.strokeWidth=radius*(if((items?.length()?:0)<=3).26f else .2f)*WidgetTuning.stroke(config,1);p.strokeCap=Paint.Cap.BUTT;p.color=track;c.drawCircle(x,y,radius,p);var start=-90f;if(items!=null&&total>0)for(i in 0 until min(items.length(),6)){val item=items.getJSONObject(i);val angle=(item.optDouble("value")/total*360).toFloat();p.color=WidgetColors.resolve(config,b.optString("id"))?.let{base->android.graphics.Color.rgb((Color.red(base)+(255-Color.red(base))*i*.09).toInt().coerceIn(0,255),(Color.green(base)+(255-Color.green(base))*i*.09).toInt().coerceIn(0,255),(Color.blue(base)+(255-Color.blue(base))*i*.09).toInt().coerceIn(0,255))}?:palette[i%4];c.drawArc(RectF(x-radius,y-radius,x+radius,y+radius),start,angle,false,p);start+=angle};p.style=Paint.Style.FILL;text(value(JSONObject(b.toString()).put("value",total)),x-radius*.6f,y,18f*numberScale,color=color(0,b),bold=true,right=x+radius*.6f,cap=10,align=Paint.Align.CENTER);if(items!=null)for(i in 0 until min(items.length(),6))text(WidgetTextLimits.cap(items.getJSONObject(i).optString("label"),4)+" "+WidgetTextLimits.number(items.getJSONObject(i).optDouble("value")),w*.6f,top+(i+1)*contentH/(items.length()+1),12f*labelScale,WidgetColors.resolve(config,b.optString("id"))?:fg)}
             else->text("请选择模板",pad,top+30*scale,16f)
         }
-        if(stale)text("数据已过期 · 最后采样 "+java.text.SimpleDateFormat("HH:mm",java.util.Locale.getDefault()).format(java.util.Date(row.optLong("observed_at_ms"))),pad,h-pad,11f,muted,cap=24)
+        if(stale)text("数据较旧 · 最后采样 "+java.text.SimpleDateFormat("HH:mm",java.util.Locale.getDefault()).format(java.util.Date(row.optLong("observed_at_ms"))),pad,h-pad,11f,muted,cap=24)
         else if(config.optBoolean("_offline"))text("网络未连通 · 最后结果",pad,h-pad,11f,muted,cap=24)
         else if(!compactRing&&config.optBoolean("updated",true))text("更新约 "+java.text.SimpleDateFormat("HH:mm",java.util.Locale.getDefault()).format(java.util.Date(WidgetPerformance.updatedAt(row))),pad,h-pad,11f,muted,cap=24)
         return bitmap

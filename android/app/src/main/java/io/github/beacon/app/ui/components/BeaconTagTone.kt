@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import io.github.beacon.app.domain.policy.tagToneIndex
 
 /** Bright opaque labels retain the same identity and readable ink in both themes. */
@@ -43,20 +44,23 @@ fun BeaconActiveFilterChip(
     leadingIcon: (@Composable () -> Unit)? = null,
     trailingIcon: (@Composable () -> Unit)? = null,
 ) {
-    val ink = BeaconTagInk.copy(alpha = if (enabled) 1f else .38f)
+    val foreground = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+    val ink = foreground.copy(alpha = if (enabled) 1f else .38f)
     androidx.compose.material3.InputChip(selected = selected, onClick = onClick, modifier = modifier,
         enabled = enabled, shape = shape, label = {
             androidx.compose.runtime.CompositionLocalProvider(LocalButtonLabel provides true,
                 androidx.compose.material3.LocalContentColor provides ink,
                 top.yukonga.miuix.kmp.theme.LocalContentColor provides ink) { label() }
         }, leadingIcon = leadingIcon, trailingIcon = trailingIcon,
+        border = androidx.compose.foundation.BorderStroke(1.dp,
+            androidx.compose.material3.MaterialTheme.colorScheme.outlineVariant.copy(alpha = if (enabled) 1f else .38f)),
         colors = androidx.compose.material3.InputChipDefaults.inputChipColors(
-            containerColor = BeaconChoiceUnselected, selectedContainerColor = BeaconChoiceSelected,
-            labelColor = BeaconTagInk, selectedLabelColor = BeaconTagInk,
-            leadingIconColor = BeaconTagInk, selectedLeadingIconColor = BeaconTagInk,
-            trailingIconColor = BeaconTagInk, selectedTrailingIconColor = BeaconTagInk,
-            disabledContainerColor = BeaconChoiceUnselected,
-            disabledSelectedContainerColor = BeaconChoiceUnselected,
+            containerColor = Color.Transparent, selectedContainerColor = Color.Transparent,
+            labelColor = foreground, selectedLabelColor = foreground,
+            leadingIconColor = foreground, selectedLeadingIconColor = foreground,
+            trailingIconColor = foreground, selectedTrailingIconColor = foreground,
+            disabledContainerColor = Color.Transparent,
+            disabledSelectedContainerColor = Color.Transparent,
             disabledLabelColor = ink, disabledLeadingIconColor = ink, disabledTrailingIconColor = ink,
         ))
 }

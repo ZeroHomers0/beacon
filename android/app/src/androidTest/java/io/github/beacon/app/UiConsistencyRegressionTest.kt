@@ -127,6 +127,48 @@ class UiConsistencyRegressionTest {
         capture("FILTERS_${style}")
     }
 
+    private fun neutralFilters(style: BeaconUiStyle) {
+        for (mode in listOf(BeaconThemeMode.LIGHT, BeaconThemeMode.DARK)) {
+            rule.runOnUiThread {
+                rule.activity.setContent {
+                    BeaconTheme(style, mode) {
+                        androidx.compose.material3.Surface {
+                            Column(Modifier.padding(16.dp)) {
+                                for (selected in listOf(true, false)) {
+                                    BeaconActiveFilterChip(onClick = {}, selected = selected,
+                                        modifier = Modifier.width(200.dp).testTag("filter-$selected"),
+                                        label = { BeaconText("测试筛选") })
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            val image = rule.onRoot().captureToImage().toPixelMap()
+            val background = image[2, 2]
+            for (selected in listOf(true, false)) {
+                val bounds = rule.onNodeWithTag("filter-$selected").fetchSemanticsNode().boundsInRoot
+                val x = (bounds.left + 8 * rule.activity.resources.displayMetrics.density).toInt()
+                assertEquals("Filter fill must match surface: $style/$mode/$selected",
+                    background, image[x, bounds.center.y.toInt()])
+            }
+            capture("NEUTRAL_FILTERS_${style}_${mode}")
+        }
+    }
+
+    @Test fun materialFiltersHaveNoColoredFill() = neutralFilters(BeaconUiStyle.MATERIAL3)
+    @Test fun miuixFiltersHaveNoColoredFill() = neutralFilters(BeaconUiStyle.MIUIX)
+
+    @Test fun olderDataAndExpiredDataHaveDifferentDescriptions() {
+        val now = 10_000L
+        val older = org.json.JSONObject().put("stale_at_ms", now - 1)
+        val expired = org.json.JSONObject(older.toString()).put("expires_at_ms", now - 1)
+        assertTrue(io.github.beacon.app.widget.WidgetHealth.description(older, now).startsWith("数据较旧"))
+        assertTrue(io.github.beacon.app.widget.WidgetHealth.description(expired, now).startsWith("已过期"))
+        assertEquals("等待数据", io.github.beacon.app.widget.WidgetHealth.description(
+            org.json.JSONObject().put("_waiting", true), now))
+    }
+
     private fun capture(name: String) {
         val bitmap = rule.onRoot().captureToImage()
         val file = java.io.File(rule.activity.getExternalFilesDir("ui-qa"), "$name.png")

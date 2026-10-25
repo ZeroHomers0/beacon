@@ -13,9 +13,9 @@ object WidgetHealth {
         manager.activeNetwork!=null
     }.getOrDefault(true)
     fun description(row:JSONObject?,now:Long=System.currentTimeMillis(),online:Boolean=true):String=when{
-        row==null->"原内容已删除或尚未同步，请检查主题绑定"
-        row.optBoolean("_waiting")->"等待首次上报"
-        row.optLong("expires_at_ms") in 1..now->"已过有效期，等待新数据"
+        row==null->"内容已删除或尚未同步，请重新选择主题"
+        row.optBoolean("_waiting")->"等待数据"
+        row.optLong("expires_at_ms") in 1..now->"已过期，等待新数据"
         row.optLong("stale_at_ms") in 1..now->"数据较旧，展示最后一次结果"
         !online->"网络未连通，展示最后一次结果"
         else->"数据有效"

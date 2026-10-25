@@ -479,7 +479,7 @@
     <string name="connection_status_waiting">等待即时连接</string>
     <string name="connection_status_connected">服务器已连接</string>
     <string name="storage_save_failed_title">清理设置保存失败</string>
-    <string name="settings_confirm">确定</string>
+    <string name="settings_confirm">确认</string>
     <string name="settings_unsaved_title">尚未保存修改</string>
     <string name="settings_unsaved_hint">修改后请保存</string>
     <string name="settings_continue_editing">继续编辑</string>
@@ -549,9 +549,9 @@
 <string name="state_widget_wide_title">数据宽卡 · 4×2</string>
 <string name="settings_widgets_title">小组件管理</string>
 <string name="admin_topics_title">数据主题</string>
-<string name="admin_topic_cleared">主题状态已清空</string>
+<string name="admin_topic_cleared">主题数据已清空</string>
 <string name="ui_nav_states_title">数据</string>
-    <string name="admin_topic_clear">清空当前状态</string>
+    <string name="admin_topic_clear">清空当前数据</string>
     <string name="bark_decryption_title">Bark 消息解密</string>
     <string name="bark_decryption_configure">配置解密密钥</string>
     <string name="bark_decryption_bind_first">请先完成服务器绑定</string>
