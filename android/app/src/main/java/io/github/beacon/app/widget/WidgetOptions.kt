@@ -10,6 +10,13 @@ import io.github.beacon.app.data.remote.topicSnapshot
 import io.github.beacon.app.domain.model.DataStatus
 
 object WidgetHealth {
+    fun guidance(row:JSONObject?,online:Boolean=true):String = when(row?.topicSnapshot()?.status(System.currentTimeMillis())?:DataStatus.MISSING){
+        DataStatus.MISSING->"打开此组件设置，重新选择已创建的数据主题。"
+        DataStatus.WAITING->"绑定已完成，等待采集脚本首次上报，无需重复添加组件。"
+        DataStatus.STALE->"请检查采集脚本是否仍在运行；手机联网不代表来源已更新。"
+        DataStatus.EXPIRED,DataStatus.CLEARED->"等待发送方上报新的有效数据，组件会自动恢复。"
+        else->if(!online)"恢复手机网络后将继续补收，当前显示最后一次结果。"else""
+    }
     fun online(context:android.content.Context):Boolean=runCatching{
         val manager=context.getSystemService(android.net.ConnectivityManager::class.java)
         manager.activeNetwork!=null
@@ -34,8 +41,8 @@ object WidgetHealth {
 
 @Composable internal fun WidgetMoreSettings(row:JSONObject,config:JSONObject,onChange:(JSONObject)->Unit){
     val type = config.optString("template")
-    if(type == "text") return
-    val numeric = type != "text_list"
+    if(type in listOf("text","countdown")) return
+    val numeric = type !in listOf("text_list","overview_list")
     var expanded by remember{mutableStateOf(false)}
     Column(verticalArrangement=Arrangement.spacedBy(BeaconUiMetrics.SettingsGroupGap)){
         SettingsGroup("更多设置"){

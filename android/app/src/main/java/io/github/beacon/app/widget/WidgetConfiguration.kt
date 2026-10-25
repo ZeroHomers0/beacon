@@ -11,6 +11,7 @@ internal object WidgetConfiguration {
         "bands" to false, "global_color" to "", "number_scale" to 100, "label_scale" to 100,
         "stroke_scale" to 100, "decimals" to -1, "unit_position" to "after", "trend" to true,
         "text_size" to 16, "list_start" to 1, "list_count" to 12, "list_lines" to 1, "list_rank" to true,
+        "tap_action" to "none", "short_labels" to JSONObject(),
     )
 
     /** Restore only inherited visual defaults. Binding, content order, template and refresh stay intact. */
@@ -29,6 +30,9 @@ internal object WidgetConfiguration {
         val colors = value.optJSONObject("content_colors") ?: JSONObject()
         colors.keys().asSequence().toList().forEach { if (colors.optString(it).isBlank()) colors.remove(it) }
         value.put("content_colors", colors)
+        val labels=value.optJSONObject("short_labels")?:JSONObject()
+        labels.keys().asSequence().toList().forEach{if(labels.optString(it).isBlank())labels.remove(it)}
+        value.put("short_labels",labels)
         return value
     }
 

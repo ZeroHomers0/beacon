@@ -72,9 +72,15 @@ class StateRefreshReceiver:BroadcastReceiver(){
             val pending=PendingIntent.getBroadcast(context,7901,Intent(context,StateRefreshReceiver::class.java).setAction("beacon.STATE_DEADLINE"),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             val now=System.currentTimeMillis()
             val next=StateCache(context).use{cache->
-                val bound=WidgetInstances.ids(context).toList().mapNotNull{runCatching{org.json.JSONObject(cache.preference("widget:$it"))}.getOrNull()}.map{it.optString("source") to it.optString("identity")}.toSet()
-                (bound+cache.notificationBindings()).mapNotNull{cache.find(it.first,it.second)}
-                    .flatMap{listOf(it.optLong("stale_at_ms"),it.optLong("expires_at_ms"))}.filter{it>now}.minOrNull()
+                val configs=WidgetInstances.ids(context).toList().mapNotNull{runCatching{org.json.JSONObject(cache.preference("widget:$it"))}.getOrNull()}
+                val bound=configs.map{it.optString("source") to it.optString("identity")}.toSet()
+                val deadlines=(bound+cache.notificationBindings()).mapNotNull{cache.find(it.first,it.second)}
+                    .flatMap{listOf(it.optLong("stale_at_ms"),it.optLong("expires_at_ms"))}.filter{it>now}
+                val interactive=context.getSystemService(android.os.PowerManager::class.java).isInteractive
+                val ticks=configs.mapNotNull{config->
+                    WidgetCountdown.next(cache.find(config.optString("source"),config.optString("identity")),config,now,interactive)
+                }
+                (deadlines+ticks).minOrNull()
             }
             if(next==null)alarm.cancel(pending)else alarm.set(AlarmManager.RTC,next,pending)
         }

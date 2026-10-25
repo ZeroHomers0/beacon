@@ -188,6 +188,7 @@ private fun StateWidgetEditorContent(id:Int, detail:Boolean, source:String?, ide
                     BeaconDropdownPreference("选择展示内容",choices.map{it.optString("title").ifBlank{it.optString("topic_key")}+" · "+(if(it.optString("application_id").isBlank())"未关联应用"else it.optString("application_name").ifBlank{it.optString("application_id")})},choices.indexOf(row),enabled=choices.isNotEmpty(),settingsRow=true,icon=BeaconIcons.Topics){index->
                         val selected=choices[index]
                         val next=JSONObject(draft).put("source",selected.optString("local_source")).put("identity",selected.optString("local_identity"))
+                        if(config.optString("source")!=selected.optString("local_source")||config.optString("identity")!=selected.optString("local_identity"))next.remove("short_labels")
                         next.remove("metrics")
                         next.put("template",if(selected.optBoolean("_waiting"))"auto"else WidgetConfigRules.recommend(selected))
                         if(!selected.optBoolean("_waiting"))next.put("metrics",JSONArray(WidgetConfigRules.defaults(selected,next).map{it.optString("id")}))
@@ -215,6 +216,7 @@ private fun StateWidgetEditorContent(id:Int, detail:Boolean, source:String?, ide
                     if(!row.optBoolean("_waiting"))item { WidgetTuningSettings(WidgetConfigRules.resolved(row,config)){next->draft=next.toString()} }
                     item { WidgetSimpleAppearance(row,config){next->draft=next.toString()} }
                     if(!row.optBoolean("_waiting"))item { WidgetMoreSettings(row,config){next->draft=next.toString()} }
+                    item { WidgetDisplaySettings(row,config){next->draft=next.toString()} }
                     item { SettingsGroup(androidx.compose.ui.res.stringResource(io.github.beacon.app.R.string.widget_update_hints)){
                         BeaconDropdownPreference("刷新策略",listOf("及时更新（约5秒）","均衡（任务约5秒，其他约15秒）","省电（约1分钟）"),listOf("fast","balanced","economy").indexOf(config.optString("refresh","balanced")).coerceAtLeast(0),settingsRow=true,icon=BeaconIcons.Sync){index->update{it.put("refresh",listOf("fast","balanced","economy")[index])}}
                         Column(Modifier.padding(horizontal=BeaconUiMetrics.CardInset)){

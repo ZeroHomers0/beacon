@@ -106,11 +106,13 @@ class StructuredStateTest {
             java.io.File(directory,"bold_${template}_${count}.png").outputStream().use{bitmap.compress(Bitmap.CompressFormat.PNG,100,it)}
         }
         for(template in WidgetRenderer.templates){
-            val r=row();val ids=when(template){"single_ring"->listOf("short");"nested_rings"->listOf("short","long","monthly");else->listOf("short","long","monthly","yearly")}
+            val r=row();val ids=when(template){"single_ring"->listOf("short");"nested_rings","overview_bars","overview_rings"->listOf("short","long","monthly");"overview_list"->listOf("short","news");else->listOf("short","long","monthly","yearly")}
             if(template=="segmented_ring")r.put("blocks",JSONArray("""[{"kind":"segments","id":"disk","label":"磁盘分布","total":100,"unit":"GB","items":[{"id":"images","label":"图片","value":30},{"id":"video","label":"视频","value":40},{"id":"other","label":"其他","value":10}]}]"""))
             if(template=="sparkline")r.put("blocks",JSONArray("""[{"kind":"sparkline","id":"trend","label":"延迟","points":[{"at_ms":1,"value":20},{"at_ms":2,"value":40},{"at_ms":3,"value":30}]}]"""))
             if(template=="text_list")r.put("blocks",JSONArray("""[{"kind":"list","id":"news","label":"热搜","items":[{"id":"one","text":"第一条新闻"},{"id":"two","text":"第二条新闻"}]}]"""))
-            val config=JSONObject().put("template",template).put("metrics",JSONArray(if(template=="segmented_ring")listOf("disk")else if(template=="text_list")listOf("news")else if(template=="sparkline")listOf("trend")else ids))
+            if(template=="countdown")r.put("blocks",JSONArray().put(JSONObject().put("kind","countdown").put("id","reset").put("label","窗口重置").put("target_at_ms",System.currentTimeMillis()+3600000)))
+            if(template=="overview_list")r.getJSONArray("blocks").put(JSONObject().put("kind","list").put("id","news").put("items",JSONArray().put(JSONObject().put("id","one").put("text","备份任务已完成"))))
+            val config=JSONObject().put("template",template).put("metrics",JSONArray(if(template=="countdown")listOf("reset")else if(template=="segmented_ring")listOf("disk")else if(template=="text_list")listOf("news")else if(template=="sparkline")listOf("trend")else ids))
             assertNull(template,WidgetConfigRules.error(r,config))
             for(dark in listOf(false,true))for(size in listOf(180 to 180,360 to 220,480 to 320)){
                 val bitmap=WidgetRenderer.render(r,config,size.first,size.second,dark)

@@ -282,7 +282,7 @@ curl.exe --fail-with-body -X POST "$env:BEACON_URL/api/v1/push" -H "Authorizatio
 | `segments` | 正数 `total`，`items` 1–6 项；每项 `id/label/value`，值非负且总和不超过 `total` | 占比圆环；未占满部分作为剩余空间 |
 | `sparkline` | `points` 1–120 项，每项 `at_ms/value`，时间非负且严格递增 | 迷你趋势图 |
 | `kv` | `items` 1–12 项，每项 `id/label/text` | App 详情渲染，不直接作为桌面数值块 |
-| `countdown` | `target_at_ms` 非负毫秒时间戳 | App 详情渲染，当前没有独立倒计时桌面模板 |
+| `countdown` | `target_at_ms` 非负毫秒时间戳 | App详情及独立倒计时小组件；按分钟显示，不需要脚本每分钟重复上报 |
 | `timeline` | `items` 1–12 项：`id/label/at_ms/status`；状态为 `pending/active/completed/failed` | App 详情渲染 |
 | `pipeline` | `items` 1–12 项：`id/label/status`；状态为 `pending/running/completed/failed/skipped` | App 详情渲染 |
 | `alert` | 非空 `text`（最多 2048 UTF-8 字节），可带 `tone` | App 详情渲染 |
@@ -524,6 +524,31 @@ curl --fail-with-body "$BEACON_URL/api/v1/states/meta?topic_key=widget%2Fdemo-pr
 | `X-Beacon-Topics` | `1` | 接收 `@beacon/topics_changed/1` 目录更新提示 |
 
 目录/状态提示不携带完整业务数据，收到后通过各自HTTP同步接口获取。断线恢复也必须补收，不能以WebSocket在线代替HTTP版本和游标校验。状态与目录快照最多每设备保留两个、有效10分钟，增量日志按24小时和10000条上限清理；游标失效需重新快照。
+
+### 倒计时与组合面板
+
+倒计时沿用已有结构化块，不增加服务端轮询或新接口。例如在已经预创建的主题上发送：
+
+```json
+{
+  "mode": "state",
+  "schema_version": 1,
+  "topic_key": "widget/reset",
+  "revision": 1,
+  "observed_at_ms": 1792972800000,
+  "fresh_for_seconds": 14400,
+  "ttl": 86400,
+  "title": "窗口重置",
+  "body": "以目标时间计算剩余时间",
+  "blocks": [
+    {"kind":"countdown","id":"reset","label":"下次重置","target_at_ms":1792980000000}
+  ]
+}
+```
+
+示例时间戳须替换为实际观察/目标时间，后续上报递增revision。目标时间到达只表示倒计时结束，不代表额度已重置或任务完成；业务结果仍由发送方确认后上报。手机息屏不绘制，分钟级显示受系统调度影响，不承诺逐秒/精确到分钟；较旧数据停止动态倒计时并提示等待更新。
+
+组合面板使用同一主题已有blocks：数字与横条需要三项数值（后两项明确范围），环形与数值需要三项数值（第一项明确范围），数值与榜单需要一项数值和一组list。布局、显示短名称及点击行为属于手机实例设置，不是推送payload字段；发送方不指定桌面尺寸或自由布局。榜单完整内容通过用户主动开启的只读详情入口查看，未增加逐条新闻链接或自动打开外链的协议。
 
 ### 实现依据
 

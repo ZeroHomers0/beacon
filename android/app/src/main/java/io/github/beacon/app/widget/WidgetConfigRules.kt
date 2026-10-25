@@ -7,12 +7,12 @@ object WidgetConfigRules {
 
     fun recommend(row:JSONObject):String {
         val blocks=available(row)
-        return when { blocks.isEmpty()->"text";blocks.any{it.optString("kind") in listOf("progress","metric")}->if(blocks.filter{it.optString("kind") in listOf("progress","metric")}.all{!it.has("max")})"numbers"else"horizontal_bars";blocks.first().optString("kind")=="list"->"text_list";blocks.first().optString("kind")=="sparkline"->"sparkline";else->"segmented_ring" }
+        return when { blocks.isEmpty()->"text";blocks.any{it.optString("kind") in listOf("progress","metric")}->if(blocks.filter{it.optString("kind") in listOf("progress","metric")}.all{!it.has("max")})"numbers"else"horizontal_bars";blocks.first().optString("kind")=="list"->"text_list";blocks.first().optString("kind")=="countdown"->"countdown";blocks.first().optString("kind")=="sparkline"->"sparkline";else->"segmented_ring" }
     }
-    fun defaults(row:JSONObject,config:JSONObject):List<JSONObject> = available(row).filter{when(config.optString("template")){"text_list"->it.optString("kind")=="list";"sparkline"->it.optString("kind")=="sparkline";"segmented_ring"->it.optString("kind")=="segments";"text"->false;else->it.optString("kind") in listOf("progress","metric")}}.take(if(config.optString("template") in listOf("text_list","sparkline","segmented_ring"))1 else 4)
+    fun defaults(row:JSONObject,config:JSONObject):List<JSONObject> = available(row).filter{when(config.optString("template")){"countdown"->it.optString("kind")=="countdown";"overview_list"->it.optString("kind") in listOf("metric","progress","list");"text_list"->it.optString("kind")=="list";"sparkline"->it.optString("kind")=="sparkline";"segmented_ring"->it.optString("kind")=="segments";"text"->false;else->it.optString("kind") in listOf("progress","metric")}}.take(if(config.optString("template") in listOf("text_list","sparkline","segmented_ring","countdown"))1 else 4)
     fun available(row:JSONObject):List<JSONObject> {
         val blocks=row.optJSONArray("blocks")?:org.json.JSONArray()
-        return (0 until blocks.length()).mapNotNull{blocks.optJSONObject(it)}.filter{it.optString("kind") in listOf("progress","metric","segments","list","sparkline")}
+        return (0 until blocks.length()).mapNotNull{blocks.optJSONObject(it)}.filter{it.optString("kind") in listOf("progress","metric","segments","list","sparkline","countdown")}
     }
     fun selected(row:JSONObject, config:JSONObject):List<JSONObject>{
         val available=available(row)
@@ -30,6 +30,14 @@ object WidgetConfigRules {
         if(requested!=null){val available=row.optJSONArray("blocks")?:org.json.JSONArray();val ids=(0 until available.length()).map{available.getJSONObject(it).optString("id")};if((0 until requested.length()).any{requested.optString(it) !in ids})return "所选内容已失效，请重新选择"}
         val blocks=selected(row,config);if(blocks.isEmpty())return "暂无绑定内容"
         if(type !in WidgetRenderer.templates)return "请选择模板"
+        if(type=="countdown")return if(blocks.size==1&&blocks[0].optString("kind")=="countdown"&&blocks[0].has("target_at_ms")&&blocks[0].optLong("target_at_ms",-1)>=0)null else "请选择一个有效的倒计时内容"
+        if(type=="overview_list")return if(blocks.size==2&&blocks.count{it.optString("kind")=="list"}==1&&blocks.count{it.optString("kind") in listOf("progress","metric")}==1)null else "请选择一个数值和一组文字列表"
+        if(type in listOf("overview_bars","overview_rings")) {
+            if(blocks.size!=3||blocks.any{it.optString("kind") !in listOf("progress","metric")})return "请选择三项数值内容"
+            val ranged=if(type=="overview_rings")listOf(blocks.first())else blocks.drop(1)
+            return if(ranged.any{!it.optDouble("max").isFinite()||it.optBoolean("indeterminate")})"图形内容需要明确范围"else null
+        }
+        if(blocks.any{it.optString("kind")=="countdown"})return "倒计时内容请使用倒计时样式"
         if(type=="text_list")return if(blocks.size==1&&blocks[0].optString("kind")=="list")null else "请选择一组文字列表"
         if(type=="sparkline")return if(blocks.size==1&&blocks[0].optString("kind")=="sparkline")null else "请选择一组趋势数据"
         if(blocks.any{it.optString("kind")=="sparkline"})return "此样式不支持趋势数据"
@@ -49,18 +57,20 @@ object WidgetConfigRules {
         error(row,config)?.let{return it}
         if(row.optBoolean("_waiting"))return null
         val blocks=selected(row,config);val type=config.optString("template","horizontal_bars")
-        val scale=kotlin.math.min(width/300f,height/220f).coerceAtLeast(.75f)
-        val pad=kotlin.math.max(12f,kotlin.math.min(width,height)*(40f/440f))
+        val scale=WidgetGeometry.scale(width,height)
+        val pad=WidgetGeometry.inset(width,height)
         val content=height-2*pad-28*scale-(if(type=="single_ring"&&height<150)0f else 16*scale)
         val count=blocks.size
         val small=when(type){
             "sparkline"->content<80*scale
             "horizontal_bars"->content/count<30*scale
             "numbers"->content/((count+1)/2).coerceAtLeast(1)<40*scale
-            "nested_rings"->content/count<36*scale
+            "nested_rings"->WidgetGeometry.nested(width,pad+24*scale,height-pad, pad,count,WidgetTuning.factor(config,"label_scale"),WidgetTuning.stroke(config,count)).radius<29f
+            "overview_bars","overview_rings","overview_list"->width<245||height<230
+            "countdown"->content<45*scale
             "ring_grid"->content/(if(count>2)2 else 1)<45*scale||(width-2*pad)/2<40*scale
             "vertical_bars"->content<90*scale||count>3&&width<240
-            "segmented_ring"->content/(blocks[0].optJSONArray("items")?.length()?:1).coerceAtLeast(1)<16*scale
+            "segmented_ring"->width<150||content/(blocks[0].optJSONArray("items")?.length()?:1).coerceAtLeast(1)<16*scale
             else->content<36*scale
         }
         return if(small)"当前尺寸空间不足，请减少内容或选择其他模板" else null

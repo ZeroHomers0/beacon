@@ -61,7 +61,7 @@ open class BeaconStateWidget: AppWidgetProvider() {
                 val pixelBudget=(bounds.width().toDouble()*bounds.height()*1.0).coerceIn(1.0,Int.MAX_VALUE.toDouble())
                 val area=sizes.sumOf{it.width.toDouble()*it.height}
                 val rasterDensity=kotlin.math.min(metrics.density.toDouble(),kotlin.math.sqrt(pixelBudget/area)).toFloat()
-                val signature="display-v8:"+android.provider.Settings.Global.getInt(context.contentResolver,android.provider.Settings.Global.BOOT_COUNT,0)+":"+java.util.TimeZone.getDefault().id+":"+context.resources.configuration.locales.toLanguageTags()+":"+rasterDensity+":"+sizes.joinToString()+":"+dark+":"+WidgetPerformance.displayKey(row,config)
+                val signature="display-v9:"+android.provider.Settings.Global.getInt(context.contentResolver,android.provider.Settings.Global.BOOT_COUNT,0)+":"+java.util.TimeZone.getDefault().id+":"+context.resources.configuration.locales.toLanguageTags()+":"+rasterDensity+":"+sizes.joinToString()+":"+dark+":"+WidgetPerformance.displayKey(row,config)
                 val last=cache.preference("widget-last:$id").toLongOrNull()?:0L
                 if(cache.preference("widget-signature:$id")==signature){WidgetPerformance.skipped.incrementAndGet();continue}
                 if(ids==null&&source!=null&&row!=null&&cache.preference("widget-valid:$id")=="1"&&status !in listOf("completed","failed","cancelled")&&now-last<WidgetPerformance.interval(config,row)){schedule(context,(WidgetPerformance.interval(config,row)-(now-last)).coerceAtLeast(250));continue}
@@ -73,7 +73,7 @@ open class BeaconStateWidget: AppWidgetProvider() {
                     return RemoteViews(context.packageName,R.layout.state_widget).apply{
                         setImageViewBitmap(R.id.widget_image,bitmap)
                         setContentDescription(R.id.widget_image,row?.optString("body")?:"Beacon 数据，长按桌面组件编辑")
-                        setOnClickPendingIntent(R.id.widget_image,null)
+                        setOnClickPendingIntent(R.id.widget_image,WidgetTapIntent.pending(context,id,config))
                     }
                 }
                 val views=if(android.os.Build.VERSION.SDK_INT>=31&&sizes.size>1)RemoteViews(sizes.associateWith{render(it)})else render(sizes.first())

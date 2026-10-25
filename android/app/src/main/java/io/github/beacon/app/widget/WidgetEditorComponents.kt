@@ -39,11 +39,12 @@ import io.github.beacon.app.core.labelResource
 internal fun WidgetPreview(row:JSONObject?,config:JSONObject,size:SizeF,actual:Boolean,format:WidgetFormat,error:String?=null) {
     val dark=when(config.optString("background","system")){"light"->false;"dark"->true;else->androidx.compose.foundation.isSystemInDarkTheme()}
     val density=LocalDensity.current.density
+    val clock=rememberWidgetClock(row,config)
     SettingsGroup("桌面预览") {
         Column(Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
             BoxWithConstraints(Modifier.fillMaxWidth(),contentAlignment=Alignment.Center) {
                 val factor=minOf(1f,maxWidth.value/size.width,240f/size.height)
-                val bitmap=remember(WidgetPerformance.displayKey(row,config),size,dark,density,factor){WidgetRenderer.render(row,config,size.width.toInt(),size.height.toInt(),dark,density*factor)}
+                val bitmap=remember(WidgetPerformance.displayKey(row,config,clock),size,dark,density,factor){WidgetRenderer.render(row,config,size.width.toInt(),size.height.toInt(),dark,density*factor)}
                 Box(Modifier.width((size.width*factor).dp).height((size.height*factor).dp)){
                     if(config.optString("background")=="transparent")Canvas(Modifier.fillMaxSize()){
                         val cell=12.dp.toPx()
@@ -143,6 +144,18 @@ private fun TemplateGlyph(type:String,enabled:Boolean=true){
     Canvas(Modifier.fillMaxWidth().height(32.dp)){
         val stroke=4.dp.toPx()
         when(type){
+            "countdown"->{
+                val radius=size.height*.38f;val center=Offset(size.width*.24f,size.height/2)
+                drawCircle(muted,radius,center,style=Stroke(2.dp.toPx()))
+                drawLine(ink,center,Offset(center.x,center.y-radius*.65f),2.dp.toPx(),StrokeCap.Round)
+                drawLine(ink,center,Offset(center.x+radius*.55f,center.y),2.dp.toPx(),StrokeCap.Round)
+                drawLine(ink,Offset(size.width*.5f,size.height*.5f),Offset(size.width*.9f,size.height*.5f),stroke,StrokeCap.Round)
+            }
+            "overview_bars","overview_rings","overview_list"->{
+                if(type=="overview_rings")drawArc(ink,-90f,260f,false,Offset(0f,0f),Size(size.height,size.height),style=Stroke(stroke,cap=StrokeCap.Round))
+                else drawRoundRect(ink,Offset(0f,size.height*.05f),Size(size.width*.32f,size.height*.38f),androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()))
+                for(i in 0..1)drawLine(if(i==0)ink else muted,Offset(size.width*.5f,size.height*(.3f+i*.45f)),Offset(size.width*(if(type=="overview_list").95f else .82f),size.height*(.3f+i*.45f)),if(type=="overview_list")2.dp.toPx()else stroke,StrokeCap.Round)
+            }
             "text","text_list"->for(i in 0..2){val y=size.height*(.18f+i*.3f);drawLine(if(i==0)ink else muted,Offset(0f,y),Offset(size.width*(if(i==2).6f else .9f),y),2.dp.toPx(),StrokeCap.Round)}
             "numbers"->for(i in 0..1){drawRoundRect(ink,Offset(size.width*i*.5f,size.height*.15f),Size(size.width*.3f,size.height*.4f),androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()));drawLine(muted,Offset(size.width*i*.5f,size.height*.85f),Offset(size.width*(i*.5f+.35f),size.height*.85f),2.dp.toPx())}
             "horizontal_bars"->for(i in 0..1){val y=size.height*(.25f+i*.5f);drawLine(muted,Offset(0f,y),Offset(size.width*.9f,y),stroke,StrokeCap.Round);drawLine(ink,Offset(0f,y),Offset(size.width*(.35f+i*.2f),y),stroke,StrokeCap.Round)}

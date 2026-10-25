@@ -109,7 +109,7 @@ class WidgetEfficiencyTest {
                 rule.waitUntil(5000){rule.onAllNodesWithText("小组件设置").fetchSemanticsNodes().isNotEmpty()}
                 rule.onNodeWithTag("settings-list").performScrollToNode(hasText("起始排名"))
                 rule.onNodeWithText("起始排名").performClick();rule.onNodeWithText("第7条",substring=false).performClick()
-                rule.onNodeWithText("每条行数").performClick();rule.onNodeWithText("两行",substring=false).performClick()
+                rule.onNodeWithText("每条行数").performScrollTo().performClick();rule.onNodeWithText("两行",substring=false).performClick()
                 val folder=requireNotNull(context.getExternalFilesDir("state-qa"));folder.mkdirs()
                 java.io.File(folder,"widget_list_settings_${style.name}.png").outputStream().use{stream->rule.onRoot().captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG,100,stream)}
                 rule.onNodeWithContentDescription("查看预览").performClick()
@@ -158,7 +158,7 @@ class WidgetEfficiencyTest {
             val config=JSONObject().put("template",template).put("format",format.name).put("number_scale",115).put("label_scale",110).put("stroke_scale",115).put("global_color","#E65B65")
             assertNull(WidgetTuning.error(config))
             val bitmap=WidgetRenderer.render(data,config,format.width,format.height,false)
-            val inset=kotlin.math.max(12f,kotlin.math.min(format.width,format.height)*40f/440f).toInt()-1
+            val inset=WidgetGeometry.inset(format.width,format.height).toInt()-1
             for(y in 0 until bitmap.height)for(x in 0 until bitmap.width){
                 if(bitmap.getPixel(x,y)==0xFFE65B65.toInt())assertTrue("$template $format cannot draw outside safe insets",x>=inset&&x<bitmap.width-inset&&y>=inset&&y<bitmap.height-inset)
             }
