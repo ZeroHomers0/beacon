@@ -137,7 +137,7 @@ npx wrangler secret put ADMIN_TOKEN
 - [MCP](mcp/README.md)：本机stdio服务，支持AI客户端发送通知及只读查询能力、管理概况。
 - [青龙仓库订阅](examples/qinglong/README.md)：直接订阅本仓库，按白名单自动导入新闻、热搜和额度任务；仅依赖Python标准库。
 - [青龙热搜榜](examples/qinglong/hot-search/README.md)：每半小时抓取60s热搜榜写入数据主题，用文字列表小组件展示。
-- [青龙Codex额度](examples/qinglong/codex-quota/README.md)：每5分钟查询Codex五小时与周额度，变化时上报、最长30分钟保鲜，以四项数值展示剩余额度与重置时间。
+- [青龙Codex额度](examples/qinglong/codex-quota/README.md)：白天每10分钟、夜间每30分钟查询Codex五小时与周额度，变化时上报，以四项数值展示剩余额度与重置时间。
 - [外部Webhook适配](examples/webhooks/README.md)：Python标准库接收GitHub/Grafana事件，完成验签、固定映射和有界幂等重试，不内置第三方业务到服务端。
 - [结构化内容示例](examples/structured/README.md)：外部任务采集并发送进度等数据；新主题需先预创建。
 - 接收模式默认省电；即时模式保持WebSocket，规则模式按环境切换。普通消息批量接收会增加优先级0–7的等待时间，8–10仍即时投递。

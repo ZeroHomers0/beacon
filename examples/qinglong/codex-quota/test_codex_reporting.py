@@ -2,6 +2,7 @@
 import copy
 import importlib.util
 import os
+from datetime import datetime
 from pathlib import Path
 import unittest
 from unittest.mock import patch
@@ -136,6 +137,57 @@ class ReportingTest(unittest.TestCase):
             self.run_sender()
         self.assertIn("pending", self.saved)
         self.assertNotIn("fingerprint", self.saved)
+
+
+class ScheduleTest(unittest.TestCase):
+    def env(self, **values):
+        return patch.dict(os.environ, {k: str(v) for k, v in values.items()}, clear=True)
+
+    def test_defaults_use_ten_minutes_by_day_and_thirty_at_night(self):
+        with self.env():
+            self.assertEqual(10, quota._interval_minutes(datetime(2026, 11, 1, 14, 20)))
+            self.assertEqual(30, quota._interval_minutes(datetime(2026, 11, 1, 3, 20)))
+
+    def test_night_window_is_left_closed_and_midnight_belongs_to_night(self):
+        with self.env():
+            self.assertTrue(quota.should_query(datetime(2026, 11, 1, 0, 30)))
+            self.assertTrue(quota.should_query(datetime(2026, 11, 1, 7, 30)))
+            self.assertFalse(quota.should_query(datetime(2026, 11, 1, 7, 40)))
+            self.assertFalse(quota.should_query(datetime(2026, 11, 1, 8, 35)))
+            self.assertTrue(quota.should_query(datetime(2026, 11, 1, 8, 40)))
+
+    def test_default_day_gap_skips_odd_five_minute_runs(self):
+        with self.env():
+            self.assertTrue(quota.should_query(datetime(2026, 11, 1, 9, 10)))
+            self.assertFalse(quota.should_query(datetime(2026, 11, 1, 9, 15)))
+
+    def test_one_minute_scheduling_delay_still_queries(self):
+        with self.env():
+            self.assertTrue(quota.should_query(datetime(2026, 11, 1, 3, 31)))
+            self.assertTrue(quota.should_query(datetime(2026, 11, 1, 9, 11)))
+            self.assertFalse(quota.should_query(datetime(2026, 11, 1, 3, 32)))
+            self.assertFalse(quota.should_query(datetime(2026, 11, 1, 3, 29)))
+
+    def test_custom_overnight_window_and_intervals(self):
+        env = {"NIGHT_START_HOUR": 23, "NIGHT_END_HOUR": 7, "NIGHT_INTERVAL_MINUTES": 20, "DAY_INTERVAL_MINUTES": 15}
+        with self.env(**env):
+            self.assertEqual(20, quota._interval_minutes(datetime(2026, 11, 1, 23, 40)))
+            self.assertEqual(20, quota._interval_minutes(datetime(2026, 11, 1, 6, 20)))
+            self.assertEqual(15, quota._interval_minutes(datetime(2026, 11, 1, 7, 15)))
+            self.assertFalse(quota.should_query(datetime(2026, 11, 1, 6, 30)))
+            self.assertTrue(quota.should_query(datetime(2026, 11, 1, 6, 40)))
+
+    def test_interval_not_dividing_an_hour_falls_back_to_default(self):
+        with self.env(DAY_INTERVAL_MINUTES=7):
+            with patch.object(quota, "log") as output:
+                self.assertEqual(10, quota._interval_minutes(datetime(2026, 11, 1, 12, 30)))
+            self.assertIn("DAY_INTERVAL_MINUTES", str(output.call_args_list))
+
+    def test_equal_night_hours_disable_night_and_force_run_bypasses_gate(self):
+        with self.env(NIGHT_START_HOUR=8, NIGHT_END_HOUR=8):
+            self.assertEqual(10, quota._interval_minutes(datetime(2026, 11, 1, 3, 20)))
+        with self.env(FORCE_RUN=1):
+            self.assertTrue(quota.should_query(datetime(2026, 11, 1, 6, 37)))
 
 
 class RetryAfterTest(unittest.TestCase):

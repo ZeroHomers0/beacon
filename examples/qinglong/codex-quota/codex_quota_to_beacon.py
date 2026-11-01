@@ -1,18 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# cron: */5 * * * *
-# */5 * * * * codex_quota_to_beacon.py
+# cron: */10 * * * *
+# */10 * * * * codex_quota_to_beacon.py
 # new Env('Beacon Codex 额度');
 """Codex 额度 -> Beacon 数据主题（青龙面板定时任务）
 
-每 5 分钟读取一次 Codex 的五小时窗口与七天窗口额度，变化时作为**完整快照**上报到
-Beacon 数据主题，由手机桌面小组件展示。
+按节奏读取 Codex 的五小时窗口与七天窗口额度，变化时作为**完整快照**上报到
+Beacon 数据主题，由手机桌面小组件展示：白天（默认 08:00-24:00）每 10 分钟一次，
+夜间（默认 00:00-08:00）每 30 分钟一次。
+
+青龙一个任务只能挂一条 cron，所以定时规则按较短间隔（`*/10`）触发，夜间由脚本
+按分钟对齐跳过未到点的运行；这也是任务保持退出码 0、不写任何状态的原因。
 
 用法（青龙面板）：
     1. 先在 App「服务器管理 → 数据主题」创建主题，例如 widget/codex-quota
     2. 把本文件放到青龙的脚本目录，例如 /ql/data/scripts/codex-quota/codex_quota_to_beacon.py
     3. 「环境变量」里添加 BEACON_BASE_URL、BEACON_PUSH_KEY，以及下面的 CODEX_AUTH_JSON
-    4. 定时任务命令填 `task codex-quota/codex_quota_to_beacon.py`，定时规则填 `*/5 * * * *`
+    4. 定时任务命令填 `task codex-quota/codex_quota_to_beacon.py`，定时规则填 `*/10 * * * *`
 
 本脚本只依赖 Python 标准库（urllib），青龙镜像无需安装任何依赖。
 
@@ -29,6 +33,11 @@ Beacon 数据主题，由手机桌面小组件展示。
     TOPIC_KEY            可选，数据主题标识，默认 widget/codex-quota
     FRESH_FOR_SECONDS    可选，多旧算过期（秒），默认 3600（两倍保鲜上限）
     MAX_REPORT_SECONDS   可选，无变化时的最长上报间隔，默认 1800
+    DAY_INTERVAL_MINUTES   可选，白天查询间隔（分钟），默认 10，须整除 60
+    NIGHT_INTERVAL_MINUTES 可选，夜间查询间隔（分钟），默认 30，须整除 60
+    NIGHT_START_HOUR     可选，夜间开始小时（含），默认 0
+    NIGHT_END_HOUR       可选，夜间结束小时（不含），默认 8
+    FORCE_RUN            可选，1/true 忽略上面的节奏判断，立即查一次（手工验证用）
     WARN_PERCENT         可选，已用比例到达该值标黄，默认 70
     CRITICAL_PERCENT     可选，已用比例到达该值标红，默认 90
     BEACON_TTL           可选，数据有效期（秒），默认 604800；0 表示服务端默认
@@ -105,6 +114,53 @@ def log(message: str) -> None:
 def fail(code: int, message: str) -> NoReturn:
     log(f"失败：{message}")
     raise SystemExit(code)
+
+
+# ---------------------------------------------------------------- 查询节奏
+
+def _divisor_env(name: str, default: int) -> int:
+    """间隔必须能整除 60，否则无法按整点/整十分对齐。"""
+    value = _int_env(name, default, 1, 60)
+    if 60 % value:
+        log(f"{name}={value} 不能整除 60，无法对齐到整分钟，改用默认值 {default}")
+        return default
+    return value
+
+
+def _night_hours() -> tuple[int, int]:
+    return _int_env("NIGHT_START_HOUR", 0, 0, 23), _int_env("NIGHT_END_HOUR", 8, 0, 23)
+
+
+def _in_night(hour: int, start: int, end: int) -> bool:
+    """夜间区间左闭右开；start > end 表示跨零点（例如 23 点到 7 点）。"""
+    if start == end:
+        return False
+    if start < end:
+        return start <= hour < end
+    return hour >= start or hour < end
+
+
+def _interval_minutes(moment: datetime | None = None) -> int:
+    now = moment or datetime.now()
+    start, end = _night_hours()
+    if _in_night(now.hour, start, end):
+        return _divisor_env("NIGHT_INTERVAL_MINUTES", 30)
+    return _divisor_env("DAY_INTERVAL_MINUTES", 10)
+
+
+def should_query(moment: datetime | None = None) -> bool:
+    """青龙一个任务只能挂一条 cron，所以按分钟是否对齐当前时段间隔决定本次是否查询。
+
+    cron 需按最短间隔（默认白天 10 分钟）触发；夜间间隔 30 分钟时，只有整点和
+    半点对齐的运行会继续查询。跳过的运行不写任何状态、退出码为 0。
+    对齐容忍 1 分钟延迟：面板被占满时调度可能晚一分钟，不该让夜间那一次采集
+    整轮丢掉（丢掉会把 30 分钟间隔拉成 60 分钟）。只容忍迟到、不容忍提前，
+    避免同一次采集因为时钟抖动跑两遍。
+    """
+    if _flag("FORCE_RUN"):
+        return True
+    now = moment or datetime.now()
+    return now.minute % _interval_minutes(now) <= 1
 
 
 def http_json(
@@ -678,6 +734,12 @@ def main() -> int:
         fail(1, "缺少环境变量 BEACON_PUSH_KEY（App 里复制的推送密钥或应用令牌）")
     base = base.rstrip("/")
     topic = _env("TOPIC_KEY", "widget/codex-quota")
+    if not dry_run and not should_query():
+        now = datetime.now()
+        start, end = _night_hours()
+        period = f"夜间 {start:02d}:00-{end:02d}:00" if _in_night(now.hour, start, end) else "白天"
+        log(f"{period}每 {_interval_minutes(now)} 分钟查询一次，{now:%H:%M} 不在对齐点，本次跳过（FORCE_RUN=1 可强跑）")
+        return 0
     with RunLock(_lock_path()):
         return _run(base, key, topic, dry_run)
 
