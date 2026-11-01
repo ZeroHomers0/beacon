@@ -238,8 +238,11 @@ def fetch_board(api_base: str, source: str, limit: int, show_heat: bool) -> list
             continue
         seen.add(title)
         heat = item_heat(row) if show_heat else ""
-        text = f"{title} · {heat}" if heat else title
-        items.append({"id": f"{source}-{len(items) + 1}", "text": text[:300]})
+        # 热度单独放 label，桌面会把它右对齐画成小字，标题因此能独享整条宽度。
+        entry = {"id": f"{source}-{len(items) + 1}", "text": title[:300]}
+        if heat:
+            entry["label"] = heat[:64]
+        items.append(entry)
         if len(items) >= limit:
             break
     if not items:
@@ -274,7 +277,10 @@ def build_payload(topic: str, source: str, items: list[dict], revision: int) -> 
     ttl = _int_env("HOT_TTL", 86400, 60, 604800)
     fresh = _int_env("HOT_FRESH_FOR", 3600, 0, ttl)
     stamp = datetime.now(CN_TZ).strftime("%m-%d %H:%M")
-    lines = [f"{index}. {item['text']}" for index, item in enumerate(items, start=1)]
+    lines = [
+        f"{index}. {item['text']}" + (f" · {item['label']}" if item.get("label") else "")
+        for index, item in enumerate(items, start=1)
+    ]
     return {
         "mode": "state",
         "schema_version": 1,

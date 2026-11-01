@@ -105,25 +105,59 @@ object WidgetRenderer {
             placeholder("当前内容或尺寸不适合\n请在组件设置中调整")
             return bitmap
         }
-        val textSize=config.optInt("text_size",16).coerceIn(12,24).toFloat()
+        // 文字列表默认自动字号（0）；其余模板仍按 12–24 收口。
+        val requestedTextSize=WidgetListLayout.preferredSize(config)
+        val autoTextSize=requestedTextSize==0&&type=="text_list"
+        val textSize=if(autoTextSize)16f else requestedTextSize.coerceIn(12,24).toFloat()
         val textInk=WidgetColors.resolve(config,if(template=="text")""else selected.firstOrNull()?.optString("id").orEmpty())?:if(stale)muted else fg
         when(type){
             "text_list"->{
                 val items=selected.first().optJSONArray("items")?:org.json.JSONArray()
-                val columns=if(config.optString("format") in listOf("WIDE","LARGE"))2 else 1
                 val lines=config.optInt("list_lines",1).coerceIn(1,2)
-                val lineH=textSize*scale*1.6f*lines
-                val perColumn=(contentH/lineH).toInt().coerceAtLeast(1)
-                val cellW=(w-2*pad)/columns
                 val start=(config.optInt("list_start",1)-1).coerceIn(0,11)
-                val limit=min(items.length()-start,min(perColumn*columns,config.optInt("list_count",12).coerceIn(1,12))).coerceAtLeast(0)
+                val requestedColumns=config.optInt("list_columns",0)
+                val wide=config.optString("format") in listOf("WIDE","LARGE")
+                val rank=config.optBoolean("list_rank",true)
+                val total=min(items.length()-start,12).coerceAtLeast(0)
+                val count=config.optInt("list_count",12).coerceIn(1,12)
+                fun prefix(index:Int)=if(rank)"${start+index+1}. " else ""
+                fun title(index:Int)=prefix(index)+items.getJSONObject(start+index).optString("text")
+                // 条目自带的 label 画成右侧小字；它占掉的宽度从标题里扣，避免两段文字叠在一起。
+                // 两行标题会把右侧占满，label 会压在文字上，此时只在正文里保留完整信息。
+                fun suffix(index:Int)=if(lines>1)"" else items.getJSONObject(start+index).optString("label").let{WidgetTextLimits.cap(it,12)}
+                fun suffixWidth(index:Int,size:Float):Float{
+                    val label=suffix(index)
+                    if(label.isEmpty())return 0f
+                    val paint=android.text.TextPaint(Paint.ANTI_ALIAS_FLAG).apply{this.textSize=size*0.8f*scale}
+                    return paint.measureText(label)+6*scale
+                }
+                fun paintAt(size:Float)=android.text.TextPaint(Paint.ANTI_ALIAS_FLAG).apply{color=textInk;this.textSize=size*scale}
+                fun planFor(columns:Int):WidgetListLayout.Plan{
+                    val cellText=(w-2*pad)/columns-(if(columns>1)8*scale else 0f)
+                    return WidgetListLayout.plan(total,count,columns,lines,contentH,cellText,
+                        if(autoTextSize)0f else textSize,scale){i,size->paintAt(size).measureText(title(i))+suffixWidth(i,size)}
+                }
+                var columns=WidgetListLayout.columns(requestedColumns,wide,w.toFloat(),pad,scale)
+                var plan=planFor(columns)
+                // 跟随尺寸时的双列只是默认猜测：带热度后缀挤到 12 号还放不下，就退回单列保住完整标题。
+                if(autoTextSize&&!plan.fits&&requestedColumns==0&&columns>1){
+                    columns=1;plan=planFor(columns)
+                }
+                val cellW=(w-2*pad)/columns
+                val cellText=cellW-(if(columns>1)8*scale else 0f)
+                val size=plan.textSize
+                val lineH=size*scale*1.6f*lines
+                val perColumn=plan.perColumn
+                val limit=plan.limit
                 for(i in 0 until limit){
                     val column=i/perColumn;val line=i%perColumn;val x=pad+column*cellW;val y=top+line*lineH
-                    val caption=(if(config.optBoolean("list_rank",true))"${start+i+1}. "else "")+items.getJSONObject(start+i).optString("text")
-                    val paint=android.text.TextPaint(Paint.ANTI_ALIAS_FLAG).apply{color=textInk;this.textSize=textSize*scale}
-                    val layout=android.text.StaticLayout.Builder.obtain(caption,0,caption.length,paint,(cellW-(if(columns>1)8*scale else 0f)).toInt().coerceAtLeast(1))
+                    val gutter=suffixWidth(i,size)
+                    val paint=paintAt(size)
+                    val layout=android.text.StaticLayout.Builder.obtain(title(i),0,title(i).length,paint,(cellText-gutter).toInt().coerceAtLeast(1))
                         .setIncludePad(false).setMaxLines(lines).setEllipsize(android.text.TextUtils.TruncateAt.END).build()
                     c.save();c.clipRect(x,y,x+cellW,y+lineH);c.translate(x,y);layout.draw(c);c.restore()
+                    val label=suffix(i)
+                    if(gutter>0f&&label.isNotEmpty())text(label,x+cellText-gutter+6*scale,y+size*scale*0.95f,size*0.8f,muted,right=x+cellText,cap=12,align=Paint.Align.RIGHT)
                 }
             }
             "sparkline"->{

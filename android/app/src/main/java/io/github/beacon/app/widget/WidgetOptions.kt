@@ -65,11 +65,13 @@ object WidgetHealth {
 @Composable internal fun WidgetListSettings(config:JSONObject,onChange:(JSONObject)->Unit){
     if(config.optString("template")!="text_list")return
     SettingsGroup("榜单显示"){
+        BeaconDropdownPreference("排布列数",listOf("跟随尺寸","单列","双列"),listOf(0,1,2).indexOf(config.optInt("list_columns",0)).coerceAtLeast(0),settingsRow=true,icon=BeaconIcons.Tune){i->onChange(JSONObject(config.toString()).put("list_columns",listOf(0,1,2)[i]))}
         BeaconDropdownPreference("起始排名",(1..12).map{"第${it}条"},config.optInt("list_start",1).coerceIn(1,12)-1,settingsRow=true,icon=BeaconIcons.Tune){i->onChange(JSONObject(config.toString()).put("list_start",i+1))}
         BeaconDropdownPreference("最多显示",(1..12).map{"${it}条"},config.optInt("list_count",12).coerceIn(1,12)-1,settingsRow=true,icon=BeaconIcons.Tune){i->onChange(JSONObject(config.toString()).put("list_count",i+1))}
         BeaconDropdownPreference("每条行数",listOf("一行","两行"),config.optInt("list_lines",1).coerceIn(1,2)-1,settingsRow=true,icon=BeaconIcons.Tune){i->onChange(JSONObject(config.toString()).put("list_lines",i+1))}
         Column(Modifier.padding(horizontal=BeaconUiMetrics.CardInset)){
             BeaconPreferenceToggle("显示排名序号","序号对应原榜单排名",config.optBoolean("list_rank",true)){value->onChange(JSONObject(config.toString()).put("list_rank",value))}
+            SettingsHint("单列能给每条更多宽度，双列能多放几条；空间太窄或标题太长时会自动回到单列。")
         }
     }
 }

@@ -12,6 +12,11 @@ object WidgetTuning {
     fun stroke(config:JSONObject,count:Int):Float=if(config.optString("template")=="nested_rings"&&count==3)factor(config,"stroke_scale").coerceAtMost(1.1f)else factor(config,"stroke_scale")
     fun error(config:JSONObject):String? {
         if(config.optString("tap_action","none") !in listOf("none","detail"))return "请选择有效的点击行为"
+        if(config.optInt("list_columns",0) !in 0..2)return "请选择有效的排布列数"
+        val text=config.optInt("text_size",16)
+        if(text!=0&&text !in listOf(12,14,16,18,20,24))return "请选择有效的文字大小"
+        // 只有文字列表支持「自动」；把 0 混进其他模板会被渲染端悄悄改成 12 号，直接拒绝。
+        if(text==0&&config.optString("template")!="text_list")return "请选择有效的文字大小"
         val labels=config.optJSONObject("short_labels")
         if(labels!=null&&(labels.length()>32||labels.keys().asSequence().any{key->
             val value=labels.optString(key)
@@ -26,7 +31,11 @@ object WidgetTuning {
     if(type in listOf("text","text_list")){
         SettingsGroup("字号与排版"){
             val sizes=listOf(12,14,16,18,20,24)
-            BeaconDropdownPreference("文字大小",sizes.map{"$it 号"},sizes.indexOf(config.optInt("text_size",16)).coerceAtLeast(0),settingsRow=true,icon=BeaconIcons.Tune){i->onChange(JSONObject(config.toString()).put("text_size",sizes[i]))}
+            if(type=="text_list"){
+                val options=listOf(0,12,14,16,18,20,24)
+                val current=if(config.has("text_size"))config.optInt("text_size",16)else 0
+                BeaconDropdownPreference("文字大小",options.map{if(it==0)"自动"else"$it 号"},options.indexOf(current).coerceAtLeast(0),settingsRow=true,icon=BeaconIcons.Tune){i->onChange(JSONObject(config.toString()).put("text_size",options[i]))}
+            }else BeaconDropdownPreference("文字大小",sizes.map{"$it 号"},sizes.indexOf(config.optInt("text_size",16)).coerceAtLeast(0),settingsRow=true,icon=BeaconIcons.Tune){i->onChange(JSONObject(config.toString()).put("text_size",sizes[i]))}
         }
         return
     }

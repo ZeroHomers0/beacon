@@ -278,7 +278,7 @@ curl.exe --fail-with-body -X POST "$env:BEACON_URL/api/v1/push" -H "Authorizatio
 | `progress` | `value`、`max`；`min` 默认 0，须满足 `min ≤ value ≤ max` 且 `max > min` | 横条、柱图、单环、嵌套环、独立小环、纯数字 |
 | 不确定进度 | `kind:"progress", indeterminate:true`，不要同时传 `value/min/max/trend` | 横向进度条或纯数字；需要百分比的环形不可选 |
 | `metric` | `value`；`min/max` 若提供必须成对；`trend` 可为 `up/down/flat` | 无范围可用纯数字/横条；有范围可用环形/柱图 |
-| `list` | `items` 1–12 项，每项有唯一 `id` 和非空 `text`，可带 `label/tone` | 文字列表：2×宽单列、4×宽双列，3×宽按可用空间展示 |
+| `list` | `items` 1–12 项，每项有唯一 `id` 和非空 `text`，可带 `label/tone` | 文字列表：默认 2×宽单列、4×宽双列，3×宽按可用空间展示；列数可显式改单/双列，文字大小可选自动。`label` 作为右侧灰色小字展示，桌面会为它预留宽度 |
 | `segments` | 正数 `total`，`items` 1–6 项；每项 `id/label/value`，值非负且总和不超过 `total` | 占比圆环；未占满部分作为剩余空间 |
 | `sparkline` | `points` 1–120 项，每项 `at_ms/value`，时间非负且严格递增 | 迷你趋势图 |
 | `kv` | `items` 1–12 项，每项 `id/label/text` | App 详情渲染，不直接作为桌面数值块 |
