@@ -79,9 +79,12 @@ fun BeaconDropdownPreference(
             modifier = Modifier.semantics(mergeDescendants = true) { if (!enabled) disabled() },
             summary = items.getOrElse(selectedIndex) { BeaconUnknownValue },
             enabled = enabled, showValue = false, maxHeight = 360.dp,
-            startAction = icon?.let { image -> { androidx.compose.material3.Icon(image, null) } },
+            startAction = icon?.let { image -> {
+                androidx.compose.material3.Icon(image, null,
+                    if (settingsRow) Modifier.padding(end = BeaconUiMetrics.Gap16) else Modifier)
+            } },
             insideMargin = PaddingValues(horizontal = if (settingsRow) BeaconUiMetrics.CardInset else 0.dp,
-                vertical = BeaconUiMetrics.FieldVerticalInset),
+                vertical = if (settingsRow) BeaconUiMetrics.NavigationVerticalInset else BeaconUiMetrics.FieldVerticalInset),
         )
         return
     }

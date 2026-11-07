@@ -1,6 +1,5 @@
 package io.github.beacon.app.ui
 
-import androidx.compose.animation.core.Transition
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.pager.PagerState
@@ -22,7 +21,6 @@ import io.github.beacon.app.ipc.RuntimeActions
 import io.github.beacon.app.ui.components.BeaconActionIcon
 import io.github.beacon.app.ui.components.BeaconBarBehavior
 import io.github.beacon.app.ui.components.BeaconIconButton
-import io.github.beacon.app.ui.components.BeaconMessageTransition
 import io.github.beacon.app.ui.components.BeaconTopBar
 import io.github.beacon.app.ui.components.ReceiveModeButton
 import io.github.beacon.app.ui.components.SettingsScreen
@@ -44,21 +42,20 @@ internal fun BeaconTopBarArea(
     adminState: AdminUiState,
     adminModel: ServerAdminViewModel,
     updateState: UpdateCheckState,
-    detailTransition: Transition<IncomingMessage?>,
+    displayedDetail: IncomingMessage? = null,
     pager: PagerState,
     barBehavior: BeaconBarBehavior,
     settingsBarBehaviors: Map<SettingsScreen, BeaconBarBehavior>,
     pageBarBehaviors: Map<Int, BeaconBarBehavior>,
     navigate: (Int) -> Unit,
     settingsScreenOverride: SettingsScreen? = null,
-    pageOverride: Int? = null,
+    pageOverride: Int,
 ) {
     // Both change per recomposition and are cheap to read, so deriving them here keeps the call
     // site from forwarding two more parameters.
     val busy = runtimeState.messageBusy
     val polling = runtimeState.pollingState
 
-    BeaconMessageTransition(detailTransition) { displayedDetail ->
         val renderSettingsBar: @Composable (Int, SettingsScreen) -> Unit =
             { barPage, displayedSettingsScreen ->
                 Box(Modifier.testTag("settings-header-$barPage-$displayedSettingsScreen")) {
@@ -384,7 +381,5 @@ internal fun BeaconTopBarArea(
                 )
             }
         }
-        if (pageOverride != null) renderSettingsBar(pageOverride, settingsScreenOverride ?: ui.settingsScreen)
-        else if (displayedDetail != null) renderSettingsBar(ui.page, ui.settingsScreen)
-    }
+        renderSettingsBar(pageOverride, settingsScreenOverride ?: ui.settingsScreen)
 }

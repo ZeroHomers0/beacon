@@ -23,6 +23,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import io.github.beacon.app.BuildConfig
 import io.github.beacon.app.R
 import io.github.beacon.app.data.remote.ReleaseClient
+import io.github.beacon.app.domain.model.IncomingMessage
 import io.github.beacon.app.domain.model.MessageKey
 import io.github.beacon.app.feature.settings.UpdateCheckDialog
 import io.github.beacon.app.feature.settings.UpdateCheckReport
@@ -342,15 +343,7 @@ fun BeaconApp(
         val messageBarBehavior = rememberBeaconBarBehavior()
         val statesBarBehavior = rememberBeaconBarBehavior()
         val detailBarBehavior = rememberBeaconBarBehavior()
-        val barBehavior = when {
-            detail != null -> detailBarBehavior
-            ui.page == 1 -> settingsBarBehaviors.getValue(ui.settingsScreen)
-            ui.page == 2 -> statesBarBehavior
-            else -> messageBarBehavior
-        }
-        // Ordinary pages use the same large, scroll-collapsing title.
-        val compactBar = detail != null || (ui.page == 0 && ui.selectionMode)
-        val renderTopBar: @Composable (Int?, SettingsScreen?) -> Unit = { page, screen ->
+        val renderTopBar: @Composable (Int, SettingsScreen?, IncomingMessage?) -> Unit = { page, screen, displayedDetail ->
             BeaconTopBarArea(
                             ui = ui,
                             runtimeState = runtimeState,
@@ -358,9 +351,9 @@ fun BeaconApp(
                             adminState = adminState,
                             adminModel = adminModel,
                             updateState = updateState,
-                            detailTransition = detailTransition,
+                            displayedDetail = displayedDetail,
                             pager = pager,
-                            barBehavior = barBehavior,
+                            barBehavior = detailBarBehavior,
                             settingsBarBehaviors = settingsBarBehaviors,
                             pageBarBehaviors = mapOf(0 to messageBarBehavior, 2 to statesBarBehavior),
                             navigate = navigate,
@@ -373,10 +366,8 @@ fun BeaconApp(
                 BeaconScaffold(
                     snackbar = snackbar,
                     bottomBar = {},
-                    topBar = {
-                        renderTopBar(null, null)
-                    },
-                ) { insets ->
+                    topBar = {},
+                ) { _ ->
                     BeaconContentArea(
                         ui = ui,
                         runtimeState = runtimeState,
@@ -388,16 +379,14 @@ fun BeaconApp(
                         messageScroll = messageScroll,
                         statesScroll = statesScroll,
                         settingsScrollStates = settingsScrollStates,
-                        barBehavior = barBehavior,
                         settingsBarBehaviors = settingsBarBehaviors,
-                        pageTopBar = { page, screen -> renderTopBar(page, screen) },
+                        pageTopBar = { page, screen -> renderTopBar(page, screen, null) },
+                        detailTopBar = { message -> renderTopBar(ui.page, null, message) },
                         pageBarBehaviors = mapOf(0 to messageBarBehavior, 2 to statesBarBehavior),
-                        compactBar = compactBar,
                         sharedTitleLabel = null,
                         busy = busy,
                         snackbar = snackbar,
                         uiScope = uiScope,
-                        insets = insets,
                         connectionDirty = connectionDirty,
                         notificationPermission = notificationPermission,
                         notificationHint = notificationHint,

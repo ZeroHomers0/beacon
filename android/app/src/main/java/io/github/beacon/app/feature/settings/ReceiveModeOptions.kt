@@ -17,6 +17,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.ReceiveMode
@@ -35,24 +38,39 @@ internal fun ReceiveModeOptions(
             listOf(ReceiveMode.REALTIME, ReceiveMode.POWER_SAVING, ReceiveMode.RULES)
                 .forEach { mode ->
                     if (io.github.beacon.app.ui.theme.LocalBeaconUiStyle.current == io.github.beacon.app.domain.model.BeaconUiStyle.MIUIX) {
-                        top.yukonga.miuix.kmp.preference.RadioButtonPreference(
+                        top.yukonga.miuix.kmp.basic.BasicComponent(
                             title = stringResource(receiveModeTitle(mode)),
                             summary = stringResource(when (mode) {
                                 ReceiveMode.REALTIME -> R.string.receive_mode_realtime_description
                                 ReceiveMode.POWER_SAVING -> R.string.receive_mode_power_description
                                 ReceiveMode.RULES -> R.string.receive_mode_rules_description
-                            }), selected = mode == selected, enabled = enabled,
-                            onClick = { onSelect(mode) },
+                            }), enabled = enabled, role = Role.RadioButton,
+                            onClick = { if (enabled) onSelect(mode) },
+                            insideMargin = PaddingValues(horizontal = BeaconUiMetrics.CardInset,
+                                vertical = BeaconUiMetrics.NavigationVerticalInset),
                             modifier = Modifier.background(
                                 if (mode == selected) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Transparent,
-                                RoundedCornerShape(BeaconUiMetrics.CardRadius)),
+                                RoundedCornerShape(BeaconUiMetrics.CardRadius)).semantics {
+                                    this.selected = mode == selected
+                                    if (!enabled) disabled()
+                                },
                             startAction = {
-                                Box(Modifier.padding(end = BeaconUiMetrics.Gap10)
+                                Row(Modifier.padding(end = BeaconUiMetrics.Gap16),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap10)) {
+                                Box(Modifier.size(BeaconUiMetrics.SearchFieldMinHeight),
+                                    contentAlignment = Alignment.Center) {
+                                    top.yukonga.miuix.kmp.basic.RadioButton(
+                                        selected = mode == selected, onClick = null, enabled = enabled,
+                                        modifier = Modifier.size(BeaconUiMetrics.IconMedium))
+                                }
+                                Box(Modifier
                                     .size(BeaconUiMetrics.SearchFieldMinHeight)
                                     .background(receiveModeColor(mode).copy(alpha = .14f)
                                         .compositeOver(MaterialTheme.colorScheme.surface), CircleShape),
                                     contentAlignment = Alignment.Center) {
                                     Icon(receiveModeIcon(mode), null, Modifier.size(20.dp), tint = receiveModeColor(mode))
+                                }
                                 }
                             },
                         )

@@ -43,7 +43,7 @@ import kotlinx.coroutines.launch
  * list and the settings stack.
  *
  * Split out of [BeaconApp] so the shell above it stays readable: the shell owns the pager, the
- * top bar and the navigation transitions, while this file owns the body. The list padding and
+ * shared feedback and navigation state, while this file owns each page and its top bar. List padding and
  * the nested-scroll wiring live here because the two pages consume them, not the shell.
  */
 @Composable
@@ -58,16 +58,14 @@ internal fun BeaconContentArea(
     messageScroll: LazyListState,
     statesScroll: LazyListState,
     settingsScrollStates: Map<SettingsScreen, LazyListState>,
-    barBehavior: BeaconBarBehavior,
     settingsBarBehaviors: Map<SettingsScreen, BeaconBarBehavior>,
     pageTopBar: @Composable (Int, SettingsScreen?) -> Unit,
+    detailTopBar: @Composable (IncomingMessage) -> Unit,
     pageBarBehaviors: Map<Int, BeaconBarBehavior>,
-    compactBar: Boolean,
     sharedTitleLabel: String?,
     busy: Boolean,
     snackbar: SnackbarHostState,
     uiScope: CoroutineScope,
-    insets: PaddingValues,
     connectionDirty: Boolean,
     notificationPermission: NotificationPermissionState,
     notificationHint: Int?,
@@ -78,15 +76,6 @@ internal fun BeaconContentArea(
     val context = LocalContext.current
     val clipboardBodyLabel = stringResource(R.string.ui_widget_body_label)
     val clipboardTitleLabel = stringResource(R.string.ui_widget_title_label)
-// Keyboard overlays the fixed layout; Scaffold only supplies system-bar/page
-// insets.
-val listModifier =
-    Modifier.fillMaxSize()
-        .padding(insets)
-        .then(
-            if (compactBar) Modifier
-            else Modifier.nestedScroll(barBehavior.connection(ui.uiStyle))
-        )
 val edge = BeaconUiMetrics.PageInset
 val listPadding =
     PaddingValues(start = edge, end = edge, top = BeaconUiMetrics.PageTopInset, bottom = BeaconUiMetrics.PageBottomInset)
@@ -100,10 +89,13 @@ BeaconMessageTransition(
     Modifier.fillMaxSize(),
     animateSize = false,
 ) { detail ->
-    if (detail != null)
+    if (detail != null) {
+        io.github.beacon.app.ui.components.BeaconScaffold(
+            topBar = { detailTopBar(detail) }, bottomBar = {},
+        ) { detailInsets ->
         MessageDetailScreen(
             detail,
-            listModifier,
+            Modifier.fillMaxSize().padding(detailInsets),
             onCopy = { body ->
                 copyToClipboard(
                     context,
@@ -133,7 +125,8 @@ BeaconMessageTransition(
                 )
             },
         )
-    else
+        }
+    } else
         HorizontalPager(
             state = pager,
             modifier = Modifier.fillMaxSize(),

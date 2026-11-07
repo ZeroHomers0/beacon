@@ -265,7 +265,7 @@ fun SettingsPage(
                 }
                 item {
                     SettingsGroup(stringResource(R.string.settings_interface_section_title)) {
-                        SettingsRow(stringResource(R.string.settings_widgets_title),"查看与编辑已添加的桌面小组件",BeaconIcons.Applications){onNavigate(SettingsScreen.WIDGETS)}
+                        SettingsRow(stringResource(R.string.settings_widgets_title),"管理桌面小组件",BeaconIcons.Applications){onNavigate(SettingsScreen.WIDGETS)}
                         BeaconDropdownPreference(
                             stringResource(R.string.appearance_style),
                             listOf(

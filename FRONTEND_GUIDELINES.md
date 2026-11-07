@@ -263,7 +263,7 @@ MIUIX列表保留既有滚动布局；设置页标题栏与正文同属一个官
 - 操作反馈按风格使用官方SnackbarHost/Snackbar，业务提示控制器继续负责新消息替换旧消息、操作结果回调和状态提示生命周期。
 - 紧凑表单同样使用MIUIX TextField或M3 OutlinedTextField，保留错误、密码转换、键盘和输入避让规则，不另行绘制边框。
 - 普通MIUIX设置导航使用ArrowPreference，普通M3导航使用ListItem；命令、危险、外链及展开行保留各自语义适配。
-- MIUIX开关行使用SwitchPreference，接收模式使用RadioButtonPreference；M3使用原生Switch/RadioButton组合，整行只触发一次回调。
+- MIUIX开关行使用SwitchPreference，接收模式使用官方BasicComponent与RadioButton组合，前导对钩与模式图标垂直居中；M3使用原生Switch/RadioButton组合，整行只触发一次回调。
 - MIUIX普通下拉设置使用WindowDropdownPreference及DropdownEntry，支持色样和图标；M3使用自己的DropdownMenu。通用MIUIX上下文菜单使用官方WindowListPopup及BasicComponent选项行。
 - 普通徽标按风格使用Badge/BadgedBox，多选指示使用官方Checkbox，长按说明按风格使用TooltipBox；接收模式已有长按功能不覆盖。
 - 新消息悬浮入口由官方MIUIX Button或M3 FilledTonalButton提供点击、禁用及反馈，保留全圆外形、最小56dp、动态底部避让和原计数逻辑。
@@ -294,3 +294,7 @@ MIUIX列表保留既有滚动布局；设置页标题栏与正文同属一个官
 MIUIX设置和小组件管理的返回手势由官方NavDisplay处理，全局返回处理器不抢占它；本地页面返回不受后台消息同步忙碌状态限制。独立小组件编辑Activity在没有未保存修改时交由Android执行跨Activity预测性返回，保存中及未保存修改继续保留退出保护。
 
 列表不注册内容为空的设置item；按模板判断可见性后再插入小组件的榜单、数值等分组。同一个item内展示多个设置分组时使用SettingsGroupGap，与列表项之间保持一致，避免标题贴近上一张卡片或空item造成双倍空白。
+
+消息详情与列表各自持有完整Scaffold及顶栏，二者整体放在同一个BeaconMessageTransition内。顶栏通过显式页面及消息快照渲染，不再自行观察详情过渡，也不在根Scaffold中显示；根容器只承载背景和共享反馈，不通过外层insets改变所有页面位置。进入、返回和取消预测性手势均由整页过渡处理，禁止标题栏单独重复动画。
+
+MIUIX普通下拉设置行在settingsRow模式下与ArrowPreference使用相同的页面内边距、垂直内距和图标后留白。接收模式的前导单选标记与模式色图标各放入固定尺寸的居中容器，整行统一处理点击和禁用语义，不使用原生偏好内部的顶部对齐组合。设置首页的小组件入口说明统一为“管理桌面小组件”。
