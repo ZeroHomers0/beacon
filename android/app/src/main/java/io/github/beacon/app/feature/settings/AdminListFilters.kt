@@ -82,14 +82,7 @@ internal fun AdminListFilters(
             selectedIndex = if (status == 0) 0 else 1, enabled = enabled,
             onSelected = { onStatus(if (it == 0) 0 else if (status == 2) 2 else 1) },
         )
-        if (query.isNotBlank() || status != 0 || selectedDevice.isNotBlank()) ActionFlow {
-            if (status != 0) AdminFilterChip(stringResource(if (status == 2) R.string.admin_revoked else R.string.admin_active),
-                enabled) { onStatus(0) }
-            if (query.isNotBlank()) AdminFilterChip(query, enabled) { onQuery("") }
-            if (selectedDevice.isNotBlank()) AdminFilterChip(
-                devices.find { it.id == selectedDevice }?.name?.ifBlank { selectedDevice } ?: selectedDevice,
-                enabled) { onDevice?.invoke("") }
-        }
+
     }
 }
 

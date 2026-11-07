@@ -281,56 +281,6 @@ internal fun BeaconTopBarArea(
                                 ) {
                                     actions.transport()
                                 }
-                                Box {
-                                    BeaconActionIcon(
-                                        BeaconIcons.Filter,
-                                        stringResource(
-                                            R.string.ui_filter_messages_title
-                                        ),
-                                        enabled = !busy,
-                                    ) {
-                                        ui.filtersOpen = true
-                                    }
-                                    BeaconDropdownMenu(
-                                        ui.filtersOpen,
-                                        { ui.filtersOpen = false },
-                                    ) {
-                                        MessageReadFilter.entries.forEach { filter
-                                            ->
-                                            BeaconDropdownMenuItem(
-                                                text = {
-                                                    BeaconSelectableRow(
-                                                        stringResource(
-                                                            when (filter) {
-                                                                MessageReadFilter
-                                                                    .ALL ->
-                                                                    R.string
-                                                                        .ui_filter_all_label
-                                                                MessageReadFilter
-                                                                    .UNREAD ->
-                                                                    R.string
-                                                                        .msg_unread_label
-                                                                MessageReadFilter
-                                                                    .READ ->
-                                                                    R.string
-                                                                        .msg_read_label
-                                                            }
-                                                        ),
-                                                        filter == ui.readFilter,
-                                                    )
-                                                },
-                                                onClick = {
-                                                    ui.filtersOpen = false
-                                                    ui.applyFilter(
-                                                        actions,
-                                                        ui.search,
-                                                        filter,
-                                                    )
-                                                },
-                                            )
-                                        }
-                                    }
-                                }
                                 BeaconActionIcon(
                                     BeaconIcons.Settings,
                                     stringResource(R.string.ui_nav_settings_title),

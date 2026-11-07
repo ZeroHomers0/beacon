@@ -93,10 +93,7 @@ internal fun StatesPage(
             BeaconSearchBox(search,{search=it},"搜索主题或应用",Modifier.fillMaxWidth(),scroll = scroll,onSearch={})
             BeaconListSwitch(labels=listOf("共 ${rows.size} 个","显示 ${visible.size} 个"),
                 icons=listOf(BeaconIcons.Topics,BeaconIcons.List))
-            if(showHidden||search.isNotBlank()) ActionFlow {
-                if(showHidden) BeaconActiveFilterChip(selected=true,onClick={onShowHidden(false)},label={BeaconText("包含已隐藏主题")})
-                if(search.isNotBlank()) BeaconActiveFilterChip(selected=true,onClick={search=""},label={BeaconText(search,maxLines=1,overflow=TextOverflow.Ellipsis)})
-            }
+
         }
         BeaconPullToRefresh(refreshing,{if(!busy){refreshing=true;onRefresh();version++}},Modifier.fillMaxWidth().weight(1f),enabled=connected) {
             PageStateHost(AsyncPageState.resolve(loaded,loading,failed,visible.isEmpty()),Modifier.fillMaxSize(),

@@ -56,7 +56,7 @@ fun BeaconSettingsTransition(
                 } +
                     fadeIn(
                         tween(SETTINGS_NAVIGATION_DURATION_MS, easing = settingsNavigationEasing),
-                        initialAlpha = 1f,
+                        initialAlpha = 0f,
                     )
             val exit =
                 slideOutHorizontally(motion) { width ->
@@ -64,7 +64,7 @@ fun BeaconSettingsTransition(
                 } +
                     fadeOut(
                         tween(SETTINGS_NAVIGATION_DURATION_MS, easing = settingsNavigationEasing),
-                        targetAlpha = 1f,
+                        targetAlpha = 0f,
                     )
             (entry togetherWith exit)
                 .apply { targetContentZIndex = settingsPageDepth(targetState).toFloat() }

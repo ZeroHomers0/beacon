@@ -65,7 +65,7 @@ fun BeaconListSwitch(
                 })
                 Row(Modifier.weight(1f).fillMaxHeight()
                     .heightIn(min = if (onSelected != null) androidx.compose.material3.InputChipDefaults.Height else 0.dp)
-                    .then(if (interactive) Modifier.selectable(active, enabled = enabled,
+                    .then(if (interactive) Modifier.selectable(selected = active, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null, enabled = enabled,
                         role = Role.Tab, onClick = { onSelected?.invoke(index) }) else Modifier)
                     .padding(horizontal = BeaconUiMetrics.Gap12, vertical = BeaconUiMetrics.Gap2),
                     verticalAlignment = Alignment.CenterVertically,

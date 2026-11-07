@@ -62,7 +62,8 @@ class ScrollPresentationTest {
             val full = rule.onNodeWithTag(SEARCH_COLLAPSE_TAG).getUnclippedBoundsInRoot()
             rule.runOnIdle { scope.launch { scroll.scrollToItem(0, half) } }
             val partial = rule.onNodeWithTag(SEARCH_COLLAPSE_TAG).getUnclippedBoundsInRoot()
-            assertEquals(full.width.value / 2, partial.width.value, 1f)
+            assertEquals(full.width.value, partial.width.value, 1f)
+            assertEquals(full.height.value / 2, partial.height.value, 1f)
             capture("search-half-$style-$mode-$font")
             rule.onNodeWithTag(SEARCH_BOX_TAG).performTextReplacement("保留查询")
             assertEquals(full.width.value, rule.onNodeWithTag(SEARCH_COLLAPSE_TAG).getUnclippedBoundsInRoot().width.value, 1f)

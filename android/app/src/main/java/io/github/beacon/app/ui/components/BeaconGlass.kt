@@ -150,7 +150,7 @@ private fun Modifier.beaconTopGlassMaterial(background: Color): Modifier {
     val veil = Brush.verticalGradient(
         0f to background,
         .4f to background.copy(alpha = .96f),
-        .75f to background.copy(alpha = .6f),
+        .85f to background.copy(alpha = .96f),
         1f to background.copy(alpha = 0f),
     )
     if (state?.available != true || backdrop == null) return background(veil)

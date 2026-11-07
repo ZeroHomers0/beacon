@@ -65,11 +65,11 @@ fun BeaconSearchBox(
     BoxWithConstraints(modifier.fillMaxWidth()) {
     val fullWidth = maxWidth
     val fraction = if (focused) 1f else 1f - progress()
-    val width = fullWidth * fraction.coerceIn(0f, 1f)
+    val width = fullWidth
     val fieldHeight = maxOf(BeaconUiMetrics.SearchFieldMinHeight,
         with(density) { BeaconListText.SearchLineHeight.toDp() } + BeaconUiMetrics.SearchFieldVerticalInset * 2)
-    val textAlpha = ((width / fieldHeight - 1f) / 1.5f).coerceIn(0f, 1f)
-    val height = fieldHeight * (width / fieldHeight).coerceIn(0f, 1f)
+    val textAlpha = ((fieldHeight * fraction / with(density) { BeaconListText.SearchLineHeight.toDp() } - 1f) / .5f).coerceIn(0f, 1f)
+    val height = fieldHeight * fraction.coerceIn(0f, 1f)
     Box(Modifier.align(Alignment.Center).width(width).height(height)
         .clip(CircleShape)
         .beaconGlassMaterial(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
@@ -90,7 +90,7 @@ fun BeaconSearchBox(
         keyboardActions = KeyboardActions(onSearch = { onSearch() }),
         modifier =
             Modifier
-                .requiredWidth(width.coerceAtLeast(fieldHeight))
+                .requiredWidth(fullWidth)
                 .heightIn(min = BeaconUiMetrics.SearchFieldMinHeight)
                 .onFocusChanged { focused = it.isFocused }
                 .semantics { contentDescription = hint }

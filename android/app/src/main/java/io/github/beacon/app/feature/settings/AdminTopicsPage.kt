@@ -58,12 +58,7 @@ internal fun AdminTopicsPage(state:AdminUiState,model:ServerAdminViewModel,scrol
             BeaconListSwitch(labels=listOf("共 ${state.topicsTotal} 个","本页 ${state.topics.size} 个"),
                 icons=listOf(BeaconIcons.Topics,BeaconIcons.List), selectedIndex=if(status=="all")0 else -1,
                 enabled=!state.busy,selectableIndices=setOf(0),onSelected={status="all";offset=0})
-            if(device.isNotBlank()||application!="*"||status!="all"||search.isNotBlank())ActionFlow{
-                if(device.isNotBlank())AdminFilterChip(state.devices.firstOrNull{it.id==device}?.name?:device,!state.busy){device="";offset=0}
-                if(application!="*")AdminFilterChip(if(application.isBlank())"未关联应用"else state.applications.firstOrNull{it.id==application}?.name?:application,!state.busy){application="*";offset=0}
-                if(status!="all")AdminFilterChip(labels.getOrElse(states.indexOf(status)){"未知"},!state.busy){status="all";offset=0}
-                if(search.isNotBlank())AdminFilterChip(search,!state.busy){search="";offset=0}
-            }
+
         }
         BeaconPullToRefresh(refreshing,{if(!state.busy){refreshing=true;reload++}},Modifier.fillMaxWidth().weight(1f)){
             BeaconSettingsList(scroll,Modifier.fillMaxSize().beaconFilterChange(states.indexOf(status)),contentPadding=PaddingValues(start=padding.calculateStartPadding(direction),end=padding.calculateEndPadding(direction),top=BeaconUiMetrics.Gap4,bottom=padding.calculateBottomPadding()),itemSpacing=BeaconUiMetrics.MessageCardGap){

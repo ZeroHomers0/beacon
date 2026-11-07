@@ -150,7 +150,7 @@ private fun MessagesContent(
         LocalBeaconGlass.current ?: rememberBeaconGlassState() else null
     val pageBackground = MaterialTheme.colorScheme.background
     // The button samples only the list, never the enclosing scaffold layer that contains it.
-    val arrivalsBackdrop = if (hasNewMessages && glass?.available == true)
+    val arrivalsBackdrop = if (glass?.available == true)
         rememberLayerBackdrop { drawRect(pageBackground); drawContent() } else null
     var jumpToLatest by remember { mutableStateOf(false) }
     LaunchedEffect(jumpToLatest,busy,runtimeState.newMessageCount,runtimeState.messageLoadFailed) {
@@ -278,71 +278,7 @@ private fun MessagesContent(
                     onSelected = { onApplyFilter(applied.search,
                         if (it == 0) MessageReadFilter.ALL else MessageReadFilter.UNREAD) },
                 )
-                if (
-                    applied.readFilter != MessageReadFilter.ALL ||
-                        applied.search.isNotBlank()
-                )
-                    ActionFlow {
-                        if (applied.readFilter != MessageReadFilter.ALL)
-                            io.github.beacon.app.ui.components.BeaconActiveFilterChip(
-                                shape = BeaconUiMetrics.PillShape,
-                                selected = true,
-                                enabled = !busy,
-                                onClick = {
-                                    onApplyFilter(
-                                        applied.search,
-                                        MessageReadFilter.ALL,
-                                    )
-                                },
-                                label = {
-                                    BeaconText(
-                                        stringResource(
-                                            if (
-                                                applied.readFilter == MessageReadFilter.READ
-                                            )
-                                                R.string.msg_read_label
-                                            else R.string.msg_unread_label
-                                        )
-                                    )
-                                },
-                                trailingIcon = {
-                                    Icon(
-                                        BeaconIcons.Close,
-                                        stringResource(R.string.msg_clear_filters_action),
-                                        Modifier.size(BeaconUiMetrics.IconSmall),
-                                    )
-                                },
-                            )
-                        if (applied.search.isNotBlank())
-                            io.github.beacon.app.ui.components.BeaconActiveFilterChip(
-                                shape = BeaconUiMetrics.PillShape,
-                                selected = true,
-                                enabled = !busy,
-                                onClick = {
-                                    onSearch("")
-                                    onApplyFilter("", applied.readFilter)
-                                },
-                                label = {
-                                    BeaconText(
-                                        applied.search,
-                                        maxLines = 1,
-                                        overflow =
-                                            androidx.compose.ui.text.style.TextOverflow
-                                                .Ellipsis,
-                                    )
-                                },
-                                leadingIcon = {
-                                    Icon(BeaconIcons.Search, null, Modifier.size(BeaconUiMetrics.IconSmall))
-                                },
-                                trailingIcon = {
-                                    Icon(
-                                        BeaconIcons.Close,
-                                        stringResource(R.string.msg_clear_filters_action),
-                                        Modifier.size(BeaconUiMetrics.IconSmall),
-                                    )
-                                },
-                            )
-                    }
+
             }
         }
         BeaconPullToRefresh(
@@ -563,6 +499,15 @@ private fun MessagesContent(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                         }
+                    }
+                }
+                if (glass?.available == true) {
+                    CompositionLocalProvider(LocalBeaconGlass provides glass,
+                        LocalBeaconGlassBackdrop provides arrivalsBackdrop) {
+                        io.github.beacon.app.ui.components.BeaconGlassSurface(
+                            MaterialTheme.colorScheme.background,
+                            Modifier.fillMaxWidth().height(32.dp).align(Alignment.TopCenter), topFade = true,
+                        ) {}
                     }
                 }
                 if (hasNewMessages) {
