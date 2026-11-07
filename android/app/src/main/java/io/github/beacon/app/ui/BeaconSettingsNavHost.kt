@@ -28,41 +28,16 @@ internal fun BeaconSettingsNavHost(ui: BeaconUiState, content: @Composable (Sett
         effects = NavDisplayEffects(blockInputDuringTransition = false,
             backdropColor = MaterialTheme.colorScheme.background)) {
         entry<SettingsRoute> { route ->
-            val scope = LocalNavTransitionScope.current
-            SideEffect { if (route.screen == ui.settingsScreen) ui.settingsNavScope = scope }
-            DisposableEffect(scope) { onDispose { if (ui.settingsNavScope === scope) ui.settingsNavScope = null } }
             Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).testTag("settings-body-${route.screen}")) { content(route.screen) }
         }
     }
 }
 
-/** Only nested settings need a path; it occupies the original top inset once. */
+/** Keep shared page geometry without adding a second navigation control row. */
 @Composable
 internal fun BeaconSettingsPageFrame(
     ui: BeaconUiState, screen: SettingsScreen, modifier: Modifier, padding: PaddingValues,
     content: @Composable (Modifier, PaddingValues) -> Unit,
 ) {
-    val path = when (screen) {
-        SettingsScreen.SERVER_DEVICES, SettingsScreen.SERVER_APPLICATIONS,
-        SettingsScreen.SERVER_TOPICS, SettingsScreen.SERVER_TEST -> listOf(SettingsScreen.HOME, SettingsScreen.SERVER_ADMIN, screen)
-        SettingsScreen.QUIET_HOURS -> listOf(SettingsScreen.HOME, SettingsScreen.NOTIFICATION_RULES, screen)
-        else -> emptyList()
-    }
-    if (ui.uiStyle != io.github.beacon.app.domain.model.BeaconUiStyle.MIUIX || path.isEmpty()) {
-        content(modifier.testTag("settings-content-$screen"), padding)
-        return
-    }
-    val direction = androidx.compose.ui.platform.LocalLayoutDirection.current
-    Column(modifier) {
-        top.yukonga.miuix.kmp.basic.BreadcrumbBar(
-            items = path.map { top.yukonga.miuix.kmp.basic.BreadcrumbItem(it.name,
-                androidx.compose.ui.res.stringResource(it.titleRes)) },
-            modifier = Modifier.padding(top = padding.calculateTopPadding()),
-            onItemClick = { index -> if (index < path.lastIndex) ui.navigateSettingsAncestor(path[index]) },
-        )
-        content(Modifier.fillMaxWidth().weight(1f), PaddingValues(
-            start = padding.calculateStartPadding(direction), end = padding.calculateEndPadding(direction),
-            top = io.github.beacon.app.ui.components.BeaconUiMetrics.Gap4,
-            bottom = padding.calculateBottomPadding()))
-    }
+    content(modifier.testTag("settings-content-$screen"), padding)
 }

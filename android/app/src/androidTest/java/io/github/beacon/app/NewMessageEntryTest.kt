@@ -50,6 +50,12 @@ class NewMessageEntryTest {
                     onSearch={},onApplyFilter={_,_->},onConnectionSettings={},onEnterSelection={},
                     onSelectionChange={},onSelectionHint={},onRequestDelete={},onCopyText={_,_->})
             }}}}
+            val dateLabel = io.github.beacon.app.domain.policy.MessagePresentation.receivedDate(rows.first(), java.time.ZoneId.systemDefault())
+                ?.toString() ?: rule.activity.getString(R.string.message_unknown_date)
+            val firstDate = rule.onNodeWithText(dateLabel).getUnclippedBoundsInRoot()
+            val initialHeader = rule.onNodeWithTag("message-pinned-header").getUnclippedBoundsInRoot()
+            val dateGap = firstDate.top - initialHeader.bottom
+            assertTrue("The blur tail must not reserve extra space above the first date", dateGap.value >= 0f && dateGap <= BeaconUiMetrics.PageInset)
             val root = rule.onRoot().captureToImage().toPixelMap()
             val listBounds = rule.onNodeWithTag(MESSAGE_LIST_TAG).fetchSemanticsNode().boundsInRoot
             val scale = rule.activity.resources.displayMetrics.density
@@ -63,6 +69,9 @@ class NewMessageEntryTest {
             rule.onNodeWithTag(MESSAGE_LIST_TAG).performScrollToIndex(8)
             rule.waitUntil(5000){reading}
             val viewport=rule.onNodeWithTag(MESSAGE_LIST_TAG).getUnclippedBoundsInRoot()
+            val pinnedHeader=rule.onNodeWithTag("message-pinned-header").getUnclippedBoundsInRoot()
+            assertTrue("Messages must scroll behind the pinned header for backdrop blur to work", viewport.top <= pinnedHeader.top)
+            assertTrue("The pinned header overlaps the list viewport", pinnedHeader.bottom > viewport.top)
             var index=0;var offset=0
             rule.runOnIdle{index=scroll.firstVisibleItemIndex;offset=scroll.firstVisibleItemScrollOffset;state.value=state.value.copy(newMessageCount=2)}
             rule.onNodeWithTag("message-new-arrivals").assertIsDisplayed()

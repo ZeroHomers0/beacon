@@ -19,6 +19,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.Role
 
@@ -91,17 +92,25 @@ internal fun BeaconGlassSurface(
     modifier: Modifier = Modifier,
     shape: Shape = RectangleShape,
     topFade: Boolean = false,
+    topFadeProgress: () -> Float = { 1f },
     content: @Composable BoxScope.() -> Unit,
 ) {
     val backdrop = LocalBeaconTopBackdrop.current
     val hardware = LocalView.current.isHardwareAccelerated
-    Box(modifier) {
-        Box(Modifier.matchParentSize().clipToBounds().then(
+    Box(modifier.background(fallback, shape)) {
+        Box(Modifier.matchParentSize().clipToBounds().graphicsLayer {
+            alpha = if (topFade) topFadeProgress().coerceIn(0f, 1f) else 1f
+        }.then(
             if (topFade && miuix() && hardware && backdrop != null) Modifier
                 .progressiveTextureBlur(backdrop = backdrop, shape = RectangleShape,
                     blurRadius = BeaconUiMetrics.TopGlassBlurRadius.value,
                     gradient = ProgressiveBlur.Top.copy(startFraction = .1f))
-                .background(Brush.verticalGradient(listOf(fallback.copy(alpha = .9f), fallback.copy(alpha = 0f))))
+                .background(Brush.verticalGradient(
+                    0f to fallback.copy(alpha = .98f),
+                    .65f to fallback.copy(alpha = .94f),
+                    .9f to fallback.copy(alpha = .60f),
+                    1f to fallback.copy(alpha = 0f),
+                ))
             else Modifier.background(fallback, shape)
         ))
         content()

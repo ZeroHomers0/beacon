@@ -122,7 +122,6 @@ class BeaconUiState(
     var settingsScreen: SettingsScreen by savedState(handle, "settingsScreen", SettingsScreen.HOME)
     var settingsHistory: ArrayList<SettingsScreen> by
         savedState(handle, "settingsHistory", arrayListOf())
-    var settingsNavScope by mutableStateOf<top.yukonga.miuix.kmp.nav.transition.NavTransitionScope?>(null)
     var settingsNavigatingBack by mutableStateOf(false)
     val settingsBackTarget: SettingsScreen
         get() = settingsHistory.lastOrNull() ?: SettingsScreen.HOME

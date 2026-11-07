@@ -218,6 +218,7 @@ fun BeaconApp(
             }
         }
         val messageScroll = rememberLazyListState()
+        val messageHeaderScroll = io.github.beacon.app.ui.components.rememberBeaconSearchScrollState(messageScroll)
         val statesScroll = rememberLazyListState()
         androidx.lifecycle.compose.LifecycleEventEffect(
             androidx.lifecycle.Lifecycle.Event.ON_STOP
@@ -356,7 +357,8 @@ fun BeaconApp(
             2 -> statesScroll
             else -> settingsScrollStates.getValue(ui.settingsScreen)
         }
-        val scrollProgress = io.github.beacon.app.ui.components.rememberBeaconScrollProgress(activeScroll)
+        val scrollProgress = if (ui.page == 0) messageHeaderScroll.progress
+            else io.github.beacon.app.ui.components.rememberBeaconScrollProgress(activeScroll)
         androidx.compose.runtime.CompositionLocalProvider(
             io.github.beacon.app.ui.components.LocalBeaconScrollProgress provides scrollProgress,
         ) {
@@ -393,6 +395,7 @@ fun BeaconApp(
                         settingsTransition = settingsTransition,
                         settingsMotion = settingsMotion,
                         messageScroll = messageScroll,
+                        messageHeaderScroll = messageHeaderScroll,
                         statesScroll = statesScroll,
                         settingsScrollStates = settingsScrollStates,
                         barBehavior = barBehavior,

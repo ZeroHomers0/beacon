@@ -59,9 +59,10 @@ fun BeaconSearchBox(
     hint: String,
     modifier: Modifier = Modifier,
     scroll: androidx.compose.foundation.lazy.LazyListState? = null,
+    scrollProgress: (() -> Float)? = null,
     onSearch: () -> Unit,
 ) {
-    val progress = if (scroll != null) rememberBeaconScrollProgress(scroll) else LocalBeaconScrollProgress.current
+    val progress = scrollProgress ?: if (scroll != null) rememberBeaconScrollProgress(scroll) else LocalBeaconScrollProgress.current
     var focused by remember { mutableStateOf(false) }
     val density = LocalDensity.current
     val hardware = LocalView.current.isHardwareAccelerated
@@ -198,6 +199,7 @@ fun BeaconTitleSearchRow(
     modifier: Modifier = Modifier,
     titleCollapsed: Boolean = false,
     scroll: androidx.compose.foundation.lazy.LazyListState? = null,
+    scrollProgress: (() -> Float)? = null,
     onSearch: () -> Unit,
 ) {
     Row(
@@ -225,6 +227,7 @@ fun BeaconTitleSearchRow(
             hint,
             Modifier.weight(1f),
             scroll = scroll,
+            scrollProgress = scrollProgress,
             onSearch = onSearch,
         )
     }

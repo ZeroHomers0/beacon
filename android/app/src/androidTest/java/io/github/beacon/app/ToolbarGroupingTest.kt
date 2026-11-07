@@ -27,7 +27,7 @@ class ToolbarGroupingTest {
                 ui.selectionMode = false
                 ui.page = 0
             }
-            rule.onNodeWithText(rule.activity.getString(R.string.ui_nav_messages_title)).assertDoesNotExist()
+            rule.onNodeWithText(rule.activity.getString(R.string.ui_nav_messages_title)).assertIsDisplayed()
             val labels = listOf(R.string.ui_mark_all_read_action, R.string.action_sync_now,
                 R.string.ui_nav_settings_title)
             val bounds = labels.map {

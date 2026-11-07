@@ -81,7 +81,7 @@ internal fun BeaconTopBarArea(
                             R.string.msg_selected_count_label,
                             ui.selectedKeys.size,
                         )
-                    else if (barPage == 0) ""
+                    else if (barPage == 0) stringResource(R.string.ui_nav_messages_title)
                     else stringResource(ui.pages[barPage]),
                     barPage == 0 ||
                         displayedDetail != null,
@@ -396,17 +396,9 @@ internal fun BeaconTopBarArea(
         }
         val renderBar: @Composable (Int) -> Unit = { barPage ->
             if (barPage == 1 && displayedDetail == null) {
-                Box(Modifier.graphicsLayer {
-                    translationX = 0f
-                    if (ui.uiStyle == io.github.beacon.app.domain.model.BeaconUiStyle.MIUIX) {
-                        val scope = ui.settingsNavScope
-                        if (scope?.gesture != null) {
-                            val depth = scope.relativeDepth
-                            val sign = if (scope.layoutDirection == androidx.compose.ui.unit.LayoutDirection.Rtl) -1f else 1f
-                            translationX = sign * scope.layoutSize.width * if (depth < 0f) -depth else -depth * .25f
-                        }
-                    }
-                }) {
+                if (ui.uiStyle == io.github.beacon.app.domain.model.BeaconUiStyle.MIUIX) {
+                    renderSettingsBar(barPage, ui.settingsScreen)
+                } else {
                 BeaconSettingsTransition(
                     settingsTransition,
                     ui.settingsNavigatingBack ||

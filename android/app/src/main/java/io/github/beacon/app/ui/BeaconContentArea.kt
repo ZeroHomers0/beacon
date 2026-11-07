@@ -56,6 +56,7 @@ internal fun BeaconContentArea(
     settingsTransition: Transition<SettingsScreen>,
     settingsMotion: SeekableTransitionState<SettingsScreen>,
     messageScroll: LazyListState,
+    messageHeaderScroll: io.github.beacon.app.ui.components.BeaconSearchScrollState,
     statesScroll: LazyListState,
     settingsScrollStates: Map<SettingsScreen, LazyListState>,
     barBehavior: BeaconBarBehavior,
@@ -152,7 +153,7 @@ BeaconMessageTransition(
                 0 ->
                     MessagesPage(
                         messageScroll,
-                        Modifier.fillMaxSize().padding(insets),
+                        settingsModifier,
                         listPadding,
                         runtimeState,
                         actions,
@@ -168,6 +169,8 @@ BeaconMessageTransition(
                                     barBehavior.connection(ui.uiStyle)
                                 ),
                         sharedTitle = sharedTitleLabel,
+                        topInset = if (underTopBar) insets.calculateTopPadding() else 0.dp,
+                        headerScrollState = messageHeaderScroll,
                         onSearch = { ui.search = it },
                         onApplyFilter = { text, filter ->
                             ui.applyFilter(actions, text, filter)
