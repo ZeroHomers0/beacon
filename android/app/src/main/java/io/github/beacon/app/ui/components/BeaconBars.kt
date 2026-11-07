@@ -21,24 +21,9 @@ import io.github.beacon.app.domain.model.BeaconUiStyle
 /** One shared surface for trailing controls; children retain their own hit targets and semantics. */
 @Composable
 internal fun BeaconToolbarActions(actions: @Composable RowScope.() -> Unit) {
-    Box(Modifier.padding(end = BeaconUiMetrics.Gap8)) {
-        val backgroundAlpha = LocalBeaconToolbarGlassAlpha.current
-        Box(Modifier.matchParentSize().graphicsLayer { alpha = backgroundAlpha() }.beaconGlassMaterial(
-            androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh,
-            androidx.compose.foundation.shape.CircleShape))
-        CompositionLocalProvider(LocalGroupedToolbarActions provides true) {
-            androidx.compose.ui.layout.Layout(content = {
-                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, content = actions)
-            }) { measurables, constraints ->
-                val row = measurables.single().measure(constraints.copy(minWidth = 0, minHeight = 0))
-                // One icon gets exactly its circular touch surface; only groups need capsule insets.
-                val inset = if (row.width <= BeaconUiMetrics.ControlMinHeight.roundToPx()) 0 else BeaconUiMetrics.Gap4.roundToPx()
-                val width = (row.width + inset * 2).coerceIn(constraints.minWidth, constraints.maxWidth)
-                val height = row.height.coerceIn(constraints.minHeight, constraints.maxHeight)
-                layout(width, height) { row.placeRelative((width - row.width) / 2, (height - row.height) / 2) }
-            }
-        }
-    }
+    Row(Modifier.padding(end = BeaconUiMetrics.Gap8),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, content = actions)
+
 }
 
 class BeaconBarBehavior(
@@ -85,7 +70,7 @@ fun BeaconTopBar(
     CompositionLocalProvider(LocalBeaconToolbarGlassAlpha provides glassAlpha, LocalToolbarButtonStyle provides true) {
     val groupedActions: @Composable RowScope.() -> Unit = { BeaconToolbarActions(actions) }
     if (miuix()) {
-        BeaconGlassSurface(androidx.compose.material3.MaterialTheme.colorScheme.background, topFade = true) {
+        BeaconGlassSurface(androidx.compose.material3.MaterialTheme.colorScheme.background) {
             if (compact)
                 top.yukonga.miuix.kmp.basic.SmallTopAppBar(
                     title,

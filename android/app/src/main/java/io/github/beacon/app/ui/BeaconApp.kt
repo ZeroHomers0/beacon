@@ -362,13 +362,8 @@ fun BeaconApp(
         androidx.compose.runtime.CompositionLocalProvider(
             io.github.beacon.app.ui.components.LocalBeaconScrollProgress provides scrollProgress,
         ) {
-        Row(Modifier.fillMaxSize()) {
-            Box(Modifier.weight(1f).fillMaxHeight()) {
-                BeaconScaffold(
-                    snackbar = snackbar,
-                    bottomBar = {},
-                    topBar = {
-                        BeaconTopBarArea(
+        val renderTopBar: @Composable (SettingsScreen?) -> Unit = { screen ->
+            BeaconTopBarArea(
                             ui = ui,
                             runtimeState = runtimeState,
                             actions = actions,
@@ -383,7 +378,16 @@ fun BeaconApp(
                             settingsBarBehaviors = settingsBarBehaviors,
                             pageBarBehaviors = mapOf(0 to messageBarBehavior, 2 to statesBarBehavior),
                             navigate = navigate,
+                            settingsScreenOverride = screen,
                         )
+        }
+        Row(Modifier.fillMaxSize()) {
+            Box(Modifier.weight(1f).fillMaxHeight()) {
+                BeaconScaffold(
+                    snackbar = snackbar,
+                    bottomBar = {},
+                    topBar = {
+                        renderTopBar(null)
                     },
                 ) { insets ->
                     BeaconContentArea(
@@ -400,6 +404,7 @@ fun BeaconApp(
                         settingsScrollStates = settingsScrollStates,
                         barBehavior = barBehavior,
                         settingsBarBehaviors = settingsBarBehaviors,
+                        settingsTopBar = { screen -> renderTopBar(screen) },
                         compactBar = compactBar,
                         sharedTitleLabel = null,
                         busy = busy,

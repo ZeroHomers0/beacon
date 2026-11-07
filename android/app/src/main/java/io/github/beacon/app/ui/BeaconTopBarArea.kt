@@ -61,6 +61,7 @@ internal fun BeaconTopBarArea(
     settingsBarBehaviors: Map<SettingsScreen, BeaconBarBehavior>,
     pageBarBehaviors: Map<Int, BeaconBarBehavior>,
     navigate: (Int) -> Unit,
+    settingsScreenOverride: SettingsScreen? = null,
 ) {
     // Both change per recomposition and are cheap to read, so deriving them here keeps the call
     // site from forwarding two more parameters.
@@ -397,7 +398,8 @@ internal fun BeaconTopBarArea(
         val renderBar: @Composable (Int) -> Unit = { barPage ->
             if (barPage == 1 && displayedDetail == null) {
                 if (ui.uiStyle == io.github.beacon.app.domain.model.BeaconUiStyle.MIUIX) {
-                    renderSettingsBar(barPage, ui.settingsScreen)
+                    // MIUIX settings headers live inside their navigation entry.
+                    Unit
                 } else {
                 BeaconSettingsTransition(
                     settingsTransition,
@@ -409,7 +411,8 @@ internal fun BeaconTopBarArea(
                 }
             } else renderSettingsBar(barPage, ui.settingsScreen)
         }
-        if (displayedDetail != null) renderBar(ui.page)
+        if (settingsScreenOverride != null) renderSettingsBar(1, settingsScreenOverride)
+        else if (displayedDetail != null) renderBar(ui.page)
         else BeaconPagerToolbar(pager, renderBar)
     }
 }

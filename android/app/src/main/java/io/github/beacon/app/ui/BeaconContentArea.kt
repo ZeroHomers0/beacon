@@ -61,6 +61,7 @@ internal fun BeaconContentArea(
     settingsScrollStates: Map<SettingsScreen, LazyListState>,
     barBehavior: BeaconBarBehavior,
     settingsBarBehaviors: Map<SettingsScreen, BeaconBarBehavior>,
+    settingsTopBar: @Composable (SettingsScreen) -> Unit,
     compactBar: Boolean,
     sharedTitleLabel: String?,
     busy: Boolean,
@@ -205,10 +206,16 @@ BeaconMessageTransition(
                     )
 
                 else -> {
-                    val renderSettings: @Composable (SettingsScreen) -> Unit = { displayedSettingsScreen ->
+                    val renderSettings: @Composable (SettingsScreen, PaddingValues) -> Unit = { displayedSettingsScreen, routeInsets ->
+                        val routeModifier = if(underTopBar) Modifier.fillMaxSize().padding(
+                            start=routeInsets.calculateStartPadding(direction), end=routeInsets.calculateEndPadding(direction),
+                            bottom=routeInsets.calculateBottomPadding()) else settingsModifier
+                        val routePadding = if(underTopBar) PaddingValues(start=edge,end=edge,
+                            top=routeInsets.calculateTopPadding()+BeaconUiMetrics.PageTopInset,
+                            bottom=BeaconUiMetrics.PageBottomInset) else settingsPadding
                         BeaconSettingsPageFrame(ui, displayedSettingsScreen,
-                            settingsModifier.then(if (compactBar) Modifier else Modifier.nestedScroll(
-                                settingsBarBehaviors.getValue(displayedSettingsScreen).connection(ui.uiStyle))), settingsPadding) { pageModifier, pagePadding ->
+                            routeModifier.then(if (compactBar) Modifier else Modifier.nestedScroll(
+                                settingsBarBehaviors.getValue(displayedSettingsScreen).connection(ui.uiStyle))), routePadding) { pageModifier, pagePadding ->
                         SettingsPage(
                             displayedSettingsScreen,
                             settingsScrollStates.getValue(
@@ -250,10 +257,14 @@ BeaconMessageTransition(
                         )
                     }
                     }
-                    if (underTopBar) BeaconSettingsNavHost(ui, renderSettings)
+                    if (underTopBar) BeaconSettingsNavHost(ui) { screen ->
+                        io.github.beacon.app.ui.components.BeaconScaffold(
+                            topBar={settingsTopBar(screen)},bottomBar={},
+                        ){routeInsets->renderSettings(screen,routeInsets)}
+                    }
                     else BeaconSettingsTransition(settingsTransition,
                         ui.settingsNavigatingBack || settingsMotion.targetState == ui.settingsBackTarget,
-                        animateSize = false, content = renderSettings)
+                        animateSize = false) {screen -> renderSettings(screen,insets)}
                 }
             }
         }

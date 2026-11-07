@@ -109,6 +109,7 @@ private fun StateWidgetEditorContent(id:Int, detail:Boolean, source:String?, ide
     LaunchedEffect(sourceIds){if(sourceFilter !in sourceIds)sourceFilter="*"}
     val sourceNames=sourceIds.map{key->if(key=="*")"全部应用"else if(key.isBlank())"未关联应用"else rows.firstOrNull{it.optString("application_id")==key}?.optString("application_name").orEmpty().ifBlank{key}}
     val choices=(rows.filter{!it.optBoolean("_topic_deleted")}.filter{sourceFilter=="*"||it.optString("application_id")==sourceFilter}+listOfNotNull(row)).distinctBy{it.optString("local_source")+":"+it.optString("local_identity")}
+    var moreSettings by rememberSaveable{mutableStateOf(false)}
     var editing by rememberSaveable{mutableStateOf(!detail)}
     val defaultFormat=remember{requestedFormat?:WidgetInstances.format(context,id).name}
     val formatName=config.optString("format",defaultFormat)
@@ -191,10 +192,10 @@ private fun StateWidgetEditorContent(id:Int, detail:Boolean, source:String?, ide
                 bottom=BeaconUiMetrics.PageBottomInset)) {
             if(editing){
                 item { WidgetPreview(row,JSONObject(config.toString()).put("format",format.name).put("_offline",!WidgetHealth.online(context)),previewSize,existing,format,error) }
-                item { SettingsGroup("数据选择"){
+                item { SettingsGroup("数据主题"){
                     if(!existing)BeaconDropdownPreference("组件规格",WidgetFormat.entries.map{it.label},format.ordinal,settingsRow=true,icon=BeaconIcons.Applications){index->update{it.put("format",WidgetFormat.entries[index].name)}}
-                    BeaconDropdownPreference("按发送应用筛选",sourceNames,sourceIds.indexOf(sourceFilter).coerceAtLeast(0),settingsRow=true,icon=BeaconIcons.Applications){index->sourceFilter=sourceIds[index]}
-                    BeaconDropdownPreference("选择展示内容",choices.map{it.optString("title").ifBlank{it.optString("topic_key")}+" · "+(if(it.optString("application_id").isBlank())"未关联应用"else it.optString("application_name").ifBlank{it.optString("application_id")})},choices.indexOf(row),enabled=choices.isNotEmpty(),settingsRow=true,icon=BeaconIcons.Topics){index->
+                    if(sourceIds.size>2)BeaconDropdownPreference("发送应用",sourceNames,sourceIds.indexOf(sourceFilter).coerceAtLeast(0),settingsRow=true,icon=BeaconIcons.Applications){index->sourceFilter=sourceIds[index]}
+                    BeaconDropdownPreference("数据主题",choices.map{it.optString("title").ifBlank{it.optString("topic_key")}+" · "+(if(it.optString("application_id").isBlank())"未关联应用"else it.optString("application_name").ifBlank{it.optString("application_id")})},choices.indexOf(row),enabled=choices.isNotEmpty(),settingsRow=true,icon=BeaconIcons.Topics){index->
                         val selected=choices[index]
                         val next=JSONObject(draft).put("source",selected.optString("local_source")).put("identity",selected.optString("local_identity"))
                         if(config.optString("source")!=selected.optString("local_source")||config.optString("identity")!=selected.optString("local_identity"))next.remove("short_labels")
@@ -205,33 +206,38 @@ private fun StateWidgetEditorContent(id:Int, detail:Boolean, source:String?, ide
                     }
                     SettingsCommandRow("同步主题",topicSyncMessage,BeaconIcons.Sync,enabled=!topicSyncing){topicSyncKey++}
                     Column(Modifier.padding(horizontal=BeaconUiMetrics.CardInset,vertical=BeaconUiMetrics.Gap8),verticalArrangement=Arrangement.spacedBy(BeaconUiMetrics.Gap8)){
-                        SettingsHint("仅显示当前绑定设备的主题；为其他设备创建的主题不会出现在这里。")
-                        SettingsHint("选项来自服务器已创建的主题，尚未上报也可绑定。筛选仅帮助查找，选择展示内容后才会更换当前绑定。")
-                        SettingsHint("未关联应用：直接使用设备推送密钥上报，无需创建应用。")
+                        if(choices.isEmpty())SettingsHint("暂无主题，请先在服务器管理中创建。")
+                        else if(row?.optBoolean("_waiting")==true)SettingsHint("等待首次上报，收到数据后自动匹配样式。")
                         if(row!=null&&sourceFilter!="*"&&row.optString("application_id")!=sourceFilter)
-                            SettingsHint("当前展示内容不属于筛选的应用，已保留；选择新内容后才会更换。")
+                            SettingsHint("已保留当前主题，选择其他主题后才会更换。")
                     }
                 }}
                 if(row!=null){
                     if(!row.optBoolean("_waiting"))item { WidgetMetricSelector(row,WidgetConfigRules.resolved(row,config)){next->draft=next.toString()} }
-                    item { SettingsGroup("组件名称与标题") { Column(Modifier.padding(BeaconUiMetrics.CardInset)){
-                        BeaconTextField(config.optString("instance_name"),{value->update{it.put("instance_name",WidgetTextLimits.cap(value,24))}},Modifier.fillMaxWidth(),label={BeaconText("组件名称")},labelText="组件名称",singleLine=true,placeholder="仅用于区分桌面实例")
-                        BeaconTextField(config.optString("title"),{value->update{it.put("title",if(value.codePointCount(0,value.length)>12)value.substring(0,value.offsetByCodePoints(0,12))else value)}},Modifier.fillMaxWidth(),label={BeaconText("自定义短标题")},labelText="自定义短标题",singleLine=true,placeholder="留空使用主题名称")
-                        SettingsHint("最多12个字符，桌面按实际宽度省略显示。")
-                    }}}
-                    if(row.optBoolean("_waiting"))item{SettingsGroup(androidx.compose.ui.res.stringResource(io.github.beacon.app.R.string.widget_display_style)){Column(Modifier.padding(BeaconUiMetrics.CardInset)){SettingsHint("收到数据后自动匹配。首次上报前可设置名称与背景。")}}}
+                    if(row.optBoolean("_waiting"))item{SettingsGroup(androidx.compose.ui.res.stringResource(io.github.beacon.app.R.string.widget_display_style)){Column(Modifier.padding(BeaconUiMetrics.CardInset)){SettingsHint("收到数据后自动匹配样式。")}}}
                     else item { WidgetTemplateSelector(row,WidgetConfigRules.resolved(row,config),previewSize){value->update{val suggested=WidgetConfigRules.resolved(row,it);it.put("template",value);if(!it.has("metrics"))it.put("metrics",suggested.optJSONArray("metrics")?:JSONArray(WidgetConfigRules.defaults(row,it).map{block->block.optString("id")}))}} }
+                    item { WidgetSimpleAppearance(row,config){next->draft=next.toString()} }
+                    item { BeaconCard(Modifier.fillMaxWidth()){
+                        SettingsRow("更多设置","名称、排版、点击与更新",BeaconIcons.Tune,iconTint=MaterialTheme.colorScheme.onSurface,
+                            onClick={moreSettings=!moreSettings},expanded=moreSettings)
+                    }}
+                    if(moreSettings){
+                    item { SettingsGroup("名称") { Column(Modifier.padding(BeaconUiMetrics.CardInset)){
+                        BeaconTextField(config.optString("instance_name"),{value->update{it.put("instance_name",WidgetTextLimits.cap(value,24))}},Modifier.fillMaxWidth(),label={BeaconText("组件名称")},labelText="组件名称",singleLine=true,placeholder="仅在管理页显示")
+                        BeaconTextField(config.optString("title"),{value->update{it.put("title",if(value.codePointCount(0,value.length)>12)value.substring(0,value.offsetByCodePoints(0,12))else value)}},Modifier.fillMaxWidth(),label={BeaconText("桌面标题")},labelText="桌面标题",singleLine=true,placeholder="留空使用主题名称")
+                        SettingsHint("桌面标题最多12字，留空使用主题名称。")
+                    }}}
                     if(!row.optBoolean("_waiting"))item { WidgetListSettings(WidgetConfigRules.resolved(row,config)){next->draft=next.toString()} }
                     if(!row.optBoolean("_waiting"))item { WidgetTuningSettings(WidgetConfigRules.resolved(row,config)){next->draft=next.toString()} }
-                    item { WidgetSimpleAppearance(row,config){next->draft=next.toString()} }
                     if(!row.optBoolean("_waiting"))item { WidgetMoreSettings(row,config){next->draft=next.toString()} }
                     item { WidgetDisplaySettings(row,config){next->draft=next.toString()} }
                     item { SettingsGroup(androidx.compose.ui.res.stringResource(io.github.beacon.app.R.string.widget_update_hints)){
-                        BeaconDropdownPreference("刷新策略",listOf("及时更新（约5秒）","均衡（任务约5秒，其他约15秒）","省电（约1分钟）"),listOf("fast","balanced","economy").indexOf(config.optString("refresh","balanced")).coerceAtLeast(0),settingsRow=true,icon=BeaconIcons.Sync){index->update{it.put("refresh",listOf("fast","balanced","economy")[index])}}
+                        BeaconDropdownPreference("刷新策略",listOf("及时 · 约5秒","均衡 · 任务约5秒，其他约15秒","省电 · 约1分钟"),listOf("fast","balanced","economy").indexOf(config.optString("refresh","balanced")).coerceAtLeast(0),settingsRow=true,icon=BeaconIcons.Sync){index->update{it.put("refresh",listOf("fast","balanced","economy")[index])}}
                         Column(Modifier.padding(horizontal=BeaconUiMetrics.CardInset)){
-                            BeaconPreferenceToggle("显示更新时间","紧凑尺寸下优先保证内容可读",config.optBoolean("updated",true)){value->update{it.put("updated",value)}}
+                            BeaconPreferenceToggle("显示更新时间","空间不足时自动隐藏",config.optBoolean("updated",true)){value->update{it.put("updated",value)}}
                         }
                     }}
+                    }
 
                 }
             }else if(row!=null){

@@ -38,13 +38,13 @@ internal fun WidgetDisplaySettings(row:JSONObject,config:JSONObject,onChange:(JS
             onChange(JSONObject(config.toString()).put("tap_action",if(index==1)"detail"else"none"))
         }
         Column(Modifier.padding(horizontal=BeaconUiMetrics.CardInset)) {
-            SettingsHint("默认不响应单击。开启后只查看完整内容，不进入编辑，也不会直接打开外部链接。")
+            SettingsHint("查看内容不会打开外部链接。")
         }
     }
     val selected=WidgetConfigRules.selected(row,config)
-    if(selected.isNotEmpty())SettingsGroup("显示短名称") {
+    if(selected.isNotEmpty())SettingsGroup("内容名称") {
         Column(Modifier.padding(BeaconUiMetrics.CardInset)) {
-            SettingsHint("仅修改当前组件的说明，留空使用原名称；最多8个字符。嵌套环按外环到内环的顺序对应。")
+            SettingsHint(if(config.optString("template")=="nested_rings")"留空使用原名称，最多8字；按外环到内环排列。"else"仅对当前组件生效，留空使用原名称，最多8字。")
             selected.take(8).forEach { block ->
                 val id=block.optString("id")
                 BeaconTextField(config.optJSONObject("short_labels")?.optString(id).orEmpty(),{ raw ->

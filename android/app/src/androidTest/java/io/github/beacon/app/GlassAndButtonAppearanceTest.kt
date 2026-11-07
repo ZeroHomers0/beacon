@@ -62,8 +62,8 @@ class GlassAndButtonAppearanceTest {
             val values = (5 until image.width / 3).map { x -> android.graphics.Color.blue(image.getPixel(x, y)) }
             return values.max() - values.min()
         }
-        assertTrue("The lower edge must recover sharp background detail",
-            rowContrast((image.height * .95f).toInt()) > rowContrast((image.height * .1f).toInt()) + 30)
+        assertEquals("The opaque header must not show background stripes", 0,
+            rowContrast((image.height * .95f).toInt()))
         capture("top-fade-$mode")
         val button = rule.onNodeWithContentDescription("接收模式 · 省电接收 · 接收已暂停")
         button.performClick()

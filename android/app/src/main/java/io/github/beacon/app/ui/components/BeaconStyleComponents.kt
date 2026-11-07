@@ -165,30 +165,13 @@ fun BeaconIconButton(
     content: @Composable () -> Unit,
 ) {
     val actionModifier = if (LocalCompactActions.current) modifier.width(44.dp) else modifier
-    val glass = miuix() && !LocalGroupedToolbarActions.current
-    val glassAlpha = LocalBeaconToolbarGlassAlpha.current
     if (miuix()) {
-        Box(actionModifier.semantics(mergeDescendants = true) { if (!enabled) disabled() }) {
-            if (glass) Box(Modifier.matchParentSize().graphicsLayer { alpha = glassAlpha() }
-                .beaconGlassMaterial(MaterialTheme.colorScheme.surfaceContainerHigh,
-                    androidx.compose.foundation.shape.CircleShape))
         top.yukonga.miuix.kmp.basic.IconButton(
-            onClick,
-            Modifier,
-            enabled,
+            onClick, actionModifier, enabled,
             minHeight = 48.dp,
             minWidth = if (LocalCompactActions.current) 44.dp else 48.dp,
             content = content,
         )
-        }
-    } else if (LocalToolbarButtonStyle.current && !LocalGroupedToolbarActions.current) {
-        androidx.compose.material3.FilledTonalIconButton(onClick, actionModifier, enabled,
-            colors = androidx.compose.material3.IconButtonDefaults.filledTonalIconButtonColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                contentColor = MaterialTheme.colorScheme.onSurface,
-                disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = .38f)),
-            content = content)
     } else androidx.compose.material3.IconButton(onClick, actionModifier, enabled, content = content)
 }
 

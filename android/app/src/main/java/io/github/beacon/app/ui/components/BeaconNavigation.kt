@@ -5,8 +5,6 @@
 
 package io.github.beacon.app.ui.components
 
-import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -38,19 +36,10 @@ fun BeaconScaffold(
     Box(Modifier.fillMaxSize()) {
         if (miuix()) {
             val background = MaterialTheme.colorScheme.background
-            val backdrop = rememberLayerBackdrop { drawRect(background); drawContent() }
-            CompositionLocalProvider(LocalBeaconTopBackdrop provides backdrop) {
-                top.yukonga.miuix.kmp.basic.Scaffold(
-                    topBar = topBar,
-                    containerColor = background,
-                    bottomBar = bottomBar,
-                    content = { padding ->
-                        Box(Modifier.fillMaxSize().layerBackdrop(backdrop)) {
-                            CompositionLocalProvider(LocalBeaconTopBackdrop provides null) { content(padding) }
-                        }
-                    },
-                )
-            }
+            top.yukonga.miuix.kmp.basic.Scaffold(
+                topBar = topBar, containerColor = background,
+                bottomBar = bottomBar, content = content,
+            )
         } else
             androidx.compose.material3.Scaffold(
                 topBar = topBar,

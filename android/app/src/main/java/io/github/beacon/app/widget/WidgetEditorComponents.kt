@@ -56,7 +56,7 @@ internal fun WidgetPreview(row:JSONObject?,config:JSONObject,size:SizeF,actual:B
             BeaconText("${format.label} · ${size.width.toInt()} × ${size.height.toInt()} dp · ${if(actual)"桌面尺寸"else"默认尺寸"}",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1)
             // The validation slot never inserts a row or pushes controls after a choice changes.
             Box(Modifier.fillMaxWidth().height(44.dp),contentAlignment=Alignment.CenterStart){
-                BeaconText(error?:"等比预览，保存后应用到桌面。",style=MaterialTheme.typography.bodySmall,color=if(error!=null)MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,maxLines=2,overflow=TextOverflow.Ellipsis)
+                BeaconText(error?:"保存后应用到桌面",style=MaterialTheme.typography.bodySmall,color=if(error!=null)MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,maxLines=2,overflow=TextOverflow.Ellipsis)
             }
         }
     }
@@ -124,7 +124,7 @@ internal fun WidgetTemplateSelector(row:JSONObject,config:JSONObject,size:SizeF,
                                     TemplateGlyph(template,problem==null)
                                     BeaconText(WidgetRenderer.names[index],maxLines=2)
                                     val compatible=problem==null
-                                    BeaconText(if(compatible)"适合当前内容"else problem.orEmpty(),modifier=Modifier.heightIn(min=36.dp),style=MaterialTheme.typography.labelSmall,maxLines=2,overflow=TextOverflow.Ellipsis)
+                                    BeaconText(if(compatible)"可用"else problem.orEmpty(),modifier=Modifier.heightIn(min=36.dp),style=MaterialTheme.typography.labelSmall,maxLines=2,overflow=TextOverflow.Ellipsis)
                                 }
                                 }
                             },modifier=Modifier.fillMaxWidth(),enabled=problem==null)

@@ -62,26 +62,17 @@ fun BeaconSearchBox(
     scrollProgress: (() -> Float)? = null,
     onSearch: () -> Unit,
 ) {
-    val progress = scrollProgress ?: if (scroll != null) rememberBeaconScrollProgress(scroll) else LocalBeaconScrollProgress.current
     var focused by remember { mutableStateOf(false) }
     val density = LocalDensity.current
-    val hardware = LocalView.current.isHardwareAccelerated
     BoxWithConstraints(modifier.fillMaxWidth()) {
     val fullWidth = maxWidth
-    val fraction = if (focused) 1f else 1f - progress()
     val width = fullWidth
     val fieldHeight = maxOf(BeaconUiMetrics.SearchFieldMinHeight,
         with(density) { BeaconListText.SearchLineHeight.toDp() } + BeaconUiMetrics.SearchFieldVerticalInset * 2)
-    val height = fieldHeight * fraction.coerceIn(0f, 1f)
-    val lineHeight = with(density) { BeaconListText.SearchLineHeight.toDp() }
-    val fadeRange = minOf(fieldHeight - lineHeight, lineHeight * .25f)
-    // Full height must be fully sharp at every font scale, not only the default font size.
-    val textAlpha = ((height - lineHeight) / fadeRange).coerceIn(0f, 1f)
-    Box(Modifier.align(Alignment.Center).width(width).height(height)
+    Box(Modifier.align(Alignment.Center).width(width).height(fieldHeight)
         .clip(CircleShape)
         .beaconGlassMaterial(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
-        .testTag(SEARCH_COLLAPSE_TAG)
-        .then(if (fraction < .001f) Modifier.clearAndSetSemantics {} else Modifier)) {
+        .testTag(SEARCH_COLLAPSE_TAG)) {
     if (miuix()) {
         top.yukonga.miuix.kmp.basic.SearchBar(
             expanded = false, onExpandedChange = {},
@@ -97,13 +88,7 @@ fun BeaconSearchBox(
                     modifier = Modifier.requiredWidth(fullWidth).requiredHeight(fieldHeight)
                         .onFocusChanged { focused = it.isFocused }
                         .semantics { contentDescription = hint }.testTag(SEARCH_BOX_TAG)
-                        .graphicsLayer {
-                            alpha = textAlpha
-                            renderEffect = if (hardware && textAlpha > 0f && textAlpha < 1f) {
-                                val radius = BeaconUiMetrics.SearchFadeBlurRadius.toPx() * (1f - textAlpha)
-                                BlurEffect(radius, radius)
-                            } else null
-                        },
+
                 )
             },
         ) {}
@@ -129,13 +114,7 @@ fun BeaconSearchBox(
                 .semantics { contentDescription = hint }
                 .testTag(SEARCH_BOX_TAG),
         decorationBox = { field ->
-            Row(Modifier.fillMaxWidth().graphicsLayer {
-                alpha = textAlpha
-                renderEffect = if (hardware && textAlpha > 0f && textAlpha < 1f) {
-                    val radius = BeaconUiMetrics.SearchFadeBlurRadius.toPx() * (1f - textAlpha)
-                    BlurEffect(radius, radius)
-                } else null
-            }, verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     BeaconIcons.Search,
                     null,

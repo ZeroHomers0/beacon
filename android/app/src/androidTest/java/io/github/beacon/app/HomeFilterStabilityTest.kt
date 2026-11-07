@@ -50,11 +50,13 @@ class HomeFilterStabilityTest {
             rule.onNodeWithTag(MESSAGE_LIST_TAG).performTouchInput {
                 swipe(Offset(5f, height*.85f), Offset(5f, height*.15f), durationMillis = 400)
             }
-            rule.onNodeWithTag(SEARCH_BOX_TAG).assertDoesNotExist()
+            rule.onNodeWithTag(SEARCH_BOX_TAG).assertIsDisplayed()
+                assertEquals(expanded.value, rule.onNodeWithTag(SEARCH_COLLAPSE_TAG).getUnclippedBoundsInRoot().let { (it.bottom-it.top).value }, 1f)
             for (count in listOf(2, 0)) {
                 rule.onNodeWithText(rule.activity.getString(R.string.msg_stat_unread, 2L)).performClick()
                 rule.runOnIdle { assertEquals(MessageReadFilter.UNREAD, requested) }
-                rule.onNodeWithTag(SEARCH_BOX_TAG).assertDoesNotExist()
+                rule.onNodeWithTag(SEARCH_BOX_TAG).assertIsDisplayed()
+                assertEquals(expanded.value, rule.onNodeWithTag(SEARCH_COLLAPSE_TAG).getUnclippedBoundsInRoot().let { (it.bottom-it.top).value }, 1f)
                 val image = rule.onNodeWithTag("message-pinned-header").captureToImage().toPixelMap()
                 val scale = rule.activity.resources.displayMetrics.density
                 for (x in 20..120 step 10) {
@@ -65,12 +67,14 @@ class HomeFilterStabilityTest {
                 }
                 rule.runOnIdle { state.value = state.value.copy(messages = rows.take(count), dataBusy = false,
                     messageQuery = state.value.messageQuery.copy(readFilter = MessageReadFilter.UNREAD)) }
-                rule.onNodeWithTag(SEARCH_BOX_TAG).assertDoesNotExist()
+                rule.onNodeWithTag(SEARCH_BOX_TAG).assertIsDisplayed()
+                assertEquals(expanded.value, rule.onNodeWithTag(SEARCH_COLLAPSE_TAG).getUnclippedBoundsInRoot().let { (it.bottom-it.top).value }, 1f)
                 if (count > 0) {
                     rule.onNodeWithText(rule.activity.getString(R.string.msg_stat_total, 100L)).performClick()
                     rule.runOnIdle { state.value = state.value.copy(messages = rows, dataBusy = false,
                         messageQuery = state.value.messageQuery.copy(readFilter = MessageReadFilter.ALL)) }
-                    rule.onNodeWithTag(SEARCH_BOX_TAG).assertDoesNotExist()
+                    rule.onNodeWithTag(SEARCH_BOX_TAG).assertIsDisplayed()
+                assertEquals(expanded.value, rule.onNodeWithTag(SEARCH_COLLAPSE_TAG).getUnclippedBoundsInRoot().let { (it.bottom-it.top).value }, 1f)
                 }
             }
             rule.onNodeWithTag(MESSAGE_LIST_TAG).performTouchInput {
@@ -81,6 +85,6 @@ class HomeFilterStabilityTest {
             assertEquals(expanded.value, restored.value, 1f)
         } finally { repository.close() }
     }
-    @Test fun miuixKeepsCollapsedSearchAcrossShortAndEmptyResults() = verify(BeaconUiStyle.MIUIX)
-    @Test fun materialKeepsCollapsedSearchAcrossShortAndEmptyResults() = verify(BeaconUiStyle.MATERIAL3)
+    @Test fun miuixKeepsFixedSearchAcrossShortAndEmptyResults() = verify(BeaconUiStyle.MIUIX)
+    @Test fun materialKeepsFixedSearchAcrossShortAndEmptyResults() = verify(BeaconUiStyle.MATERIAL3)
 }

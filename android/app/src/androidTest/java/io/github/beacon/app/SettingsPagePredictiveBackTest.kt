@@ -114,8 +114,8 @@ class SettingsPagePredictiveBackTest {
             val header = rule.onNodeWithTag("settings-header-1-STORAGE").fetchSemanticsNode()
             val shift = body.getUnclippedBoundsInRoot().left.value - initialBody.left.value
             assertTrue(shift > 20f)
-            assertEquals("MIUIX keeps a fixed header; Material follows its page transition",
-                if (style == BeaconUiStyle.MIUIX) 0f else shift,
+            assertEquals("The header follows the same page transition as its body",
+                shift,
                 header.boundsInRoot.left / density - initialHeader.left.value, 2f)
             rule.assertSmoothBackCancellation(
                 initialBody.left.value, initialBody.left.value + shift,

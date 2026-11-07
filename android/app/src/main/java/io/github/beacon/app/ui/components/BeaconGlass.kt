@@ -95,24 +95,5 @@ internal fun BeaconGlassSurface(
     topFadeProgress: () -> Float = { 1f },
     content: @Composable BoxScope.() -> Unit,
 ) {
-    val backdrop = LocalBeaconTopBackdrop.current
-    val hardware = LocalView.current.isHardwareAccelerated
-    Box(modifier.background(fallback, shape)) {
-        Box(Modifier.matchParentSize().clipToBounds().graphicsLayer {
-            alpha = if (topFade) topFadeProgress().coerceIn(0f, 1f) else 1f
-        }.then(
-            if (topFade && miuix() && hardware && backdrop != null) Modifier
-                .progressiveTextureBlur(backdrop = backdrop, shape = RectangleShape,
-                    blurRadius = BeaconUiMetrics.TopGlassBlurRadius.value,
-                    gradient = ProgressiveBlur.Top.copy(startFraction = .1f))
-                .background(Brush.verticalGradient(
-                    0f to fallback.copy(alpha = .98f),
-                    .65f to fallback.copy(alpha = .94f),
-                    .9f to fallback.copy(alpha = .60f),
-                    1f to fallback.copy(alpha = 0f),
-                ))
-            else Modifier.background(fallback, shape)
-        ))
-        content()
-    }
+    Box(modifier.background(fallback, shape), content = content)
 }

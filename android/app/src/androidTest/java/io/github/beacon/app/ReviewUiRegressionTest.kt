@@ -56,7 +56,7 @@ class ReviewUiRegressionTest {
         rule.runOnUiThread { rule.activity.setContent { BeaconTheme(BeaconUiStyle.MIUIX) {
             Column { WidgetMoreSettings(row,JSONObject("""{"template":"text_list","metrics":["news"]}""")){} }
         } } }
-        rule.onNodeWithText("列表颜色").performClick()
+        rule.onNodeWithText("单项颜色").assertExists()
         rule.onNodeWithText("小数位数").assertDoesNotExist()
         rule.onNodeWithText("单位位置").assertDoesNotExist()
         rule.onNodeWithText("显示趋势箭头").assertDoesNotExist()

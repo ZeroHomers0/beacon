@@ -31,7 +31,7 @@ internal object WidgetColors {
 internal fun WidgetColorSettings(row:JSONObject,config:JSONObject,onChange:(JSONObject)->Unit,advanced:Boolean=true){
     var reset by remember{mutableStateOf(false)}
     SettingsGroup(if(advanced)"单项颜色"else"颜色与背景") {
-        if(!advanced)BeaconDropdownPreference("所有内容的颜色",WidgetColors.names.mapIndexed{i,name->if(i==0&&config.optString("color")=="semantic")"自动（按状态变色）"else name},WidgetColors.values.indexOf(config.optString("global_color")).coerceAtLeast(0),settingsRow=true,icon=BeaconIcons.Palette,itemLeading={ColorDot(it)}){index->
+        if(!advanced)BeaconDropdownPreference("统一颜色",WidgetColors.names.mapIndexed{i,name->if(i==0&&config.optString("color")=="semantic")"自动（按状态变色）"else name},WidgetColors.values.indexOf(config.optString("global_color")).coerceAtLeast(0),settingsRow=true,icon=BeaconIcons.Palette,itemLeading={ColorDot(it)}){index->
             onChange(JSONObject(config.toString()).put("global_color",WidgetColors.values[index]).apply{remove("content_colors")})
         }
         (if(!advanced||config.optString("template")=="text")emptyList()else WidgetConfigRules.selected(row,config)).forEach{block->
@@ -46,10 +46,10 @@ internal fun WidgetColorSettings(row:JSONObject,config:JSONObject,onChange:(JSON
         if(!advanced){
             Column(Modifier.padding(horizontal=BeaconUiMetrics.CardInset)){
                 val available=config.optString("template") !in listOf("numbers","countdown","text","text_list","overview_list") && WidgetConfigRules.selected(row,config).any{(it.optJSONArray("bands")?.length()?:0)>0}
-                BeaconPreferenceToggle("显示分段提示颜色",if(available)"手选颜色优先；自动颜色才使用分段范围"else"当前内容未提供分段范围",config.optBoolean("bands"),enabled=available){value->onChange(JSONObject(config.toString()).put("bands",value))}
+                BeaconPreferenceToggle("分段颜色",if(available)"自动颜色按数据范围分段显示"else"当前内容无分段范围",config.optBoolean("bands"),enabled=available){value->onChange(JSONObject(config.toString()).put("bands",value))}
             }
             BeaconDropdownPreference("内容配色",listOf("自选颜色","按状态变色"),if(config.optString("color")=="semantic")1 else 0,settingsRow=true,icon=BeaconIcons.Palette){i->onChange(JSONObject(config.toString()).put("color",if(i==0)"fixed"else"semantic"))}
-            BeaconDropdownPreference("卡片背景",listOf("跟随手机主题","浅色","深色","透明"),listOf("system","light","dark","transparent").indexOf(config.optString("background","system")),settingsRow=true,icon=BeaconIcons.ThemeMode){i->onChange(JSONObject(config.toString()).put("background",listOf("system","light","dark","transparent")[i]))}
+            BeaconDropdownPreference("卡片背景",listOf("跟随系统","浅色","深色","透明"),listOf("system","light","dark","transparent").indexOf(config.optString("background","system")),settingsRow=true,icon=BeaconIcons.ThemeMode){i->onChange(JSONObject(config.toString()).put("background",listOf("system","light","dark","transparent")[i]))}
             val defaults=WidgetConfiguration.resetAppearance(config.toString())
             SettingsRow(stringResource(R.string.widget_restore_appearance),stringResource(R.string.widget_restore_appearance_hint),
                 BeaconIcons.ThemeMode,iconTint=MaterialTheme.colorScheme.onSurface,

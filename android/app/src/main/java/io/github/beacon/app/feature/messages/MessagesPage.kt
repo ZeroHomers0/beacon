@@ -55,9 +55,6 @@ import io.github.beacon.app.ui.components.BeaconUiMetrics
 import io.github.beacon.app.ui.components.MessageItem
 import io.github.beacon.app.ui.icons.BeaconIcons
 import io.github.beacon.app.ui.components.BeaconFloatingGlassButton
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
-import top.yukonga.miuix.kmp.blur.layerBackdrop
-import io.github.beacon.app.ui.components.LocalBeaconTopBackdrop
 import io.github.beacon.app.ui.components.BeaconSearchScrollState
 import io.github.beacon.app.ui.components.rememberBeaconSearchScrollState
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -157,16 +154,12 @@ private fun MessagesContent(
     var headerHeight by remember { mutableStateOf(padding.calculateTopPadding() + topInset +
         BeaconUiMetrics.SearchFieldMinHeight + androidx.compose.material3.InputChipDefaults.Height + BeaconUiMetrics.Gap16) }
     val pageBackground = MaterialTheme.colorScheme.background
-    val headerScroll = headerScrollState ?: rememberBeaconSearchScrollState(scroll)
     val pageScope = androidx.compose.runtime.rememberCoroutineScope()
-    val topBackdrop = if (LocalBeaconUiStyle.current == BeaconUiStyle.MIUIX)
-        rememberLayerBackdrop { drawRect(pageBackground); drawContent() } else null
     var jumpToLatest by remember { mutableStateOf(false) }
     LaunchedEffect(jumpToLatest,busy,runtimeState.newMessageCount,runtimeState.messageLoadFailed) {
         if(jumpToLatest && !busy) {
             if(runtimeState.newMessageCount==0L) {
                 scroll.scrollToItem(0)
-                headerScroll.expand()
                 jumpToLatest=false
             } else if(runtimeState.messageLoadFailed)jumpToLatest=false
         }
@@ -178,18 +171,6 @@ private fun MessagesContent(
     DisposableEffect(actions) { onDispose { actions.setMessageReading(false) } }
     // The pinned filter row and the chips read the same applied query, so they never disagree.
     val applied = runtimeState.messageQuery
-    var blurReady by remember(applied) { mutableStateOf(false) }
-    LaunchedEffect(applied, busy) {
-        blurReady = false
-        if (!busy) {
-            androidx.compose.runtime.withFrameNanos { }
-            androidx.compose.runtime.withFrameNanos { }
-            blurReady = true
-        }
-    }
-    val headerReveal: () -> Float = {
-        if (blurReady && !busy && readFilter == applied.readFilter) headerScroll.progress() else 0f
-    }
     val pageState = io.github.beacon.app.domain.model.AsyncPageState.resolve(
         loaded = runtimeState.messagesLoaded || runtimeState.messages.isNotEmpty(),
         loading = runtimeState.messageBusy || (!runtimeState.messagesLoaded && !runtimeState.messageLoadFailed),
@@ -271,7 +252,6 @@ private fun MessagesContent(
                     stringResource(R.string.msg_search_hint),
                     titleCollapsed = titleCollapsed || hideSharedTitle,
                     scroll = scroll,
-                    scrollProgress = headerScroll.progress,
                     onSearch = submit,
                 )
             else
@@ -280,7 +260,6 @@ private fun MessagesContent(
                     { if (it.length <= 256) onSearch(it) },
                     stringResource(R.string.msg_search_hint),
                     scroll = scroll,
-                    scrollProgress = headerScroll.progress,
                     onSearch = submit,
                 )
             // Counts and active filters stay with the search instead of scrolling: they pin under
@@ -310,7 +289,7 @@ private fun MessagesContent(
             }
         }
     }
-    Box(modifier.nestedScroll(headerScroll)) {
+    Box(modifier) {
         BeaconPullToRefresh(
             refreshing,
             {
@@ -327,7 +306,6 @@ private fun MessagesContent(
                     state = scroll,
                     modifier =
                         Modifier.fillMaxSize().then(scrollModifier).beaconFilterChange(applied.readFilter.ordinal)
-                            .then(if (topBackdrop != null) Modifier.layerBackdrop(topBackdrop) else Modifier)
                             .testTag(MESSAGE_LIST_TAG),
                     contentPadding =
                         PaddingValues(
@@ -557,26 +535,9 @@ private fun MessagesContent(
                 }
             }
         }
-        if (topBackdrop != null) {
-            CompositionLocalProvider(LocalBeaconTopBackdrop provides topBackdrop) {
-                io.github.beacon.app.ui.components.BeaconGlassSurface(
-                    MaterialTheme.colorScheme.background,
-                    Modifier.fillMaxWidth().height(BeaconUiMetrics.PageBottomInset).offset(y = headerHeight)
-                        .testTag("message-header-fade")
-                        .graphicsLayer {
-                            alpha = headerReveal()
-                        },
-                    topFade = true,
-                ) {}
-            }
-        }
-        CompositionLocalProvider(LocalBeaconTopBackdrop provides topBackdrop) {
-            io.github.beacon.app.ui.components.BeaconGlassSurface(
-                MaterialTheme.colorScheme.background,
-                Modifier.fillMaxWidth().align(Alignment.TopCenter).testTag("message-pinned-header"),
-                topFade = topBackdrop != null,
-                topFadeProgress = headerReveal,
-            ) { pinnedControls() }
-        }
+        io.github.beacon.app.ui.components.BeaconGlassSurface(
+            MaterialTheme.colorScheme.background,
+            Modifier.fillMaxWidth().align(Alignment.TopCenter).testTag("message-pinned-header"),
+        ) { pinnedControls() }
     }
 }
