@@ -9,6 +9,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalDensity
 
+private data class ScrollFrame(val index: Int, val offset: Int, val scrolling: Boolean, val sizes: List<Pair<Int, Int>>)
+
 internal val LocalBeaconScrollProgress = staticCompositionLocalOf<() -> Float> { { 0f } }
 internal val LocalBeaconToolbarGlassAlpha = staticCompositionLocalOf<() -> Float> { { 1f } }
 
@@ -22,10 +24,11 @@ internal fun rememberBeaconScrollProgress(scroll: LazyListState): () -> Float {
         var previousIndex = scroll.firstVisibleItemIndex
         var previousOffset = scroll.firstVisibleItemScrollOffset
         travelled.floatValue = if (previousIndex == 0) previousOffset.toFloat() else distance
+        var wasScrolling = false
         snapshotFlow {
-            Triple(scroll.firstVisibleItemIndex, scroll.firstVisibleItemScrollOffset,
+            ScrollFrame(scroll.firstVisibleItemIndex, scroll.firstVisibleItemScrollOffset, scroll.isScrollInProgress,
                 scroll.layoutInfo.visibleItemsInfo.map { it.index to it.size + scroll.layoutInfo.mainAxisItemSpacing })
-        }.collect { (index, offset, sizes) ->
+        }.collect { (index, offset, scrolling, sizes) ->
             sizes.forEach { (item, height) -> heights[item] = height }
             var delta = (offset - previousOffset).toFloat()
             if (index > previousIndex) {
@@ -35,10 +38,11 @@ internal fun rememberBeaconScrollProgress(scroll: LazyListState): () -> Float {
             }
             // Dataset replacement may relocate the anchor without any scroll gesture.
             // Keep the search presentation stable while filters replace or empty the list.
-            if (scroll.isScrollInProgress) {
+            if (scrolling || wasScrolling) {
                 travelled.floatValue = if (index == 0) offset.toFloat()
                     else (travelled.floatValue + delta).coerceAtLeast(0f)
             }
+            wasScrolling = scrolling
             previousIndex = index
             previousOffset = offset
         }

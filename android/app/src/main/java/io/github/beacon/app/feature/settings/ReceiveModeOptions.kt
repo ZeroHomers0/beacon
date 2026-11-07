@@ -3,6 +3,11 @@ package io.github.beacon.app.feature.settings
 import io.github.beacon.app.ui.components.BeaconUiMetrics
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.*
@@ -39,7 +44,18 @@ internal fun ReceiveModeOptions(
                                 ReceiveMode.RULES -> R.string.receive_mode_rules_description
                             }), selected = mode == selected, enabled = enabled,
                             onClick = { onSelect(mode) },
-                            startAction = { Icon(receiveModeIcon(mode), null, Modifier.padding(end = BeaconUiMetrics.Gap10).size(20.dp), tint = receiveModeColor(mode)) },
+                            modifier = Modifier.background(
+                                if (mode == selected) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Transparent,
+                                RoundedCornerShape(BeaconUiMetrics.CardRadius)),
+                            startAction = {
+                                Box(Modifier.padding(end = BeaconUiMetrics.Gap10)
+                                    .size(BeaconUiMetrics.SearchFieldMinHeight)
+                                    .background(receiveModeColor(mode).copy(alpha = .14f)
+                                        .compositeOver(MaterialTheme.colorScheme.surface), CircleShape),
+                                    contentAlignment = Alignment.Center) {
+                                    Icon(receiveModeIcon(mode), null, Modifier.size(20.dp), tint = receiveModeColor(mode))
+                                }
+                            },
                         )
                     } else
                     Row(

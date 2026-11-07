@@ -59,6 +59,7 @@ internal fun BeaconContentArea(
     statesScroll: LazyListState,
     settingsScrollStates: Map<SettingsScreen, LazyListState>,
     barBehavior: BeaconBarBehavior,
+    settingsBarBehaviors: Map<SettingsScreen, BeaconBarBehavior>,
     compactBar: Boolean,
     sharedTitleLabel: String?,
     busy: Boolean,
@@ -94,8 +95,7 @@ val direction = androidx.compose.ui.platform.LocalLayoutDirection.current
 val settingsModifier = if (underTopBar) Modifier.fillMaxSize()
     .padding(start = insets.calculateStartPadding(direction), end = insets.calculateEndPadding(direction),
         bottom = insets.calculateBottomPadding())
-    .then(if (compactBar) Modifier else Modifier.nestedScroll(barBehavior.connection(ui.uiStyle)))
-else listModifier
+else Modifier.fillMaxSize().padding(insets)
 val settingsPadding = if (underTopBar) PaddingValues(start = edge, end = edge,
     top = insets.calculateTopPadding() + BeaconUiMetrics.PageTopInset,
     bottom = BeaconUiMetrics.PageBottomInset) else listPadding
@@ -203,7 +203,9 @@ BeaconMessageTransition(
 
                 else -> {
                     val renderSettings: @Composable (SettingsScreen) -> Unit = { displayedSettingsScreen ->
-                        BeaconSettingsPageFrame(ui, displayedSettingsScreen, settingsModifier, settingsPadding) { pageModifier, pagePadding ->
+                        BeaconSettingsPageFrame(ui, displayedSettingsScreen,
+                            settingsModifier.then(if (compactBar) Modifier else Modifier.nestedScroll(
+                                settingsBarBehaviors.getValue(displayedSettingsScreen).connection(ui.uiStyle))), settingsPadding) { pageModifier, pagePadding ->
                         SettingsPage(
                             displayedSettingsScreen,
                             settingsScrollStates.getValue(

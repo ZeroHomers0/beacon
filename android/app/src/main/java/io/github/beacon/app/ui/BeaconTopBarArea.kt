@@ -58,6 +58,8 @@ internal fun BeaconTopBarArea(
     settingsMotion: SeekableTransitionState<SettingsScreen>,
     pager: PagerState,
     barBehavior: BeaconBarBehavior,
+    settingsBarBehaviors: Map<SettingsScreen, BeaconBarBehavior>,
+    pageBarBehaviors: Map<Int, BeaconBarBehavior>,
     navigate: (Int) -> Unit,
 ) {
     // Both change per recomposition and are cheap to read, so deriving them here keeps the call
@@ -83,7 +85,11 @@ internal fun BeaconTopBarArea(
                     else stringResource(ui.pages[barPage]),
                     barPage == 0 ||
                         displayedDetail != null,
-                    barBehavior,
+                    when {
+                        displayedDetail != null -> barBehavior
+                        barPage == 1 -> settingsBarBehaviors.getValue(displayedSettingsScreen)
+                        else -> pageBarBehaviors.getValue(barPage)
+                    },
                     navigationIcon = {
                         if (
                             displayedDetail == null &&

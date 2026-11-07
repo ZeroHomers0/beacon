@@ -150,12 +150,8 @@ fun ReceiveModeButton(
             Modifier.size(42.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Box(Modifier.matchParentSize().graphicsLayer { alpha = glassAlpha() }.then(if (glass)
-                Modifier.beaconGlassMaterial(MaterialTheme.colorScheme.surface, CircleShape)
-            else Modifier.background(
-                accent.copy(alpha = .14f).compositeOver(MaterialTheme.colorScheme.surface),
-                CircleShape,
-            )))
+            Box(Modifier.matchParentSize().background(
+                accent.copy(alpha = .14f).compositeOver(MaterialTheme.colorScheme.surface), CircleShape))
             AnimatedContent(
                 mode,
                 transitionSpec = {

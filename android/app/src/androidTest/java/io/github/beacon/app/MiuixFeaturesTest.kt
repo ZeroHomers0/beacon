@@ -2,6 +2,11 @@ package io.github.beacon.app
 
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toPixelMap
+import io.github.beacon.app.domain.model.BeaconThemeMode
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.*
@@ -54,6 +59,31 @@ class MiuixFeaturesTest {
         rule.runOnIdle { assertEquals(SettingsScreen.CONNECTION, ui.settingsScreen) }
         rule.runOnUiThread { rule.activity.onBackPressedDispatcher.onBackPressed() }
         rule.onNodeWithTag("route-HOME").assertExists()
+    }
+
+    @Test fun settingsEntryBackgroundHidesCoveredPageBetweenCards() {
+        for (mode in listOf(BeaconThemeMode.LIGHT, BeaconThemeMode.DARK)) {
+            lateinit var ui: BeaconUiState
+            var expected = Color.Unspecified
+            rule.runOnUiThread {
+                ui = BeaconUiState(SavedStateHandle(), UiStyleStore(rule.activity))
+                rule.activity.setContent {
+                    BeaconTheme(BeaconUiStyle.MIUIX, mode) {
+                        expected = MaterialTheme.colorScheme.background
+                        BeaconSettingsNavHost(ui) { screen ->
+                            if (screen == SettingsScreen.HOME) Box(Modifier.fillMaxSize().background(Color.Magenta))
+                            else Box(Modifier.fillMaxWidth().height(androidx.compose.ui.unit.Dp(100f)).background(Color.White))
+                        }
+                    }
+                }
+            }
+            rule.runOnIdle { ui.navigateSettings(SettingsScreen.SERVER_ADMIN) }
+            val image = rule.onNodeWithTag("settings-body-SERVER_ADMIN").captureToImage().toPixelMap()
+            val actual = image[image.width / 2, image.height * 3 / 4]
+            assertEquals(expected.red, actual.red, .01f)
+            assertEquals(expected.green, actual.green, .01f)
+            assertEquals(expected.blue, actual.blue, .01f)
+        }
     }
 
     @Test fun toolbarLongPressExplainsActionWithoutClicking() {

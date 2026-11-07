@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -144,8 +145,10 @@ private fun MessagesContent(
     val hasNewMessages = runtimeState.newMessageCount > 0 && !selectionMode
     val density = androidx.compose.ui.platform.LocalDensity.current
     var entryHeight by remember { mutableStateOf(BeaconUiMetrics.NewMessagesMinHeight) }
+    val pageBackground = MaterialTheme.colorScheme.background
+    val topBlurDistance = with(density) { BeaconUiMetrics.Gap16.toPx() }
     val topBackdrop = if (LocalBeaconUiStyle.current == BeaconUiStyle.MIUIX)
-        rememberLayerBackdrop { drawContent() } else null
+        rememberLayerBackdrop { drawRect(pageBackground); drawContent() } else null
     var jumpToLatest by remember { mutableStateOf(false) }
     LaunchedEffect(jumpToLatest,busy,runtimeState.newMessageCount,runtimeState.messageLoadFailed) {
         if(jumpToLatest && !busy) {
@@ -424,7 +427,7 @@ private fun MessagesContent(
                                 key in selectedKeys,
                                 // Arriving, read and selection changes settle into place instead of
                                 // snapping, which is what made a synced batch look like a redraw.
-                                modifier = Modifier.animateItem(),
+                                modifier = Modifier.animateItem(placementSpec = null),
                                 onSelect = { checked ->
                                     if (!checked) onSelectionChange(selectedKeys - key)
                                     else if (selectedKeys.size < 100) {
@@ -499,7 +502,12 @@ private fun MessagesContent(
                     CompositionLocalProvider(LocalBeaconTopBackdrop provides topBackdrop) {
                         io.github.beacon.app.ui.components.BeaconGlassSurface(
                             MaterialTheme.colorScheme.background,
-                            Modifier.fillMaxWidth().height(BeaconUiMetrics.Gap8).align(Alignment.TopCenter),
+                            Modifier.fillMaxWidth().height(BeaconUiMetrics.Gap8).align(Alignment.TopCenter)
+                                .testTag("message-top-blur")
+                                .graphicsLayer {
+                                    alpha = if (scroll.firstVisibleItemIndex > 0) 1f
+                                        else (scroll.firstVisibleItemScrollOffset / topBlurDistance).coerceIn(0f, 1f)
+                                },
                             topFade = true,
                         ) {}
                     }

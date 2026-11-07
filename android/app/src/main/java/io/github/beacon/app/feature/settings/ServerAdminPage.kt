@@ -424,7 +424,7 @@ internal fun ServerAdminPage(
                                     add(R.string.admin_revoke_device to { pendingDevice = device })
                                 }
                             },
-                            modifier = Modifier.animateItem(),
+                            modifier = Modifier.animateItem(placementSpec = null),
                             revoked = device.revoked,
                         )
                     }
@@ -471,7 +471,7 @@ internal fun ServerAdminPage(
                                             pendingApplication = app
                                         }
                             ),
-                            modifier = Modifier.animateItem(),
+                            modifier = Modifier.animateItem(placementSpec = null),
                             revoked = app.revoked, priority = app.priority,
                             details = app.id + "\n" + app.deviceId + "\n" +
                                 state.devices.find { it.id == app.deviceId }?.name.orEmpty(),

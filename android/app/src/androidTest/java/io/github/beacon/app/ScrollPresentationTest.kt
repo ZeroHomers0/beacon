@@ -61,6 +61,7 @@ class ScrollPresentationTest {
                 }
             } }
             val full = rule.onNodeWithTag(SEARCH_COLLAPSE_TAG).getUnclippedBoundsInRoot()
+            capture("search-full-$style-$mode-$font")
             rule.runOnIdle { scope.launch { scroll.animateScrollToItem(0, half) } }
             val partial = rule.onNodeWithTag(SEARCH_COLLAPSE_TAG).getUnclippedBoundsInRoot()
             assertEquals(full.width.value, partial.width.value, 1f)
@@ -83,6 +84,8 @@ class ScrollPresentationTest {
             rule.runOnIdle { scope.launch { scroll.animateScrollToItem(0) } }
             rule.onNodeWithTag(SEARCH_BOX_TAG).assertExists()
             rule.onNodeWithText("保留查询").assertExists()
+            assertEquals(full.height.value, rule.onNodeWithTag(SEARCH_COLLAPSE_TAG).getUnclippedBoundsInRoot().height.value, 1f)
+            capture("search-restored-$style-$mode-$font")
             assertEquals(full.width.value, rule.onNodeWithTag(SEARCH_COLLAPSE_TAG).getUnclippedBoundsInRoot().width.value, 1f)
         }
     }

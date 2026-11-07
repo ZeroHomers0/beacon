@@ -2,6 +2,7 @@ package io.github.beacon.app.ui
 
 import androidx.compose.runtime.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -24,13 +25,13 @@ internal fun BeaconSettingsNavHost(ui: BeaconUiState, content: @Composable (Sett
     }
     NavDisplay(backStack = stack, modifier = Modifier.fillMaxSize().clipToBounds(),
         onBack = { ui.backSettings() },
-        effects = NavDisplayEffects(blockInputDuringTransition = true,
+        effects = NavDisplayEffects(blockInputDuringTransition = false,
             backdropColor = MaterialTheme.colorScheme.background)) {
         entry<SettingsRoute> { route ->
             val scope = LocalNavTransitionScope.current
             SideEffect { if (route.screen == ui.settingsScreen) ui.settingsNavScope = scope }
             DisposableEffect(scope) { onDispose { if (ui.settingsNavScope === scope) ui.settingsNavScope = null } }
-            Box(Modifier.fillMaxSize().testTag("settings-body-${route.screen}")) { content(route.screen) }
+            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).testTag("settings-body-${route.screen}")) { content(route.screen) }
         }
     }
 }

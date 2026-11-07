@@ -2,10 +2,12 @@ package io.github.beacon.app
 
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import io.github.beacon.app.data.repository.RuntimeRepository
@@ -26,6 +28,7 @@ class NewMessageEntryTest {
         val rows=(1..20).map{IncomingMessage("arrivals","row-$it","历史消息 $it","正文",receivedAtMs=1792900000000)}
         val state=mutableStateOf(RuntimeState(messages=rows,messagesLoaded=true,messageTotal=20,runtimeConnected=true))
         var reading=false;var requests=0
+        var expectedBackground = androidx.compose.ui.graphics.Color.Unspecified
         lateinit var scroll:LazyListState
         val actions=object:RuntimeActions by repository {
             override fun setMessageReading(readingHistory:Boolean){reading=readingHistory}
@@ -38,14 +41,25 @@ class NewMessageEntryTest {
         }
         try {
             rule.runOnUiThread{rule.activity.setContent{BeaconTheme(style,mode){
+                expectedBackground = androidx.compose.material3.MaterialTheme.colorScheme.background
                 val density=androidx.compose.ui.platform.LocalDensity.current
                 CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density,font)){
                 scroll=rememberLazyListState()
-                MessagesPage(scroll,Modifier.fillMaxSize().safeDrawingPadding(),PaddingValues(BeaconUiMetrics.PageInset),
+                MessagesPage(scroll,Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.background).safeDrawingPadding(),PaddingValues(BeaconUiMetrics.PageInset),
                     state.value,actions,"",MessageReadFilter.ALL,false,emptyList(),"",
                     onSearch={},onApplyFilter={_,_->},onConnectionSettings={},onEnterSelection={},
                     onSelectionChange={},onSelectionHint={},onRequestDelete={},onCopyText={_,_->})
             }}}}
+            val root = rule.onRoot().captureToImage().toPixelMap()
+            val listBounds = rule.onNodeWithTag(MESSAGE_LIST_TAG).fetchSemanticsNode().boundsInRoot
+            val scale = rule.activity.resources.displayMetrics.density
+            val y = (listBounds.top + 2 * scale).toInt()
+            for (dp in 20..120 step 10) {
+                val pixel = root[(listBounds.left + dp * scale).toInt(), y]
+                assertEquals("No blurred date stripe at the top", expectedBackground.red, pixel.red, .02f)
+                assertEquals(expectedBackground.green, pixel.green, .02f)
+                assertEquals(expectedBackground.blue, pixel.blue, .02f)
+            }
             rule.onNodeWithTag(MESSAGE_LIST_TAG).performScrollToIndex(8)
             rule.waitUntil(5000){reading}
             val viewport=rule.onNodeWithTag(MESSAGE_LIST_TAG).getUnclippedBoundsInRoot()

@@ -71,8 +71,11 @@ fun BeaconSearchBox(
     val width = fullWidth
     val fieldHeight = maxOf(BeaconUiMetrics.SearchFieldMinHeight,
         with(density) { BeaconListText.SearchLineHeight.toDp() } + BeaconUiMetrics.SearchFieldVerticalInset * 2)
-    val textAlpha = ((fieldHeight * fraction / with(density) { BeaconListText.SearchLineHeight.toDp() } - 1f) / .5f).coerceIn(0f, 1f)
     val height = fieldHeight * fraction.coerceIn(0f, 1f)
+    val lineHeight = with(density) { BeaconListText.SearchLineHeight.toDp() }
+    val fadeRange = minOf(fieldHeight - lineHeight, lineHeight * .25f)
+    // Full height must be fully sharp at every font scale, not only the default font size.
+    val textAlpha = ((height - lineHeight) / fadeRange).coerceIn(0f, 1f)
     Box(Modifier.align(Alignment.Center).width(width).height(height)
         .clip(CircleShape)
         .beaconGlassMaterial(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)

@@ -83,19 +83,13 @@ fun BeaconListSwitch(
 @Composable
 fun Modifier.beaconFilterChange(filter: Int): Modifier {
     val alpha = remember { Animatable(1f) }
-    val offset = remember { Animatable(0f) }
     var previous by remember { mutableIntStateOf(filter) }
-    val distance = with(androidx.compose.ui.platform.LocalDensity.current) { BeaconUiMetrics.Gap6.toPx() }
-    val rtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
     LaunchedEffect(filter) {
         if (previous != filter) {
-            val direction = (if (filter > previous) 1f else -1f) * if (rtl) -1f else 1f
             previous = filter
-            alpha.snapTo(.8f)
-            offset.snapTo(distance * direction)
-            launch { alpha.animateTo(1f, tween(BeaconMotion.QuickMs)) }
-            launch { offset.animateTo(0f, spring(dampingRatio = Spring.DampingRatioNoBouncy)) }
+            alpha.snapTo(.94f)
+            alpha.animateTo(1f, tween(BeaconMotion.QuickMs))
         }
     }
-    return graphicsLayer { this.alpha = alpha.value; translationX = offset.value }
+    return graphicsLayer { this.alpha = alpha.value }
 }

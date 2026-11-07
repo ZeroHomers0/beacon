@@ -15,6 +15,7 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.*
@@ -95,7 +96,7 @@ internal fun BeaconGlassSurface(
     val backdrop = LocalBeaconTopBackdrop.current
     val hardware = LocalView.current.isHardwareAccelerated
     Box(modifier) {
-        Box(Modifier.matchParentSize().then(
+        Box(Modifier.matchParentSize().clipToBounds().then(
             if (topFade && miuix() && hardware && backdrop != null) Modifier
                 .progressiveTextureBlur(backdrop = backdrop, shape = RectangleShape,
                     blurRadius = BeaconUiMetrics.TopGlassBlurRadius.value,

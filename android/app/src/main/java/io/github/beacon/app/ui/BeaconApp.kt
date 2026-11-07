@@ -337,7 +337,18 @@ fun BeaconApp(
                 display.join()
             }
         }
-        val barBehavior = androidx.compose.runtime.key(ui.page, ui.settingsScreen, detail != null) { rememberBeaconBarBehavior() }
+        val settingsBarBehaviors = SettingsScreen.entries.associateWith { screen ->
+            androidx.compose.runtime.key(screen) { rememberBeaconBarBehavior() }
+        }
+        val messageBarBehavior = rememberBeaconBarBehavior()
+        val statesBarBehavior = rememberBeaconBarBehavior()
+        val detailBarBehavior = rememberBeaconBarBehavior()
+        val barBehavior = when {
+            detail != null -> detailBarBehavior
+            ui.page == 1 -> settingsBarBehaviors.getValue(ui.settingsScreen)
+            ui.page == 2 -> statesBarBehavior
+            else -> messageBarBehavior
+        }
         // The home page has no title at any window size; selection still shows its count.
         val compactBar = ui.page == 0 || detail != null
         val activeScroll = when (ui.page) {
@@ -367,6 +378,8 @@ fun BeaconApp(
                             settingsMotion = settingsMotion,
                             pager = pager,
                             barBehavior = barBehavior,
+                            settingsBarBehaviors = settingsBarBehaviors,
+                            pageBarBehaviors = mapOf(0 to messageBarBehavior, 2 to statesBarBehavior),
                             navigate = navigate,
                         )
                     },
@@ -383,6 +396,7 @@ fun BeaconApp(
                         statesScroll = statesScroll,
                         settingsScrollStates = settingsScrollStates,
                         barBehavior = barBehavior,
+                        settingsBarBehaviors = settingsBarBehaviors,
                         compactBar = compactBar,
                         sharedTitleLabel = null,
                         busy = busy,
