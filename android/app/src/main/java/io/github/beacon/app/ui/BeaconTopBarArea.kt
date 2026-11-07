@@ -9,6 +9,9 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.IncomingMessage
@@ -65,6 +68,7 @@ internal fun BeaconTopBarArea(
     BeaconMessageTransition(detailTransition) { displayedDetail ->
         val renderSettingsBar: @Composable (Int, SettingsScreen) -> Unit =
             { barPage, displayedSettingsScreen ->
+                Box(Modifier.testTag("settings-header-$barPage-$displayedSettingsScreen")) {
                 BeaconTopBar(
                     if (displayedDetail != null)
                         stringResource(R.string.ui_message_detail_title)
@@ -383,8 +387,20 @@ internal fun BeaconTopBarArea(
                     },
                 )
             }
+        }
         val renderBar: @Composable (Int) -> Unit = { barPage ->
-            if (barPage == 1 && displayedDetail == null)
+            if (barPage == 1 && displayedDetail == null) {
+                Box(Modifier.graphicsLayer {
+                    translationX = 0f
+                    if (ui.uiStyle == io.github.beacon.app.domain.model.BeaconUiStyle.MIUIX) {
+                        val scope = ui.settingsNavScope
+                        if (scope?.gesture != null) {
+                            val depth = scope.relativeDepth
+                            val sign = if (scope.layoutDirection == androidx.compose.ui.unit.LayoutDirection.Rtl) -1f else 1f
+                            translationX = sign * scope.layoutSize.width * if (depth < 0f) -depth else -depth * .25f
+                        }
+                    }
+                }) {
                 BeaconSettingsTransition(
                     settingsTransition,
                     ui.settingsNavigatingBack ||
@@ -392,7 +408,8 @@ internal fun BeaconTopBarArea(
                 ) { screen ->
                     renderSettingsBar(barPage, screen)
                 }
-            else renderSettingsBar(barPage, ui.settingsScreen)
+                }
+            } else renderSettingsBar(barPage, ui.settingsScreen)
         }
         if (displayedDetail != null) renderBar(ui.page)
         else BeaconPagerToolbar(pager, renderBar)

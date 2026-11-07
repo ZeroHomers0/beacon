@@ -29,7 +29,7 @@ class ToolbarGroupingTest {
             }
             rule.onNodeWithText(rule.activity.getString(R.string.ui_nav_messages_title)).assertDoesNotExist()
             val labels = listOf(R.string.ui_mark_all_read_action, R.string.action_sync_now,
-                R.string.ui_filter_messages_title, R.string.ui_nav_settings_title)
+                R.string.ui_nav_settings_title)
             val bounds = labels.map {
                 val description = rule.activity.getString(it)
                 rule.onNode(hasClickAction() and (hasContentDescription(description) or
@@ -37,7 +37,7 @@ class ToolbarGroupingTest {
                     .getUnclippedBoundsInRoot()
             }
             capture("home-$style")
-            assertTrue("All four home actions share a single row: $bounds", bounds.all {
+            assertTrue("All home actions share a single row: $bounds", bounds.all {
                 kotlin.math.abs((it.top.value + it.bottom.value) / 2 - (bounds[0].top.value + bounds[0].bottom.value) / 2) < 1f
             })
             assertTrue("Actions keep their existing touch width", bounds.all { (it.right - it.left).value >= 44f })

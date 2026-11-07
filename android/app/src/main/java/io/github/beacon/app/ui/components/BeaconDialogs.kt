@@ -46,7 +46,9 @@ fun BeaconAlertDialog(
     }
 
     if (miuix()) {
-        top.yukonga.miuix.kmp.window.WindowDialog(show = true, onDismissRequest = onDismissRequest) {
+        top.yukonga.miuix.kmp.window.WindowDialog(show = true, onDismissRequest = onDismissRequest,
+            maxWidth = 560.dp, largeScreen = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600,
+            cornerRadius = 32.dp) {
             Column(
                 Modifier.heightIn(max = screenHeight * .85f),
                 verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap16),
@@ -150,6 +152,10 @@ fun BeaconDropdownMenu(
     onDismissRequest: () -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    if (!miuix()) {
+        androidx.compose.material3.DropdownMenu(expanded, onDismissRequest, content = content)
+        return
+    }
     top.yukonga.miuix.kmp.window.WindowListPopup(
         show = expanded,
         popupPositionProvider =
@@ -169,18 +175,9 @@ fun BeaconDropdownMenu(
 @Composable
 fun BeaconDropdownMenuItem(text: @Composable () -> Unit, onClick: () -> Unit) {
     if (miuix()) {
-        androidx.compose.material3.Surface(onClick = onClick,
-            color = androidx.compose.ui.graphics.Color.Transparent) {
-            CompositionLocalProvider(
-                top.yukonga.miuix.kmp.theme.LocalContentColor provides MaterialTheme.colorScheme.onSurface,
-                androidx.compose.material3.LocalContentColor provides MaterialTheme.colorScheme.onSurface,
-            ) {
-                androidx.compose.material3.ProvideTextStyle(MaterialTheme.typography.bodyLarge) {
-                    Row(Modifier.fillMaxWidth().heightIn(min = BeaconUiMetrics.ControlMinHeight)
-                        .padding(horizontal = BeaconUiMetrics.Gap12, vertical = BeaconUiMetrics.Gap8),
-                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) { text() }
-                }
-            }
+        top.yukonga.miuix.kmp.basic.BasicComponent(onClick = onClick,
+            insideMargin = PaddingValues(horizontal = BeaconUiMetrics.Gap12, vertical = BeaconUiMetrics.Gap8)) {
+            text()
         }
     } else androidx.compose.material3.DropdownMenuItem(text, onClick)
 }

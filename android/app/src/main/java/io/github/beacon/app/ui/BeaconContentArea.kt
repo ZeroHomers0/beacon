@@ -201,20 +201,16 @@ BeaconMessageTransition(
                         },
                     )
 
-                else ->
-                    BeaconSettingsTransition(
-                        settingsTransition,
-                        ui.settingsNavigatingBack ||
-                            settingsMotion.targetState == ui.settingsBackTarget,
-                        animateSize = false,
-                    ) { displayedSettingsScreen ->
+                else -> {
+                    val renderSettings: @Composable (SettingsScreen) -> Unit = { displayedSettingsScreen ->
+                        BeaconSettingsPageFrame(ui, displayedSettingsScreen, settingsModifier, settingsPadding) { pageModifier, pagePadding ->
                         SettingsPage(
                             displayedSettingsScreen,
                             settingsScrollStates.getValue(
                                 displayedSettingsScreen
                             ),
-                            settingsModifier,
-                            settingsPadding,
+                            pageModifier,
+                            pagePadding,
                             runtimeState,
                             actions,
                             ui.connectionForm,
@@ -248,6 +244,12 @@ BeaconMessageTransition(
                             storageSettings = ui.storageSettings,
                         )
                     }
+                    }
+                    if (underTopBar) BeaconSettingsNavHost(ui, renderSettings)
+                    else BeaconSettingsTransition(settingsTransition,
+                        ui.settingsNavigatingBack || settingsMotion.targetState == ui.settingsBackTarget,
+                        animateSize = false, content = renderSettings)
+                }
             }
         }
 }

@@ -42,6 +42,7 @@ class ScrollPresentationTest {
             lateinit var focus: androidx.compose.ui.focus.FocusManager
             var query by mutableStateOf("")
             var submitted = 0
+            var rowCount by mutableIntStateOf(100)
             var half = 0
             rule.runOnUiThread { rule.activity.setContent {
                 val density = LocalDensity.current
@@ -53,25 +54,33 @@ class ScrollPresentationTest {
                         Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).safeDrawingPadding()) {
                             BeaconSearchBox(query, { query = it }, "搜索测试", scroll = scroll, onSearch = { submitted++ })
                             LazyColumn(state = scroll, modifier = Modifier.weight(1f).testTag("search-list")) {
-                                items(20) { BeaconText("列表项目 $it", Modifier.fillMaxWidth().height(240.dp)) }
+                                items(rowCount) { BeaconText("列表项目 $it", Modifier.fillMaxWidth().height(48.dp)) }
                             }
                         }
                     }
                 }
             } }
             val full = rule.onNodeWithTag(SEARCH_COLLAPSE_TAG).getUnclippedBoundsInRoot()
-            rule.runOnIdle { scope.launch { scroll.scrollToItem(0, half) } }
+            rule.runOnIdle { scope.launch { scroll.animateScrollToItem(0, half) } }
             val partial = rule.onNodeWithTag(SEARCH_COLLAPSE_TAG).getUnclippedBoundsInRoot()
             assertEquals(full.width.value, partial.width.value, 1f)
             assertEquals(full.height.value / 2, partial.height.value, 1f)
             capture("search-half-$style-$mode-$font")
             rule.onNodeWithTag(SEARCH_BOX_TAG).performTextReplacement("保留查询")
             assertEquals(full.width.value, rule.onNodeWithTag(SEARCH_COLLAPSE_TAG).getUnclippedBoundsInRoot().width.value, 1f)
-            rule.runOnIdle { focus.clearFocus(); scope.launch { scroll.scrollToItem(1) } }
+            rule.runOnIdle { focus.clearFocus(); scope.launch { scroll.animateScrollToItem(4) } }
             rule.onNodeWithTag(SEARCH_BOX_TAG).assertDoesNotExist()
             rule.runOnIdle { assertEquals("保留查询", query); assertEquals(0, submitted) }
             capture("search-hidden-$style-$mode-$font")
-            rule.runOnIdle { scope.launch { scroll.scrollToItem(0) } }
+            rule.runOnIdle { rowCount = 1 }
+            rule.waitForIdle()
+            rule.onNodeWithTag(SEARCH_BOX_TAG).assertDoesNotExist()
+            rule.runOnIdle { rowCount = 100 }
+            rule.waitForIdle()
+            rule.onNodeWithTag(SEARCH_BOX_TAG).assertDoesNotExist()
+            rule.runOnIdle { scope.launch { scroll.animateScrollToItem(4) } }
+
+            rule.runOnIdle { scope.launch { scroll.animateScrollToItem(0) } }
             rule.onNodeWithTag(SEARCH_BOX_TAG).assertExists()
             rule.onNodeWithText("保留查询").assertExists()
             assertEquals(full.width.value, rule.onNodeWithTag(SEARCH_COLLAPSE_TAG).getUnclippedBoundsInRoot().width.value, 1f)

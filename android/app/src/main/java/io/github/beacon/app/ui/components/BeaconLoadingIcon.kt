@@ -91,6 +91,7 @@ fun BeaconSaveAction(
     onClick: () -> Unit,
 ) {
     val actionable = dirty && enabled && !saving
+    BeaconActionTooltip(description) {
     BeaconIconButton(onClick = onClick, enabled = actionable) {
         Icon(
             io.github.beacon.app.ui.icons.BeaconIcons.Save,
@@ -98,5 +99,6 @@ fun BeaconSaveAction(
             tint = if (actionable) MaterialTheme.colorScheme.onSurface
                 else MaterialTheme.colorScheme.onSurface.copy(alpha = .38f),
         )
+    }
     }
 }

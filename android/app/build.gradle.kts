@@ -5,7 +5,7 @@ plugins {
 }
 
 kotlin {
-    compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21)
 }
 
 // JVM transport tests use the JDK's local HTTP server, which is outside java.se.
@@ -78,8 +78,8 @@ android {
         buildTypes.getByName("release").signingConfig = production
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
     buildFeatures {
         compose = true
@@ -121,6 +121,7 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     // MIUIX 0.9 separates UI, preferences and backdrop effects.
     implementation(libs.miuix.android)
+    implementation(libs.miuix.nav)
     implementation(libs.miuix.preference)
     implementation(libs.miuix.blur)
     debugImplementation(libs.androidx.compose.ui.tooling)

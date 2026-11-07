@@ -93,6 +93,7 @@ fun SettingsToolAction(
     completed: Boolean = false,
     onClick: () -> Unit,
 ) {
+    BeaconActionTooltip(description) {
     BeaconIconButton(onClick = onClick,
         modifier = modifier.sizeIn(minWidth = BeaconUiMetrics.ControlMinHeight, minHeight = BeaconUiMetrics.ControlMinHeight)
             .semantics { if (loading) progressBarRangeInfo = ProgressBarRangeInfo.Indeterminate },
@@ -100,6 +101,7 @@ fun SettingsToolAction(
         BeaconLoadingIcon(if (completed) BeaconIcons.Check else icon, loading,
             modifier = Modifier.size(BeaconUiMetrics.IconMedium), description = description,
             tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled || loading) 1f else .38f))
+    }
     }
 }
 

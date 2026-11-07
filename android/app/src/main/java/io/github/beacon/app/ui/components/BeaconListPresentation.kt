@@ -83,7 +83,7 @@ fun ReceiveModeButton(
 ) {
     // One shared gate: the system switch, the animator scale and this composition all agree now.
     val animationsEnabled = rememberSystemAnimationsEnabled()
-    val glass = miuix() && LocalBeaconGlass.current?.available == true
+    val glass = miuix()
     val glassAlpha = LocalBeaconToolbarGlassAlpha.current
     val modeColor = receiveModeColor(mode)
     val accent by animateColorAsState(
@@ -216,7 +216,8 @@ fun BeaconPullToRefresh(
     if (LocalBeaconUiStyle.current == BeaconUiStyle.MIUIX) {
         top.yukonga.miuix.kmp.basic.PullToRefresh(
             isRefreshing = refreshing,
-            onRefresh = onRefresh,
+            onRefresh = { if (!refreshing) onRefresh() },
+            pullToRefreshState = top.yukonga.miuix.kmp.basic.rememberPullToRefreshState(refreshThreshold = .25f),
             modifier = modifier,
             contentPadding = indicatorPadding,
             refreshTexts =
@@ -291,46 +292,5 @@ fun BeaconSummaryPill(
 /** KSU-style floating feedback: high contrast, rounded corners and swipe dismissal. */
 @Composable
 fun BeaconOperationSnackbar(data: SnackbarData) {
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            if (value != SwipeToDismissBoxValue.Settled) data.dismiss()
-            true
-        },
-    )
-    SwipeToDismissBox(
-        state = dismissState,
-        backgroundContent = {},
-    ) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.inverseSurface,
-            contentColor = MaterialTheme.colorScheme.inverseOnSurface,
-            shadowElevation = 6.dp,
-        ) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap10),
-            ) {
-                Icon(
-                    BeaconIcons.Info,
-                    null,
-                    Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.inversePrimary,
-                )
-                BeaconText(
-                    data.visuals.message,
-                    Modifier.weight(1f),
-                    color = MaterialTheme.colorScheme.inverseOnSurface,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                data.visuals.actionLabel?.let { label ->
-                    BeaconTextButton(onClick = data::performAction) {
-                        BeaconText(label, color = MaterialTheme.colorScheme.inversePrimary)
-                    }
-                }
-            }
-        }
-    }
+    androidx.compose.material3.Snackbar(data)
 }

@@ -5,6 +5,8 @@
 
 package io.github.beacon.app.ui.components
 
+import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -12,6 +14,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBarItem as MaterialNavigationItem
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -22,8 +26,6 @@ import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 import io.github.beacon.app.ui.icons.BeaconIcons
 import top.yukonga.miuix.kmp.basic.NavigationBarItem as MiuixNavigationItem
-import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 @Composable
 fun BeaconScaffold(
@@ -35,23 +37,16 @@ fun BeaconScaffold(
     // The IME overlays the window. Preserve page and navigation geometry while it opens or closes.
     Box(Modifier.fillMaxSize()) {
         if (miuix()) {
-            val glass = rememberBeaconGlassState()
             val background = MaterialTheme.colorScheme.background
             val backdrop = rememberLayerBackdrop { drawRect(background); drawContent() }
-            CompositionLocalProvider(
-                LocalBeaconGlass provides glass,
-                LocalBeaconGlassBackdrop provides backdrop,
-            ) {
+            CompositionLocalProvider(LocalBeaconTopBackdrop provides backdrop) {
                 top.yukonga.miuix.kmp.basic.Scaffold(
                     topBar = topBar,
-                    containerColor = MaterialTheme.colorScheme.background,
+                    containerColor = background,
                     bottomBar = bottomBar,
                     content = { padding ->
-                        // Keep glass consumers outside their capture source to prevent feedback.
-                        Box(Modifier.fillMaxSize().then(
-                            if (glass.available) Modifier.layerBackdrop(backdrop) else Modifier
-                        )) {
-                            CompositionLocalProvider(LocalBeaconGlassBackdrop provides null) { content(padding) }
+                        Box(Modifier.fillMaxSize().layerBackdrop(backdrop)) {
+                            CompositionLocalProvider(LocalBeaconTopBackdrop provides null) { content(padding) }
                         }
                     },
                 )
@@ -64,7 +59,7 @@ fun BeaconScaffold(
                 content = content,
             )
         if (snackbar != null)
-            androidx.compose.material3.SnackbarHost(
+            BeaconFeedbackHost(
                 snackbar,
                 Modifier.align(androidx.compose.ui.Alignment.BottomCenter)
                     .widthIn(max = 480.dp)
@@ -72,9 +67,7 @@ fun BeaconScaffold(
                     .imePadding()
                     .navigationBarsPadding()
                     .padding(start = 12.dp, end = 12.dp, bottom = 96.dp),
-            ) { data ->
-                BeaconOperationSnackbar(data)
-            }
+            )
     }
 }
 
@@ -181,6 +174,23 @@ fun BeaconDropdownPreference(
     itemLeading: (@Composable (Int) -> Unit)? = null,
     onSelected: (Int) -> Unit,
 ) {
+    if (miuix()) {
+        val entry = top.yukonga.miuix.kmp.basic.DropdownEntry(items.mapIndexed { index, label ->
+            top.yukonga.miuix.kmp.basic.DropdownItem(text = label, selected = index == selectedIndex,
+                enabled = enabled, onClick = { if (enabled) onSelected(index) },
+                icon = itemLeading?.let { render -> { _: Modifier -> render(index) } })
+        })
+        top.yukonga.miuix.kmp.preference.WindowDropdownPreference(
+            entry = entry, title = title,
+            modifier = Modifier.semantics(mergeDescendants = true) { if (!enabled) disabled() },
+            summary = items.getOrElse(selectedIndex) { BeaconUnknownValue },
+            enabled = enabled, showValue = false, maxHeight = 360.dp,
+            startAction = icon?.let { image -> { androidx.compose.material3.Icon(image, null) } },
+            insideMargin = PaddingValues(horizontal = if (settingsRow) BeaconUiMetrics.CardInset else 0.dp,
+                vertical = BeaconUiMetrics.FieldVerticalInset),
+        )
+        return
+    }
     var expanded by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxWidth()) {
         if (settingsRow) {

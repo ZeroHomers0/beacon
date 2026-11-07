@@ -54,15 +54,11 @@ internal fun BeaconSelectionAction(checked: Boolean, onChange: (Boolean) -> Unit
         .then(Modifier.toggleable(checked, enabled = enabled,
             role = androidx.compose.ui.semantics.Role.Checkbox, onValueChange = onChange)),
         contentAlignment = androidx.compose.ui.Alignment.Center) {
-        Box(Modifier.size(BeaconUiMetrics.MessageCardActionIconSize)
-            .border(2.dp, if (checked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                androidx.compose.foundation.shape.CircleShape)
-            .background(if (checked) MaterialTheme.colorScheme.primary else androidx.compose.ui.graphics.Color.Transparent,
-                androidx.compose.foundation.shape.CircleShape),
-            contentAlignment = androidx.compose.ui.Alignment.Center) {
-            if (checked) androidx.compose.material3.Icon(BeaconIcons.Check, null,
-                Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onPrimary)
-        }
+        if (miuix()) top.yukonga.miuix.kmp.basic.Checkbox(
+            state = androidx.compose.ui.state.ToggleableState(checked), onClick = null,
+            modifier = Modifier.size(BeaconUiMetrics.MessageCardActionIconSize), enabled = enabled,
+        ) else androidx.compose.material3.Checkbox(checked = checked, onCheckedChange = null,
+            modifier = Modifier.size(BeaconUiMetrics.MessageCardActionIconSize), enabled = enabled)
     }
 }
 
@@ -96,32 +92,22 @@ fun BeaconTextField(
     if (compact) {
         Column(modifier, verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6)) {
             label()
-            androidx.compose.foundation.text.BasicTextField(
+            if (miuix()) top.yukonga.miuix.kmp.basic.TextField(
                 value = value, onValueChange = onValueChange,
                 modifier = Modifier.fillMaxWidth().named(labelText).then(fieldModifier),
                 singleLine = singleLine, enabled = enabled,
-                textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                label = placeholder, useLabelAsPlaceholder = placeholder.isNotEmpty(),
+                colors = top.yukonga.miuix.kmp.basic.TextFieldDefaults.textFieldColors(
+                    borderColor = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary),
                 visualTransformation = visualTransformation,
                 keyboardOptions = keyboardOptions, keyboardActions = keyboardActions,
-                cursorBrush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary),
-                decorationBox = { inner ->
-                    androidx.compose.material3.Surface(
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainer,
-                        border = androidx.compose.foundation.BorderStroke(1.dp,
-                            if (isError) MaterialTheme.colorScheme.error
-                            else if (focused) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.outline),
-                    ) {
-                        Box(Modifier.heightIn(min = BeaconUiMetrics.ControlMinHeight)
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                            contentAlignment = androidx.compose.ui.Alignment.CenterStart) {
-                            if (value.isEmpty() && placeholder.isNotEmpty())
-                                BeaconText(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            inner()
-                        }
-                    }
-                },
+            ) else androidx.compose.material3.OutlinedTextField(
+                value = value, onValueChange = onValueChange,
+                modifier = Modifier.fillMaxWidth().named(labelText).then(fieldModifier),
+                singleLine = singleLine, enabled = enabled, isError = isError,
+                placeholder = if (placeholder.isNotEmpty()) { { BeaconText(placeholder) } } else null,
+                visualTransformation = visualTransformation,
+                keyboardOptions = keyboardOptions, keyboardActions = keyboardActions,
             )
         }
     } else if (miuix())

@@ -30,6 +30,18 @@ internal fun ReceiveModeOptions(
         Column(Modifier.selectableGroup()) {
             listOf(ReceiveMode.REALTIME, ReceiveMode.POWER_SAVING, ReceiveMode.RULES)
                 .forEach { mode ->
+                    if (io.github.beacon.app.ui.theme.LocalBeaconUiStyle.current == io.github.beacon.app.domain.model.BeaconUiStyle.MIUIX) {
+                        top.yukonga.miuix.kmp.preference.RadioButtonPreference(
+                            title = stringResource(receiveModeTitle(mode)),
+                            summary = stringResource(when (mode) {
+                                ReceiveMode.REALTIME -> R.string.receive_mode_realtime_description
+                                ReceiveMode.POWER_SAVING -> R.string.receive_mode_power_description
+                                ReceiveMode.RULES -> R.string.receive_mode_rules_description
+                            }), selected = mode == selected, enabled = enabled,
+                            onClick = { onSelect(mode) },
+                            startAction = { Icon(receiveModeIcon(mode), null, Modifier.padding(end = BeaconUiMetrics.Gap10).size(20.dp), tint = receiveModeColor(mode)) },
+                        )
+                    } else
                     Row(
                         Modifier.fillMaxWidth().alpha(if (enabled) 1f else .38f)
                             .selectable(selected = mode == selected, enabled = enabled,
@@ -50,9 +62,7 @@ internal fun ReceiveModeOptions(
                             }), Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        Box(Modifier.size(20.dp)) {
-                            if (mode == selected) Icon(BeaconIcons.Check, null, tint = MaterialTheme.colorScheme.primary)
-                        }
+                        RadioButton(selected = mode == selected, onClick = null, enabled = enabled)
                     }
                 }
         }

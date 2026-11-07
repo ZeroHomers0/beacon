@@ -127,12 +127,14 @@ class UiConsistencyRegressionTest {
         rule.onNodeWithText(rule.activity.getString(R.string.admin_revoked)).performClick()
         rule.runOnIdle { assertEquals(2, state.applicationStatus) }
         rule.onNodeWithText(rule.activity.getString(R.string.admin_stat_revoked, 2)).assertExists()
-        rule.onNodeWithText(rule.activity.getString(R.string.admin_revoked)).performClick()
+        rule.onNodeWithText(rule.activity.getString(R.string.admin_stat_total, 5)).performClick()
         rule.runOnIdle { assertEquals(0, state.applicationStatus) }
         rule.onNodeWithContentDescription(rule.activity.getString(R.string.admin_filter_title)).performClick()
         rule.onNodeWithText("测试设备").performClick()
         rule.runOnIdle { assertEquals("d", state.applicationDevice) }
-        rule.onNodeWithText("测试设备").performClick()
+        rule.onNodeWithText("测试设备").assertDoesNotExist()
+        rule.onNodeWithContentDescription(rule.activity.getString(R.string.admin_filter_title)).performClick()
+        rule.onNodeWithText(rule.activity.getString(R.string.settings_all_devices)).performClick()
         rule.runOnIdle { assertEquals("", state.applicationDevice) }
         rule.onNodeWithText(rule.activity.getString(R.string.msg_clear_filters_action)).assertDoesNotExist()
         capture("FILTERS_${style}")

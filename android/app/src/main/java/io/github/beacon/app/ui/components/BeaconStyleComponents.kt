@@ -164,7 +164,7 @@ fun BeaconIconButton(
     content: @Composable () -> Unit,
 ) {
     val actionModifier = if (LocalCompactActions.current) modifier.width(44.dp) else modifier
-    val glass = miuix() && !LocalGroupedToolbarActions.current && LocalBeaconGlass.current?.available == true
+    val glass = miuix() && !LocalGroupedToolbarActions.current
     val glassAlpha = LocalBeaconToolbarGlassAlpha.current
     if (miuix()) {
         Box(actionModifier.semantics(mergeDescendants = true) { if (!enabled) disabled() }) {
@@ -274,3 +274,13 @@ fun BeaconActionButton(
 fun BeaconDangerButton(onClick: () -> Unit, modifier: Modifier = Modifier,
     enabled: Boolean = true, content: @Composable RowScope.() -> Unit,
 ) = BeaconUnifiedButton(onClick, modifier, enabled, danger = true, content = content)
+
+@Composable
+internal fun BeaconBadgedBox(showBadge: Boolean, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    if (miuix()) top.yukonga.miuix.kmp.basic.BadgedBox(
+        badge = { if (showBadge) top.yukonga.miuix.kmp.basic.Badge() }, modifier = modifier,
+    ) { content() }
+    else androidx.compose.material3.BadgedBox(
+        badge = { if (showBadge) androidx.compose.material3.Badge() }, modifier = modifier,
+    ) { content() }
+}

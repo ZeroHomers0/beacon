@@ -2,6 +2,9 @@ package io.github.beacon.app.ui.components
 
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalDensity
@@ -13,8 +16,34 @@ internal val LocalBeaconToolbarGlassAlpha = staticCompositionLocalOf<() -> Float
 @Composable
 internal fun rememberBeaconScrollProgress(scroll: LazyListState): () -> Float {
     val distance = with(LocalDensity.current) { BeaconUiMetrics.SearchCollapseDistance.toPx() }
+    val travelled = remember(scroll) { mutableFloatStateOf(0f) }
+    LaunchedEffect(scroll, distance) {
+        val heights = mutableMapOf<Int, Int>()
+        var previousIndex = scroll.firstVisibleItemIndex
+        var previousOffset = scroll.firstVisibleItemScrollOffset
+        travelled.floatValue = if (previousIndex == 0) previousOffset.toFloat() else distance
+        snapshotFlow {
+            Triple(scroll.firstVisibleItemIndex, scroll.firstVisibleItemScrollOffset,
+                scroll.layoutInfo.visibleItemsInfo.map { it.index to it.size + scroll.layoutInfo.mainAxisItemSpacing })
+        }.collect { (index, offset, sizes) ->
+            sizes.forEach { (item, height) -> heights[item] = height }
+            var delta = (offset - previousOffset).toFloat()
+            if (index > previousIndex) {
+                for (item in previousIndex until index) delta += heights[item] ?: distance.toInt()
+            } else {
+                for (item in index until previousIndex) delta -= heights[item] ?: distance.toInt()
+            }
+            // Dataset replacement may relocate the anchor without any scroll gesture.
+            // Keep the search presentation stable while filters replace or empty the list.
+            if (scroll.isScrollInProgress) {
+                travelled.floatValue = if (index == 0) offset.toFloat()
+                    else (travelled.floatValue + delta).coerceAtLeast(0f)
+            }
+            previousIndex = index
+            previousOffset = offset
+        }
+    }
     return remember(scroll, distance) {
-        { if (scroll.firstVisibleItemIndex > 0) 1f
-          else (scroll.firstVisibleItemScrollOffset / distance).coerceIn(0f, 1f) }
+        { (travelled.floatValue / distance).coerceIn(0f, 1f) }
     }
 }

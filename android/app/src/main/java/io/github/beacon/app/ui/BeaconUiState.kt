@@ -122,6 +122,7 @@ class BeaconUiState(
     var settingsScreen: SettingsScreen by savedState(handle, "settingsScreen", SettingsScreen.HOME)
     var settingsHistory: ArrayList<SettingsScreen> by
         savedState(handle, "settingsHistory", arrayListOf())
+    var settingsNavScope by mutableStateOf<top.yukonga.miuix.kmp.nav.transition.NavTransitionScope?>(null)
     var settingsNavigatingBack by mutableStateOf(false)
     val settingsBackTarget: SettingsScreen
         get() = settingsHistory.lastOrNull() ?: SettingsScreen.HOME
@@ -134,6 +135,17 @@ class BeaconUiState(
             settingsHistory =
                 if (destination == SettingsScreen.HOME) arrayListOf()
                 else ArrayList(settingsHistory + settingsScreen)
+            settingsScreen = destination
+        }
+    }
+
+    fun navigateSettingsAncestor(destination: SettingsScreen) {
+        val index = settingsHistory.indexOf(destination)
+        if (index < 0) { navigateSettings(destination); return }
+        requestNavigation(destination) {
+            invalidateQuietHoursOnExit(destination)
+            settingsNavigatingBack = true
+            settingsHistory = ArrayList(settingsHistory.take(index))
             settingsScreen = destination
         }
     }

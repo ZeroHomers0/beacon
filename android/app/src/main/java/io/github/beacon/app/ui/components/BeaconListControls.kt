@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package io.github.beacon.app.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
@@ -29,6 +31,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -75,6 +78,32 @@ fun BeaconSearchBox(
         .beaconGlassMaterial(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
         .testTag(SEARCH_COLLAPSE_TAG)
         .then(if (fraction < .001f) Modifier.clearAndSetSemantics {} else Modifier)) {
+    if (miuix()) {
+        top.yukonga.miuix.kmp.basic.SearchBar(
+            expanded = false, onExpandedChange = {},
+            insideMargin = androidx.compose.ui.unit.DpSize.Zero,
+            inputField = {
+                top.yukonga.miuix.kmp.basic.InputField(
+                    query = value, onQueryChange = onValueChange,
+                    onSearch = { onSearch() }, expanded = focused,
+                    onExpandedChange = { focused = it }, label = hint,
+                    color = androidx.compose.ui.graphics.Color.Transparent,
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                        fontSize = BeaconListText.SearchSize, lineHeight = BeaconListText.SearchLineHeight),
+                    modifier = Modifier.requiredWidth(fullWidth).requiredHeight(fieldHeight)
+                        .onFocusChanged { focused = it.isFocused }
+                        .semantics { contentDescription = hint }.testTag(SEARCH_BOX_TAG)
+                        .graphicsLayer {
+                            alpha = textAlpha
+                            renderEffect = if (hardware && textAlpha > 0f && textAlpha < 1f) {
+                                val radius = BeaconUiMetrics.SearchFadeBlurRadius.toPx() * (1f - textAlpha)
+                                BlurEffect(radius, radius)
+                            } else null
+                        },
+                )
+            },
+        ) {}
+    } else
     BasicTextField(
         value,
         onValueChange,
@@ -206,8 +235,9 @@ fun BeaconActionIcon(
     showBadge: Boolean = false,
     onClick: () -> Unit,
 ) {
+    BeaconActionTooltip(description) {
     BeaconIconButton(onClick = onClick, enabled = enabled) {
-        BadgedBox(badge = { if (showBadge) Badge() }) {
+        BeaconBadgedBox(showBadge) {
             Icon(
                 icon,
                 description,
@@ -215,6 +245,7 @@ fun BeaconActionIcon(
                 tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 1f else 0.38f),
             )
         }
+    }
     }
 }
 
@@ -226,6 +257,15 @@ fun BeaconPreferenceToggle(
     enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit,
 ) {
+    if (miuix()) {
+        top.yukonga.miuix.kmp.preference.SwitchPreference(
+            title = title, summary = summary.takeIf { it.isNotBlank() },
+            checked = checked, enabled = enabled, onCheckedChange = { if (enabled) onCheckedChange(it) },
+            insideMargin = PaddingValues(vertical = BeaconUiMetrics.FieldVerticalInset),
+            modifier = Modifier.semantics { contentDescription = title; if (!enabled) disabled() },
+        )
+        return
+    }
     Row(
         Modifier.fillMaxWidth()
             .heightIn(min = BeaconUiMetrics.FieldMinHeight)
@@ -407,4 +447,15 @@ fun BeaconEmptyState(
         )
         if (!loading) action()
     }
+}
+
+@Composable
+internal fun BeaconActionTooltip(description: String, content: @Composable () -> Unit) {
+    if (miuix()) top.yukonga.miuix.kmp.basic.TooltipBox(text = description, content = content)
+    else androidx.compose.material3.TooltipBox(
+        positionProvider = androidx.compose.material3.TooltipDefaults.rememberPlainTooltipPositionProvider(),
+        tooltip = { PlainTooltip { BeaconText(description) } },
+        state = androidx.compose.material3.rememberTooltipState(),
+        content = content,
+    )
 }

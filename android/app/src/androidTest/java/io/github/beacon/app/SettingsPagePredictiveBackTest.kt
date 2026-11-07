@@ -64,14 +64,14 @@ class SettingsPagePredictiveBackTest {
             rule.waitForIdle()
             assertEquals(1, model.uiState.page)
             val messages = rule.activity.getString(R.string.ui_nav_messages_title)
-            val preview = if (shortWindow) rule.onNodeWithText(messages, useUnmergedTree = true).getUnclippedBoundsInRoot() else null
+            val preview = if (shortWindow) rule.onAllNodesWithTag(io.github.beacon.app.ui.components.SEARCH_COLLAPSE_TAG, useUnmergedTree = true).onFirst().getUnclippedBoundsInRoot() else null
             rule.runOnUiThread { dispatcher.onBackPressed() }
             rule.waitUntil(15_000) { model.uiState.page == 0 }
             rule.waitForIdle()
             row.assertIsNotDisplayed()
             if (preview != null) {
-                val settled = rule.onNodeWithText(messages, useUnmergedTree = true).getUnclippedBoundsInRoot()
-                assertTrue("The compact message title does not jump on commit", kotlin.math.abs(preview.top.value - settled.top.value) < 12f)
+                val settled = rule.onAllNodesWithTag(io.github.beacon.app.ui.components.SEARCH_COLLAPSE_TAG, useUnmergedTree = true).onFirst().getUnclippedBoundsInRoot()
+                assertTrue("The compact message search does not jump on commit", kotlin.math.abs(preview.top.value - settled.top.value) < 12f)
             }
             assertEquals(SettingsScreen.HOME, model.uiState.settingsScreen)
         } finally {
@@ -102,17 +102,16 @@ class SettingsPagePredictiveBackTest {
             rule.waitForIdle()
             rule.waitUntil(15_000) { model.state.value.cleanupPreview != null && !model.state.value.messageBusy }
             val title = rule.activity.getString(R.string.settings_storage_title)
-            val body = rule.onNodeWithText(rule.activity.getString(R.string.settings_storage_title), useUnmergedTree = true)
+            val body = if (style == BeaconUiStyle.MIUIX) rule.onNodeWithTag("settings-body-STORAGE") else rule.onNodeWithTag("settings-content-STORAGE")
             val initialBody = body.getUnclippedBoundsInRoot()
-            val initialHeader = rule.onNodeWithText(title, useUnmergedTree = true).getUnclippedBoundsInRoot()
+            val initialHeader = rule.onNodeWithTag("settings-header-1-STORAGE").getUnclippedBoundsInRoot()
             val dispatcher = rule.activity.onBackPressedDispatcher
             rule.runOnUiThread { dispatcher.dispatchOnBackStarted(BackEventCompat(0f, 200f, 0f, BackEventCompat.EDGE_LEFT)) }
             rule.waitForIdle()
             rule.runOnUiThread { dispatcher.dispatchOnBackProgressed(BackEventCompat(160f, 200f, .4f, BackEventCompat.EDGE_LEFT)) }
             rule.waitForIdle()
             val density = rule.activity.resources.displayMetrics.density
-            val header = rule.onAllNodesWithText(title, useUnmergedTree = true).fetchSemanticsNodes()
-                .first { it.boundsInRoot.height > 0 && it.boundsInRoot.top < (initialHeader.bottom.value + 10f) * density }
+            val header = rule.onNodeWithTag("settings-header-1-STORAGE").fetchSemanticsNode()
             val shift = body.getUnclippedBoundsInRoot().left.value - initialBody.left.value
             assertTrue(shift > 20f)
             assertEquals("Secondary-page header and content move together", shift, header.boundsInRoot.left / density - initialHeader.left.value, 2f)

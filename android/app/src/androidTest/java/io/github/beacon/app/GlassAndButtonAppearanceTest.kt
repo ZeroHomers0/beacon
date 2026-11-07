@@ -28,14 +28,13 @@ class GlassAndButtonAppearanceTest {
     @get:Rule val rule = createAndroidComposeRule<MainActivity>()
 
     private fun topFade(mode: BeaconThemeMode) {
-        lateinit var state: BeaconGlassState
+        var blurEnabled by mutableStateOf(true)
         var clicks = 0
         var longClicks = 0
         rule.runOnUiThread { rule.activity.setContent {
             BeaconTheme(BeaconUiStyle.MIUIX, mode) {
-                state = rememberBeaconGlassState()
                 val backdrop = rememberLayerBackdrop()
-                CompositionLocalProvider(LocalBeaconGlass provides state, LocalBeaconGlassBackdrop provides backdrop) {
+                CompositionLocalProvider(LocalBeaconTopBackdrop provides if (blurEnabled) backdrop else null) {
                     Box(Modifier.fillMaxSize()) {
                         androidx.compose.foundation.Canvas(Modifier.fillMaxSize().layerBackdrop(backdrop)) {
                             val stripe = 12.dp.toPx()
@@ -58,7 +57,6 @@ class GlassAndButtonAppearanceTest {
             }
         } }
         rule.onNodeWithText("顶部渐变").assertIsDisplayed()
-        rule.runOnIdle { assertTrue(state.available) }
         val image = rule.onNodeWithTag("top-fade").captureToImage().asAndroidBitmap()
         fun rowContrast(y: Int): Int {
             val values = (5 until image.width / 3).map { x -> android.graphics.Color.blue(image.getPixel(x, y)) }
@@ -70,40 +68,9 @@ class GlassAndButtonAppearanceTest {
         val button = rule.onNodeWithContentDescription("接收模式 · 省电接收 · 接收已暂停")
         button.performClick()
         button.performTouchInput { longClick() }
-        rule.runOnIdle { assertEquals(1, clicks); assertEquals(1, longClicks); state.disable() }
+        rule.runOnIdle { assertEquals(1, clicks); assertEquals(1, longClicks); blurEnabled = false }
         rule.onNodeWithText("顶部渐变").assertIsDisplayed()
         capture("top-fade-fallback-$mode")
-    }
-
-    private fun glass(mode: BeaconThemeMode) {
-        lateinit var state: BeaconGlassState
-        rule.runOnUiThread { rule.activity.setContent {
-            BeaconTheme(BeaconUiStyle.MIUIX, mode) {
-                state = rememberBeaconGlassState()
-                val backdrop = rememberLayerBackdrop()
-                CompositionLocalProvider(LocalBeaconGlass provides state, LocalBeaconGlassBackdrop provides backdrop) {
-                    Box(Modifier.fillMaxSize()) {
-                        Box(Modifier.fillMaxSize().layerBackdrop(backdrop)
-                            .background(Brush.linearGradient(listOf(Color(0xFF246FC0), Color(0xFFE9A475)))))
-                        BeaconGlassSurface(MaterialTheme.colorScheme.surface,
-                            Modifier.align(Alignment.Center).size(260.dp, 110.dp).testTag("glass")) {
-                            BeaconText("柔光玻璃", Modifier.align(Alignment.Center))
-                        }
-                    }
-                }
-            }
-        } }
-        rule.onNodeWithText("柔光玻璃").assertIsDisplayed()
-        rule.runOnIdle { assertTrue("Hardware renderer must enable glass in this fixture", state.available) }
-        val bounds = rule.onNodeWithTag("glass").getUnclippedBoundsInRoot()
-        val optical = rule.onNodeWithTag("glass").captureToImage().asAndroidBitmap()
-        capture("glass-$mode")
-        rule.runOnIdle { state.disable() }
-        rule.onNodeWithText("柔光玻璃").assertIsDisplayed()
-        assertEquals(bounds, rule.onNodeWithTag("glass").getUnclippedBoundsInRoot())
-        val fallback = rule.onNodeWithTag("glass").captureToImage().asAndroidBitmap()
-        assertNotEquals(optical.getPixel(optical.width / 2, 8), fallback.getPixel(fallback.width / 2, 8))
-        capture("fallback-$mode")
     }
 
     private fun buttons(style: BeaconUiStyle) {
@@ -167,8 +134,6 @@ class GlassAndButtonAppearanceTest {
         }
     }
 
-    @Test fun glassAndFallbackLight() = glass(BeaconThemeMode.LIGHT)
-    @Test fun glassAndFallbackDark() = glass(BeaconThemeMode.DARK)
     @Test fun miuixSystemButtonPalette() = buttons(BeaconUiStyle.MIUIX)
     @Test fun materialButtonPalette() = buttons(BeaconUiStyle.MATERIAL3)
     @Test fun topFadeAndModeButtonLight() = topFade(BeaconThemeMode.LIGHT)

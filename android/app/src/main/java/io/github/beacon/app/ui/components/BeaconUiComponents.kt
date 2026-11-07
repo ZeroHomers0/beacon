@@ -328,6 +328,29 @@ fun SettingsRow(
     external: Boolean = false,
     compact: Boolean = false,
 ) {
+    if (miuix() && !command && !selection && !external && expanded == null) {
+        top.yukonga.miuix.kmp.preference.ArrowPreference(
+            title = title, summary = subtitle.takeIf { it.isNotBlank() },
+            enabled = enabled, onClick = onClick,
+            startAction = { BadgedIcon(icon, iconTint, badge, Modifier.padding(end = BeaconUiMetrics.Gap16)) },
+            insideMargin = PaddingValues(horizontal = BeaconUiMetrics.CardInset,
+                vertical = BeaconUiMetrics.NavigationVerticalInset),
+        )
+        return
+    }
+    if (!miuix() && !command && !selection && !external && expanded == null) {
+        ListItem(
+            headlineContent = { BeaconFittedText(title, Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodyLarge) },
+            supportingContent = subtitle.takeIf { it.isNotBlank() }?.let { summary ->
+                { BeaconFittedText(summary, Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall) }
+            },
+            leadingContent = { BadgedIcon(icon, iconTint, badge) },
+            trailingContent = { Icon(BeaconIcons.Arrow, null) },
+            modifier = Modifier.clickable(enabled = enabled, onClick = onClick).alpha(if (enabled) 1f else .38f),
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        )
+        return
+    }
     Surface(onClick = onClick, enabled = enabled, color = Color.Transparent) {
         Row(
             Modifier.fillMaxWidth()
@@ -404,16 +427,7 @@ private fun BadgedIcon(
     badge: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Box(modifier.size(24.dp)) {
-        Icon(icon, null, tint = tint)
-        if (badge)
-            Box(
-                Modifier.align(Alignment.TopEnd)
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.error)
-            )
-    }
+    BeaconBadgedBox(badge, modifier) { Icon(icon, null, Modifier.size(24.dp), tint = tint) }
 }
 
 @Composable

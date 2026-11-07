@@ -54,11 +54,9 @@ import io.github.beacon.app.ui.components.BeaconUiMetrics
 import io.github.beacon.app.ui.components.MessageItem
 import io.github.beacon.app.ui.icons.BeaconIcons
 import io.github.beacon.app.ui.components.BeaconFloatingGlassButton
-import io.github.beacon.app.ui.components.LocalBeaconGlass
-import io.github.beacon.app.ui.components.LocalBeaconGlassBackdrop
-import io.github.beacon.app.ui.components.rememberBeaconGlassState
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 import top.yukonga.miuix.kmp.blur.layerBackdrop
+import io.github.beacon.app.ui.components.LocalBeaconTopBackdrop
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 
@@ -146,12 +144,8 @@ private fun MessagesContent(
     val hasNewMessages = runtimeState.newMessageCount > 0 && !selectionMode
     val density = androidx.compose.ui.platform.LocalDensity.current
     var entryHeight by remember { mutableStateOf(BeaconUiMetrics.NewMessagesMinHeight) }
-    val glass = if (LocalBeaconUiStyle.current == BeaconUiStyle.MIUIX)
-        LocalBeaconGlass.current ?: rememberBeaconGlassState() else null
-    val pageBackground = MaterialTheme.colorScheme.background
-    // The button samples only the list, never the enclosing scaffold layer that contains it.
-    val arrivalsBackdrop = if (glass?.available == true)
-        rememberLayerBackdrop { drawRect(pageBackground); drawContent() } else null
+    val topBackdrop = if (LocalBeaconUiStyle.current == BeaconUiStyle.MIUIX)
+        rememberLayerBackdrop { drawContent() } else null
     var jumpToLatest by remember { mutableStateOf(false) }
     LaunchedEffect(jumpToLatest,busy,runtimeState.newMessageCount,runtimeState.messageLoadFailed) {
         if(jumpToLatest && !busy) {
@@ -296,7 +290,7 @@ private fun MessagesContent(
                     state = scroll,
                     modifier =
                         Modifier.fillMaxSize().then(scrollModifier).beaconFilterChange(applied.readFilter.ordinal)
-                            .then(if (arrivalsBackdrop != null) Modifier.layerBackdrop(arrivalsBackdrop) else Modifier)
+                            .then(if (topBackdrop != null) Modifier.layerBackdrop(topBackdrop) else Modifier)
                             .testTag(MESSAGE_LIST_TAG),
                     contentPadding =
                         PaddingValues(
@@ -501,12 +495,12 @@ private fun MessagesContent(
                         }
                     }
                 }
-                if (glass?.available == true) {
-                    CompositionLocalProvider(LocalBeaconGlass provides glass,
-                        LocalBeaconGlassBackdrop provides arrivalsBackdrop) {
+                if (topBackdrop != null) {
+                    CompositionLocalProvider(LocalBeaconTopBackdrop provides topBackdrop) {
                         io.github.beacon.app.ui.components.BeaconGlassSurface(
                             MaterialTheme.colorScheme.background,
-                            Modifier.fillMaxWidth().height(32.dp).align(Alignment.TopCenter), topFade = true,
+                            Modifier.fillMaxWidth().height(BeaconUiMetrics.Gap8).align(Alignment.TopCenter),
+                            topFade = true,
                         ) {}
                     }
                 }
@@ -516,8 +510,6 @@ private fun MessagesContent(
                             .padding(horizontal = BeaconUiMetrics.PageInset, vertical = BeaconUiMetrics.Gap16),
                         contentAlignment = Alignment.Center,
                     ) {
-                        CompositionLocalProvider(LocalBeaconGlass provides glass,
-                            LocalBeaconGlassBackdrop provides arrivalsBackdrop) {
                         BeaconFloatingGlassButton(
                             onClick = {
                                 focus.clearFocus()
@@ -532,7 +524,6 @@ private fun MessagesContent(
                             Spacer(Modifier.width(BeaconUiMetrics.Gap8))
                             BeaconText(stringResource(R.string.msg_new_arrivals, runtimeState.newMessageCount),
                                 style = MaterialTheme.typography.titleMedium)
-                        }
                         }
                     }
                 }
