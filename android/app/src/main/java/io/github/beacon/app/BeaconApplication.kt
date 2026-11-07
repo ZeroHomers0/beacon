@@ -8,7 +8,7 @@ import io.github.beacon.app.core.currentProcessName
 class BeaconApplication : Application(), Configuration.Provider {
     override val workManagerConfiguration: Configuration
         get() {
-            check(currentProcessName(this) == packageName + ":runtime") {
+            check(currentProcessName() == packageName + ":runtime") {
                 "WorkManager must only be initialized in the communication process"
             }
             return Configuration.Builder().setDefaultProcessName(packageName + ":runtime").build()

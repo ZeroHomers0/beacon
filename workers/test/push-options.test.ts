@@ -4,7 +4,7 @@ import { afterEach, expect, it } from "vitest";
 import worker, { BeaconInstance, type Env } from "../src/index";
 import cases from "../../contract/push-contract.json";
 import { migrate } from "../src/store/schema";
-import { MessageStore } from "../src/store/messages";
+import { SqliteRepository } from "../src/store/repository";
 
 const bindings = env as unknown as Env;
 const admin = "test-only-admin-token-32-characters";
@@ -38,7 +38,7 @@ it("does not deliver expired messages and retains scoped retry receipts",async()
  const device=await bind(),other=await bind();const payload={body:"short alert",ttl:1};const first=await (await call("/api/v1/push",device.push_key,payload,"short")).json<any>();
  await runInDurableObject(stub(),(_instance:BeaconInstance,state)=>{
   state.storage.sql.exec("UPDATE messages SET expires_at=? WHERE id=?",Date.now()-1,first.id);
-  const store=new MessageStore(state.storage);expect(store.due(Date.now())).toHaveLength(0);store.maintain(Date.now(),30);
+  const store=new SqliteRepository(state.storage);expect(store.due(Date.now())).toHaveLength(0);store.maintain(Date.now(),30);
   expect([...state.storage.sql.exec("SELECT * FROM messages")]).toHaveLength(0);
  });
  const page=await (await call("/api/v1/messages",device.receive_token)).json<any>();expect(page.messages).toHaveLength(0);

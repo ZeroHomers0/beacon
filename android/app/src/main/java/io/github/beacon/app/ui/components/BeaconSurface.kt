@@ -1,45 +1,18 @@
 package io.github.beacon.app.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
-import top.yukonga.miuix.kmp.blur.*
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.*
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.semantics.Role
-
-
-/** One failure disables the optical path for this scaffold; no saved preference or retry loop. */
-internal class BeaconGlassState(supported: Boolean) {
-    var available by mutableStateOf(supported)
-        private set
-
-    fun disable() { available = false }
-}
-
-internal val LocalBeaconTopBackdrop = staticCompositionLocalOf<LayerBackdrop?> { null }
-
-internal val LocalBeaconGlass = staticCompositionLocalOf<BeaconGlassState?> { null }
-internal val LocalBeaconGlassBackdrop = staticCompositionLocalOf<Any?> { null }
 
 /** A fully rounded floating action: only its own bounds paint or intercept touches. */
 @Composable
-internal fun BeaconFloatingGlassButton(
+internal fun BeaconFloatingActionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
@@ -76,23 +49,12 @@ internal fun BeaconFloatingGlassButton(
     )
 }
 
-internal fun supportsBeaconGlass(sdk: Int, hardware: Boolean, lowRam: Boolean, shader: Boolean) = false
-
+/** An opaque theme surface without background sampling. */
 @Composable
-internal fun rememberBeaconGlassState(): BeaconGlassState = remember { BeaconGlassState(false) }
-
-/** Ordinary theme surface; no background capture, shader, blur or refraction. */
-@Composable
-internal fun Modifier.beaconGlassMaterial(fallback: Color, shape: Shape = RectangleShape): Modifier =
-    background(fallback, shape)
-
-@Composable
-internal fun BeaconGlassSurface(
+internal fun BeaconSurface(
     fallback: Color,
     modifier: Modifier = Modifier,
     shape: Shape = RectangleShape,
-    topFade: Boolean = false,
-    topFadeProgress: () -> Float = { 1f },
     content: @Composable BoxScope.() -> Unit,
 ) {
     Box(modifier.background(fallback, shape), content = content)

@@ -1,6 +1,7 @@
 package io.github.beacon.app
 
 import androidx.compose.ui.test.*
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.lifecycle.ViewModelProvider
 import io.github.beacon.app.domain.model.*
@@ -33,7 +34,13 @@ class SettingsToolbarSaveTest {
                 model.uiState.navigateSettings(SettingsScreen.RECEPTION)
             }
             rule.waitForIdle()
-            val save = rule.onNodeWithContentDescription(rule.activity.getString(R.string.action_save))
+            // Native navigation retains parent entries; address the current page's toolbar.
+            val activeHeader = SemanticsMatcher("current settings header") { node ->
+                node.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.TestTag) ==
+                    "settings-header-1-${model.uiState.settingsScreen}"
+            }
+            val save = rule.onNode(hasContentDescription(rule.activity.getString(R.string.action_save)) and
+                hasAnyAncestor(activeHeader))
             save.assertIsNotEnabled()
             assertTrue(save.getUnclippedBoundsInRoot().top.value < 100)
             rule.onNodeWithText("有未保存的更改").assertDoesNotExist()
@@ -85,4 +92,3 @@ class SettingsToolbarSaveTest {
     @Test fun toolbarSaveMaterial() = verify(BeaconUiStyle.MATERIAL3)
     @Test fun toolbarSaveMiuix() = verify(BeaconUiStyle.MIUIX)
 }
-

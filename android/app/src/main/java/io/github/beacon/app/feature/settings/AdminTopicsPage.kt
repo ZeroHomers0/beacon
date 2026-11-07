@@ -54,7 +54,7 @@ internal fun AdminTopicsPage(state:AdminUiState,model:ServerAdminViewModel,scrol
     val direction=androidx.compose.ui.platform.LocalLayoutDirection.current
     Column(modifier){
         Column(Modifier.fillMaxWidth().padding(start=padding.calculateStartPadding(direction),end=padding.calculateEndPadding(direction),top=padding.calculateTopPadding(),bottom=BeaconUiMetrics.Gap8),verticalArrangement=Arrangement.spacedBy(BeaconUiMetrics.Gap8)){
-            BeaconSearchBox(search,{search=it;offset=0},"搜索主题、设备或应用",scroll=scroll,onSearch={})
+            BeaconSearchBox(search,{search=it;offset=0},"搜索主题、设备或应用",onSearch={})
             BeaconListSwitch(labels=listOf("共 ${state.topicsTotal} 个","本页 ${state.topics.size} 个"),
                 icons=listOf(BeaconIcons.Topics,BeaconIcons.List), selectedIndex=if(status=="all")0 else -1,
                 enabled=!state.busy,selectableIndices=setOf(0),onSelected={status="all";offset=0})
@@ -114,7 +114,7 @@ internal fun AdminTopicsPage(state:AdminUiState,model:ServerAdminViewModel,scrol
                 BeaconTextField(name,{name=it.take(80)},Modifier.fillMaxWidth().testTag("topic-name"),label={BeaconText("主题名称")},labelText="主题名称",singleLine=true,enabled=!state.busy)
                 if(target==null){
                     DevicePicker(active,deviceId,{deviceId=it;applicationId=""},!state.busy)
-                    BeaconDropdownPreference("发送应用",listOf("未关联应用")+apps.map{it.name},(apps.indexOfFirst{it.id==applicationId}+1).coerceAtLeast(0),enabled=!state.busy,stacked=true){applicationId=if(it==0)""else apps[it-1].id}
+                    BeaconDropdownPreference("发送应用",listOf("未关联应用")+apps.map{it.name},(apps.indexOfFirst{it.id==applicationId}+1).coerceAtLeast(0),enabled=!state.busy){applicationId=if(it==0)""else apps[it-1].id}
                     BeaconTextField(key,{key=it.take(128)},Modifier.fillMaxWidth(),label={BeaconText("主题标识（可选）")},labelText="主题标识（可选）",singleLine=true,enabled=!state.busy,placeholder="留空自动生成")
                     if(!validKey)SettingsHint("标识不能包含控制字符，UTF-8 编码最多128字节。")
                     SettingsHint("先创建主题，脚本仅更新已创建的主题。未关联应用时使用设备推送密钥。")

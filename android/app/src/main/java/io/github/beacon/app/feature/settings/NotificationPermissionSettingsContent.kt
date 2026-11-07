@@ -4,30 +4,21 @@ package io.github.beacon.app.feature.settings
 
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.provider.Settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 import io.github.beacon.app.ipc.RuntimeActions
 import io.github.beacon.app.ui.components.*
-import io.github.beacon.app.ui.components.BeaconActionButton
-import io.github.beacon.app.ui.components.BeaconButton
-import io.github.beacon.app.ui.components.BeaconText
-import io.github.beacon.app.ui.components.BeaconUiMetrics
 import io.github.beacon.app.ui.components.NotificationPermissionState
 import io.github.beacon.app.ui.components.SettingsGroup
-import io.github.beacon.app.ui.components.SettingsHint
 import io.github.beacon.app.ui.components.SettingsRow
 import io.github.beacon.app.ui.components.SettingsSection
-import io.github.beacon.app.ui.components.SettingsStatusSummary
 import io.github.beacon.app.ui.icons.BeaconIcons
 
 internal fun LazyListScope.notificationPermissionSettingsItems(
@@ -57,9 +48,9 @@ internal fun LazyListScope.notificationPermissionSettingsItems(
                 icon = BeaconIcons.Messages,
                 iconTint = if (allowed) io.github.beacon.app.ui.theme.beaconSuccessColor()
                     else MaterialTheme.colorScheme.onSurfaceVariant,
-                external = allowed || Build.VERSION.SDK_INT < 33,
+                external = allowed,
                 onClick = {
-                    if (!allowed && notificationPermission == NotificationPermissionState.DENIED && Build.VERSION.SDK_INT >= 33) {
+                    if (!allowed && notificationPermission == NotificationPermissionState.DENIED) {
                         onRequestNotificationPermission()
                     } else try {
                         context.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)

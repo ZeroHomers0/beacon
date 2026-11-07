@@ -56,12 +56,12 @@ internal fun BeaconContentArea(
     settingsTransition: Transition<SettingsScreen>,
     settingsMotion: SeekableTransitionState<SettingsScreen>,
     messageScroll: LazyListState,
-    messageHeaderScroll: io.github.beacon.app.ui.components.BeaconSearchScrollState,
     statesScroll: LazyListState,
     settingsScrollStates: Map<SettingsScreen, LazyListState>,
     barBehavior: BeaconBarBehavior,
     settingsBarBehaviors: Map<SettingsScreen, BeaconBarBehavior>,
-    settingsTopBar: @Composable (SettingsScreen) -> Unit,
+    pageTopBar: @Composable (Int, SettingsScreen?) -> Unit,
+    pageBarBehaviors: Map<Int, BeaconBarBehavior>,
     compactBar: Boolean,
     sharedTitleLabel: String?,
     busy: Boolean,
@@ -94,15 +94,7 @@ val listPadding =
 // moving the top inset into scrollable content padding rather than shrinking the viewport.
 val underTopBar = ui.uiStyle == io.github.beacon.app.domain.model.BeaconUiStyle.MIUIX
 val direction = androidx.compose.ui.platform.LocalLayoutDirection.current
-val settingsModifier = if (underTopBar) Modifier.fillMaxSize()
-    .padding(start = insets.calculateStartPadding(direction), end = insets.calculateEndPadding(direction),
-        bottom = insets.calculateBottomPadding())
-else Modifier.fillMaxSize().padding(insets)
-val settingsPadding = if (underTopBar) PaddingValues(start = edge, end = edge,
-    top = insets.calculateTopPadding() + BeaconUiMetrics.PageTopInset,
-    bottom = BeaconUiMetrics.PageBottomInset) else listPadding
-// Scaffold follows the animated header height; animating body size again
-// would change the shared transition duration during a back gesture.
+// Page-owned scaffolds keep title and content geometry stable while the pager moves horizontally.
 BeaconMessageTransition(
     detailTransition,
     Modifier.fillMaxSize(),
@@ -150,11 +142,25 @@ BeaconMessageTransition(
             overscrollEffect = null,
         ) { visiblePage ->
             when (visiblePage) {
-                2 -> io.github.beacon.app.feature.messages.StatesPage(Modifier.fillMaxSize().padding(insets), busy = runtimeState.messageBusy || runtimeState.transportBusy, connected = runtimeState.runtimeConnected, showHidden=ui.statesShowHidden,onShowHidden={ui.statesShowHidden=it},onRefresh = { actions.transport() }, scroll = statesScroll)
-                0 ->
+                2 -> io.github.beacon.app.ui.components.BeaconScaffold(
+                    topBar = { pageTopBar(2, null) }, bottomBar = {},
+                ) { pageInsets ->
+                    io.github.beacon.app.feature.messages.StatesPage(
+                        Modifier.fillMaxSize().padding(pageInsets)
+                            .nestedScroll(pageBarBehaviors.getValue(2).connection(ui.uiStyle)),
+                        busy = runtimeState.messageBusy || runtimeState.transportBusy,
+                        connected = runtimeState.runtimeConnected, showHidden = ui.statesShowHidden,
+                        onShowHidden = { ui.statesShowHidden = it }, onRefresh = { actions.transport() }, scroll = statesScroll)
+                }
+                0 -> io.github.beacon.app.ui.components.BeaconScaffold(
+                    topBar = { pageTopBar(0, null) }, bottomBar = {},
+                ) { pageInsets ->
+                    val messageModifier = if (underTopBar) Modifier.fillMaxSize().padding(
+                        start = pageInsets.calculateStartPadding(direction), end = pageInsets.calculateEndPadding(direction),
+                        bottom = pageInsets.calculateBottomPadding()) else Modifier.fillMaxSize().padding(pageInsets)
                     MessagesPage(
                         messageScroll,
-                        settingsModifier,
+                        messageModifier,
                         listPadding,
                         runtimeState,
                         actions,
@@ -163,15 +169,9 @@ BeaconMessageTransition(
                         ui.selectionMode,
                         ui.selectedKeys,
                         ui.selectionHint,
-                        scrollModifier =
-                            if (compactBar) Modifier
-                            else
-                                Modifier.nestedScroll(
-                                    barBehavior.connection(ui.uiStyle)
-                                ),
+                        scrollModifier = Modifier.nestedScroll(pageBarBehaviors.getValue(0).connection(ui.uiStyle)),
                         sharedTitle = sharedTitleLabel,
-                        topInset = if (underTopBar) insets.calculateTopPadding() else 0.dp,
-                        headerScrollState = messageHeaderScroll,
+                        topInset = if (underTopBar) pageInsets.calculateTopPadding() else 0.dp,
                         onSearch = { ui.search = it },
                         onApplyFilter = { text, filter ->
                             ui.applyFilter(actions, text, filter)
@@ -204,18 +204,18 @@ BeaconMessageTransition(
                             )
                         },
                     )
+                }
 
                 else -> {
                     val renderSettings: @Composable (SettingsScreen, PaddingValues) -> Unit = { displayedSettingsScreen, routeInsets ->
                         val routeModifier = if(underTopBar) Modifier.fillMaxSize().padding(
                             start=routeInsets.calculateStartPadding(direction), end=routeInsets.calculateEndPadding(direction),
-                            bottom=routeInsets.calculateBottomPadding()) else settingsModifier
+                            bottom=routeInsets.calculateBottomPadding()) else Modifier.fillMaxSize().padding(routeInsets)
                         val routePadding = if(underTopBar) PaddingValues(start=edge,end=edge,
                             top=routeInsets.calculateTopPadding()+BeaconUiMetrics.PageTopInset,
-                            bottom=BeaconUiMetrics.PageBottomInset) else settingsPadding
-                        BeaconSettingsPageFrame(ui, displayedSettingsScreen,
-                            routeModifier.then(if (compactBar) Modifier else Modifier.nestedScroll(
-                                settingsBarBehaviors.getValue(displayedSettingsScreen).connection(ui.uiStyle))), routePadding) { pageModifier, pagePadding ->
+                            bottom=BeaconUiMetrics.PageBottomInset) else listPadding
+                        BeaconSettingsPageFrame(displayedSettingsScreen,
+                            routeModifier.nestedScroll(settingsBarBehaviors.getValue(displayedSettingsScreen).connection(ui.uiStyle)), routePadding) { pageModifier, pagePadding ->
                         SettingsPage(
                             displayedSettingsScreen,
                             settingsScrollStates.getValue(
@@ -257,17 +257,17 @@ BeaconMessageTransition(
                         )
                     }
                     }
-                    if (underTopBar) BeaconSettingsNavHost(ui) { screen ->
+                    val renderRoute: @Composable (SettingsScreen) -> Unit = { screen ->
                         io.github.beacon.app.ui.components.BeaconScaffold(
-                            topBar={settingsTopBar(screen)},bottomBar={},
-                        ){routeInsets->renderSettings(screen,routeInsets)}
+                            topBar = { pageTopBar(1, screen) }, bottomBar = {},
+                        ) { routeInsets -> renderSettings(screen, routeInsets) }
                     }
+                    if (underTopBar) BeaconSettingsNavHost(ui, renderRoute)
                     else BeaconSettingsTransition(settingsTransition,
                         ui.settingsNavigatingBack || settingsMotion.targetState == ui.settingsBackTarget,
-                        animateSize = false) {screen -> renderSettings(screen,insets)}
+                        animateSize = false, content = renderRoute)
                 }
             }
         }
 }
 }
-

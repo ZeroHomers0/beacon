@@ -90,7 +90,7 @@ internal fun StatesPage(
             Modifier.fillMaxWidth().padding(start=BeaconUiMetrics.PageInset,end=BeaconUiMetrics.PageInset,top=BeaconUiMetrics.PageTopInset,bottom=BeaconUiMetrics.Gap8),
             verticalArrangement=Arrangement.spacedBy(BeaconUiMetrics.Gap8),
         ) {
-            BeaconSearchBox(search,{search=it},"搜索主题或应用",Modifier.fillMaxWidth(),scroll = scroll,onSearch={})
+            BeaconSearchBox(search,{search=it},"搜索主题或应用",Modifier.fillMaxWidth(),onSearch={})
             BeaconListSwitch(labels=listOf("共 ${rows.size} 个","显示 ${visible.size} 个"),
                 icons=listOf(BeaconIcons.Topics,BeaconIcons.List))
 

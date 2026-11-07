@@ -7,7 +7,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.testTag
@@ -21,22 +20,17 @@ import io.github.beacon.app.ui.theme.BeaconTheme
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
-import top.yukonga.miuix.kmp.blur.layerBackdrop
-import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
-class GlassAndButtonAppearanceTest {
+class ToolbarAndButtonAppearanceTest {
     @get:Rule val rule = createAndroidComposeRule<MainActivity>()
 
-    private fun topFade(mode: BeaconThemeMode) {
-        var blurEnabled by mutableStateOf(true)
+    private fun opaqueHeader(mode: BeaconThemeMode) {
         var clicks = 0
         var longClicks = 0
         rule.runOnUiThread { rule.activity.setContent {
             BeaconTheme(BeaconUiStyle.MIUIX, mode) {
-                val backdrop = rememberLayerBackdrop()
-                CompositionLocalProvider(LocalBeaconTopBackdrop provides if (blurEnabled) backdrop else null) {
                     Box(Modifier.fillMaxSize()) {
-                        androidx.compose.foundation.Canvas(Modifier.fillMaxSize().layerBackdrop(backdrop)) {
+                        androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
                             val stripe = 12.dp.toPx()
                             for (x in 0..(size.width / stripe).toInt()) {
                                 drawRect(if (x % 2 == 0) Color(0xFF2567AC) else Color(0xFFF7C978),
@@ -44,33 +38,32 @@ class GlassAndButtonAppearanceTest {
                                     size = androidx.compose.ui.geometry.Size(stripe, size.height))
                             }
                         }
-                        BeaconGlassSurface(MaterialTheme.colorScheme.background,
-                            Modifier.fillMaxWidth().height(180.dp).testTag("top-fade"), topFade = true) {
+                        BeaconSurface(MaterialTheme.colorScheme.background,
+                            Modifier.fillMaxWidth().height(180.dp).testTag("opaque-header")) {
                             Box(Modifier.align(Alignment.CenterStart)) {
                                 ReceiveModeButton(false, io.github.beacon.app.domain.model.ReceiveMode.POWER_SAVING,
                                     { clicks++ }, { longClicks++ }, visible = false)
                             }
-                            BeaconText("顶部渐变", Modifier.align(Alignment.Center))
+                            BeaconText("顶部背景", Modifier.align(Alignment.Center))
                         }
                     }
-                }
             }
         } }
-        rule.onNodeWithText("顶部渐变").assertIsDisplayed()
-        val image = rule.onNodeWithTag("top-fade").captureToImage().asAndroidBitmap()
+        rule.onNodeWithText("顶部背景").assertIsDisplayed()
+        val image = rule.onNodeWithTag("opaque-header").captureToImage().asAndroidBitmap()
         fun rowContrast(y: Int): Int {
             val values = (5 until image.width / 3).map { x -> android.graphics.Color.blue(image.getPixel(x, y)) }
             return values.max() - values.min()
         }
         assertEquals("The opaque header must not show background stripes", 0,
             rowContrast((image.height * .95f).toInt()))
-        capture("top-fade-$mode")
+        capture("opaque-header-$mode")
         val button = rule.onNodeWithContentDescription("接收模式 · 省电接收 · 接收已暂停")
         button.performClick()
         button.performTouchInput { longClick() }
-        rule.runOnIdle { assertEquals(1, clicks); assertEquals(1, longClicks); blurEnabled = false }
-        rule.onNodeWithText("顶部渐变").assertIsDisplayed()
-        capture("top-fade-fallback-$mode")
+        rule.runOnIdle { assertEquals(1, clicks); assertEquals(1, longClicks) }
+        rule.onNodeWithText("顶部背景").assertIsDisplayed()
+        capture("opaque-header-fallback-$mode")
     }
 
     private fun buttons(style: BeaconUiStyle) {
@@ -136,6 +129,6 @@ class GlassAndButtonAppearanceTest {
 
     @Test fun miuixSystemButtonPalette() = buttons(BeaconUiStyle.MIUIX)
     @Test fun materialButtonPalette() = buttons(BeaconUiStyle.MATERIAL3)
-    @Test fun topFadeAndModeButtonLight() = topFade(BeaconThemeMode.LIGHT)
-    @Test fun topFadeAndModeButtonDark() = topFade(BeaconThemeMode.DARK)
+    @Test fun opaqueHeaderAndModeButtonLight() = opaqueHeader(BeaconThemeMode.LIGHT)
+    @Test fun opaqueHeaderAndModeButtonDark() = opaqueHeader(BeaconThemeMode.DARK)
 }

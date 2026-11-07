@@ -123,7 +123,6 @@ dependencies {
     implementation(libs.miuix.android)
     implementation(libs.miuix.nav)
     implementation(libs.miuix.preference)
-    implementation(libs.miuix.blur)
     debugImplementation(libs.androidx.compose.ui.tooling)
     testImplementation(libs.junit)
     testImplementation(libs.json)

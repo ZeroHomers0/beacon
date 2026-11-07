@@ -77,6 +77,7 @@ class AdminSessionPersistenceTest {
         instrumentation.runOnMainSync { restored.restoreSession(context) }
         waitUntil { restored.state.value.loggedIn && !restored.state.value.busy }
         instrumentation.runOnMainSync { restored.logout() }
+        waitUntil { !restored.state.value.busy && !store().isConfigured() }
         assertFalse(store().isConfigured())
         assertFalse(restored.state.value.loggedIn)
     }
@@ -85,7 +86,7 @@ class AdminSessionPersistenceTest {
     fun unauthorizedRestoreClearsCredentials() {
         store().save(io.github.beacon.app.domain.model.TransportSettings(endpoint, token))
         val model = ServerAdminViewModel { _, _ -> client(true) }
-        instrumentation.runOnMainSync { model.restoreSession(context) }
+        instrumentation.runOnMainSync { model.restoreSession(context); model.loadOnEntry() }
         waitUntil { model.state.value.feedback == R.string.admin_unauthorized }
         assertFalse(model.state.value.loggedIn)
         assertFalse(store().isConfigured())

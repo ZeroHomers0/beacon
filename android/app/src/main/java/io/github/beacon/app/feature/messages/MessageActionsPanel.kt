@@ -12,7 +12,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
-import io.github.beacon.app.data.remote.MessageActionsCodec
 import io.github.beacon.app.domain.model.MessageLinkAction
 import io.github.beacon.app.ui.components.*
 import io.github.beacon.app.ui.icons.BeaconIcons
@@ -31,7 +30,7 @@ fun MessageActionsPanel(actions: List<MessageLinkAction>, legacyUrl: String = ""
                 else listOf(MessageLinkAction(defaultTitle, legacyUrl))
             }
             runCatching {
-                    MessageActionsCodec.validate(supplied)
+                    io.github.beacon.app.domain.policy.MessageActionValidation.validate(supplied)
                     supplied.take(1)
                 }
                 .getOrDefault(emptyList())

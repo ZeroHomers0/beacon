@@ -11,7 +11,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.dp
 import io.github.beacon.app.data.repository.RuntimeRepository
 import io.github.beacon.app.domain.model.*
 import io.github.beacon.app.feature.settings.*

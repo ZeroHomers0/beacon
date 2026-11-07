@@ -8,8 +8,6 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import io.github.beacon.app.ui.components.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -18,23 +16,16 @@ import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.unit.dp
 import io.github.beacon.app.BuildConfig
 import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.BindingRequest
 import io.github.beacon.app.domain.model.RuntimeState
 import io.github.beacon.app.ipc.RuntimeActions
-import io.github.beacon.app.ui.components.BeaconActionButton
 import io.github.beacon.app.ui.components.BeaconButton
 import io.github.beacon.app.ui.components.BeaconText
 import io.github.beacon.app.ui.components.BeaconTextField
-import io.github.beacon.app.ui.components.SettingsGroup
-import io.github.beacon.app.ui.components.SettingsPrimaryAction
-import io.github.beacon.app.ui.components.SettingsSection
 import io.github.beacon.app.ui.components.connectionStatusLabel
-import io.github.beacon.app.ui.components.copyToClipboard
 import io.github.beacon.app.ui.components.formatMessageTime
-import io.github.beacon.app.ui.icons.BeaconIcons
 
 internal fun LazyListScope.connectionSettingsItems(
     resources: android.content.res.Resources,

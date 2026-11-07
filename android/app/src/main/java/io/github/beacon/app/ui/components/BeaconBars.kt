@@ -8,8 +8,6 @@ package io.github.beacon.app.ui.components
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -62,15 +60,9 @@ fun BeaconTopBar(
     navigationIcon: @Composable () -> Unit,
     actions: @Composable RowScope.() -> Unit,
 ) {
-    val scrollProgress = LocalBeaconScrollProgress.current
-    val isMiuix = miuix()
-    val glassAlpha: () -> Float = {
-        if (isMiuix) maxOf(scrollProgress(), behavior.miuix.state.collapsedFraction).coerceIn(0f, 1f) else 1f
-    }
-    CompositionLocalProvider(LocalBeaconToolbarGlassAlpha provides glassAlpha, LocalToolbarButtonStyle provides true) {
     val groupedActions: @Composable RowScope.() -> Unit = { BeaconToolbarActions(actions) }
     if (miuix()) {
-        BeaconGlassSurface(androidx.compose.material3.MaterialTheme.colorScheme.background) {
+        BeaconSurface(androidx.compose.material3.MaterialTheme.colorScheme.background) {
             if (compact)
                 top.yukonga.miuix.kmp.basic.SmallTopAppBar(
                     title,
@@ -101,7 +93,6 @@ fun BeaconTopBar(
                 actions = groupedActions,
                 scrollBehavior = behavior.material,
             )
-    }
     }
 }
 

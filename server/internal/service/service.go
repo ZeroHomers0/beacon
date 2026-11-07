@@ -9,7 +9,13 @@ import (
 	"beacon.local/server/internal/domain"
 )
 
+// Repository composes the capabilities required by every supported backend.
+// Missing storage features fail at compile time, not as an unrelated realtime error.
 type Repository interface {
+	StateRepository
+	StateAdminRepository
+	TopicRepository
+	MaintenanceRepository
 	ApplicationRepository
 	ServerID() string
 	CreateDevice(string) (domain.DeviceCredentials, error)
@@ -50,10 +56,6 @@ func (s *Service) Authenticate(token string, push bool) (string, error) {
 	return s.repository.AuthenticateToken(token, push)
 }
 
-func (s *Service) Push(device, title, subtitle, body string) (domain.Message, error) {
-	return s.PushPriority(device, title, subtitle, body, nil)
-}
-
 // PushPriority serves the administrator test path, which may pick a tier; nil keeps the default.
 // A device-level push has no sending application, so both the application id and the credential
 // stay empty.
@@ -78,13 +80,7 @@ func (s *Service) Messages(device string, after int64, limit int, pending bool) 
 func (s *Service) Ack(device string, ids []string) error { return s.repository.Ack(device, ids) }
 
 func (s *Service) ReceiptStatuses(device string, ids []string) (map[string]string, error) {
-	repository, ok := s.repository.(interface {
-		ReceiptStatuses(string, []string) (map[string]string, error)
-	})
-	if !ok {
-		return nil, domain.ErrRealtimeUnavailable
-	}
-	return repository.ReceiptStatuses(device, ids)
+	return s.repository.ReceiptStatuses(device, ids)
 }
 
 func (s *Service) CreateBindingCode(name string, ttl time.Duration) (domain.BindingCode, error) {

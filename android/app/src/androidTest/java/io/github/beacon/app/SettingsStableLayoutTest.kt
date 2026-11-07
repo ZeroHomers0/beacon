@@ -30,12 +30,14 @@ class SettingsStableLayoutTest {
                     CompositionLocalProvider(LocalDensity provides Density(density.density, 2f)) {
                         Column(Modifier.width(280.dp)) {
                             Box(Modifier.testTag("status")) {
-                                SettingsStatusSummary(
-                                    title = if (refreshed.value) "连接失败" else "连接正常",
-                                    details = if (refreshed.value) "服务器暂时无法连接，请检查网络后重试。" else "",
-                                    interactive = false, reserveDetails = true,
-                                    caption = "上次检查 · 2026-10-24 12:34:56",
-                                )
+                                SettingsOverviewCard(
+                                    title = "连接状态",
+                                    status = if (refreshed.value) "连接失败" else "连接正常",
+                                    subtitle = "上次检查 · 2026-10-24 12:34:56",
+                                    healthy = !refreshed.value, error = refreshed.value,
+                                ) {
+                                    SettingsOverviewField("检测结果", if (refreshed.value) "服务器暂时无法连接，请检查网络后重试。" else "—")
+                                }
                             }
                             Box(Modifier.testTag("metrics")) {
                                 SettingsMetricGrid(listOf("设备" to "1", "消息" to

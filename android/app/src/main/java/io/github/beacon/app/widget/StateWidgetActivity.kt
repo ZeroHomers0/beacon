@@ -152,7 +152,8 @@ private fun StateWidgetEditorContent(id:Int, detail:Boolean, source:String?, ide
     val dirty=!WidgetConfiguration.equivalent(draft,baseline,format.name)||!hasSaved
     fun update(change:(JSONObject)->Unit){draft=JSONObject(draft).apply(change).toString()}
     fun back(){if(saving)return;if(editing&&dirty)discard=true else if(editing&&detail)editing=false else onExit()}
-    BackHandler{back()}
+    // Clean editors delegate to Android for the cross-activity predictive animation.
+    BackHandler(enabled = saving || (editing && (dirty || detail))){back()}
     val lifecycle=LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle,format){
         val observer=LifecycleEventObserver{_,event->if(event==Lifecycle.Event.ON_RESUME){previewSize=WidgetInstances.previewSize(context,id,format)}}
@@ -227,9 +228,11 @@ private fun StateWidgetEditorContent(id:Int, detail:Boolean, source:String?, ide
                         BeaconTextField(config.optString("title"),{value->update{it.put("title",if(value.codePointCount(0,value.length)>12)value.substring(0,value.offsetByCodePoints(0,12))else value)}},Modifier.fillMaxWidth(),label={BeaconText("桌面标题")},labelText="桌面标题",singleLine=true,placeholder="留空使用主题名称")
                         SettingsHint("桌面标题最多12字，留空使用主题名称。")
                     }}}
-                    if(!row.optBoolean("_waiting"))item { WidgetListSettings(WidgetConfigRules.resolved(row,config)){next->draft=next.toString()} }
+                    if(!row.optBoolean("_waiting") && WidgetConfigRules.resolved(row,config).optString("template")=="text_list")
+                        item { WidgetListSettings(WidgetConfigRules.resolved(row,config)){next->draft=next.toString()} }
                     if(!row.optBoolean("_waiting"))item { WidgetTuningSettings(WidgetConfigRules.resolved(row,config)){next->draft=next.toString()} }
-                    if(!row.optBoolean("_waiting"))item { WidgetMoreSettings(row,config){next->draft=next.toString()} }
+                    if(!row.optBoolean("_waiting") && WidgetConfigRules.resolved(row,config).optString("template") !in listOf("text","countdown"))
+                        item { WidgetMoreSettings(row,WidgetConfigRules.resolved(row,config)){next->draft=next.toString()} }
                     item { WidgetDisplaySettings(row,config){next->draft=next.toString()} }
                     item { SettingsGroup(androidx.compose.ui.res.stringResource(io.github.beacon.app.R.string.widget_update_hints)){
                         BeaconDropdownPreference("刷新策略",listOf("及时 · 约5秒","均衡 · 任务约5秒，其他约15秒","省电 · 约1分钟"),listOf("fast","balanced","economy").indexOf(config.optString("refresh","balanced")).coerceAtLeast(0),settingsRow=true,icon=BeaconIcons.Sync){index->update{it.put("refresh",listOf("fast","balanced","economy")[index])}}

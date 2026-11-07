@@ -1,15 +1,12 @@
 package io.github.beacon.app.feature.settings
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.*
 import io.github.beacon.app.ipc.RuntimeActions
 import io.github.beacon.app.ui.components.*
-import io.github.beacon.app.ui.icons.BeaconIcons
 import java.util.Locale
 
 @Composable

@@ -33,11 +33,6 @@ func (s *Service) DeleteApplication(id string) (int64, error) {
 	return s.repository.DeleteApplication(id)
 }
 
-// Legacy device push keys remain valid. Application credentials are send-only.
-func (s *Service) PushCredential(token, title, subtitle, body string, priority *int, extensions ...string) (domain.Message, error) {
-	return s.PushWithOptions(token, title, subtitle, body, priority, domain.PushOptions{}, extensions...)
-}
-
 func (s *Service) PushWithOptions(token, title, subtitle, body string, priority *int, options domain.PushOptions, extensions ...string) (domain.Message, error) {
 	if !options.Valid() || len(extensions) > 1 {
 		return domain.Message{}, domain.ErrInvalidMessage

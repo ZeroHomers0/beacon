@@ -46,7 +46,7 @@ class CrashRecoveryPolicyTest {
         val recorded = CrashRecoveryPolicy.record(fresh, now)
         assertEquals(1, recorded.attempts)
         assertEquals(now, recorded.windowStartMs)
-        assertTrue(CrashRecoveryPolicy.delayMs(1) <= CrashRecoveryPolicy.RECOVERY_DEADLINE_MS)
+        assertTrue(CrashRecoveryPolicy.delayMs(1) <= 60_000L)
         assertEquals(CrashRecoveryDecision.DELAYED, CrashRecoveryPolicy.decide(recorded, now))
     }
 

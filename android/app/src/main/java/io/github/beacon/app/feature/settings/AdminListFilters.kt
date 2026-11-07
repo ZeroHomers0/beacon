@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import io.github.beacon.app.R
 import io.github.beacon.app.ui.components.*
@@ -68,11 +67,10 @@ internal fun AdminListFilters(
     onDevice: ((String) -> Unit)? = null,
     total: Int = 0, active: Int = 0, enabled: Boolean = true,
     totalIcon: androidx.compose.ui.graphics.vector.ImageVector = io.github.beacon.app.ui.icons.BeaconIcons.Device,
-    scroll: androidx.compose.foundation.lazy.LazyListState? = null,
 ) {
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
     Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
-        BeaconSearchBox(query, onQuery, label, scroll=scroll,onSearch = { focus.clearFocus() })
+        BeaconSearchBox(query, onQuery, label, onSearch = { focus.clearFocus() })
         BeaconListSwitch(
             labels = listOf(stringResource(R.string.admin_stat_total, total),
                 stringResource(if (status == 2) R.string.admin_stat_revoked else R.string.admin_stat_active,
@@ -84,15 +82,6 @@ internal fun AdminListFilters(
         )
 
     }
-}
-
-@Composable
-internal fun AdminFilterChip(label: String, enabled: Boolean, onRemove: () -> Unit) {
-    BeaconActiveFilterChip(selected = true, onClick = onRemove, enabled = enabled,
-        shape = BeaconUiMetrics.PillShape,
-        label = { BeaconText(label, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
-        trailingIcon = { androidx.compose.material3.Icon(io.github.beacon.app.ui.icons.BeaconIcons.Close,
-            stringResource(R.string.msg_clear_filters_action), Modifier.size(BeaconUiMetrics.IconSmall)) })
 }
 
 internal fun priorityShortLabel(value: Int): Int = when {
@@ -121,7 +110,6 @@ internal fun AdminTopicFilterAction(filters:AdminListFilterState,devices:List<Ad
         }
     }
 }
-
 
 @Composable
 internal fun AdminOverviewActions(state: AdminUiState, model: ServerAdminViewModel) {

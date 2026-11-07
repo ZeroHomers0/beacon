@@ -16,13 +16,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -35,17 +33,12 @@ import io.github.beacon.app.domain.model.MessageAction
 import io.github.beacon.app.domain.model.MessageKey
 import io.github.beacon.app.domain.model.MessageReadFilter
 import io.github.beacon.app.domain.model.RuntimeState
-import io.github.beacon.app.domain.model.BeaconUiStyle
-import io.github.beacon.app.ui.theme.LocalBeaconUiStyle
 import io.github.beacon.app.domain.policy.MessagePresentation
 import io.github.beacon.app.ipc.RuntimeActions
-import io.github.beacon.app.ui.components.ActionFlow
 import io.github.beacon.app.ui.components.BeaconEmptyState
-import io.github.beacon.app.ui.components.BeaconButton
 import io.github.beacon.app.ui.components.BeaconMotion
 import io.github.beacon.app.ui.components.BeaconPullToRefresh
 import io.github.beacon.app.ui.components.BeaconSearchBox
-import io.github.beacon.app.ui.components.BeaconSummaryPill
 import io.github.beacon.app.ui.components.BeaconListSwitch
 import io.github.beacon.app.ui.components.beaconFilterChange
 import io.github.beacon.app.ui.components.BeaconText
@@ -54,10 +47,7 @@ import io.github.beacon.app.ui.components.BeaconTitleSearchRow
 import io.github.beacon.app.ui.components.BeaconUiMetrics
 import io.github.beacon.app.ui.components.MessageItem
 import io.github.beacon.app.ui.icons.BeaconIcons
-import io.github.beacon.app.ui.components.BeaconFloatingGlassButton
-import io.github.beacon.app.ui.components.BeaconSearchScrollState
-import io.github.beacon.app.ui.components.rememberBeaconSearchScrollState
-import androidx.compose.ui.input.nestedscroll.nestedScroll
+import io.github.beacon.app.ui.components.BeaconFloatingActionButton
 import androidx.compose.foundation.gestures.stopScroll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
@@ -85,7 +75,6 @@ fun MessagesPage(
     sharedTitle: String? = null,
     hideSharedTitle: Boolean = false,
     topInset: androidx.compose.ui.unit.Dp = 0.dp,
-    headerScrollState: BeaconSearchScrollState? = null,
     onSearch: (String) -> Unit,
     onApplyFilter: (String, MessageReadFilter) -> Unit,
     onConnectionSettings: () -> Unit,
@@ -103,7 +92,7 @@ fun MessagesPage(
     MessagesContent(
         scroll, modifier, padding, rememberMessageListState(runtimeState), actions,
         search, readFilter, selectionMode, selectedKeys, selectionHint, scrollModifier,
-        sharedTitle, hideSharedTitle, topInset, headerScrollState, onSearch, onApplyFilter, onConnectionSettings,
+        sharedTitle, hideSharedTitle, topInset, onSearch, onApplyFilter, onConnectionSettings,
         onEnterSelection, onSelectionChange, onSelectionHint, onRequestDelete, onCopyText, calendar,
     )
 }
@@ -126,7 +115,6 @@ private fun MessagesContent(
     sharedTitle: String?,
     hideSharedTitle: Boolean,
     topInset: androidx.compose.ui.unit.Dp,
-    headerScrollState: BeaconSearchScrollState?,
     onSearch: (String) -> Unit,
     onApplyFilter: (String, MessageReadFilter) -> Unit,
     onConnectionSettings: () -> Unit,
@@ -251,7 +239,6 @@ private fun MessagesContent(
                     { if (it.length <= 256) onSearch(it) },
                     stringResource(R.string.msg_search_hint),
                     titleCollapsed = titleCollapsed || hideSharedTitle,
-                    scroll = scroll,
                     onSearch = submit,
                 )
             else
@@ -259,7 +246,6 @@ private fun MessagesContent(
                     search,
                     { if (it.length <= 256) onSearch(it) },
                     stringResource(R.string.msg_search_hint),
-                    scroll = scroll,
                     onSearch = submit,
                 )
             // Counts and active filters stay with the search instead of scrolling: they pin under
@@ -516,7 +502,7 @@ private fun MessagesContent(
                             .padding(horizontal = BeaconUiMetrics.PageInset, vertical = BeaconUiMetrics.Gap16),
                         contentAlignment = Alignment.Center,
                     ) {
-                        BeaconFloatingGlassButton(
+                        BeaconFloatingActionButton(
                             onClick = {
                                 focus.clearFocus()
                                 jumpToLatest = true
@@ -535,7 +521,7 @@ private fun MessagesContent(
                 }
             }
         }
-        io.github.beacon.app.ui.components.BeaconGlassSurface(
+        io.github.beacon.app.ui.components.BeaconSurface(
             MaterialTheme.colorScheme.background,
             Modifier.fillMaxWidth().align(Alignment.TopCenter).testTag("message-pinned-header"),
         ) { pinnedControls() }

@@ -25,20 +25,3 @@ internal fun runReceiveCleanup(context: Context, store: RuntimeMessageStore) {
         }
     }
 }
-
-private object WalMaintenance {
-    private const val INTERVAL_MS = 6 * 60 * 60_000L
-
-    @Synchronized
-    fun claim(context: Context): Boolean {
-        val preferences =
-            context.applicationContext.getSharedPreferences(
-                "storage_maintenance",
-                Context.MODE_PRIVATE,
-            )
-        val now = System.currentTimeMillis()
-        val previous = preferences.getLong("wal_checkpoint_attempt_ms", 0L)
-        if (previous > 0 && now - previous in 0 until INTERVAL_MS) return false
-        return preferences.edit().putLong("wal_checkpoint_attempt_ms", now).commit()
-    }
-}

@@ -1,5 +1,5 @@
-import { topicSchema } from "../topics";
-import { stateSchema } from "../states";
+import { topicSchema } from "./topic-schema";
+import { stateSchema } from "./state-schema";
 import { token } from "../domain";
 
 // Workers keeps its own schema version, independent of the Go server database.

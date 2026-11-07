@@ -23,13 +23,13 @@ class MessageActionsCodecTest {
         listOf("http://example.com", "javascript:alert(1)", "/relative", "https://user:password@example.com",
             "https://example.com:0", "https://example.com:65536", "https://example.com:",
             "https://example.com:abc", "https://exa mple.com", "https://example.com/a\u00a0b", "https://").forEach { url ->
-            assertThrows(IllegalArgumentException::class.java) { MessageActionsCodec.validate(listOf(action.copy(url = url))) }
+            assertThrows(IllegalArgumentException::class.java) { io.github.beacon.app.domain.policy.MessageActionValidation.validate(listOf(action.copy(url = url))) }
         }
         listOf(" ", "title\n", "中".repeat(22)).forEach { title ->
-            assertThrows(IllegalArgumentException::class.java) { MessageActionsCodec.validate(listOf(action.copy(title = title))) }
+            assertThrows(IllegalArgumentException::class.java) { io.github.beacon.app.domain.policy.MessageActionValidation.validate(listOf(action.copy(title = title))) }
         }
-        assertThrows(IllegalArgumentException::class.java) { MessageActionsCodec.validate(List(4) { action }) }
-        assertThrows(IllegalArgumentException::class.java) { MessageActionsCodec.validate(listOf(action.copy(url = "https://example.com/" + "a".repeat(2048)))) }
+        assertThrows(IllegalArgumentException::class.java) { io.github.beacon.app.domain.policy.MessageActionValidation.validate(List(4) { action }) }
+        assertThrows(IllegalArgumentException::class.java) { io.github.beacon.app.domain.policy.MessageActionValidation.validate(listOf(action.copy(url = "https://example.com/" + "a".repeat(2048)))) }
     }
     @Test fun realtimeTransportPreservesAndRejectsActions() {
         val server = "a".repeat(64)

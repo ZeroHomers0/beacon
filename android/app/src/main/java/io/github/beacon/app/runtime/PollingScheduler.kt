@@ -54,7 +54,7 @@ object PollingScheduler {
 
     @Synchronized
     fun apply(context: Context, state: PollingState) {
-        check(currentProcessName(context) == context.packageName + ":runtime")
+        check(currentProcessName() == context.packageName + ":runtime")
         pending = state
         submit(context)
     }
@@ -62,7 +62,7 @@ object PollingScheduler {
     /** Debug-only one-shot probe; WorkManager periodic work remains 15 minutes minimum. */
     @Synchronized
     fun testOnce(context: Context, state: PollingState) {
-        check(currentProcessName(context) == context.packageName + ":runtime")
+        check(currentProcessName() == context.packageName + ":runtime")
         check(BuildConfig.DEBUG && state.shouldSchedule)
         val request =
             OneTimeWorkRequestBuilder<HttpPollingWorker>()

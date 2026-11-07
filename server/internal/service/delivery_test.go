@@ -34,11 +34,11 @@ func TestDeliveryFailureDoesNotUndoAcceptanceOrBlockOtherDevices(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	m1, err := app.Push(first.DeviceID, "title", "subtitle", "body")
+	m1, err := app.PushPriority(first.DeviceID, "title", "subtitle", "body", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	m2, err := app.Push(second.DeviceID, "title", "subtitle", "body")
+	m2, err := app.PushPriority(second.DeviceID, "title", "subtitle", "body", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

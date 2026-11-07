@@ -3,7 +3,6 @@ package io.github.beacon.app.feature.settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.Lifecycle

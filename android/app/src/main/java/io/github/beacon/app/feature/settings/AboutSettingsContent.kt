@@ -17,7 +17,6 @@ import androidx.compose.ui.unit.dp
 import io.github.beacon.app.BuildConfig
 import io.github.beacon.app.R
 import io.github.beacon.app.ui.components.*
-import io.github.beacon.app.ui.components.BeaconText
 import io.github.beacon.app.ui.icons.BeaconIcons
 
 internal fun LazyListScope.aboutSettingsItems(

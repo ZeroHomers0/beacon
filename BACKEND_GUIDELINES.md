@@ -22,7 +22,8 @@ Beacon是通用消息与结构化数据管道。目标服务查询、轮询、�
 | `workers/src/domain.ts`、`protocol.ts` | 通用模型、限制、协议号 |
 | `workers/src/state-version.ts`、`blocks.ts` | 状态转换和结构化校验 |
 | `workers/src/states.ts`、`topics.ts` | 数据状态、目录事务及分页同步 |
-| `workers/src/store/` | SQLite schema、身份、消息与清理 |
+| `workers/src/state-validation.ts`、`topic-models.ts` | 状态校验及目录/同步响应类型 |
+| `workers/src/store/` | schema、身份、消息与清理；SqliteRepository通过组合提供综合门面 |
 | `workers/src/index.ts` | Durable Object、Socket与定时调度 |
 
 仓储层不能依赖HTTP Request/Response或拥有WebSocket；依赖图必须无环。遵守 `workers/tools/architecture.mjs`，修改模块时同步显式依赖规则，不绕过检查。Go模块与依赖版本以go.mod为准，Workers以package-lock为准，不在规范固定版本后忘记更新代码。
@@ -133,3 +134,5 @@ npm run build
 管理metrics由Go/Workers提供固定路由聚合、活动连接和最多缓存5秒的投递队列快照。队列数不等于未ACK消息数；成功写Socket也不算客户端确认。指标只使用有界聚合，不记录真实设备、主题、路径参数或正文。就绪检查使用独立管理鉴权和轻量读探针，healthz继续表示存活；不得因探针进行写事务或全表扫描。新增字段含义与失败行为统一维护在API.md。
 
 Go后台投递每轮最多领取4条，按设备分组并发、组内按领取顺序执行；一轮结束再领取下一轮，不存在无限内存队列或提前完成任务。显式串行DrainDelivery原语保持原语义。Workers的Socket send是平台队列操作，未测出同类阻塞前不强加Go线程池；仍保留DO持久化恢复和有界批次。
+
+必需的Go仓储能力使用小接口组合进Repository，由编译器检查；不通过运行时断言把缺失的状态/目录/运维方法映射为实时不可用。Workers ports按身份、消息、目录、状态、运维分组；SqliteRepository组合功能存储，状态校验和schema分别维护，迁移仍在同一个原有事务中执行。重复的纯字节校验复用domain.bytes，业务事务不因形式相似而合并。

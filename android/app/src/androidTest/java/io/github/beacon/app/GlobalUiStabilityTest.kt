@@ -129,12 +129,7 @@ class GlobalUiStabilityTest {
                                         MessageFilterTag(samples[slot], Modifier.weight(1f).testTag("palette$slot"), toneSlot = 0)
                                     }
                                 }
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    BeaconSummaryPill("共 128 条", BeaconIcons.Mail, true, modifier = Modifier.weight(1f).testTag("summary-selected"), compact = true)
-                                    BeaconSummaryPill("8 条未读", BeaconIcons.Messages, modifier = Modifier.weight(1f).testTag("summary-normal"), compact = true)
-                                }
-                                BeaconActiveFilterChip(onClick = {}, label = { BeaconText("已选筛选条件") },
-                                    trailingIcon = { androidx.compose.material3.Icon(BeaconIcons.Close, null, Modifier.size(16.dp)) })
+
                             }
                         }
                     }
@@ -145,20 +140,6 @@ class GlobalUiStabilityTest {
                 val color = pixels[pixels.width / 2, pixels.height - 3]
                 assertTrue("Displayed label stays bright in $style / $mode", color.luminance() >= .4f)
             }
-            val neutralColors = listOf("summary-selected", "summary-normal").map { tag ->
-                val pixels = rule.onNodeWithTag(tag).captureToImage().toPixelMap()
-                pixels[pixels.width / 2, pixels.height - 2].also {
-                    assertEquals("Statistics stay achromatic", it.red, it.green, .001f)
-                    assertEquals("Statistics stay achromatic", it.green, it.blue, .001f)
-                }
-            }
-            assertNotEquals(neutralColors[0], neutralColors[1])
-            val layouts = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
-            rule.onNodeWithText("已选筛选条件", useUnmergedTree = true).performSemanticsAction(
-                androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult) { it(layouts) }
-            assertTrue(layouts.isNotEmpty())
-            assertEquals("Native and Material text must use the same readable ink", BeaconTagInk,
-                layouts.last().layoutInput.style.color)
             val image = rule.onRoot().captureToImage().asAndroidBitmap()
             val file = java.io.File(rule.activity.getExternalFilesDir("ui-qa"), "BRIGHT_TAGS_${style}_${mode}.png")
             file.outputStream().use { image.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }

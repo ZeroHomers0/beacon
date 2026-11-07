@@ -10,7 +10,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
@@ -24,8 +23,6 @@ import io.github.beacon.app.domain.model.BeaconUiStyle
 import io.github.beacon.app.ui.theme.LocalBeaconUiStyle
 
 internal val LocalCompactActions = staticCompositionLocalOf { false }
-internal val LocalToolbarButtonStyle = staticCompositionLocalOf { false }
-internal val LocalGroupedToolbarActions = staticCompositionLocalOf { false }
 
 internal val LocalActionFillWidth = staticCompositionLocalOf { false }
 internal val LocalButtonLabel = staticCompositionLocalOf { false }
@@ -166,12 +163,14 @@ fun BeaconIconButton(
 ) {
     val actionModifier = if (LocalCompactActions.current) modifier.width(44.dp) else modifier
     if (miuix()) {
-        top.yukonga.miuix.kmp.basic.IconButton(
-            onClick, actionModifier, enabled,
-            minHeight = 48.dp,
-            minWidth = if (LocalCompactActions.current) 44.dp else 48.dp,
-            content = content,
-        )
+        Box(actionModifier.semantics(mergeDescendants = true) { if (!enabled) disabled() }) {
+            top.yukonga.miuix.kmp.basic.IconButton(
+                onClick, Modifier, enabled,
+                minHeight = 48.dp,
+                minWidth = if (LocalCompactActions.current) 44.dp else 48.dp,
+                content = content,
+            )
+        }
     } else androidx.compose.material3.IconButton(onClick, actionModifier, enabled, content = content)
 }
 

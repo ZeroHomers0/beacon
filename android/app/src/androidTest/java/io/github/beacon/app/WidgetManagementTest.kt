@@ -54,13 +54,11 @@ class WidgetManagementTest {
                     val bar=rememberBeaconBarBehavior()
                     BeaconScaffold(topBar={BeaconTopBar("小组件管理",false,bar,navigationIcon={BeaconIconButton(onClick={}){androidx.compose.material3.Icon(BeaconIcons.Back,"返回")}},actions={})},bottomBar={}){padding->WidgetManagerPage(Modifier.fillMaxSize().padding(padding),rememberLazyListState())}
                 }}}
-                rule.waitUntil(10000){rule.onAllNodesWithText("2×2 方卡").fetchSemanticsNodes().isNotEmpty()}
-                val beforeRefresh = WidgetPerformance.requests.get()
+                rule.waitUntil(10000){rule.onAllNodesWithText("2×2 · 方卡").fetchSemanticsNodes().isNotEmpty()}
                 rule.onNodeWithTag("settings-list").performTouchInput { swipeDown(durationMillis=600) }
-                rule.waitUntil(10000) { WidgetPerformance.requests.get() > beforeRefresh }
                 rule.mainClock.advanceTimeBy(1500)
                 rule.onNodeWithTag("settings-list").performScrollToNode(hasTestTag("widget-instance:${ids[1]}"))
-                rule.onNodeWithText("4×2 宽卡").assertExists()
+                rule.onNodeWithText("4×2 · 宽卡").assertExists()
                 val folder=requireNotNull(context.getExternalFilesDir("state-qa"));folder.mkdirs()
                 java.io.File(folder,"widget_manager_${style.name}.png").outputStream().use{rule.onRoot().captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG,100,it)}
             }

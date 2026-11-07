@@ -144,7 +144,6 @@ internal fun DevicePicker(
                 .ifEmpty { listOf(stringResource(R.string.admin_no_active_devices)) },
             devices.indexOfFirst { it.id == selected }.coerceAtLeast(0),
             enabled = enabled && devices.isNotEmpty(),
-            stacked = true,
         ) {
             devices.getOrNull(it)?.let { device -> change(device.id) }
         }
@@ -156,11 +155,3 @@ internal fun DevicePicker(
  * still accept the whole 0-10 range, so a narrow picker never narrows the contract.
  */
 internal val PRIORITY_TIERS = listOf(0, 2, 5, 8)
-
-internal fun priorityLabel(value: Int): Int =
-    when (value) {
-        0 -> R.string.admin_priority_save
-        in 1..3 -> R.string.admin_priority_silent
-        in 4..7 -> R.string.admin_priority_normal
-        else -> R.string.admin_priority_important
-    }

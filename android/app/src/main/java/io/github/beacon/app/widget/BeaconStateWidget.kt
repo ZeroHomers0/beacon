@@ -1,6 +1,5 @@
 package io.github.beacon.app.widget
 
-import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
@@ -55,11 +54,11 @@ open class BeaconStateWidget: AppWidgetProvider() {
                 val dark=when(config.optString("background")){"light"->false;"dark"->true;else->context.resources.configuration.uiMode and 0x30 == 0x20}
                 val now=System.currentTimeMillis()
                 val status=row?.optString("status")?:""
-                val metrics=context.resources.displayMetrics
-                val bounds=if(android.os.Build.VERSION.SDK_INT>=30)context.getSystemService(android.view.WindowManager::class.java).currentWindowMetrics.bounds else android.graphics.Rect(0,0,metrics.widthPixels,metrics.heightPixels)
+                val bounds=context.getSystemService(android.view.WindowManager::class.java).currentWindowMetrics.bounds
                 // Budget all responsive variants together, below the platform's 1.5-screen cap.
                 val pixelBudget=(bounds.width().toDouble()*bounds.height()*1.0).coerceIn(1.0,Int.MAX_VALUE.toDouble())
                 val area=sizes.sumOf{it.width.toDouble()*it.height}
+                val metrics=context.resources.displayMetrics
                 val rasterDensity=kotlin.math.min(metrics.density.toDouble(),kotlin.math.sqrt(pixelBudget/area)).toFloat()
                 val signature="display-v9:"+android.provider.Settings.Global.getInt(context.contentResolver,android.provider.Settings.Global.BOOT_COUNT,0)+":"+java.util.TimeZone.getDefault().id+":"+context.resources.configuration.locales.toLanguageTags()+":"+rasterDensity+":"+sizes.joinToString()+":"+dark+":"+WidgetPerformance.displayKey(row,config)
                 val last=cache.preference("widget-last:$id").toLongOrNull()?:0L
@@ -76,7 +75,7 @@ open class BeaconStateWidget: AppWidgetProvider() {
                         setOnClickPendingIntent(R.id.widget_image,WidgetTapIntent.pending(context,id,config))
                     }
                 }
-                val views=if(android.os.Build.VERSION.SDK_INT>=31&&sizes.size>1)RemoteViews(sizes.associateWith{render(it)})else render(sizes.first())
+                val views=if(sizes.size>1)RemoteViews(sizes.associateWith{render(it)})else render(sizes.first())
                 manager.updateAppWidget(id,views)
                 cache.preference("widget-valid:$id",if(row==null)"0"else"1");cache.preference("widget-signature:$id",signature);cache.preference("widget-last:$id",now.toString())
             }}

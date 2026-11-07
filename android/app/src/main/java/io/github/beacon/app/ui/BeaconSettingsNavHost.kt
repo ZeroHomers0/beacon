@@ -36,7 +36,7 @@ internal fun BeaconSettingsNavHost(ui: BeaconUiState, content: @Composable (Sett
 /** Keep shared page geometry without adding a second navigation control row. */
 @Composable
 internal fun BeaconSettingsPageFrame(
-    ui: BeaconUiState, screen: SettingsScreen, modifier: Modifier, padding: PaddingValues,
+    screen: SettingsScreen, modifier: Modifier, padding: PaddingValues,
     content: @Composable (Modifier, PaddingValues) -> Unit,
 ) {
     content(modifier.testTag("settings-content-$screen"), padding)

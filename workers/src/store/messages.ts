@@ -1,5 +1,3 @@
-import { TopicStore } from "../topics";
-import { StateStore } from "../states";
 import {
   BATCH,
   MAX_TITLE,
@@ -18,19 +16,21 @@ import {
   token,
 } from "../domain";
 import { IdentityStore } from "./identity";
-import type { Repository } from "../ports";
 
-export class MessageStore extends IdentityStore implements Repository {
- topicPage(device:string,q:URLSearchParams,now:number){this.active(device);return new TopicStore(this.storage,this.serverID).page(device,q,now)}
- adminTopics(p:Record<string,unknown>,now:number){return new TopicStore(this.storage,this.serverID).list(p,now)}
- adminTopic(p:Record<string,unknown>){return new TopicStore(this.storage,this.serverID).detail(p)}
- mutateTopic(a:string,p:Record<string,unknown>,now:number){return new TopicStore(this.storage,this.serverID).mutate(a,p,now)}
- saveState(credential:string,p:Record<string,unknown>,digest:string,now:number){return this.storage.transactionSync(()=>new StateStore(this.storage,this.serverID).save(this.sender(credential),p,digest,now))}
- statePage(device:string,q:URLSearchParams,now:number){this.active(device);return new StateStore(this.storage,this.serverID).page(device,q,now)}
- stateMeta(credential:string,topic:string){return new StateStore(this.storage,this.serverID).meta(this.sender(credential),topic)}
- adminStates(p:Record<string,unknown>,now:number){return new StateStore(this.storage,this.serverID).adminList(p,now)}
- adminState(p:Record<string,unknown>){return new StateStore(this.storage,this.serverID).adminDetail(p)}
- clearAdminState(p:Record<string,unknown>,now:number){return new StateStore(this.storage,this.serverID).adminClear(p,now)}
+export class MessageStore {
+  constructor(
+    private storage: DurableObjectStorage,
+    private identity: IdentityStore,
+  ) {}
+  private rows(query: string, ...values: SqlStorageValue[]): Row[] {
+    return this.identity.rows(query, ...values);
+  }
+  private first(query: string, ...values: SqlStorageValue[]): Row | undefined {
+    return this.identity.first(query, ...values);
+  }
+  private get serverID(): string {
+    return this.identity.serverID;
+  }
 
   expiredCount(device: string): number {
     return Number(
@@ -58,14 +58,18 @@ export class MessageStore extends IdentityStore implements Repository {
       bytes(bark) > MAX_BARK
     )
       reject(400, "invalid_message");
-    const blockJSON = options?.blocks?.length ? JSON.stringify(options.blocks) : "";
-    const actionJSON = options?.actions?.length ? JSON.stringify(options.actions) : "";
+    const blockJSON = options?.blocks?.length
+      ? JSON.stringify(options.blocks)
+      : "";
+    const actionJSON = options?.actions?.length
+      ? JSON.stringify(options.actions)
+      : "";
     return this.storage.transactionSync(() => {
-      this.active(sender.device);
+      this.identity.active(sender.device);
       // Fingerprinting yields to other requests; recheck rotated/revoked credentials
       // inside the transaction before replaying or accepting a new message.
       if (options) {
-        const current = this.sender(options.credential);
+        const current = this.identity.sender(options.credential);
         if (
           current.device !== sender.device ||
           current.application !== sender.application
@@ -96,8 +100,8 @@ export class MessageStore extends IdentityStore implements Repository {
           reject(507, "storage_capacity_reached");
       }
       const expires = now + (options?.ttl || 604800) * 1000;
-      this.admit("push", now, 1000, 100);
-      this.admit(`device:${sender.device}`, now, 200, 10);
+      this.identity.admit("push", now, 1000, 100);
+      this.identity.admit(`device:${sender.device}`, now, 200, 10);
       const usage = this.first(
         "SELECT pending_count,pending_bytes FROM devices WHERE id=?",
         sender.device,
@@ -105,7 +109,8 @@ export class MessageStore extends IdentityStore implements Repository {
       const live = this.first("SELECT messages FROM usage WHERE singleton=1")!;
       if (
         Number(usage.pending_count) >= 10000 ||
-        Number(usage.pending_bytes) + bytes(title + subtitle + body + bark + actionJSON + blockJSON) >
+        Number(usage.pending_bytes) +
+          bytes(title + subtitle + body + bark + actionJSON + blockJSON) >
           64 * 1024 * 1024 ||
         Number(live.messages) >= 100000 ||
         this.storage.sql.databaseSize + 512 * 1024 > 256 * 1024 * 1024
@@ -255,20 +260,35 @@ export class MessageStore extends IdentityStore implements Repository {
       if (deleteDevice) {
         for (const table of ["applications", "session_disconnects"])
           this.rows("DELETE FROM " + table + " WHERE device=?", device);
-        for(const table of ["topic_catalog","topic_changes","topic_snapshots","current_states","state_changes","state_snapshots"])this.rows(`DELETE FROM ${table} WHERE device=?`,device);
+        for (const table of [
+          "topic_catalog",
+          "topic_changes",
+          "topic_snapshots",
+          "current_states",
+          "state_changes",
+          "state_snapshots",
+        ])
+          this.rows(`DELETE FROM ${table} WHERE device=?`, device);
         this.rows("DELETE FROM devices WHERE id=?", device);
         this.rows("DELETE FROM rate_buckets WHERE key=?", `device:${device}`);
       }
       return count;
     });
   }
-  ready():boolean { return Number(this.first("SELECT 1 AS ready")?.ready)===1; }
-  operationalStats(now:number):Record<string,number> {
-    const row=this.first(`SELECT count(*) AS queued,coalesce(min(m.created),0) AS oldest,
+  ready(): boolean {
+    return Number(this.first("SELECT 1 AS ready")?.ready) === 1;
+  }
+  operationalStats(now: number): Record<string, number> {
+    const row = this
+      .first(`SELECT count(*) AS queued,coalesce(min(m.created),0) AS oldest,
       coalesce(sum(o.attempts>0),0) AS retrying FROM publish_outbox o JOIN messages m ON m.seq=o.message_seq`)!;
-    const oldest=Number(row.oldest);
-    return {sampled_at_ms:now,queued_realtime_messages:Number(row.queued),
-      oldest_realtime_age_ms:oldest>0?Math.max(0,now-oldest):0,retrying_realtime_messages:Number(row.retrying)};
+    const oldest = Number(row.oldest);
+    return {
+      sampled_at_ms: now,
+      queued_realtime_messages: Number(row.queued),
+      oldest_realtime_age_ms: oldest > 0 ? Math.max(0, now - oldest) : 0,
+      retrying_realtime_messages: Number(row.retrying),
+    };
   }
   stats() {
     const counts = this
@@ -277,7 +297,9 @@ export class MessageStore extends IdentityStore implements Repository {
       coalesce(min(CASE WHEN acked=1 THEN created END),0) AS oldest_confirmed_created_ms FROM messages`)!;
     return {
       ...counts,
-      ...this.first("SELECT coalesce(sum(deleted=0),0) AS states,coalesce(sum(length(CAST(payload AS BLOB))*(deleted=0)),0) AS state_bytes,count(*) AS state_watermarks FROM current_states"),
+      ...this.first(
+        "SELECT coalesce(sum(deleted=0),0) AS states,coalesce(sum(length(CAST(payload AS BLOB))*(deleted=0)),0) AS state_bytes,count(*) AS state_watermarks FROM current_states",
+      ),
       devices: this.first("SELECT count(*) AS n FROM devices")!.n,
       cleanup_confirmation_receipts: this.first(
         "SELECT count(*) AS n FROM confirmed_receipts",

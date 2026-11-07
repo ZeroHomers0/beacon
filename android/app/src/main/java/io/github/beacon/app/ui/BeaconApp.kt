@@ -18,7 +18,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import io.github.beacon.app.BuildConfig
@@ -218,7 +217,6 @@ fun BeaconApp(
             }
         }
         val messageScroll = rememberLazyListState()
-        val messageHeaderScroll = io.github.beacon.app.ui.components.rememberBeaconSearchScrollState(messageScroll)
         val statesScroll = rememberLazyListState()
         androidx.lifecycle.compose.LifecycleEventEffect(
             androidx.lifecycle.Lifecycle.Event.ON_STOP
@@ -350,19 +348,9 @@ fun BeaconApp(
             ui.page == 2 -> statesBarBehavior
             else -> messageBarBehavior
         }
-        // The home page has no title at any window size; selection still shows its count.
-        val compactBar = ui.page == 0 || detail != null
-        val activeScroll = when (ui.page) {
-            0 -> messageScroll
-            2 -> statesScroll
-            else -> settingsScrollStates.getValue(ui.settingsScreen)
-        }
-        val scrollProgress = if (ui.page == 0) messageHeaderScroll.progress
-            else io.github.beacon.app.ui.components.rememberBeaconScrollProgress(activeScroll)
-        androidx.compose.runtime.CompositionLocalProvider(
-            io.github.beacon.app.ui.components.LocalBeaconScrollProgress provides scrollProgress,
-        ) {
-        val renderTopBar: @Composable (SettingsScreen?) -> Unit = { screen ->
+        // Ordinary pages use the same large, scroll-collapsing title.
+        val compactBar = detail != null || (ui.page == 0 && ui.selectionMode)
+        val renderTopBar: @Composable (Int?, SettingsScreen?) -> Unit = { page, screen ->
             BeaconTopBarArea(
                             ui = ui,
                             runtimeState = runtimeState,
@@ -371,14 +359,13 @@ fun BeaconApp(
                             adminModel = adminModel,
                             updateState = updateState,
                             detailTransition = detailTransition,
-                            settingsTransition = settingsTransition,
-                            settingsMotion = settingsMotion,
                             pager = pager,
                             barBehavior = barBehavior,
                             settingsBarBehaviors = settingsBarBehaviors,
                             pageBarBehaviors = mapOf(0 to messageBarBehavior, 2 to statesBarBehavior),
                             navigate = navigate,
                             settingsScreenOverride = screen,
+                            pageOverride = page,
                         )
         }
         Row(Modifier.fillMaxSize()) {
@@ -387,7 +374,7 @@ fun BeaconApp(
                     snackbar = snackbar,
                     bottomBar = {},
                     topBar = {
-                        renderTopBar(null)
+                        renderTopBar(null, null)
                     },
                 ) { insets ->
                     BeaconContentArea(
@@ -399,12 +386,12 @@ fun BeaconApp(
                         settingsTransition = settingsTransition,
                         settingsMotion = settingsMotion,
                         messageScroll = messageScroll,
-                        messageHeaderScroll = messageHeaderScroll,
                         statesScroll = statesScroll,
                         settingsScrollStates = settingsScrollStates,
                         barBehavior = barBehavior,
                         settingsBarBehaviors = settingsBarBehaviors,
-                        settingsTopBar = { screen -> renderTopBar(screen) },
+                        pageTopBar = { page, screen -> renderTopBar(page, screen) },
+                        pageBarBehaviors = mapOf(0 to messageBarBehavior, 2 to statesBarBehavior),
                         compactBar = compactBar,
                         sharedTitleLabel = null,
                         busy = busy,
@@ -420,7 +407,6 @@ fun BeaconApp(
                     )
                 }
             }
-        }
         }
     }
 }

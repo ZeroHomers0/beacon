@@ -18,7 +18,6 @@ import androidx.compose.ui.unit.sp
  */
 object BeaconUiMetrics {
     val PageInset = 16.dp
-    val TopGlassBlurRadius = 18.dp
     val NewMessagesMinHeight = 56.dp
     val FloatingActionElevation = 6.dp
     val FloatingActionHorizontalInset = 24.dp
@@ -36,8 +35,6 @@ object BeaconUiMetrics {
 
     /** List search field: 36dp pairs with the 14sp search text so the pill is not mostly padding. */
     val SearchFieldMinHeight = 36.dp
-    val SearchCollapseDistance = 160.dp
-    val SearchFadeBlurRadius = 6.dp
     val SummarySwitchInset = 3.dp
     val SearchFieldVerticalInset = 6.dp
     val SearchFieldLeadingInset = 14.dp

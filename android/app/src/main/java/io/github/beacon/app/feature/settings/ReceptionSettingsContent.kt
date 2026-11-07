@@ -27,11 +27,9 @@ import io.github.beacon.app.ui.components.SettingsFieldGroup
 import io.github.beacon.app.ui.components.SettingsGroup
 import io.github.beacon.app.ui.components.SettingsPreferences
 import io.github.beacon.app.ui.components.SettingsRow
-import io.github.beacon.app.ui.components.SettingsSection
 import io.github.beacon.app.ui.components.SettingsOverviewCard
 import io.github.beacon.app.ui.components.SettingsOverviewField
 import io.github.beacon.app.ui.components.formatMessageTime
-import io.github.beacon.app.ui.components.receiveModeIcon
 import io.github.beacon.app.ui.components.receiveModeTitle
 
 /**

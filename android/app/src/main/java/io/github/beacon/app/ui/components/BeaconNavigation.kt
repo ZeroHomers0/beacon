@@ -9,7 +9,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBarItem as MaterialNavigationItem
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
@@ -17,13 +16,10 @@ import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 import io.github.beacon.app.ui.icons.BeaconIcons
-import top.yukonga.miuix.kmp.basic.NavigationBarItem as MiuixNavigationItem
 
 @Composable
 fun BeaconScaffold(
@@ -60,96 +56,6 @@ fun BeaconScaffold(
     }
 }
 
-@Composable
-fun BeaconNavigation(
-    page: Int,
-    titleRes: List<Int>,
-    rail: Boolean = false,
-    onNavigate: (Int) -> Unit,
-) {
-    val icons = listOf(BeaconIcons.Messages, BeaconIcons.Settings, BeaconIcons.Topics)
-    if (rail) {
-        if (miuix()) {
-            val railColor = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surface
-            top.yukonga.miuix.kmp.basic.NavigationRail(
-                color = railColor,
-                modifier =
-                    Modifier.fillMaxHeight()
-                        .background(railColor)
-                        .windowInsetsPadding(
-                            WindowInsets.safeDrawing.only(
-                                WindowInsetsSides.Start +
-                                    WindowInsetsSides.Top +
-                                    WindowInsetsSides.Bottom
-                            )
-                        ),
-            ) {
-                titleRes.indices.sortedBy{when(it){0->0;2->1;else->2}}.forEach { index ->
-                val res=titleRes[index]
-                    top.yukonga.miuix.kmp.basic.NavigationRailItem(
-                        page == index,
-                        { onNavigate(index) },
-                        icons[index],
-                        stringResource(res),
-                    )
-                }
-            }
-            return
-        }
-        androidx.compose.material3.NavigationRail(
-            Modifier.fillMaxHeight()
-                .width(96.dp)
-                .background(androidx.compose.material3.MaterialTheme.colorScheme.surface)
-                .windowInsetsPadding(
-                    WindowInsets.safeDrawing.only(
-                        WindowInsetsSides.Start + WindowInsetsSides.Top + WindowInsetsSides.Bottom
-                    )
-                )
-        ) {
-            Spacer(Modifier.height(24.dp))
-            titleRes.indices.sortedBy{when(it){0->0;2->1;else->2}}.forEach { index ->
-                val res=titleRes[index]
-                androidx.compose.material3.NavigationRailItem(
-                    selected = page == index,
-                    onClick = { onNavigate(index) },
-                    icon = { androidx.compose.material3.Icon(icons[index], null) },
-                    label = { BeaconText(stringResource(res)) },
-                )
-            }
-        }
-        return
-    }
-    if (miuix())
-        BeaconGlassSurface(MaterialTheme.colorScheme.surface) {
-            top.yukonga.miuix.kmp.basic.NavigationBar(
-                color = androidx.compose.ui.graphics.Color.Transparent,
-                showDivider = LocalBeaconGlass.current?.available != true,
-            ) {
-                titleRes.indices.sortedBy{when(it){0->0;2->1;else->2}}.forEach { index ->
-                    val res=titleRes[index]
-                    MiuixNavigationItem(
-                        page == index,
-                        { onNavigate(index) },
-                        icons[index],
-                        stringResource(res),
-                    )
-                }
-            }
-        }
-    else
-        androidx.compose.material3.NavigationBar {
-            titleRes.indices.sortedBy{when(it){0->0;2->1;else->2}}.forEach { index ->
-                val res=titleRes[index]
-                MaterialNavigationItem(
-                    page == index,
-                    onClick = { onNavigate(index) },
-                    icon = { androidx.compose.material3.Icon(icons[index], null) },
-                    label = { BeaconText(stringResource(res)) },
-                )
-            }
-        }
-}
-
 /** Single preference row: selected value at the right, choices in a focused popup. */
 @Composable
 fun BeaconDropdownPreference(
@@ -159,7 +65,6 @@ fun BeaconDropdownPreference(
     enabled: Boolean = true,
     icon: ImageVector? = null,
     settingsRow: Boolean = false,
-    stacked: Boolean = false,
     itemLeading: (@Composable (Int) -> Unit)? = null,
     onSelected: (Int) -> Unit,
 ) {

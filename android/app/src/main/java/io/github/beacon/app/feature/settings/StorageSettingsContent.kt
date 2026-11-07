@@ -142,8 +142,7 @@ internal fun StorageSettingsPanel(
                     else BeaconUnknownValue
                     // Keep the same record slot for initial loading, disabled and enabled states.
                     DiagnosticRow(
-                        stringResource(R.string.storage_last_result_label), result.ifBlank { BeaconUnknownValue },
-                        reserveValueLines = 2)
+                        stringResource(R.string.storage_last_result_label), result.ifBlank { BeaconUnknownValue })
 
                 },
             )

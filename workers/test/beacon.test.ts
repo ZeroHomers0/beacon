@@ -8,7 +8,7 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 import worker, { BeaconInstance, Env } from "../src/index";
 import { DAY, GRACE, PENDING, RECEIPT } from "../src/domain";
-import { MessageStore } from "../src/store/messages";
+import { SqliteRepository } from "../src/store/repository";
 
 const bindings = env as unknown as Env;
 const admin = "test-only-admin-token-32-characters";
@@ -251,7 +251,7 @@ describe("Beacon protocol and durable delivery", () => {
       stub(),
       async (instance: BeaconInstance, state) => {
         await instance.arm();
-        const store = new MessageStore(state.storage);
+        const store = new SqliteRepository(state.storage);
         return store.save(
           { device: device.device_id, application: "", priority: 5 },
           "",
@@ -333,7 +333,7 @@ describe("Beacon protocol and durable delivery", () => {
       stub(),
       async (instance: BeaconInstance, state) => {
         await instance.arm();
-        new MessageStore(state.storage).revoke(device.device_id);
+        new SqliteRepository(state.storage).revoke(device.device_id);
       },
     );
     await evictDurableObject(stub(), { webSockets: "hibernate" });

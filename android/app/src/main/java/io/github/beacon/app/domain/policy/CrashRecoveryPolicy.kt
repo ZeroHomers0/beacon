@@ -36,9 +36,6 @@ object CrashRecoveryPolicy {
     const val WINDOW_MS = 10 * 60 * 1000L
     const val MAX_ATTEMPTS = 5
 
-    /** Recovery target from the requirements: attempt within 60 s of an unexpected exit. */
-    const val RECOVERY_DEADLINE_MS = 60_000L
-
     fun delayMs(attempt: Int): Long {
         require(attempt >= 1) { "attempt must be positive" }
         return BACKOFF_MS[minOf(attempt, BACKOFF_MS.size) - 1]

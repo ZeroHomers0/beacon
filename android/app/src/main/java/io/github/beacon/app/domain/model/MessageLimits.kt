@@ -25,6 +25,5 @@ object MessageLimits {
         }
         return value.toByteArray(Charsets.UTF_8).size <= maxBytes
     }
-    const val SOURCE_NAME_CHARACTERS = 40
     const val MUTATION_BATCH_SIZE = 100
 }

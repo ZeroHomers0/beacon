@@ -138,17 +138,6 @@ class BeaconUiState(
         }
     }
 
-    fun navigateSettingsAncestor(destination: SettingsScreen) {
-        val index = settingsHistory.indexOf(destination)
-        if (index < 0) { navigateSettings(destination); return }
-        requestNavigation(destination) {
-            invalidateQuietHoursOnExit(destination)
-            settingsNavigatingBack = true
-            settingsHistory = ArrayList(settingsHistory.take(index))
-            settingsScreen = destination
-        }
-    }
-
     fun backSettings() {
         requestNavigation(settingsBackTarget) {
             settingsNavigatingBack = true

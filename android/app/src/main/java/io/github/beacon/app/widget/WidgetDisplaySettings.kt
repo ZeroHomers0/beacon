@@ -1,5 +1,6 @@
 package io.github.beacon.app.widget
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -32,6 +33,7 @@ internal fun rememberWidgetClock(row:JSONObject?,config:JSONObject):Long {
 
 @Composable
 internal fun WidgetDisplaySettings(row:JSONObject,config:JSONObject,onChange:(JSONObject)->Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SettingsGroupGap)) {
     SettingsGroup("点击行为") {
         BeaconDropdownPreference("单击小组件",listOf("不执行操作","查看完整内容"),
             if(config.optString("tap_action")=="detail")1 else 0,settingsRow=true,icon=BeaconIcons.Info){index->
@@ -57,5 +59,6 @@ internal fun WidgetDisplaySettings(row:JSONObject,config:JSONObject,onChange:(JS
                     placeholder=block.optString("label",id))
             }
         }
+    }
     }
 }

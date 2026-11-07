@@ -6,8 +6,6 @@
 package io.github.beacon.app.ui.components
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.border
-import androidx.compose.foundation.background
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.text.KeyboardActions

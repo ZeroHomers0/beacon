@@ -4,7 +4,6 @@ import android.Manifest
 import android.app.*
 import android.content.*
 import android.content.pm.PackageManager
-import android.os.Build
 import io.github.beacon.app.R
 import io.github.beacon.app.data.local.StateCache
 import org.json.JSONObject
@@ -17,7 +16,7 @@ class StateDismissReceiver: BroadcastReceiver(){
 }
 object StateNotifications {
     @Synchronized fun refresh(context:Context,changes:Map<String,Set<String>?>?=null){
-        val postable=Build.VERSION.SDK_INT<33||context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)==PackageManager.PERMISSION_GRANTED
+        val postable=context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)==PackageManager.PERMISSION_GRANTED
         val manager=context.getSystemService(NotificationManager::class.java)
         if(manager.getNotificationChannel("beacon_states")==null)manager.createNotificationChannel(NotificationChannel("beacon_states","状态更新",NotificationManager.IMPORTANCE_LOW))
         if(manager.getNotificationChannel("beacon_states_first")==null)manager.createNotificationChannel(NotificationChannel("beacon_states_first","状态首次提醒",NotificationManager.IMPORTANCE_DEFAULT))

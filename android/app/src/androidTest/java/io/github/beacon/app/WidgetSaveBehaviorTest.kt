@@ -51,6 +51,9 @@ class WidgetSaveBehaviorTest {
                         rule.waitForIdle();scenario.onActivity{assertFalse(it.isFinishing)}
                         rule.onAllNodesWithText("小组件设置").onFirst().assertExists();save.assertIsNotEnabled()
                     }else save.assertIsNotEnabled()
+
+                    rule.onNodeWithTag("settings-list").performScrollToNode(hasText("更多设置"))
+                    rule.onNodeWithText("更多设置").performClick()
                     rule.onNodeWithTag("settings-list").performScrollToNode(hasSetTextAction())
                     val name=rule.onAllNodes(hasSetTextAction()).onFirst()
                     name.performTextReplacement("我的组件");save.assertIsEnabled().performClick()

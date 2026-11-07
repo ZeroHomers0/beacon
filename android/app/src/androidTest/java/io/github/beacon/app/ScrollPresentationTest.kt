@@ -43,16 +43,15 @@ class ScrollPresentationTest {
             var query by mutableStateOf("")
             var submitted = 0
             var rowCount by mutableIntStateOf(100)
-            var half = 0
+            val half = 80
             rule.runOnUiThread { rule.activity.setContent {
                 val density = LocalDensity.current
                 CompositionLocalProvider(LocalDensity provides Density(density.density, font)) {
                     BeaconTheme(style, mode) {
                         scroll = rememberLazyListState(); scope = rememberCoroutineScope()
                         focus = LocalFocusManager.current
-                        half = with(LocalDensity.current) { (BeaconUiMetrics.SearchCollapseDistance / 2).roundToPx() }
                         Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).safeDrawingPadding()) {
-                            BeaconSearchBox(query, { query = it }, "搜索测试", scroll = scroll, onSearch = { submitted++ })
+                            BeaconSearchBox(query, { query = it }, "搜索测试", onSearch = { submitted++ })
                             LazyColumn(state = scroll, modifier = Modifier.weight(1f).testTag("search-list")) {
                                 items(rowCount) { BeaconText("列表项目 $it", Modifier.fillMaxWidth().height(48.dp)) }
                             }
@@ -60,33 +59,33 @@ class ScrollPresentationTest {
                     }
                 }
             } }
-            val full = rule.onNodeWithTag(SEARCH_COLLAPSE_TAG).getUnclippedBoundsInRoot()
+            val full = rule.onNodeWithTag(SEARCH_SURFACE_TAG).getUnclippedBoundsInRoot()
             capture("search-full-$style-$mode-$font")
             rule.runOnIdle { scope.launch { scroll.animateScrollToItem(0, half) } }
-            val partial = rule.onNodeWithTag(SEARCH_COLLAPSE_TAG).getUnclippedBoundsInRoot()
+            val partial = rule.onNodeWithTag(SEARCH_SURFACE_TAG).getUnclippedBoundsInRoot()
             assertEquals(full.width.value, partial.width.value, 1f)
-            assertEquals(full.height.value / 2, partial.height.value, 1f)
+            assertEquals(full.height.value, partial.height.value, 1f)
             capture("search-half-$style-$mode-$font")
             rule.onNodeWithTag(SEARCH_BOX_TAG).performTextReplacement("保留查询")
-            assertEquals(full.width.value, rule.onNodeWithTag(SEARCH_COLLAPSE_TAG).getUnclippedBoundsInRoot().width.value, 1f)
+            assertEquals(full.width.value, rule.onNodeWithTag(SEARCH_SURFACE_TAG).getUnclippedBoundsInRoot().width.value, 1f)
             rule.runOnIdle { focus.clearFocus(); scope.launch { scroll.animateScrollToItem(4) } }
-            rule.onNodeWithTag(SEARCH_BOX_TAG).assertDoesNotExist()
+            rule.onNodeWithTag(SEARCH_BOX_TAG).assertIsDisplayed()
             rule.runOnIdle { assertEquals("保留查询", query); assertEquals(0, submitted) }
             capture("search-hidden-$style-$mode-$font")
             rule.runOnIdle { rowCount = 1 }
             rule.waitForIdle()
-            rule.onNodeWithTag(SEARCH_BOX_TAG).assertDoesNotExist()
+            rule.onNodeWithTag(SEARCH_BOX_TAG).assertIsDisplayed()
             rule.runOnIdle { rowCount = 100 }
             rule.waitForIdle()
-            rule.onNodeWithTag(SEARCH_BOX_TAG).assertDoesNotExist()
+            rule.onNodeWithTag(SEARCH_BOX_TAG).assertIsDisplayed()
             rule.runOnIdle { scope.launch { scroll.animateScrollToItem(4) } }
 
             rule.runOnIdle { scope.launch { scroll.animateScrollToItem(0) } }
             rule.onNodeWithTag(SEARCH_BOX_TAG).assertExists()
             rule.onNodeWithText("保留查询").assertExists()
-            assertEquals(full.height.value, rule.onNodeWithTag(SEARCH_COLLAPSE_TAG).getUnclippedBoundsInRoot().height.value, 1f)
+            assertEquals(full.height.value, rule.onNodeWithTag(SEARCH_SURFACE_TAG).getUnclippedBoundsInRoot().height.value, 1f)
             capture("search-restored-$style-$mode-$font")
-            assertEquals(full.width.value, rule.onNodeWithTag(SEARCH_COLLAPSE_TAG).getUnclippedBoundsInRoot().width.value, 1f)
+            assertEquals(full.width.value, rule.onNodeWithTag(SEARCH_SURFACE_TAG).getUnclippedBoundsInRoot().width.value, 1f)
         }
     }
 
@@ -100,11 +99,6 @@ class ScrollPresentationTest {
                 CompositionLocalProvider(LocalDensity provides Density(density.density, font)) {
                     BeaconTheme(style, mode) {
                         Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).safeDrawingPadding().padding(16.dp)) {
-                            Row(Modifier.fillMaxWidth().testTag("old-switch")) {
-                                BeaconSummaryPill("全部 20", BeaconIcons.Mail, modifier = Modifier.weight(1f), compact = true, onClick = {})
-                                BeaconSummaryPill("未读 12", BeaconIcons.Messages, modifier = Modifier.weight(1f), compact = true, onClick = {})
-                            }
-                            Spacer(Modifier.height(16.dp))
                             Box(Modifier.testTag("new-switch")) {
                                 BeaconListSwitch(listOf("全部 20", "未读 12"), listOf(BeaconIcons.Mail, BeaconIcons.Messages),
                                     selected.intValue, enabled.value, onSelected = { selected.intValue = it; calls++ })
@@ -117,7 +111,6 @@ class ScrollPresentationTest {
                 }
             } }
             val initial = rule.onNodeWithTag("new-switch").getUnclippedBoundsInRoot()
-            assertEquals(rule.onNodeWithTag("old-switch").getUnclippedBoundsInRoot().height.value, initial.height.value, .5f)
             val second = rule.onNode(hasText("未读 12") and hasAnyAncestor(hasTestTag("new-switch")))
             rule.mainClock.autoAdvance = false
             second.performClick()
@@ -136,12 +129,11 @@ class ScrollPresentationTest {
     }
 
     private fun header(mode: BeaconThemeMode) {
-        val progress = mutableFloatStateOf(0f)
+        lateinit var behavior: BeaconBarBehavior
         var clicks = 0
         rule.runOnUiThread { rule.activity.setContent {
             BeaconTheme(BeaconUiStyle.MIUIX, mode) {
-                val behavior = rememberBeaconBarBehavior()
-                CompositionLocalProvider(LocalBeaconScrollProgress provides { progress.floatValue }) {
+                behavior = rememberBeaconBarBehavior()
                     BeaconScaffold(topBar = {
                         BeaconTopBar("滚动顶栏", true, behavior,
                             navigationIcon = { BeaconIconButton({ clicks++ }, Modifier.testTag("back-control")) {
@@ -150,22 +142,21 @@ class ScrollPresentationTest {
                     }, bottomBar = {}) { padding ->
                         Box(Modifier.fillMaxSize().background(Color(0xFFA8C9E5)).padding(padding))
                     }
-                }
             }
         } }
         val back = rule.onNodeWithTag("back-control")
         val before = back.captureToImage().asAndroidBitmap()
         val bounds = back.getUnclippedBoundsInRoot()
         capture("header-clear-$mode")
-        rule.runOnIdle { progress.floatValue = 1f }
+        rule.runOnIdle { behavior.miuix.state.heightOffset = behavior.miuix.state.heightOffsetLimit }
         val after = back.captureToImage().asAndroidBitmap()
-        assertNotEquals(before.getPixel(before.width / 8, before.height / 2), after.getPixel(after.width / 8, after.height / 2))
+        assertEquals(before.getPixel(before.width / 8, before.height / 2), after.getPixel(after.width / 8, after.height / 2))
         assertEquals(bounds, back.getUnclippedBoundsInRoot())
         back.performClick()
         rule.onNodeWithContentDescription("刷新测试").performClick()
         rule.runOnIdle { assertEquals(2, clicks) }
-        capture("header-glass-$mode")
-        rule.runOnIdle { progress.floatValue = 0f }
+        capture("header-scrolled-$mode")
+        rule.runOnIdle { behavior.miuix.state.heightOffset = 0f }
         rule.mainClock.advanceTimeBy(1000)
         val restored = back.captureToImage().asAndroidBitmap()
         assertEquals(before.getPixel(before.width / 8, before.height / 2), restored.getPixel(restored.width / 8, restored.height / 2))
@@ -180,10 +171,10 @@ class ScrollPresentationTest {
             android.os.ParcelFileDescriptor.AutoCloseInputStream(automation.executeShellCommand(command)).use { it.readBytes() }
     }
 
-    @Test fun materialSearchCollapsesAndKeepsQuery() = search(BeaconUiStyle.MATERIAL3)
-    @Test fun miuixSearchCollapsesAndKeepsQuery() = search(BeaconUiStyle.MIUIX)
+    @Test fun materialSearchKeepsSizeAndQuery() = search(BeaconUiStyle.MATERIAL3)
+    @Test fun miuixSearchKeepsSizeAndQuery() = search(BeaconUiStyle.MIUIX)
     @Test fun materialSwitchHeightAndSelection() = switch(BeaconUiStyle.MATERIAL3)
     @Test fun miuixSwitchHeightAndSelection() = switch(BeaconUiStyle.MIUIX)
-    @Test fun miuixHeaderRevealsLight() = header(BeaconThemeMode.LIGHT)
-    @Test fun miuixHeaderRevealsDark() = header(BeaconThemeMode.DARK)
+    @Test fun miuixHeaderKeepsTransparentButtonsLight() = header(BeaconThemeMode.LIGHT)
+    @Test fun miuixHeaderKeepsTransparentButtonsDark() = header(BeaconThemeMode.DARK)
 }

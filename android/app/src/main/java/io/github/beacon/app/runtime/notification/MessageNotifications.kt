@@ -9,10 +9,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import io.github.beacon.app.MainActivity
 import io.github.beacon.app.R
-import io.github.beacon.app.data.remote.MessageActionsCodec
 import io.github.beacon.app.domain.model.IncomingMessage
 import io.github.beacon.app.domain.model.MessageLinkAction
 import io.github.beacon.app.domain.model.NotificationSettings
@@ -77,7 +75,6 @@ class MessageNotifications(
     fun post(batch: NotificationBatch): Boolean {
         settings.validate()
         if (
-            Build.VERSION.SDK_INT >= 33 &&
                 context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
                     PackageManager.PERMISSION_GRANTED
         )
@@ -232,9 +229,7 @@ class MessageNotifications(
         val builder = Notification.Action.Builder(null, context.getString(label), read)
         // A label alone does not tell the platform what an action means; the semantic does. Both
         // constants only exist from API 28 on.
-        if (Build.VERSION.SDK_INT >= 28) {
-            builder.setSemanticAction(Notification.Action.SEMANTIC_ACTION_MARK_AS_READ)
-        }
+        builder.setSemanticAction(Notification.Action.SEMANTIC_ACTION_MARK_AS_READ)
         return builder.build()
     }
 
@@ -278,7 +273,7 @@ class MessageNotifications(
                             MessageLinkAction(context.getString(R.string.message_action_open), url)
                         )
                 }
-                .also(MessageActionsCodec::validate)
+                .also(io.github.beacon.app.domain.policy.MessageActionValidation::validate)
         }
             .getOrDefault(emptyList())
         return available
@@ -339,7 +334,6 @@ class MessageNotifications(
          */
         fun postable(context: Context): Boolean {
             if (
-                Build.VERSION.SDK_INT >= 33 &&
                     context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) !=
                         PackageManager.PERMISSION_GRANTED
             )

@@ -137,4 +137,3 @@ class MessagePredictiveBackTest {
     @Test fun detailNormalBackHeaderMiuix() = navigation(BeaconUiStyle.MIUIX, normalBack = true)
     @Test fun detailNormalBackHeaderMaterial() = navigation(BeaconUiStyle.MATERIAL3, normalBack = true)
 }
-

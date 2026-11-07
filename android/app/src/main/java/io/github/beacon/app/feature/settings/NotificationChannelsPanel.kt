@@ -3,12 +3,9 @@ package io.github.beacon.app.feature.settings
 import android.app.NotificationManager
 import android.content.Intent
 import android.provider.Settings
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.NotificationChannelKind
 import io.github.beacon.app.ui.components.*

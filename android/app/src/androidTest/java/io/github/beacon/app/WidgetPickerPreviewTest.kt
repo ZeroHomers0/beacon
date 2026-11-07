@@ -1,7 +1,6 @@
 package io.github.beacon.app
 import android.appwidget.AppWidgetManager
 import android.graphics.Bitmap
-import android.content.ComponentName
 import androidx.test.platform.app.InstrumentationRegistry
 import io.github.beacon.app.widget.*
 import org.json.JSONObject

@@ -2,8 +2,6 @@
 
 package io.github.beacon.app.ui.components
 
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -123,19 +121,6 @@ fun SettingsPreferences(title: String, content: @Composable ColumnScope.() -> Un
             content = content,
         )
     }
-}
-
-@Composable
-fun SettingsPreferenceActions(content: @Composable ColumnScope.() -> Unit) {
-    Column(
-        Modifier.fillMaxWidth()
-            .padding(
-                top = BeaconUiMetrics.SectionGap,
-                bottom = BeaconUiMetrics.CardInset - BeaconUiMetrics.PreferenceInset,
-            ),
-        verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SectionGap),
-        content = content,
-    )
 }
 
 /**
@@ -655,7 +640,7 @@ internal fun MessageFilterTag(
                 if (compact)
                     MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 14.sp)
                 else MaterialTheme.typography.labelSmall,
-            color = beaconTagContent(toneSlot),
+            color = BeaconTagInk,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )

@@ -140,7 +140,7 @@ func TestDeviceRevocationPersistsAndPreservesMessages(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = a.service.Push(credentials.DeviceID, "title", "", "body"); err != nil {
+	if _, err = a.service.PushPriority(credentials.DeviceID, "title", "", "body", nil); err != nil {
 		t.Fatal(err)
 	}
 	if err = a.service.RevokeDevice(credentials.DeviceID); err != nil {

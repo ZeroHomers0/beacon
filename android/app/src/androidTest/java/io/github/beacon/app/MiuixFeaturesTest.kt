@@ -41,7 +41,7 @@ class MiuixFeaturesTest {
         rule.onNodeWithTag("route-SERVER_ADMIN").assertExists()
         rule.runOnIdle { ui.navigateSettings(SettingsScreen.SERVER_DEVICES) }
         rule.onNodeWithTag("route-SERVER_DEVICES").assertExists()
-        rule.runOnIdle { ui.shouldConfirmExit = { true }; ui.navigateSettingsAncestor(SettingsScreen.HOME) }
+        rule.runOnIdle { ui.shouldConfirmExit = { true }; ui.navigateSettings(SettingsScreen.HOME) }
         rule.runOnIdle { assertEquals(SettingsScreen.SERVER_DEVICES, ui.settingsScreen); assertNotNull(ui.pendingNavigation) }
         rule.onNodeWithTag("route-SERVER_DEVICES").assertExists()
         rule.runOnIdle { ui.discardAndContinue() }

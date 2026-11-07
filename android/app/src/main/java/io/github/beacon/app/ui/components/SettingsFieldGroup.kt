@@ -13,4 +13,3 @@ fun SettingsFieldGroup(vararg rows: @Composable () -> Unit) {
         }
     }
 }
-

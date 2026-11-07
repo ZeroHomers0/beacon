@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"beacon.local/server/internal/domain"
 	"net/http/httptest"
 	"path/filepath"
 	"strings"
@@ -77,10 +78,10 @@ func TestAdminApplicationDeletionRequiresRevocationAndRemovesItsMessages(t *test
 	if _, err = a.service.PushPriority(device.DeviceID, "manual", "", "body", nil); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = a.service.PushCredential(first.Token, "one", "", "body", nil); err != nil {
+	if _, err = a.service.PushWithOptions(first.Token, "one", "", "body", nil, domain.PushOptions{}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = a.service.PushCredential(second.Token, "two", "", "body", nil); err != nil {
+	if _, err = a.service.PushWithOptions(second.Token, "two", "", "body", nil, domain.PushOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	firstPayload := `{"id":"` + first.ID + `"}`
@@ -106,10 +107,10 @@ func TestAdminApplicationDeletionRequiresRevocationAndRemovesItsMessages(t *test
 		}
 	}
 	// The removed credential no longer authenticates, while the surviving one still does.
-	if _, err = a.service.PushCredential(first.Token, "gone", "", "body", nil); err == nil {
+	if _, err = a.service.PushWithOptions(first.Token, "gone", "", "body", nil, domain.PushOptions{}); err == nil {
 		t.Fatal("deleted application credential accepted")
 	}
-	if _, err = a.service.PushCredential(second.Token, "still", "", "body", nil); err != nil {
+	if _, err = a.service.PushWithOptions(second.Token, "still", "", "body", nil, domain.PushOptions{}); err != nil {
 		t.Fatal("sibling application credential rejected", err)
 	}
 }

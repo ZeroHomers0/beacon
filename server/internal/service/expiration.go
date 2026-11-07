@@ -31,8 +31,5 @@ func RunDeliveryExpiration(ctx context.Context, repository DeliveryExpirationSto
 }
 
 func (s *Service) ExpiredMessages(device string) (int64, error) {
-	if repository, ok := s.repository.(interface{ ExpiredMessages(string) (int64, error) }); ok {
-		return repository.ExpiredMessages(device)
-	}
-	return 0, nil
+	return s.repository.ExpiredMessages(device)
 }

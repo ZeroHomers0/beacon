@@ -56,10 +56,10 @@ internal fun BeaconBackHandlers(
         }
     }
     val predictiveSettingsBack =
-        ui.page == 1 &&
+        ui.uiStyle != io.github.beacon.app.domain.model.BeaconUiStyle.MIUIX &&
+            ui.page == 1 &&
             ui.settingsScreen != SettingsScreen.HOME &&
-            runtimeState.selectedMessage == null &&
-            !runtimeState.messageBusy
+            runtimeState.selectedMessage == null
     PredictiveBackHandler(enabled = predictiveSettingsBack) { events ->
         settingsBackReset.stop()
         val original = ui.settingsScreen
@@ -81,8 +81,7 @@ internal fun BeaconBackHandlers(
     val predictivePageBack =
         ui.page == 1 &&
             ui.settingsScreen == SettingsScreen.HOME &&
-            runtimeState.selectedMessage == null &&
-            !runtimeState.messageBusy
+            runtimeState.selectedMessage == null
     PredictiveBackHandler(enabled = predictivePageBack) { events ->
         focus.clearFocus()
         try {
@@ -102,6 +101,8 @@ internal fun BeaconBackHandlers(
             !predictiveSettingsBack &&
                 !predictiveDetailBack &&
                 !predictivePageBack &&
+                !(ui.uiStyle == io.github.beacon.app.domain.model.BeaconUiStyle.MIUIX &&
+                    ui.page == 1 && ui.settingsScreen != SettingsScreen.HOME && runtimeState.selectedMessage == null) &&
                 (runtimeState.selectedMessage != null ||
                     ui.page != 0 ||
                     ui.selectionMode ||

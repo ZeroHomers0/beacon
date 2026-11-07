@@ -6,17 +6,11 @@
     <string name="ui_v2_receive_mode_dialog_title">选择接收模式</string>
     <string name="ui_v2_examples_formats">curl / PowerShell / JSON</string>
     <string name="ui_v2_quiet_scope_short">只影响通知提醒，不停止消息接收</string>
-    <string name="ui_v2_quiet_effect">免打扰期间</string>
     <string name="ui_v2_quiet_section">免打扰</string>
     <string name="ui_v2_docs">使用与部署文档</string>
     <string name="ui_v2_copy_device_id">复制完整设备 ID</string>
     <string name="ui_v2_priority">消息优先级</string>
     <string name="ui_v2_read_state">阅读状态</string>
     <string name="ui_v2_expiry">有效期至</string>
-    <string name="ui_v2_export_settings_hint">保存当前配置</string>
-    <string name="ui_v2_import_settings_hint">从备份文件恢复</string>
-    <string name="ui_v2_export_history_hint">保存本地历史消息</string>
-    <string name="ui_v2_import_history_hint">从备份恢复历史</string>
-    <string name="ui_v2_expand_examples">展开 API 示例</string>
     <string name="ui_v2_power_conditions_title">省电接收条件</string>
 </resources>

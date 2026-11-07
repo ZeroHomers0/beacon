@@ -3,7 +3,7 @@ import { reset, runInDurableObject, evictDurableObject } from "cloudflare:test";
 import { afterEach, expect, it } from "vitest";
 import worker, { BeaconInstance, type Env } from "../src/index";
 import { validateMessageActions as actions, message } from "../src/domain";
-import { MessageStore } from "../src/store/messages";
+import { SqliteRepository } from "../src/store/repository";
 import { migrate } from "../src/store/schema";
 const bindings = env as unknown as Env;
 const stub = () => bindings.BEACON.get(bindings.BEACON.idFromName(bindings.BEACON_INSTANCE));
@@ -41,7 +41,7 @@ it("persists actions across eviction, pages and realtime rows and detects retry 
   expect((await call("/api/v1/push",device.push_key,{...payload,actions:[action]},"build")).status).toBe(409);
  const page=await (await call("/api/v1/messages",device.receive_token)).json<any>(); expect(page.messages[0].actions).toEqual(payload.actions);
  await runInDurableObject(stub(),(_instance:BeaconInstance,state)=>{
-  const store=new MessageStore(state.storage);expect(message(store.due(Date.now(),device.device_id)[0]).actions).toEqual(payload.actions);
+  const store=new SqliteRepository(state.storage);expect(message(store.due(Date.now(),device.device_id)[0]).actions).toEqual(payload.actions);
   const usage=[...state.storage.sql.exec("SELECT pending_bytes FROM devices")][0];
   expect(usage.pending_bytes).toBe(new TextEncoder().encode(payload.body+JSON.stringify(payload.actions)).length);
   store.ack(device.device_id,[first.id],Date.now());

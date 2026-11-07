@@ -38,7 +38,7 @@ func TestOperationalMetricsAndReadinessAreProtected(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = a.service.Push(device.DeviceID, "title", "", "body"); err != nil {
+	if _, err = a.service.PushPriority(device.DeviceID, "title", "", "body", nil); err != nil {
 		t.Fatal(err)
 	}
 	w := request("/api/admin/metrics", credential)

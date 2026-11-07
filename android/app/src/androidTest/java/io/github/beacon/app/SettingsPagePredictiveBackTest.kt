@@ -64,13 +64,13 @@ class SettingsPagePredictiveBackTest {
             rule.waitForIdle()
             assertEquals(1, model.uiState.page)
             val messages = rule.activity.getString(R.string.ui_nav_messages_title)
-            val preview = if (shortWindow) rule.onAllNodesWithTag(io.github.beacon.app.ui.components.SEARCH_COLLAPSE_TAG, useUnmergedTree = true).onFirst().getUnclippedBoundsInRoot() else null
+            val preview = if (shortWindow) rule.onAllNodesWithTag(io.github.beacon.app.ui.components.SEARCH_SURFACE_TAG, useUnmergedTree = true).onFirst().getUnclippedBoundsInRoot() else null
             rule.runOnUiThread { dispatcher.onBackPressed() }
             rule.waitUntil(15_000) { model.uiState.page == 0 }
             rule.waitForIdle()
             row.assertIsNotDisplayed()
             if (preview != null) {
-                val settled = rule.onAllNodesWithTag(io.github.beacon.app.ui.components.SEARCH_COLLAPSE_TAG, useUnmergedTree = true).onFirst().getUnclippedBoundsInRoot()
+                val settled = rule.onAllNodesWithTag(io.github.beacon.app.ui.components.SEARCH_SURFACE_TAG, useUnmergedTree = true).onFirst().getUnclippedBoundsInRoot()
                 assertTrue("The compact message search does not jump on commit", kotlin.math.abs(preview.top.value - settled.top.value) < 12f)
             }
             assertEquals(SettingsScreen.HOME, model.uiState.settingsScreen)
@@ -144,4 +144,3 @@ class SettingsPagePredictiveBackTest {
     @Test fun secondaryHeaderAndBodyMaterial() = secondaryPage(BeaconUiStyle.MATERIAL3)
 
 }
-

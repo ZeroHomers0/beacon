@@ -83,8 +83,6 @@ fun ReceiveModeButton(
 ) {
     // One shared gate: the system switch, the animator scale and this composition all agree now.
     val animationsEnabled = rememberSystemAnimationsEnabled()
-    val glass = miuix()
-    val glassAlpha = LocalBeaconToolbarGlassAlpha.current
     val modeColor = receiveModeColor(mode)
     val accent by animateColorAsState(
         if (serverIssue) MaterialTheme.colorScheme.error
@@ -243,50 +241,4 @@ fun BeaconPullToRefresh(
             content()
         }
     }
-}
-
-/** Small information pills and removable filters share the page's color and radius. */
-@Composable
-fun BeaconSummaryPill(
-    label: String, icon: ImageVector, highlighted: Boolean = false,
-    enabled: Boolean = true, onClick: (() -> Unit)? = null,
-    modifier: Modifier = Modifier,
-    compact: Boolean = false,
-) {
-    val darkSummary = MaterialTheme.colorScheme.background.luminance() < .5f
-    val summaryColor = if (darkSummary) {
-        if (highlighted) Color(0xFF3C3C3C) else Color(0xFF292929)
-    } else {
-        if (highlighted) Color(0xFFDDDDDD) else Color(0xFFEEEEEE)
-    }
-    Surface(
-        modifier = if (onClick == null) modifier else modifier
-            .heightIn(min = if (compact) InputChipDefaults.Height else BeaconUiMetrics.ControlMinHeight)
-            .clip(RoundedCornerShape(50))
-            .semantics { selected = highlighted }
-            .clickable(enabled = enabled, role = androidx.compose.ui.semantics.Role.Button, onClick = onClick),
-        shape = RoundedCornerShape(50),
-        color = summaryColor,
-    ) {
-        Row(
-            Modifier.padding(horizontal = 12.dp, vertical = if (compact) 2.dp else 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6, Alignment.CenterHorizontally),
-        ) {
-            Icon(
-                icon,
-                null,
-                Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.onSurface,
-            )
-            BeaconFittedText(label, Modifier.weight(1f), color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.labelMedium.copy(textAlign = androidx.compose.ui.text.style.TextAlign.Center))
-        }
-    }
-}
-
-/** KSU-style floating feedback: high contrast, rounded corners and swipe dismissal. */
-@Composable
-fun BeaconOperationSnackbar(data: SnackbarData) {
-    androidx.compose.material3.Snackbar(data)
 }

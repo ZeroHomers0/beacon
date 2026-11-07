@@ -3,7 +3,7 @@ import { API } from "./api";
 import { Attachment, MAINTENANCE, message, reject } from "./domain";
 import { error, json, negotiated } from "./http";
 import { REALTIME_ENVELOPE_PROTOCOL } from "./protocol";
-import { MessageStore } from "./store/messages";
+import { SqliteRepository } from "./store/repository";
 import { migrate } from "./store/schema";
 import type { Transport } from "./ports";
 
@@ -14,7 +14,7 @@ export interface Env {
   HISTORY_RETENTION_DAYS: string;
 }
 export class BeaconInstance extends DurableObject<Env> implements Transport {
-  private store: MessageStore;
+  private store: SqliteRepository;
   private api: API;
   private retention: number;
   constructor(ctx: DurableObjectState, env: Env) {
@@ -27,7 +27,7 @@ export class BeaconInstance extends DurableObject<Env> implements Transport {
     )
       throw new Error("invalid retention configuration");
     this.retention = Math.min(30, Math.max(1, this.retention));
-    this.store = new MessageStore(ctx.storage);
+    this.store = new SqliteRepository(ctx.storage);
     this.api = new API(this.store, this, env.ADMIN_TOKEN);
     ctx.blockConcurrencyWhile(async () => {
       migrate(ctx.storage);

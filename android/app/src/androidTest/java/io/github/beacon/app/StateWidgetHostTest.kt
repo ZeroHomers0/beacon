@@ -2,7 +2,6 @@ package io.github.beacon.app
 
 import android.appwidget.AppWidgetHost
 import android.appwidget.AppWidgetManager
-import android.content.ComponentName
 import android.os.Bundle
 import android.widget.ImageView
 import android.graphics.drawable.BitmapDrawable

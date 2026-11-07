@@ -21,7 +21,6 @@ import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.ReceiveMode
 import io.github.beacon.app.ui.components.*
-import io.github.beacon.app.ui.icons.BeaconIcons
 
 /** All modes remain visible; selecting another mode retains the draft-discard safeguard. */
 @Composable

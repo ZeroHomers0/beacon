@@ -39,7 +39,7 @@ func TestBatchReceptionWaitsForHeartbeatAndUrgentBypassesIt(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer conn.Close()
-	ordinary, err := a.service.Push(device.DeviceID, "ordinary", "", "body")
+	ordinary, err := a.service.PushPriority(device.DeviceID, "ordinary", "", "body", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +79,7 @@ func TestBatchReceptionWaitsForHeartbeatAndUrgentBypassesIt(t *testing.T) {
 	if _, _, err = conn.ReadMessage(); err != nil {
 		t.Fatal(err)
 	}
-	extra, err := a.service.Push(device.DeviceID, "delete-before-heartbeat", "", "body")
+	extra, err := a.service.PushPriority(device.DeviceID, "delete-before-heartbeat", "", "body", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,7 +151,7 @@ func TestWebSocketLongestHeartbeat(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("heartbeat was not answered")
 	}
-	message, err := a.service.Push(device.DeviceID, "after idle", "", "body")
+	message, err := a.service.PushPriority(device.DeviceID, "after idle", "", "body", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -190,7 +190,7 @@ func TestWebSocketDeliveryAndRevocation(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer conn.Close()
-	message, err := a.service.Push(device.DeviceID, "title", "subtitle", "body")
+	message, err := a.service.PushPriority(device.DeviceID, "title", "subtitle", "body", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -264,7 +264,7 @@ func TestWebSocketIdleRevocationKeepsOtherDeviceConnected(t *testing.T) {
 	} else if networkError, ok := err.(net.Error); ok && networkError.Timeout() {
 		t.Fatal("idle revoked connection reached its read timeout")
 	}
-	message, err := a.service.Push(active.DeviceID, "still active", "", "body")
+	message, err := a.service.PushPriority(active.DeviceID, "still active", "", "body", nil)
 	if err != nil {
 		t.Fatal(err)
 	}

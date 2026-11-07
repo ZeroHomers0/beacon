@@ -11,8 +11,6 @@ import io.github.beacon.app.ui.components.BeaconButton
 import io.github.beacon.app.ui.components.BeaconConfirmDialog
 import io.github.beacon.app.ui.components.BeaconOutlinedButton
 import io.github.beacon.app.ui.components.BeaconText
-import io.github.beacon.app.ui.components.BeaconTextButton
-import io.github.beacon.app.ui.components.BeaconUiMetrics
 
 /**
  * The modal dialogs that can appear over any page.
@@ -93,4 +91,3 @@ internal fun BeaconDialogHost(
         )
     }
 }
-

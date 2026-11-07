@@ -41,30 +41,7 @@ fun BeaconTheme(
             BeaconThemeMode.DARK -> true
         }
     val context = LocalContext.current
-    val colors =
-        if (android.os.Build.VERSION.SDK_INT >= 31) {
-            if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        } else if (dark) darkColorScheme(
-            primary = Color(0xFFA9C7FF),
-            primaryContainer = Color(0xFF173B70),
-            onPrimaryContainer = Color(0xFFD5E3FF),
-            background = Color(0xFF111318),
-            surface = Color(0xFF191C22),
-            surfaceContainerLow = Color(0xFF191C22),
-        ) else lightColorScheme(
-            primary = Color(0xFF3478F6),
-            onPrimary = Color.White,
-            primaryContainer = Color(0xFFEAF2FF),
-            onPrimaryContainer = Color(0xFF173B70),
-            background = Color(0xFFF6F7FA),
-            surface = Color.White,
-            surfaceContainerLow = Color.White,
-            onBackground = Color(0xFF202633),
-            onSurface = Color(0xFF202633),
-            onSurfaceVariant = Color(0xFF737E90),
-            outlineVariant = Color(0xFFE9EDF2),
-            error = Color(0xFFE5484D),
-        )
+    val colors = if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
     SideEffect {
         (context as? android.app.Activity)?.window?.let { window ->
             WindowInsetsControllerCompat(window, window.decorView).apply {

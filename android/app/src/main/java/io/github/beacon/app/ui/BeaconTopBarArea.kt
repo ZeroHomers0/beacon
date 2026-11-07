@@ -1,15 +1,12 @@
 package io.github.beacon.app.ui
 
-import androidx.compose.animation.core.SeekableTransitionState
 import androidx.compose.animation.core.Transition
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -17,7 +14,6 @@ import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.IncomingMessage
 import io.github.beacon.app.domain.model.MessageAction
 import io.github.beacon.app.domain.model.MessageKey
-import io.github.beacon.app.domain.model.MessageReadFilter
 import io.github.beacon.app.domain.model.RuntimeState
 import io.github.beacon.app.feature.settings.AdminUiState
 import io.github.beacon.app.feature.settings.ServerAdminViewModel
@@ -25,13 +21,8 @@ import io.github.beacon.app.feature.settings.UpdateCheckState
 import io.github.beacon.app.ipc.RuntimeActions
 import io.github.beacon.app.ui.components.BeaconActionIcon
 import io.github.beacon.app.ui.components.BeaconBarBehavior
-import io.github.beacon.app.ui.components.BeaconDropdownMenu
-import io.github.beacon.app.ui.components.BeaconDropdownMenuItem
 import io.github.beacon.app.ui.components.BeaconIconButton
 import io.github.beacon.app.ui.components.BeaconMessageTransition
-import io.github.beacon.app.ui.components.BeaconPagerToolbar
-import io.github.beacon.app.ui.components.BeaconSelectableRow
-import io.github.beacon.app.ui.components.BeaconSettingsTransition
 import io.github.beacon.app.ui.components.BeaconTopBar
 import io.github.beacon.app.ui.components.ReceiveModeButton
 import io.github.beacon.app.ui.components.SettingsScreen
@@ -54,14 +45,13 @@ internal fun BeaconTopBarArea(
     adminModel: ServerAdminViewModel,
     updateState: UpdateCheckState,
     detailTransition: Transition<IncomingMessage?>,
-    settingsTransition: Transition<SettingsScreen>,
-    settingsMotion: SeekableTransitionState<SettingsScreen>,
     pager: PagerState,
     barBehavior: BeaconBarBehavior,
     settingsBarBehaviors: Map<SettingsScreen, BeaconBarBehavior>,
     pageBarBehaviors: Map<Int, BeaconBarBehavior>,
     navigate: (Int) -> Unit,
     settingsScreenOverride: SettingsScreen? = null,
+    pageOverride: Int? = null,
 ) {
     // Both change per recomposition and are cheap to read, so deriving them here keeps the call
     // site from forwarding two more parameters.
@@ -84,8 +74,7 @@ internal fun BeaconTopBarArea(
                         )
                     else if (barPage == 0) stringResource(R.string.ui_nav_messages_title)
                     else stringResource(ui.pages[barPage]),
-                    barPage == 0 ||
-                        displayedDetail != null,
+                    (barPage == 0 && ui.selectionMode) || displayedDetail != null,
                     when {
                         displayedDetail != null -> barBehavior
                         barPage == 1 -> settingsBarBehaviors.getValue(displayedSettingsScreen)
@@ -395,25 +384,7 @@ internal fun BeaconTopBarArea(
                 )
             }
         }
-        val renderBar: @Composable (Int) -> Unit = { barPage ->
-            if (barPage == 1 && displayedDetail == null) {
-                if (ui.uiStyle == io.github.beacon.app.domain.model.BeaconUiStyle.MIUIX) {
-                    // MIUIX settings headers live inside their navigation entry.
-                    Unit
-                } else {
-                BeaconSettingsTransition(
-                    settingsTransition,
-                    ui.settingsNavigatingBack ||
-                        settingsMotion.targetState == ui.settingsBackTarget,
-                ) { screen ->
-                    renderSettingsBar(barPage, screen)
-                }
-                }
-            } else renderSettingsBar(barPage, ui.settingsScreen)
-        }
-        if (settingsScreenOverride != null) renderSettingsBar(1, settingsScreenOverride)
-        else if (displayedDetail != null) renderBar(ui.page)
-        else BeaconPagerToolbar(pager, renderBar)
+        if (pageOverride != null) renderSettingsBar(pageOverride, settingsScreenOverride ?: ui.settingsScreen)
+        else if (displayedDetail != null) renderSettingsBar(ui.page, ui.settingsScreen)
     }
 }
-

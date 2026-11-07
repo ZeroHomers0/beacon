@@ -63,4 +63,3 @@ class SettingsCopyLayoutTest {
     @Test fun materialGuideFooterAndCleanupCopy() = verify(BeaconUiStyle.MATERIAL3)
     @Test fun miuixGuideFooterAndCleanupCopy() = verify(BeaconUiStyle.MIUIX)
 }
-

@@ -36,12 +36,12 @@ class UiConsistencyRegressionTest {
                                 BeaconTopBar("设备管理", false, behavior, {}, {})
                             }
                         }, bottomBar = {}) { padding ->
-                            val glassHeader = style == BeaconUiStyle.MIUIX
-                            val viewportPadding = if (glassHeader) PaddingValues(bottom = padding.calculateBottomPadding()) else padding
+                            val underTopBar = style == BeaconUiStyle.MIUIX
+                            val viewportPadding = if (underTopBar) PaddingValues(bottom = padding.calculateBottomPadding()) else padding
                             LazyColumn(state = listState, modifier = Modifier.fillMaxSize().padding(viewportPadding)
                                 .nestedScroll(behavior.connection(style)).testTag("shell-list"),
                                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp,
-                                    top = 16.dp + if (glassHeader) padding.calculateTopPadding() else 0.dp)) {
+                                    top = 16.dp + if (underTopBar) padding.calculateTopPadding() else 0.dp)) {
                                 item {
                                     Box(Modifier.testTag("card")) {
                                         BeaconCard(Modifier.fillMaxWidth().height(80.dp),
@@ -139,38 +139,6 @@ class UiConsistencyRegressionTest {
         rule.onNodeWithText(rule.activity.getString(R.string.msg_clear_filters_action)).assertDoesNotExist()
         capture("FILTERS_${style}")
     }
-
-    private fun neutralFilters(style: BeaconUiStyle) {
-        for (mode in listOf(BeaconThemeMode.LIGHT, BeaconThemeMode.DARK)) {
-            rule.runOnUiThread {
-                rule.activity.setContent {
-                    BeaconTheme(style, mode) {
-                        androidx.compose.material3.Surface {
-                            Column(Modifier.padding(16.dp)) {
-                                for (selected in listOf(true, false)) {
-                                    BeaconActiveFilterChip(onClick = {}, selected = selected,
-                                        modifier = Modifier.width(200.dp).testTag("filter-$selected"),
-                                        label = { BeaconText("测试筛选") })
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            val image = rule.onRoot().captureToImage().toPixelMap()
-            val background = image[2, 2]
-            for (selected in listOf(true, false)) {
-                val bounds = rule.onNodeWithTag("filter-$selected").fetchSemanticsNode().boundsInRoot
-                val x = (bounds.left + 8 * rule.activity.resources.displayMetrics.density).toInt()
-                assertEquals("Filter fill must match surface: $style/$mode/$selected",
-                    background, image[x, bounds.center.y.toInt()])
-            }
-            capture("NEUTRAL_FILTERS_${style}_${mode}")
-        }
-    }
-
-    @Test fun materialFiltersHaveNoColoredFill() = neutralFilters(BeaconUiStyle.MATERIAL3)
-    @Test fun miuixFiltersHaveNoColoredFill() = neutralFilters(BeaconUiStyle.MIUIX)
 
     @Test fun olderDataAndExpiredDataHaveDifferentDescriptions() {
         val now = 10_000L

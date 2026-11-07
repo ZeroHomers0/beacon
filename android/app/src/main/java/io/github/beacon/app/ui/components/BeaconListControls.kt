@@ -23,9 +23,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.BlurEffect
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
@@ -37,11 +34,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import io.github.beacon.app.R
 import io.github.beacon.app.domain.model.BeaconUiStyle
 import io.github.beacon.app.ui.icons.BeaconIcons
@@ -49,7 +44,7 @@ import io.github.beacon.app.ui.theme.LocalBeaconUiStyle
 
 /** Finds the search field regardless of its hint text, which is user-facing copy. */
 const val SEARCH_BOX_TAG = "search-box"
-const val SEARCH_COLLAPSE_TAG = "search-collapse-host"
+const val SEARCH_SURFACE_TAG = "search-surface"
 
 /** Persistent search surface; no extra card/title/submit button around a list query. */
 @Composable
@@ -58,8 +53,6 @@ fun BeaconSearchBox(
     onValueChange: (String) -> Unit,
     hint: String,
     modifier: Modifier = Modifier,
-    scroll: androidx.compose.foundation.lazy.LazyListState? = null,
-    scrollProgress: (() -> Float)? = null,
     onSearch: () -> Unit,
 ) {
     var focused by remember { mutableStateOf(false) }
@@ -71,8 +64,8 @@ fun BeaconSearchBox(
         with(density) { BeaconListText.SearchLineHeight.toDp() } + BeaconUiMetrics.SearchFieldVerticalInset * 2)
     Box(Modifier.align(Alignment.Center).width(width).height(fieldHeight)
         .clip(CircleShape)
-        .beaconGlassMaterial(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
-        .testTag(SEARCH_COLLAPSE_TAG)) {
+        .background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
+        .testTag(SEARCH_SURFACE_TAG)) {
     if (miuix()) {
         top.yukonga.miuix.kmp.basic.SearchBar(
             expanded = false, onExpandedChange = {},
@@ -177,8 +170,6 @@ fun BeaconTitleSearchRow(
     hint: String,
     modifier: Modifier = Modifier,
     titleCollapsed: Boolean = false,
-    scroll: androidx.compose.foundation.lazy.LazyListState? = null,
-    scrollProgress: (() -> Float)? = null,
     onSearch: () -> Unit,
 ) {
     Row(
@@ -205,8 +196,6 @@ fun BeaconTitleSearchRow(
             onValueChange,
             hint,
             Modifier.weight(1f),
-            scroll = scroll,
-            scrollProgress = scrollProgress,
             onSearch = onSearch,
         )
     }
@@ -292,29 +281,9 @@ fun BeaconPreferenceToggle(
     }
 }
 
-/** Smallest gap kept between the key and the value when both share one line. */
-private val DIAGNOSTIC_ROW_GAP = 16.dp
-
-/** Slack absorbed before falling back to the stacked form, covering rounding and font metrics. */
-internal const val DIAGNOSTIC_ROW_TOLERANCE_PX = 12
-
-/**
- * Whether a key and its value share one line, or must stack.
- *
- * Judged against the full width the row actually has, never a fraction of it: a fixed fractional
- * split handed the key about a third of the row whatever its length, so an 11-character key wrapped
- * in a column that could not hold it, orphaning its last character onto a line of its own.
- */
-internal fun diagnosticRowFits(
-    labelWidthPx: Int,
-    valueWidthPx: Int,
-    gapPx: Int,
-    availableWidthPx: Int,
-): Boolean = labelWidthPx + valueWidthPx + gapPx + DIAGNOSTIC_ROW_TOLERANCE_PX <= availableWidthPx
-
 /** Compatibility entry point: metadata always uses the shared title/value geometry. */
 @Composable
-fun DiagnosticRow(label: String, value: String, reserveValueLines: Int = 0) {
+fun DiagnosticRow(label: String, value: String) {
     SettingsOverviewField(label, value)
 }
 
