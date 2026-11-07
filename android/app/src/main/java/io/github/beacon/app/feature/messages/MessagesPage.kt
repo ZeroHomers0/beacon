@@ -16,9 +16,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -31,6 +34,8 @@ import io.github.beacon.app.domain.model.MessageAction
 import io.github.beacon.app.domain.model.MessageKey
 import io.github.beacon.app.domain.model.MessageReadFilter
 import io.github.beacon.app.domain.model.RuntimeState
+import io.github.beacon.app.domain.model.BeaconUiStyle
+import io.github.beacon.app.ui.theme.LocalBeaconUiStyle
 import io.github.beacon.app.domain.policy.MessagePresentation
 import io.github.beacon.app.ipc.RuntimeActions
 import io.github.beacon.app.ui.components.ActionFlow
@@ -40,12 +45,20 @@ import io.github.beacon.app.ui.components.BeaconMotion
 import io.github.beacon.app.ui.components.BeaconPullToRefresh
 import io.github.beacon.app.ui.components.BeaconSearchBox
 import io.github.beacon.app.ui.components.BeaconSummaryPill
+import io.github.beacon.app.ui.components.BeaconListSwitch
+import io.github.beacon.app.ui.components.beaconFilterChange
 import io.github.beacon.app.ui.components.BeaconText
 import io.github.beacon.app.ui.components.BeaconTextButton
 import io.github.beacon.app.ui.components.BeaconTitleSearchRow
 import io.github.beacon.app.ui.components.BeaconUiMetrics
 import io.github.beacon.app.ui.components.MessageItem
 import io.github.beacon.app.ui.icons.BeaconIcons
+import io.github.beacon.app.ui.components.BeaconFloatingGlassButton
+import io.github.beacon.app.ui.components.LocalBeaconGlass
+import io.github.beacon.app.ui.components.LocalBeaconGlassBackdrop
+import io.github.beacon.app.ui.components.rememberBeaconGlassState
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
+import top.yukonga.miuix.kmp.blur.layerBackdrop
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 
@@ -130,6 +143,15 @@ private fun MessagesContent(
     // The shared title only folds once the list has actually scrolled.
     val titleCollapsed by remember { derivedStateOf { scroll.firstVisibleItemIndex > 0 } }
     val busy = runtimeState.messageBusy
+    val hasNewMessages = runtimeState.newMessageCount > 0 && !selectionMode
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    var entryHeight by remember { mutableStateOf(BeaconUiMetrics.NewMessagesMinHeight) }
+    val glass = if (LocalBeaconUiStyle.current == BeaconUiStyle.MIUIX)
+        LocalBeaconGlass.current ?: rememberBeaconGlassState() else null
+    val pageBackground = MaterialTheme.colorScheme.background
+    // The button samples only the list, never the enclosing scaffold layer that contains it.
+    val arrivalsBackdrop = if (hasNewMessages && glass?.available == true)
+        rememberLayerBackdrop { drawRect(pageBackground); drawContent() } else null
     var jumpToLatest by remember { mutableStateOf(false) }
     LaunchedEffect(jumpToLatest,busy,runtimeState.newMessageCount,runtimeState.messageLoadFailed) {
         if(jumpToLatest && !busy) {
@@ -227,6 +249,7 @@ private fun MessagesContent(
                     { if (it.length <= 256) onSearch(it) },
                     stringResource(R.string.msg_search_hint),
                     titleCollapsed = titleCollapsed || hideSharedTitle,
+                    scroll = scroll,
                     onSearch = submit,
                 )
             else
@@ -234,6 +257,7 @@ private fun MessagesContent(
                     search,
                     { if (it.length <= 256) onSearch(it) },
                     stringResource(R.string.msg_search_hint),
+                    scroll = scroll,
                     onSearch = submit,
                 )
             // Counts and active filters stay with the search instead of scrolling: they pin under
@@ -242,32 +266,18 @@ private fun MessagesContent(
                 Modifier.padding(top = BeaconUiMetrics.Gap8),
                 verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6),
             ) {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8),
-                ) {
-                    BeaconSummaryPill(
-                        stringResource(R.string.msg_stat_total, runtimeState.messageTotal),
-                        BeaconIcons.Mail,
-                        highlighted = applied.readFilter == MessageReadFilter.ALL,
-                        enabled = !busy,
-                        onClick = { onApplyFilter(applied.search, MessageReadFilter.ALL) },
-                        modifier = Modifier.weight(1f),
-                        compact = true,
-                    )
-                    BeaconSummaryPill(
-                        stringResource(
-                            R.string.msg_stat_unread,
-                            runtimeState.messageUnread,
-                        ),
-                        BeaconIcons.Messages,
-                        highlighted = applied.readFilter == MessageReadFilter.UNREAD,
-                        enabled = !busy,
-                        onClick = { onApplyFilter(applied.search, MessageReadFilter.UNREAD) },
-                        modifier = Modifier.weight(1f),
-                        compact = true,
-                    )
-                }
+                BeaconListSwitch(
+                    labels = listOf(stringResource(R.string.msg_stat_total, runtimeState.messageTotal),
+                        stringResource(R.string.msg_stat_unread, runtimeState.messageUnread)),
+                    icons = listOf(BeaconIcons.Mail, BeaconIcons.Messages),
+                    selectedIndex = when (applied.readFilter) {
+                        MessageReadFilter.ALL -> 0
+                        MessageReadFilter.UNREAD -> 1
+                        else -> -1
+                    }, enabled = !busy,
+                    onSelected = { onApplyFilter(applied.search,
+                        if (it == 0) MessageReadFilter.ALL else MessageReadFilter.UNREAD) },
+                )
                 if (
                     applied.readFilter != MessageReadFilter.ALL ||
                         applied.search.isNotBlank()
@@ -345,17 +355,20 @@ private fun MessagesContent(
             },
             Modifier.fillMaxWidth().weight(1f),
         ) {
-            Column(Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxSize()) {
                 LazyColumn(
                     state = scroll,
                     modifier =
-                        Modifier.fillMaxWidth().weight(1f).then(scrollModifier).testTag(MESSAGE_LIST_TAG),
+                        Modifier.fillMaxSize().then(scrollModifier).beaconFilterChange(applied.readFilter.ordinal)
+                            .then(if (arrivalsBackdrop != null) Modifier.layerBackdrop(arrivalsBackdrop) else Modifier)
+                            .testTag(MESSAGE_LIST_TAG),
                     contentPadding =
                         PaddingValues(
                             start = padding.calculateStartPadding(layoutDirection),
                             end = padding.calculateEndPadding(layoutDirection),
                             top = BeaconUiMetrics.Gap4,
-                            bottom = padding.calculateBottomPadding(),
+                            bottom = padding.calculateBottomPadding() + if (hasNewMessages)
+                                entryHeight + BeaconUiMetrics.Gap16 * 2 else 0.dp,
                         ),
                     verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.MessageCardGap),
                 ) {
@@ -552,22 +565,29 @@ private fun MessagesContent(
                         }
                     }
                 }
-                if (runtimeState.newMessageCount > 0 && !selectionMode) {
+                if (hasNewMessages) {
                     Box(
-                        Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background)
-                            .padding(horizontal = BeaconUiMetrics.PageInset, vertical = BeaconUiMetrics.Gap8),
+                        Modifier.align(Alignment.BottomCenter)
+                            .padding(horizontal = BeaconUiMetrics.PageInset, vertical = BeaconUiMetrics.Gap16),
                         contentAlignment = Alignment.Center,
                     ) {
-                        BeaconButton(
+                        CompositionLocalProvider(LocalBeaconGlass provides glass,
+                            LocalBeaconGlassBackdrop provides arrivalsBackdrop) {
+                        BeaconFloatingGlassButton(
                             onClick = {
                                 focus.clearFocus()
                                 jumpToLatest = true
                                 actions.readMessages(showStatus = false)
                             },
-                            modifier = Modifier.testTag("message-new-arrivals"),
+                            modifier = Modifier.testTag("message-new-arrivals")
+                                .onSizeChanged { entryHeight = with(density) { it.height.toDp() } },
                             enabled = !busy,
                         ) {
-                            BeaconText(stringResource(R.string.msg_new_arrivals, runtimeState.newMessageCount))
+                            Icon(BeaconIcons.Arrow, null, Modifier.size(BeaconUiMetrics.IconMedium).rotate(-90f))
+                            Spacer(Modifier.width(BeaconUiMetrics.Gap8))
+                            BeaconText(stringResource(R.string.msg_new_arrivals, runtimeState.newMessageCount),
+                                style = MaterialTheme.typography.titleMedium)
+                        }
                         }
                     }
                 }

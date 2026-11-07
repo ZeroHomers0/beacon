@@ -15,11 +15,15 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.BlurEffect
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
@@ -42,6 +46,7 @@ import io.github.beacon.app.ui.theme.LocalBeaconUiStyle
 
 /** Finds the search field regardless of its hint text, which is user-facing copy. */
 const val SEARCH_BOX_TAG = "search-box"
+const val SEARCH_COLLAPSE_TAG = "search-collapse-host"
 
 /** Persistent search surface; no extra card/title/submit button around a list query. */
 @Composable
@@ -50,8 +55,26 @@ fun BeaconSearchBox(
     onValueChange: (String) -> Unit,
     hint: String,
     modifier: Modifier = Modifier,
+    scroll: androidx.compose.foundation.lazy.LazyListState? = null,
     onSearch: () -> Unit,
 ) {
+    val progress = if (scroll != null) rememberBeaconScrollProgress(scroll) else LocalBeaconScrollProgress.current
+    var focused by remember { mutableStateOf(false) }
+    val density = LocalDensity.current
+    val hardware = LocalView.current.isHardwareAccelerated
+    BoxWithConstraints(modifier.fillMaxWidth()) {
+    val fullWidth = maxWidth
+    val fraction = if (focused) 1f else 1f - progress()
+    val width = fullWidth * fraction.coerceIn(0f, 1f)
+    val fieldHeight = maxOf(BeaconUiMetrics.SearchFieldMinHeight,
+        with(density) { BeaconListText.SearchLineHeight.toDp() } + BeaconUiMetrics.SearchFieldVerticalInset * 2)
+    val textAlpha = ((width / fieldHeight - 1f) / 1.5f).coerceIn(0f, 1f)
+    val height = fieldHeight * (width / fieldHeight).coerceIn(0f, 1f)
+    Box(Modifier.align(Alignment.Center).width(width).height(height)
+        .clip(CircleShape)
+        .beaconGlassMaterial(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
+        .testTag(SEARCH_COLLAPSE_TAG)
+        .then(if (fraction < .001f) Modifier.clearAndSetSemantics {} else Modifier)) {
     BasicTextField(
         value,
         onValueChange,
@@ -66,14 +89,20 @@ fun BeaconSearchBox(
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
         keyboardActions = KeyboardActions(onSearch = { onSearch() }),
         modifier =
-            modifier
-                .fillMaxWidth()
+            Modifier
+                .requiredWidth(width.coerceAtLeast(fieldHeight))
                 .heightIn(min = BeaconUiMetrics.SearchFieldMinHeight)
-                .beaconGlassMaterial(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
+                .onFocusChanged { focused = it.isFocused }
                 .semantics { contentDescription = hint }
                 .testTag(SEARCH_BOX_TAG),
         decorationBox = { field ->
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().graphicsLayer {
+                alpha = textAlpha
+                renderEffect = if (hardware && textAlpha > 0f && textAlpha < 1f) {
+                    val radius = BeaconUiMetrics.SearchFadeBlurRadius.toPx() * (1f - textAlpha)
+                    BlurEffect(radius, radius)
+                } else null
+            }, verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     BeaconIcons.Search,
                     null,
@@ -118,6 +147,8 @@ fun BeaconSearchBox(
             }
         },
     )
+    }
+    }
 }
 
 /**
@@ -134,6 +165,7 @@ fun BeaconTitleSearchRow(
     hint: String,
     modifier: Modifier = Modifier,
     titleCollapsed: Boolean = false,
+    scroll: androidx.compose.foundation.lazy.LazyListState? = null,
     onSearch: () -> Unit,
 ) {
     Row(
@@ -160,7 +192,8 @@ fun BeaconTitleSearchRow(
             onValueChange,
             hint,
             Modifier.weight(1f),
-            onSearch,
+            scroll = scroll,
+            onSearch = onSearch,
         )
     }
 }

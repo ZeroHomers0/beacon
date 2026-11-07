@@ -41,9 +41,12 @@ class ServerStatusLayoutTest {
                             val context = LocalContext.current
                             val focus = LocalFocusManager.current
                             val form = remember { ConnectionFormState() }
+                            Column {
+                            Row(Modifier.fillMaxWidth()) { ConnectionRefreshAction(runtime.value, actions, false) }
                             LazyColumn(Modifier.fillMaxWidth()) {
                                 connectionSettingsItems(context.resources, runtime.value, actions, form, false,
                                     false, context, focus, "格式错误", {})
+                            }
                             }
                         }
                     }
@@ -53,7 +56,7 @@ class ServerStatusLayoutTest {
             val settledTop = rowTop()
             // Inspect the pending state without advancing the refresh icon's endless animation.
             rule.mainClock.autoAdvance = false
-            rule.onNodeWithContentDescription(rule.activity.getString(R.string.server_check_action)).performScrollTo().performClick()
+            rule.onNodeWithContentDescription(rule.activity.getString(R.string.server_check_action)).assertIsDisplayed().performClick()
             // Keep the viewport fixed while comparing document positions.
             rule.waitForIdle()
             assertEquals("The probe must not move the row below its status", settledTop, rowTop(), 0.5f)

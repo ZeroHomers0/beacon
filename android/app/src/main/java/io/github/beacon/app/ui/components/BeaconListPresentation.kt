@@ -83,6 +83,8 @@ fun ReceiveModeButton(
 ) {
     // One shared gate: the system switch, the animator scale and this composition all agree now.
     val animationsEnabled = rememberSystemAnimationsEnabled()
+    val glass = miuix() && LocalBeaconGlass.current?.available == true
+    val glassAlpha = LocalBeaconToolbarGlassAlpha.current
     val modeColor = receiveModeColor(mode)
     val accent by animateColorAsState(
         if (serverIssue) MaterialTheme.colorScheme.error
@@ -145,12 +147,15 @@ fun ReceiveModeButton(
         contentAlignment = Alignment.Center,
     ) {
         Box(
-            Modifier.size(42.dp).background(
-                accent.copy(alpha = .14f).compositeOver(MaterialTheme.colorScheme.surface),
-                CircleShape,
-            ),
+            Modifier.size(42.dp),
             contentAlignment = Alignment.Center,
         ) {
+            Box(Modifier.matchParentSize().graphicsLayer { alpha = glassAlpha() }.then(if (glass)
+                Modifier.beaconGlassMaterial(MaterialTheme.colorScheme.surface, CircleShape)
+            else Modifier.background(
+                accent.copy(alpha = .14f).compositeOver(MaterialTheme.colorScheme.surface),
+                CircleShape,
+            )))
             AnimatedContent(
                 mode,
                 transitionSpec = {

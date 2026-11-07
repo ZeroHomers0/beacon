@@ -10,6 +10,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
@@ -23,6 +24,7 @@ import io.github.beacon.app.domain.model.BeaconUiStyle
 import io.github.beacon.app.ui.theme.LocalBeaconUiStyle
 
 internal val LocalCompactActions = staticCompositionLocalOf { false }
+internal val LocalGroupedToolbarActions = staticCompositionLocalOf { false }
 
 internal val LocalActionFillWidth = staticCompositionLocalOf { false }
 internal val LocalButtonLabel = staticCompositionLocalOf { false }
@@ -162,21 +164,23 @@ fun BeaconIconButton(
     content: @Composable () -> Unit,
 ) {
     val actionModifier = if (LocalCompactActions.current) modifier.width(44.dp) else modifier
-    val glassModifier = if (miuix() && LocalBeaconGlass.current?.available == true)
-        Modifier.beaconGlassMaterial(MaterialTheme.colorScheme.surface,
-            androidx.compose.foundation.shape.CircleShape)
-    else Modifier
-    if (miuix())
+    val glass = miuix() && !LocalGroupedToolbarActions.current && LocalBeaconGlass.current?.available == true
+    val glassAlpha = LocalBeaconToolbarGlassAlpha.current
+    if (miuix()) {
+        Box(actionModifier.semantics(mergeDescendants = true) { if (!enabled) disabled() }) {
+            if (glass) Box(Modifier.matchParentSize().graphicsLayer { alpha = glassAlpha() }
+                .beaconGlassMaterial(MaterialTheme.colorScheme.surface,
+                    androidx.compose.foundation.shape.CircleShape))
         top.yukonga.miuix.kmp.basic.IconButton(
             onClick,
-            actionModifier.then(glassModifier)
-                .semantics(mergeDescendants = true) { if (!enabled) disabled() },
+            Modifier,
             enabled,
             minHeight = 48.dp,
             minWidth = if (LocalCompactActions.current) 44.dp else 48.dp,
             content = content,
         )
-    else androidx.compose.material3.IconButton(onClick, actionModifier, enabled, content = content)
+        }
+    } else androidx.compose.material3.IconButton(onClick, actionModifier, enabled, content = content)
 }
 
 /** A control drawn beside its label owns no text, so the caller supplies the accessible name. */

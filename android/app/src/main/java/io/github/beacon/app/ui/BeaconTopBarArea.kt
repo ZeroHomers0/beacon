@@ -55,7 +55,6 @@ internal fun BeaconTopBarArea(
     settingsMotion: SeekableTransitionState<SettingsScreen>,
     pager: PagerState,
     barBehavior: BeaconBarBehavior,
-    sharedTitleBar: Boolean,
     navigate: (Int) -> Unit,
 ) {
     // Both change per recomposition and are cheap to read, so deriving them here keeps the call
@@ -76,10 +75,9 @@ internal fun BeaconTopBarArea(
                             R.string.msg_selected_count_label,
                             ui.selectedKeys.size,
                         )
-                    else if (sharedTitleBar && barPage == 0) ""
+                    else if (barPage == 0) ""
                     else stringResource(ui.pages[barPage]),
-                    (sharedTitleBar && barPage == 0) ||
-                        (barPage == 0 && ui.selectionMode) ||
+                    barPage == 0 ||
                         displayedDetail != null,
                     barBehavior,
                     navigationIcon = {
@@ -365,6 +363,11 @@ internal fun BeaconTopBarArea(
                         ) {
                             io.github.beacon.app.feature.settings.AdminManagementActions(
                                 adminState, adminModel, displayedSettingsScreen == SettingsScreen.SERVER_APPLICATIONS)
+                        } else if (
+                            displayedDetail == null && barPage == 1 &&
+                                displayedSettingsScreen == SettingsScreen.CONNECTION
+                        ) {
+                            io.github.beacon.app.feature.settings.ConnectionRefreshAction(runtimeState, actions, busy)
                         } else if (
                             displayedDetail == null &&
                                 barPage == 1 &&

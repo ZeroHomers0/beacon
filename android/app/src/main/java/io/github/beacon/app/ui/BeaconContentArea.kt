@@ -5,6 +5,8 @@ import androidx.compose.animation.core.Transition
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
@@ -54,6 +56,7 @@ internal fun BeaconContentArea(
     settingsTransition: Transition<SettingsScreen>,
     settingsMotion: SeekableTransitionState<SettingsScreen>,
     messageScroll: LazyListState,
+    statesScroll: LazyListState,
     settingsScrollStates: Map<SettingsScreen, LazyListState>,
     barBehavior: BeaconBarBehavior,
     compactBar: Boolean,
@@ -84,6 +87,18 @@ val listModifier =
 val edge = BeaconUiMetrics.PageInset
 val listPadding =
     PaddingValues(start = edge, end = edge, top = BeaconUiMetrics.PageTopInset, bottom = BeaconUiMetrics.PageBottomInset)
+// MIUIX lists scroll beneath the transparent title bar. Keep the initial item position by
+// moving the top inset into scrollable content padding rather than shrinking the viewport.
+val underTopBar = ui.uiStyle == io.github.beacon.app.domain.model.BeaconUiStyle.MIUIX
+val direction = androidx.compose.ui.platform.LocalLayoutDirection.current
+val settingsModifier = if (underTopBar) Modifier.fillMaxSize()
+    .padding(start = insets.calculateStartPadding(direction), end = insets.calculateEndPadding(direction),
+        bottom = insets.calculateBottomPadding())
+    .then(if (compactBar) Modifier else Modifier.nestedScroll(barBehavior.connection(ui.uiStyle)))
+else listModifier
+val settingsPadding = if (underTopBar) PaddingValues(start = edge, end = edge,
+    top = insets.calculateTopPadding() + BeaconUiMetrics.PageTopInset,
+    bottom = BeaconUiMetrics.PageBottomInset) else listPadding
 // Scaffold follows the animated header height; animating body size again
 // would change the shared transition duration during a back gesture.
 BeaconMessageTransition(
@@ -133,7 +148,7 @@ BeaconMessageTransition(
             overscrollEffect = null,
         ) { visiblePage ->
             when (visiblePage) {
-                2 -> io.github.beacon.app.feature.messages.StatesPage(Modifier.fillMaxSize().padding(insets), busy = runtimeState.messageBusy || runtimeState.transportBusy, connected = runtimeState.runtimeConnected, showHidden=ui.statesShowHidden,onShowHidden={ui.statesShowHidden=it},onRefresh = { actions.transport() })
+                2 -> io.github.beacon.app.feature.messages.StatesPage(Modifier.fillMaxSize().padding(insets), busy = runtimeState.messageBusy || runtimeState.transportBusy, connected = runtimeState.runtimeConnected, showHidden=ui.statesShowHidden,onShowHidden={ui.statesShowHidden=it},onRefresh = { actions.transport() }, scroll = statesScroll)
                 0 ->
                     MessagesPage(
                         messageScroll,
@@ -198,8 +213,8 @@ BeaconMessageTransition(
                             settingsScrollStates.getValue(
                                 displayedSettingsScreen
                             ),
-                            listModifier,
-                            listPadding,
+                            settingsModifier,
+                            settingsPadding,
                             runtimeState,
                             actions,
                             ui.connectionForm,

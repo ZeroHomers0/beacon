@@ -36,9 +36,12 @@ class UiConsistencyRegressionTest {
                                 BeaconTopBar("设备管理", false, behavior, {}, {})
                             }
                         }, bottomBar = {}) { padding ->
-                            LazyColumn(state = listState, modifier = Modifier.fillMaxSize().padding(padding)
+                            val glassHeader = style == BeaconUiStyle.MIUIX
+                            val viewportPadding = if (glassHeader) PaddingValues(bottom = padding.calculateBottomPadding()) else padding
+                            LazyColumn(state = listState, modifier = Modifier.fillMaxSize().padding(viewportPadding)
                                 .nestedScroll(behavior.connection(style)).testTag("shell-list"),
-                                contentPadding = PaddingValues(16.dp)) {
+                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp,
+                                    top = 16.dp + if (glassHeader) padding.calculateTopPadding() else 0.dp)) {
                                 item {
                                     Box(Modifier.testTag("card")) {
                                         BeaconCard(Modifier.fillMaxWidth().height(80.dp),
@@ -46,7 +49,7 @@ class UiConsistencyRegressionTest {
                                                 containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerLow)) {}
                                     }
                                 }
-                                items(30) { BeaconText("设置项目", Modifier.fillMaxWidth().height(70.dp)) }
+                                items(30) { BeaconText("设置项目", Modifier.fillMaxWidth().height(70.dp).testTag("shell-item")) }
                             }
                         }
                     }
@@ -64,6 +67,14 @@ class UiConsistencyRegressionTest {
             rule.waitForIdle()
             val collapsed = rule.onNodeWithTag("toolbar").getUnclippedBoundsInRoot()
             assertTrue(collapsed.bottom - collapsed.top < initial)
+            if (style == BeaconUiStyle.MIUIX) {
+                val bar = rule.onNodeWithTag("toolbar").fetchSemanticsNode().boundsInRoot
+                assertTrue("Scrolled rows must pass behind the translucent header",
+                    rule.onAllNodesWithTag("shell-item").fetchSemanticsNodes().any {
+                        it.boundsInRoot.top < bar.bottom && it.boundsInRoot.bottom > bar.top
+                    })
+                capture("SHELL_SCROLLED_${style}_${mode}")
+            }
         }
     }
 

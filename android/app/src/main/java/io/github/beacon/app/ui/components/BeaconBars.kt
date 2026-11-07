@@ -8,6 +8,8 @@ package io.github.beacon.app.ui.components
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -15,6 +17,24 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.beacon.app.domain.model.BeaconUiStyle
+
+/** One shared surface for trailing controls; children retain their own hit targets and semantics. */
+@Composable
+internal fun BeaconToolbarActions(actions: @Composable RowScope.() -> Unit) {
+    var hasActions by remember { mutableStateOf(false) }
+    Box(Modifier.padding(end = BeaconUiMetrics.Gap8)) {
+        val glassAlpha = LocalBeaconToolbarGlassAlpha.current
+        if (hasActions) Box(Modifier.matchParentSize().graphicsLayer { alpha = glassAlpha() }.beaconGlassMaterial(
+            androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerHigh,
+            androidx.compose.foundation.shape.CircleShape))
+        CompositionLocalProvider(LocalGroupedToolbarActions provides true) {
+            Row(Modifier.onSizeChanged { hasActions = it.height > 0 }
+                .padding(horizontal = BeaconUiMetrics.Gap4),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                content = actions)
+        }
+    }
+}
 
 class BeaconBarBehavior(
     val miuix: top.yukonga.miuix.kmp.basic.ScrollBehavior,
@@ -52,21 +72,28 @@ fun BeaconTopBar(
     navigationIcon: @Composable () -> Unit,
     actions: @Composable RowScope.() -> Unit,
 ) {
+    val scrollProgress = LocalBeaconScrollProgress.current
+    val isMiuix = miuix()
+    val glassAlpha: () -> Float = {
+        if (isMiuix) maxOf(scrollProgress(), behavior.miuix.state.collapsedFraction).coerceIn(0f, 1f) else 1f
+    }
+    CompositionLocalProvider(LocalBeaconToolbarGlassAlpha provides glassAlpha) {
+    val groupedActions: @Composable RowScope.() -> Unit = { BeaconToolbarActions(actions) }
     if (miuix()) {
-        BeaconGlassSurface(androidx.compose.material3.MaterialTheme.colorScheme.background) {
+        BeaconGlassSurface(androidx.compose.material3.MaterialTheme.colorScheme.background, topFade = true) {
             if (compact)
                 top.yukonga.miuix.kmp.basic.SmallTopAppBar(
                     title,
                     color = androidx.compose.ui.graphics.Color.Transparent,
                     navigationIcon = navigationIcon,
-                    actions = actions,
+                    actions = groupedActions,
                 )
             else
                 top.yukonga.miuix.kmp.basic.TopAppBar(
                     title,
                     color = androidx.compose.ui.graphics.Color.Transparent,
                     navigationIcon = navigationIcon,
-                    actions = actions,
+                    actions = groupedActions,
                     scrollBehavior = behavior.miuix,
                 )
         }
@@ -75,15 +102,16 @@ fun BeaconTopBar(
             androidx.compose.material3.TopAppBar(
                 title = { BeaconText(title) },
                 navigationIcon = navigationIcon,
-                actions = actions,
+                actions = groupedActions,
             )
         else
             androidx.compose.material3.LargeTopAppBar(
                 title = { BeaconText(title) },
                 navigationIcon = navigationIcon,
-                actions = actions,
+                actions = groupedActions,
                 scrollBehavior = behavior.material,
             )
+    }
     }
 }
 

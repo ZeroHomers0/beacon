@@ -54,11 +54,10 @@ internal fun AdminTopicsPage(state:AdminUiState,model:ServerAdminViewModel,scrol
     val direction=androidx.compose.ui.platform.LocalLayoutDirection.current
     Column(modifier){
         Column(Modifier.fillMaxWidth().padding(start=padding.calculateStartPadding(direction),end=padding.calculateEndPadding(direction),top=padding.calculateTopPadding(),bottom=BeaconUiMetrics.Gap8),verticalArrangement=Arrangement.spacedBy(BeaconUiMetrics.Gap8)){
-            BeaconSearchBox(search,{search=it;offset=0},"搜索主题、设备或应用",onSearch={})
-            Row(horizontalArrangement=Arrangement.spacedBy(BeaconUiMetrics.Gap8)){
-                BeaconSummaryPill("共 ${state.topicsTotal} 个",BeaconIcons.Topics,highlighted=status=="all",enabled=!state.busy,onClick={status="all";offset=0},modifier=Modifier.weight(1f),compact=true)
-                BeaconSummaryPill("本页 ${state.topics.size} 个",BeaconIcons.List,highlighted=false,enabled=false,onClick={},modifier=Modifier.weight(1f),compact=true)
-            }
+            BeaconSearchBox(search,{search=it;offset=0},"搜索主题、设备或应用",scroll=scroll,onSearch={})
+            BeaconListSwitch(labels=listOf("共 ${state.topicsTotal} 个","本页 ${state.topics.size} 个"),
+                icons=listOf(BeaconIcons.Topics,BeaconIcons.List), selectedIndex=if(status=="all")0 else -1,
+                enabled=!state.busy,selectableIndices=setOf(0),onSelected={status="all";offset=0})
             if(device.isNotBlank()||application!="*"||status!="all"||search.isNotBlank())ActionFlow{
                 if(device.isNotBlank())AdminFilterChip(state.devices.firstOrNull{it.id==device}?.name?:device,!state.busy){device="";offset=0}
                 if(application!="*")AdminFilterChip(if(application.isBlank())"未关联应用"else state.applications.firstOrNull{it.id==application}?.name?:application,!state.busy){application="*";offset=0}
@@ -67,7 +66,7 @@ internal fun AdminTopicsPage(state:AdminUiState,model:ServerAdminViewModel,scrol
             }
         }
         BeaconPullToRefresh(refreshing,{if(!state.busy){refreshing=true;reload++}},Modifier.fillMaxWidth().weight(1f)){
-            BeaconSettingsList(scroll,Modifier.fillMaxSize(),contentPadding=PaddingValues(start=padding.calculateStartPadding(direction),end=padding.calculateEndPadding(direction),top=BeaconUiMetrics.Gap4,bottom=padding.calculateBottomPadding()),itemSpacing=BeaconUiMetrics.MessageCardGap){
+            BeaconSettingsList(scroll,Modifier.fillMaxSize().beaconFilterChange(states.indexOf(status)),contentPadding=PaddingValues(start=padding.calculateStartPadding(direction),end=padding.calculateEndPadding(direction),top=BeaconUiMetrics.Gap4,bottom=padding.calculateBottomPadding()),itemSpacing=BeaconUiMetrics.MessageCardGap){
                 if(state.topics.isEmpty())item{BeaconEmptyState(BeaconIcons.List,"暂无数据主题","先从右上角创建主题，再将上报示例交给脚本。无需创建应用。")}
                 items(state.topics,key={it.optString("device_id")+":"+it.optString("application_id")+":"+it.optString("topic_key")}){row->
                     AdminListCard(row.optString("title").ifBlank{row.optString("topic_key")},

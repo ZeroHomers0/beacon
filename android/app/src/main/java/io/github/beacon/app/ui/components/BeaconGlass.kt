@@ -6,16 +6,25 @@ import android.graphics.RuntimeShader
 import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.Role
 import top.yukonga.miuix.kmp.blur.*
 
 /** One failure disables the optical path for this scaffold; no saved preference or retry loop. */
@@ -28,6 +37,33 @@ internal class BeaconGlassState(supported: Boolean) {
 
 internal val LocalBeaconGlass = staticCompositionLocalOf<BeaconGlassState?> { null }
 internal val LocalBeaconGlassBackdrop = staticCompositionLocalOf<LayerBackdrop?> { null }
+
+/** A fully rounded floating action: only its own bounds paint or intercept touches. */
+@Composable
+internal fun BeaconFloatingGlassButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable RowScope.() -> Unit,
+) {
+    val scheme = androidx.compose.material3.MaterialTheme.colorScheme
+    val foreground = scheme.onSurface.copy(alpha = if (enabled) 1f else .38f)
+    BeaconGlassSurface(scheme.surfaceContainerHigh,
+        modifier.shadow(BeaconUiMetrics.FloatingActionElevation, CircleShape)
+            .clip(CircleShape).clickable(enabled = enabled, role = Role.Button, onClick = onClick),
+        shape = CircleShape) {
+        CompositionLocalProvider(
+            androidx.compose.material3.LocalContentColor provides foreground,
+            top.yukonga.miuix.kmp.theme.LocalContentColor provides foreground,
+        ) {
+            Row(Modifier.defaultMinSize(minHeight = BeaconUiMetrics.NewMessagesMinHeight)
+                .padding(horizontal = BeaconUiMetrics.FloatingActionHorizontalInset, vertical = BeaconUiMetrics.Gap12),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
+                content = content)
+        }
+    }
+}
 
 internal fun supportsBeaconGlass(sdk: Int, hardware: Boolean, lowRam: Boolean, shader: Boolean) =
     sdk >= 33 && hardware && !lowRam && shader
@@ -94,12 +130,46 @@ internal fun BeaconGlassSurface(
     fallback: Color,
     modifier: Modifier = Modifier,
     shape: Shape = RectangleShape,
+    topFade: Boolean = false,
     content: @Composable BoxScope.() -> Unit,
 ) {
     Box(modifier) {
-        Box(Modifier.matchParentSize().beaconGlassMaterial(fallback, shape))
+        Box(Modifier.matchParentSize().then(
+            if (topFade) Modifier.beaconTopGlassMaterial(fallback)
+            else Modifier.beaconGlassMaterial(fallback, shape)
+        ))
         content()
     }
+}
+
+/** Only the background is softened; the title and controls remain in the sharp foreground. */
+@Composable
+private fun Modifier.beaconTopGlassMaterial(background: Color): Modifier {
+    val state = LocalBeaconGlass.current
+    val backdrop = LocalBeaconGlassBackdrop.current
+    val veil = Brush.verticalGradient(
+        0f to background,
+        .4f to background.copy(alpha = .96f),
+        .75f to background.copy(alpha = .6f),
+        1f to background.copy(alpha = 0f),
+    )
+    if (state?.available != true || backdrop == null) return background(veil)
+    return this.drawWithContent {
+        if (state.available && drawContext.canvas.nativeCanvas.isHardwareAccelerated) {
+            try { drawContent() } catch (_: RuntimeException) {
+                state.disable()
+                drawRect(veil)
+            }
+        } else {
+            state.disable()
+            drawRect(veil)
+        }
+    }.progressiveTextureBlur(
+        backdrop = backdrop,
+        shape = RectangleShape,
+        blurRadius = BeaconUiMetrics.TopGlassBlurRadius.value,
+        gradient = ProgressiveBlur.Top.copy(startFraction = .1f),
+    ).background(veil)
 }
 
 // Original AGSL: a shallow lens at the surface perimeter, with directional soft light.

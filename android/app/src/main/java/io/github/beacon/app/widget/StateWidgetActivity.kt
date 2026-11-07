@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
@@ -179,7 +180,15 @@ private fun StateWidgetEditorContent(id:Int, detail:Boolean, source:String?, ide
                 else BeaconActionIcon(BeaconIcons.Info,"桌面添加说明",onClick={feedback="请长按桌面空白处，从小组件列表选择 Beacon。"})
             }})
     },bottomBar={}){padding->
-        BeaconSettingsList(scroll,Modifier.fillMaxSize().padding(padding).nestedScroll(bar.connection(style)),contentPadding=PaddingValues(start=BeaconUiMetrics.PageInset,end=BeaconUiMetrics.PageInset,top=BeaconUiMetrics.PageTopInset,bottom=BeaconUiMetrics.PageBottomInset)) {
+        val underTopBar = style == io.github.beacon.app.domain.model.BeaconUiStyle.MIUIX
+        val direction = androidx.compose.ui.platform.LocalLayoutDirection.current
+        val viewportInsets = if (underTopBar) PaddingValues(
+            start = padding.calculateStartPadding(direction), end = padding.calculateEndPadding(direction),
+            bottom = padding.calculateBottomPadding()) else padding
+        BeaconSettingsList(scroll,Modifier.fillMaxSize().padding(viewportInsets).nestedScroll(bar.connection(style)),
+            contentPadding=PaddingValues(start=BeaconUiMetrics.PageInset,end=BeaconUiMetrics.PageInset,
+                top=BeaconUiMetrics.PageTopInset + if (underTopBar) padding.calculateTopPadding() else 0.dp,
+                bottom=BeaconUiMetrics.PageBottomInset)) {
             if(editing){
                 item { WidgetPreview(row,JSONObject(config.toString()).put("format",format.name).put("_offline",!WidgetHealth.online(context)),previewSize,existing,format,error) }
                 item { SettingsGroup("数据选择"){

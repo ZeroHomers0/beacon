@@ -68,18 +68,20 @@ internal fun AdminListFilters(
     onDevice: ((String) -> Unit)? = null,
     total: Int = 0, active: Int = 0, enabled: Boolean = true,
     totalIcon: androidx.compose.ui.graphics.vector.ImageVector = io.github.beacon.app.ui.icons.BeaconIcons.Device,
+    scroll: androidx.compose.foundation.lazy.LazyListState? = null,
 ) {
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
     Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
-        BeaconSearchBox(query, onQuery, label, onSearch = { focus.clearFocus() })
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
-            BeaconSummaryPill(stringResource(R.string.admin_stat_total, total), totalIcon,
-                highlighted = status == 0, enabled = enabled, onClick = { onStatus(0) }, Modifier.weight(1f), compact = true)
-            BeaconSummaryPill(stringResource(if (status == 2) R.string.admin_stat_revoked else R.string.admin_stat_active,
-                if (status == 2) total - active else active), if (status == 2) io.github.beacon.app.ui.icons.BeaconIcons.Block else io.github.beacon.app.ui.icons.BeaconIcons.Check,
-                highlighted = status != 0, enabled = enabled, onClick = { onStatus(if (status == 2) 2 else 1) },
-                Modifier.weight(1f), compact = true)
-        }
+        BeaconSearchBox(query, onQuery, label, scroll=scroll,onSearch = { focus.clearFocus() })
+        BeaconListSwitch(
+            labels = listOf(stringResource(R.string.admin_stat_total, total),
+                stringResource(if (status == 2) R.string.admin_stat_revoked else R.string.admin_stat_active,
+                    if (status == 2) total - active else active)),
+            icons = listOf(totalIcon, if (status == 2) io.github.beacon.app.ui.icons.BeaconIcons.Block
+                else io.github.beacon.app.ui.icons.BeaconIcons.Check),
+            selectedIndex = if (status == 0) 0 else 1, enabled = enabled,
+            onSelected = { onStatus(if (it == 0) 0 else if (status == 2) 2 else 1) },
+        )
         if (query.isNotBlank() || status != 0 || selectedDevice.isNotBlank()) ActionFlow {
             if (status != 0) AdminFilterChip(stringResource(if (status == 2) R.string.admin_revoked else R.string.admin_active),
                 enabled) { onStatus(0) }

@@ -48,6 +48,7 @@ internal fun StatesPage(
     showHidden: Boolean=false,
     onShowHidden: (Boolean)->Unit={},
     onRefresh: ()->Unit={},
+    scroll: androidx.compose.foundation.lazy.LazyListState = rememberLazyListState(),
 ) {
     val context=LocalContext.current
     val repository=remember(context) { StateListRepository(context) }
@@ -83,18 +84,15 @@ internal fun StatesPage(
             search.isBlank() || listOf("title","topic_key","application_name").any { key -> it.optString(key).contains(search,true) }
         }
     }
-    val scroll=rememberLazyListState()
     SettingsRetryFeedback("数据加载失败",failed&&loaded,onRetry={version++})
     Column(modifier) {
         Column(
             Modifier.fillMaxWidth().padding(start=BeaconUiMetrics.PageInset,end=BeaconUiMetrics.PageInset,top=BeaconUiMetrics.PageTopInset,bottom=BeaconUiMetrics.Gap8),
             verticalArrangement=Arrangement.spacedBy(BeaconUiMetrics.Gap8),
         ) {
-            BeaconSearchBox(search,{search=it},"搜索主题或应用",Modifier.fillMaxWidth(),onSearch={})
-            Row(horizontalArrangement=Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
-                BeaconSummaryPill("共 ${rows.size} 个",BeaconIcons.Topics,enabled=false,modifier=Modifier.weight(1f),compact=true)
-                BeaconSummaryPill("显示 ${visible.size} 个",BeaconIcons.List,enabled=false,modifier=Modifier.weight(1f),compact=true)
-            }
+            BeaconSearchBox(search,{search=it},"搜索主题或应用",Modifier.fillMaxWidth(),scroll = scroll,onSearch={})
+            BeaconListSwitch(labels=listOf("共 ${rows.size} 个","显示 ${visible.size} 个"),
+                icons=listOf(BeaconIcons.Topics,BeaconIcons.List))
             if(showHidden||search.isNotBlank()) ActionFlow {
                 if(showHidden) BeaconActiveFilterChip(selected=true,onClick={onShowHidden(false)},label={BeaconText("包含已隐藏主题")})
                 if(search.isNotBlank()) BeaconActiveFilterChip(selected=true,onClick={search=""},label={BeaconText(search,maxLines=1,overflow=TextOverflow.Ellipsis)})

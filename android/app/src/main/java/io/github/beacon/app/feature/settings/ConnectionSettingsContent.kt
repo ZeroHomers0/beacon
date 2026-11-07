@@ -68,11 +68,6 @@ private fun ConnectionSummary(
         subtitle = state.configuredEndpoint.ifBlank { stringResource(R.string.settings_receive_unbound) },
         healthy = state.runtimeConnected && state.serverReachable == true && !state.serverChecking,
         error = state.serverReachable == false,
-        action = {
-            BeaconRefreshAction(stringResource(R.string.server_check_action),
-                state.runtimeConnected && !busy && state.configuredEndpoint.isNotBlank(),
-                state.serverChecking, actions::checkServer)
-        },
     ) {
         SettingsOverviewField(stringResource(R.string.binding_device_name), form.deviceName)
         SettingsOverviewField(stringResource(R.string.server_last_checked), formatMessageTime(state.serverCheckedAtMs))
@@ -90,6 +85,14 @@ private fun ConnectionSummary(
     }
 
     if (editing) ConnectionEditor(state, actions, form, busy, onDismiss = { editing = false })
+}
+
+/** Connection checks live in the shared top-bar capsule, alongside other page actions. */
+@Composable
+internal fun ConnectionRefreshAction(state: RuntimeState, actions: RuntimeActions, busy: Boolean) {
+    BeaconRefreshAction(stringResource(R.string.server_check_action),
+        state.runtimeConnected && !busy && state.configuredEndpoint.isNotBlank(),
+        state.serverChecking, actions::checkServer)
 }
 
 @Composable

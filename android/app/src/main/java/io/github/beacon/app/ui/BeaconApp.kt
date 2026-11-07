@@ -16,9 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -42,13 +40,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-
-/**
- * Below this window height the list pages move their title into the sticky search row and shrink
- * the top bar, so a short window (landscape, split screen) keeps both the title and the search
- * field without a two-band header.
- */
-private val SHARED_TITLE_MAX_HEIGHT = 560.dp
 
 @Composable
 fun BeaconApp(
@@ -227,6 +218,7 @@ fun BeaconApp(
             }
         }
         val messageScroll = rememberLazyListState()
+        val statesScroll = rememberLazyListState()
         androidx.lifecycle.compose.LifecycleEventEffect(
             androidx.lifecycle.Lifecycle.Event.ON_STOP
         ) {
@@ -345,21 +337,18 @@ fun BeaconApp(
                 display.join()
             }
         }
-        // A short window (landscape, split screen) folds the page title into the search row. The
-        // container size is read instead of Configuration.screenHeightDp so a resize is picked up
-        // without waiting for a configuration change.
-        val windowInfo = LocalWindowInfo.current
-        val windowHeightDp = with(LocalDensity.current) { windowInfo.containerSize.height.toDp() }
-        val sharedTitleBar =
-            windowHeightDp > 0.dp && windowHeightDp < SHARED_TITLE_MAX_HEIGHT && !ui.selectionMode
-        // A short window folds the title into the search row; opening the IME preserves this
-        // layout.
-        val sharedTitleLabel = if (sharedTitleBar) stringResource(ui.pages[0]) else null
         val barBehavior = androidx.compose.runtime.key(ui.page, ui.settingsScreen, detail != null) { rememberBeaconBarBehavior() }
-        val compactBar =
-            (sharedTitleBar && ui.page == 0) ||
-                (ui.page == 0 && ui.selectionMode) ||
-                detail != null
+        // The home page has no title at any window size; selection still shows its count.
+        val compactBar = ui.page == 0 || detail != null
+        val activeScroll = when (ui.page) {
+            0 -> messageScroll
+            2 -> statesScroll
+            else -> settingsScrollStates.getValue(ui.settingsScreen)
+        }
+        val scrollProgress = io.github.beacon.app.ui.components.rememberBeaconScrollProgress(activeScroll)
+        androidx.compose.runtime.CompositionLocalProvider(
+            io.github.beacon.app.ui.components.LocalBeaconScrollProgress provides scrollProgress,
+        ) {
         Row(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f).fillMaxHeight()) {
                 BeaconScaffold(
@@ -378,7 +367,6 @@ fun BeaconApp(
                             settingsMotion = settingsMotion,
                             pager = pager,
                             barBehavior = barBehavior,
-                            sharedTitleBar = sharedTitleBar,
                             navigate = navigate,
                         )
                     },
@@ -392,10 +380,11 @@ fun BeaconApp(
                         settingsTransition = settingsTransition,
                         settingsMotion = settingsMotion,
                         messageScroll = messageScroll,
+                        statesScroll = statesScroll,
                         settingsScrollStates = settingsScrollStates,
                         barBehavior = barBehavior,
                         compactBar = compactBar,
-                        sharedTitleLabel = sharedTitleLabel,
+                        sharedTitleLabel = null,
                         busy = busy,
                         snackbar = snackbar,
                         uiScope = uiScope,
@@ -409,6 +398,7 @@ fun BeaconApp(
                     )
                 }
             }
+        }
         }
     }
 }

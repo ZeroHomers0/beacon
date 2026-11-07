@@ -194,6 +194,7 @@ internal fun ServerAdminPage(
                 active = if (tab == 0) allDevices.count { !it.revoked } else allApplications.count { !it.revoked },
                 enabled = !state.busy,
                 totalIcon = if (tab == 0) BeaconIcons.Device else BeaconIcons.Applications,
+                scroll = scroll,
             )
         }
     BeaconPullToRefresh(listRefreshing, {
@@ -201,7 +202,7 @@ internal fun ServerAdminPage(
     }, Modifier.fillMaxWidth().weight(1f), enabled = state.loggedIn && tab in 0..1) {
     BeaconSettingsList(
         state = scroll,
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().beaconFilterChange(if (tab == 0) deviceStatus else applicationStatus),
         contentPadding = if (state.loggedIn && tab in 0..1) PaddingValues(
             start = padding.calculateLeftPadding(androidx.compose.ui.unit.LayoutDirection.Ltr),
             end = padding.calculateRightPadding(androidx.compose.ui.unit.LayoutDirection.Ltr),
