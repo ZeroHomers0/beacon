@@ -51,15 +51,20 @@ class ServerStatusLayoutTest {
             }
             fun rowTop() = rule.onNodeWithText(label).getUnclippedBoundsInRoot().top.value
             val settledTop = rowTop()
-            rule.onNodeWithText(rule.activity.getString(R.string.server_check_action)).performScrollTo().performClick()
+            // Inspect the pending state without advancing the refresh icon's endless animation.
+            rule.mainClock.autoAdvance = false
+            rule.onNodeWithContentDescription(rule.activity.getString(R.string.server_check_action)).performScrollTo().performClick()
             // Keep the viewport fixed while comparing document positions.
             rule.waitForIdle()
             assertEquals("The probe must not move the row below its status", settledTop, rowTop(), 0.5f)
             rule.runOnIdle { runtime.value = initial.copy(serverCheckResult = "连接失败", serverReachable = false) }
-            assertTrue("A finished result should regain its natural height", rowTop() < settledTop)
+            assertEquals("The error mark must preserve the two-line overview geometry", settledTop, rowTop(), 0.5f)
             rule.runOnIdle { runtime.value = initial }
             assertEquals(settledTop, rowTop(), 0.5f)
-        } finally { rule.runOnUiThread { repository.close() } }
+        } finally {
+            rule.mainClock.autoAdvance = true
+            rule.runOnUiThread { repository.close() }
+        }
     }
     @Test fun materialStableProbe() = verify(BeaconUiStyle.MATERIAL3, 1f)
     @Test fun miuixStableProbe() = verify(BeaconUiStyle.MIUIX, 1f)

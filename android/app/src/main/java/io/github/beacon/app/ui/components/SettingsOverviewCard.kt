@@ -4,7 +4,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -15,7 +14,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import io.github.beacon.app.ui.icons.BeaconIcons
 
 // Sampled from the supplied reference after converting its Display P3 profile to sRGB.
 internal val BeaconHealthyCardBackground = Color(0xFFDFFAE4)
@@ -49,7 +47,7 @@ fun SettingsOverviewCard(
             Box(Modifier.fillMaxWidth().clip(MaterialTheme.shapes.large)) {
                 // A match-parent overlay never contributes to the measured height.
                 Box(Modifier.matchParentSize()) {
-                    if (healthy) Box(
+                    Box(
                         Modifier.align(Alignment.BottomEnd).offset(x = 16.dp, y = 20.dp)
                             .size(88.dp).border(8.dp, tone, CircleShape),
                         contentAlignment = Alignment.Center,
@@ -57,12 +55,27 @@ fun SettingsOverviewCard(
                         androidx.compose.foundation.Canvas(Modifier.size(60.dp)) {
                             val stroke = 8.dp.toPx()
                             val color = tone
-                            drawLine(color, androidx.compose.ui.geometry.Offset(size.width * .18f, size.height * .52f),
-                                androidx.compose.ui.geometry.Offset(size.width * .42f, size.height * .75f), stroke,
-                                cap = androidx.compose.ui.graphics.StrokeCap.Round)
-                            drawLine(color, androidx.compose.ui.geometry.Offset(size.width * .42f, size.height * .75f),
-                                androidx.compose.ui.geometry.Offset(size.width * .84f, size.height * .28f), stroke,
-                                cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                            when {
+                                healthy -> {
+                                    drawLine(color, androidx.compose.ui.geometry.Offset(size.width * .18f, size.height * .52f),
+                                        androidx.compose.ui.geometry.Offset(size.width * .42f, size.height * .75f), stroke,
+                                        cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                                    drawLine(color, androidx.compose.ui.geometry.Offset(size.width * .42f, size.height * .75f),
+                                        androidx.compose.ui.geometry.Offset(size.width * .84f, size.height * .28f), stroke,
+                                        cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                                }
+                                error -> {
+                                    drawLine(color, androidx.compose.ui.geometry.Offset(size.width * .5f, size.height * .20f),
+                                        androidx.compose.ui.geometry.Offset(size.width * .5f, size.height * .52f), stroke,
+                                        cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                                    drawCircle(color, radius = stroke / 2,
+                                        center = androidx.compose.ui.geometry.Offset(size.width * .5f, size.height * .74f))
+                                }
+                                else -> drawLine(color,
+                                    androidx.compose.ui.geometry.Offset(size.width * .25f, size.height * .5f),
+                                    androidx.compose.ui.geometry.Offset(size.width * .75f, size.height * .5f), stroke,
+                                    cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                            }
                         }
                     }
                 }

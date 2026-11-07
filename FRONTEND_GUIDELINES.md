@@ -20,7 +20,9 @@
 
 入口为 [BeaconTheme.kt](android/app/src/main/java/io/github/beacon/app/ui/theme/BeaconTheme.kt)。支持 `MATERIAL3/MIUIX` 与 `SYSTEM/LIGHT/DARK`。使用 `Beacon*` 包装组件桥接风格；业务页不直接混搭独立Material或MIUIX弹窗、按钮、输入框。
 
-Material支持Android 12及以上动态色，低版本使用固定后备色。因此普通页面必须取 `MaterialTheme.colorScheme`，禁止把后备色当成全局固定主题。MIUIX也经由同一入口桥接颜色和文字样式。
+客户端最低支持Android 13（API 33）。Material使用系统动态色，普通页面必须取 `MaterialTheme.colorScheme`，禁止把后备色当成全局固定主题。MIUIX也经由同一入口桥接颜色和文字样式。
+
+界面风格仍只有MATERIAL3/MIUIX，不增加柔光玻璃设置或持久化字段。MIUIX由公共Scaffold检查硬件加速、非低内存设备和RuntimeShader初始化能力，满足条件自动启用应用内柔光玻璃；初始化或材质绘制失败后该Scaffold回退普通MIUIX，不循环重试。此效果是Compose自绘，不调用小米私有系统接口，也不按品牌白名单判断。顶栏、底栏和顶栏按钮共用内容背景采样；搜索框等位于采样源内的控件只叠加柔光混色与边缘高光，禁止采样自身形成反馈。正文与密集列表不加模糊，不新增持续动画、轮询或后台工作。系统通知与位图桌面小组件不使用此材质。
 
 | 语义 | 取值/规则 |
 | --- | --- |
@@ -31,7 +33,7 @@ Material支持Android 12及以上动态色，低版本使用固定后备色。�
 | 设置中的选项标签 | `BeaconChoiceSelected` #91CEFF，未选中#DDECFF，文字#14263D |
 | 标签配色 | `BeaconTagPalette` 按稳定标签策略映射，不随列表重排变色 |
 
-连接、运行、服务器概况等健康卡片复用 [SettingsOverviewCard](android/app/src/main/java/io/github/beacon/app/ui/components/SettingsOverviewCard.kt)：浅色背景#DFFAE4、文字#14261A；深色背景#193927、文字#E9EBEA；圆圈对钩#35D267。成功标记为不参与测量的右下角覆盖层，不能挤压文字或让状态变化改变卡片高度。
+连接、运行、服务器概况等状态卡片复用 [SettingsOverviewCard](android/app/src/main/java/io/github/beacon/app/ui/components/SettingsOverviewCard.kt)：正常时浅色背景#DFFAE4、文字#14261A，深色背景#193927、文字#E9EBEA，圆圈对钩#35D267；异常时使用error色圆圈感叹号，其余未配置、暂停、检测或等待状态使用onSurfaceVariant色圆圈横杠。所有标记沿用同一尺寸、位置及裁切，作为不参与测量的右下角覆盖层，不能挤压文字或让状态变化改变卡片高度。
 
 ## 3. 几何与排版基准
 
@@ -104,6 +106,7 @@ Material支持Android 12及以上动态色，低版本使用固定后备色。�
 | 下拉选项 | `BeaconDropdownPreference`；禁用时给出原因，保持所选项和布局稳定 |
 | 开关/勾选/筛选 | 复用Beacon组件；点击子操作不能误触整行选择 |
 | 普通/次级/危险按钮 | `BeaconButton/BeaconTextButton/BeaconOutlinedButton/BeaconDangerButton` |
+| 按钮配色 | 主操作用主题色填充与onPrimary文字，次级操作用中性填充与中性文字，危险操作用error填充与onError文字；MIUIX优先使用库的primary/secondaryVariant及对应禁用语义色，禁止统一灰底蓝字 |
 | 顶栏保存 | `BeaconSaveAction`；有效且有未保存改动才可用，onSurface深色；否则alpha=.38 |
 | 保存结果 | 成功更新基线，留在当前页并灰显；失败保留草稿可重试；不能用绿色勾替换保存图标 |
 
@@ -114,6 +117,8 @@ Material支持Android 12及以上动态色，低版本使用固定后备色。�
 统一用 `BeaconAlertDialog/BeaconConfirmDialog`；危险操作必须说明影响，确认文字用“删除/清空/撤销”等具体动词。失败留在原弹窗说明，不关闭后让用户猜结果。表单内容独立滚动，按钮保持可触达；MIUIX弹窗最大屏高85%，Material正文最大55%，由公共组件管理。
 
 所有双按钮弹窗统一由 `BeaconAlertDialog` 在底部同一行等宽展示：取消在左、确认/创建在右，两者等高、间距12dp，最小点击高度48dp；不能因文字、状态或字体设置改成上下两行。正文独立滚动，不能挤压操作区。
+
+弹窗确认槽统一使用主操作配色、取消槽使用次级配色，危险确认优先危险色；内容不得自行覆盖按钮内文字/图标为primary颜色。保存图标仍按既有dirty/保存/禁用规则，选项标签与筛选标签保持各自配色规则。
 
 弹窗操作文字统一13sp，仍尊重系统字体缩放。按钮文案最多四个汉字，优先使用“取消/创建/保存/删除/确认/下载更新/选择文件”等明确短动词；长说明放标题或正文。创建按钮统一“创建”，不重复“创建绑定码/创建发送应用”等长标题；空间不足先缩短文案到“创建”等两字，不用省略号截断、过度缩字或缩小点击区。极端大字体允许按钮内部换行并同步等高，两个按钮本身仍同行均分。危险操作缩短后必须保留行为含义，完整影响写在正文。
 

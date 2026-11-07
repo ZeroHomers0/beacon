@@ -1,6 +1,19 @@
 plugins {
     alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+}
+
+kotlin {
+    compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+}
+
+// JVM transport tests use the JDK's local HTTP server, which is outside java.se.
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile>().configureEach {
+    if (name.endsWith("UnitTestKotlin")) {
+        compilerOptions.noJdk.set(false)
+        compilerOptions.freeCompilerArgs.add("-Xadd-modules=jdk.httpserver")
+    }
 }
 
 // Production signing is opt-in. A partial configuration fails without printing secrets.
@@ -30,7 +43,7 @@ android {
     compileSdk = 37
     defaultConfig {
         applicationId = "io.github.beacon.app"
-        minSdk = 26
+        minSdk = 33
         targetSdk = 37
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         versionCode = rootProject.extra["beaconVersionCode"] as Int
@@ -97,16 +110,19 @@ android {
 
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(platform(libs.androidx.compose.bom))
     // MIUIX WindowDialog requires ComponentActivity's NavigationEventDispatcherOwner (1.12+).
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.work.runtime)
     implementation(libs.okhttp)
     implementation(libs.markwon.core)
     implementation(libs.androidx.lifecycle.runtime.compose)
-    // Version comes from the compose BOM above.
+    // Material 3 follows its latest stable release; UI/runtime/tests use the BOM.
     implementation(libs.androidx.compose.material3)
-    // Fixed official version: Kotlin 2.3.10; its Android Compose dependencies resolve together.
+    // MIUIX 0.9 separates UI, preferences and backdrop effects.
     implementation(libs.miuix.android)
+    implementation(libs.miuix.preference)
+    implementation(libs.miuix.blur)
     debugImplementation(libs.androidx.compose.ui.tooling)
     testImplementation(libs.junit)
     testImplementation(libs.json)
@@ -117,4 +133,16 @@ dependencies {
     androidTestImplementation(libs.androidx.test.runner)
     // API 37 removed the InputManager.getInstance reflection used by older Espresso.
     androidTestImplementation(libs.androidx.test.espresso.core)
+}
+
+// MIUIX's multiplatform window-size bridge requests an Android Material 3 alpha.
+// Keep this atomic group on the stable Android release selected for Beacon.
+configurations.configureEach {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "androidx.compose.material3" && requested.name in setOf(
+                "material3", "material3-android", "material3-window-size-class", "material3-window-size-class-android")) {
+            useVersion(libs.versions.material3.get())
+            because("Beacon uses the stable Material 3 API and matching window-size classes")
+        }
+    }
 }

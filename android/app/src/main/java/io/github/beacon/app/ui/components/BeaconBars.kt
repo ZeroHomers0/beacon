@@ -53,21 +53,23 @@ fun BeaconTopBar(
     actions: @Composable RowScope.() -> Unit,
 ) {
     if (miuix()) {
-        if (compact)
-            top.yukonga.miuix.kmp.basic.SmallTopAppBar(
-                title,
-                color = androidx.compose.material3.MaterialTheme.colorScheme.background,
-                navigationIcon = navigationIcon,
-                actions = actions,
-            )
-        else
-            top.yukonga.miuix.kmp.basic.TopAppBar(
-                title,
-                color = androidx.compose.material3.MaterialTheme.colorScheme.background,
-                navigationIcon = navigationIcon,
-                actions = actions,
-                scrollBehavior = behavior.miuix,
-            )
+        BeaconGlassSurface(androidx.compose.material3.MaterialTheme.colorScheme.background) {
+            if (compact)
+                top.yukonga.miuix.kmp.basic.SmallTopAppBar(
+                    title,
+                    color = androidx.compose.ui.graphics.Color.Transparent,
+                    navigationIcon = navigationIcon,
+                    actions = actions,
+                )
+            else
+                top.yukonga.miuix.kmp.basic.TopAppBar(
+                    title,
+                    color = androidx.compose.ui.graphics.Color.Transparent,
+                    navigationIcon = navigationIcon,
+                    actions = actions,
+                    scrollBehavior = behavior.miuix,
+                )
+        }
     } else {
         if (compact)
             androidx.compose.material3.TopAppBar(

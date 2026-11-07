@@ -32,8 +32,8 @@ fun BeaconCheckbox(
 ) {
     if (miuix())
         top.yukonga.miuix.kmp.basic.Checkbox(
-            checked,
-            onCheckedChange,
+            androidx.compose.ui.state.ToggleableState(checked),
+            onCheckedChange?.let { callback -> { callback(!checked) } },
             modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp).named(contentDescription),
             enabled = enabled,
         )
@@ -140,9 +140,9 @@ fun BeaconTextField(
                 enabled = enabled,
                 label = placeholder,
                 useLabelAsPlaceholder = placeholder.isNotEmpty(),
-                borderColor =
+                colors = top.yukonga.miuix.kmp.basic.TextFieldDefaults.textFieldColors(borderColor =
                     if (isError) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.primary,
+                    else MaterialTheme.colorScheme.primary),
                 visualTransformation = visualTransformation,
                 keyboardOptions = keyboardOptions,
                 keyboardActions = keyboardActions,

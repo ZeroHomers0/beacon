@@ -22,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import io.github.beacon.app.R
 import io.github.beacon.app.ui.icons.BeaconIcons
 import top.yukonga.miuix.kmp.basic.NavigationBarItem as MiuixNavigationItem
+import top.yukonga.miuix.kmp.blur.layerBackdrop
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
 
 @Composable
 fun BeaconScaffold(
@@ -32,14 +34,29 @@ fun BeaconScaffold(
 ) {
     // The IME overlays the window. Preserve page and navigation geometry while it opens or closes.
     Box(Modifier.fillMaxSize()) {
-        if (miuix())
-            top.yukonga.miuix.kmp.basic.Scaffold(
-                topBar = topBar,
-                containerColor = MaterialTheme.colorScheme.background,
-                bottomBar = bottomBar,
-                content = content,
-            )
-        else
+        if (miuix()) {
+            val glass = rememberBeaconGlassState()
+            val background = MaterialTheme.colorScheme.background
+            val backdrop = rememberLayerBackdrop { drawRect(background); drawContent() }
+            CompositionLocalProvider(
+                LocalBeaconGlass provides glass,
+                LocalBeaconGlassBackdrop provides backdrop,
+            ) {
+                top.yukonga.miuix.kmp.basic.Scaffold(
+                    topBar = topBar,
+                    containerColor = MaterialTheme.colorScheme.background,
+                    bottomBar = bottomBar,
+                    content = { padding ->
+                        // Keep glass consumers outside their capture source to prevent feedback.
+                        Box(Modifier.fillMaxSize().then(
+                            if (glass.available) Modifier.layerBackdrop(backdrop) else Modifier
+                        )) {
+                            CompositionLocalProvider(LocalBeaconGlassBackdrop provides null) { content(padding) }
+                        }
+                    },
+                )
+            }
+        } else
             androidx.compose.material3.Scaffold(
                 topBar = topBar,
                 containerColor = MaterialTheme.colorScheme.background,
@@ -121,15 +138,20 @@ fun BeaconNavigation(
         return
     }
     if (miuix())
-        top.yukonga.miuix.kmp.basic.NavigationBar {
-            titleRes.indices.sortedBy{when(it){0->0;2->1;else->2}}.forEach { index ->
-                val res=titleRes[index]
-                MiuixNavigationItem(
-                    page == index,
-                    { onNavigate(index) },
-                    icons[index],
-                    stringResource(res),
-                )
+        BeaconGlassSurface(MaterialTheme.colorScheme.surface) {
+            top.yukonga.miuix.kmp.basic.NavigationBar(
+                color = androidx.compose.ui.graphics.Color.Transparent,
+                showDivider = LocalBeaconGlass.current?.available != true,
+            ) {
+                titleRes.indices.sortedBy{when(it){0->0;2->1;else->2}}.forEach { index ->
+                    val res=titleRes[index]
+                    MiuixNavigationItem(
+                        page == index,
+                        { onNavigate(index) },
+                        icons[index],
+                        stringResource(res),
+                    )
+                }
             }
         }
     else

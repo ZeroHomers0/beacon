@@ -27,6 +27,7 @@ internal val LocalCompactActions = staticCompositionLocalOf { false }
 internal val LocalActionFillWidth = staticCompositionLocalOf { false }
 internal val LocalButtonLabel = staticCompositionLocalOf { false }
 internal val LocalDialogActionLabel = staticCompositionLocalOf { false }
+internal val LocalPrimaryAction = staticCompositionLocalOf { false }
 
 /**
  * MIUIX draws a field with a placeholder label taller than one without, so two fields in the same
@@ -82,12 +83,33 @@ internal fun BeaconUnifiedButton(
     enabled: Boolean = true,
     danger: Boolean = false,
     selected: Boolean? = null,
+    primary: Boolean = false,
     content: @Composable RowScope.() -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val foreground = if (!enabled) (if (selected != null) BeaconTagInk else scheme.onSurface).copy(alpha = .38f)
-        else if (danger) scheme.error else if (selected != null) BeaconTagInk else scheme.primary
-    val background = when (selected) { true -> BeaconChoiceSelected; false -> BeaconChoiceUnselected; null -> scheme.surfaceContainerHigh }
+    val emphasized = primary || LocalPrimaryAction.current
+    val defaults = when {
+        danger -> top.yukonga.miuix.kmp.basic.ButtonDefaults.buttonColorsPrimary(
+            color = scheme.error, contentColor = scheme.onError)
+        emphasized -> top.yukonga.miuix.kmp.basic.ButtonDefaults.buttonColorsPrimary()
+        else -> top.yukonga.miuix.kmp.basic.ButtonDefaults.buttonColors()
+    }
+    val background = when {
+        selected != null -> if (selected) BeaconChoiceSelected else BeaconChoiceUnselected
+        miuix() -> if (enabled) defaults.color else defaults.disabledColor
+        !enabled -> scheme.onSurface.copy(alpha = .12f)
+        danger -> scheme.error
+        emphasized -> scheme.primary
+        else -> scheme.surfaceContainerHigh
+    }
+    val foreground = when {
+        selected != null -> BeaconTagInk.copy(alpha = if (enabled) 1f else .38f)
+        miuix() -> if (enabled) defaults.contentColor else defaults.disabledContentColor
+        !enabled -> scheme.onSurface.copy(alpha = .38f)
+        danger -> scheme.onError
+        emphasized -> scheme.onPrimary
+        else -> scheme.onSurface
+    }
     val actionModifier = (if (LocalActionFillWidth.current) modifier.fillMaxWidth() else modifier)
         .heightIn(min = BeaconUiMetrics.ControlMinHeight)
         .widthIn(min = BeaconUiMetrics.ActionMinWidth)
@@ -97,7 +119,8 @@ internal fun BeaconUnifiedButton(
             cornerRadius = BeaconUiMetrics.ActionRadius,
             minHeight = BeaconUiMetrics.ControlMinHeight, insideMargin = insets,
             colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.buttonColors(
-                color = background, disabledColor = background),
+                color = background, disabledColor = background,
+                contentColor = foreground, disabledContentColor = foreground),
         ) {
             CompositionLocalProvider(
                 LocalButtonLabel provides true,
@@ -119,7 +142,7 @@ internal fun BeaconUnifiedButton(
 @Composable
 fun BeaconButton(onClick: () -> Unit, modifier: Modifier = Modifier,
     enabled: Boolean = true, content: @Composable RowScope.() -> Unit,
-) = BeaconUnifiedButton(onClick, modifier, enabled, content = content)
+) = BeaconUnifiedButton(onClick, modifier, enabled, primary = true, content = content)
 
 @Composable
 fun BeaconTextButton(onClick: () -> Unit, modifier: Modifier = Modifier,
@@ -139,10 +162,15 @@ fun BeaconIconButton(
     content: @Composable () -> Unit,
 ) {
     val actionModifier = if (LocalCompactActions.current) modifier.width(44.dp) else modifier
+    val glassModifier = if (miuix() && LocalBeaconGlass.current?.available == true)
+        Modifier.beaconGlassMaterial(MaterialTheme.colorScheme.surface,
+            androidx.compose.foundation.shape.CircleShape)
+    else Modifier
     if (miuix())
         top.yukonga.miuix.kmp.basic.IconButton(
             onClick,
-            actionModifier.semantics(mergeDescendants = true) { if (!enabled) disabled() },
+            actionModifier.then(glassModifier)
+                .semantics(mergeDescendants = true) { if (!enabled) disabled() },
             enabled,
             minHeight = 48.dp,
             minWidth = if (LocalCompactActions.current) 44.dp else 48.dp,

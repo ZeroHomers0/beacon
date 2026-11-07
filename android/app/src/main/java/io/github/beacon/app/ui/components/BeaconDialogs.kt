@@ -30,19 +30,23 @@ fun BeaconAlertDialog(
     val screenHeight = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp
     val actions: @Composable () -> Unit = {
         if (dismissButton == null) {
-            CompositionLocalProvider(LocalDialogActionLabel provides true) { SettingsActions { confirmButton() } }
+            CompositionLocalProvider(LocalDialogActionLabel provides true, LocalPrimaryAction provides true) { SettingsActions { confirmButton() } }
         } else {
             CompositionLocalProvider(LocalActionFillWidth provides true, LocalDialogActionLabel provides true) {
                 Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12)) {
-                    Box(Modifier.weight(1f).fillMaxHeight(), propagateMinConstraints = true) { dismissButton() }
-                    Box(Modifier.weight(1f).fillMaxHeight(), propagateMinConstraints = true) { confirmButton() }
+                    Box(Modifier.weight(1f).fillMaxHeight(), propagateMinConstraints = true) {
+                        CompositionLocalProvider(LocalPrimaryAction provides false) { dismissButton() }
+                    }
+                    Box(Modifier.weight(1f).fillMaxHeight(), propagateMinConstraints = true) {
+                        CompositionLocalProvider(LocalPrimaryAction provides true) { confirmButton() }
+                    }
                 }
             }
         }
     }
 
     if (miuix()) {
-        top.yukonga.miuix.kmp.extra.WindowDialog(show = true, onDismissRequest = onDismissRequest) {
+        top.yukonga.miuix.kmp.window.WindowDialog(show = true, onDismissRequest = onDismissRequest) {
             Column(
                 Modifier.heightIn(max = screenHeight * .85f),
                 verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap16),
@@ -70,8 +74,8 @@ fun BeaconAlertDialog(
 @Composable
 fun BeaconActionPair(dismiss: @Composable () -> Unit, confirm: @Composable () -> Unit) {
     SettingsActions {
-        Box(propagateMinConstraints = true) { dismiss() }
-        Box(propagateMinConstraints = true) { confirm() }
+        Box(propagateMinConstraints = true) { CompositionLocalProvider(LocalPrimaryAction provides false) { dismiss() } }
+        Box(propagateMinConstraints = true) { CompositionLocalProvider(LocalPrimaryAction provides true) { confirm() } }
     }
 }
 
@@ -80,7 +84,7 @@ fun BeaconActionPair(dismiss: @Composable () -> Unit, confirm: @Composable () ->
  * cancel/confirm pair. The confirm label defaults to 「确认」 because repeating the title produced
  * 「删除设备 / 删除设备」; a caller that knows the verb (删除、解绑、清理) passes it explicitly.
  *
- * [danger] gives the shared button a red label and is reserved for actions that
+ * [danger] gives the shared button an error-colored fill and is reserved for actions that
  * cannot be undone. [enabled] and [dismissEnabled] stay separate because a dialog that keeps the
  * user inside while a call is in flight disables both, while one whose confirm is simply not
  * applicable yet still allows a plain dismissal. Anything richer than a single sentence still
@@ -146,7 +150,7 @@ fun BeaconDropdownMenu(
     onDismissRequest: () -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    top.yukonga.miuix.kmp.extra.WindowListPopup(
+    top.yukonga.miuix.kmp.window.WindowListPopup(
         show = expanded,
         popupPositionProvider =
             top.yukonga.miuix.kmp.basic.ListPopupDefaults.ContextMenuPositionProvider,

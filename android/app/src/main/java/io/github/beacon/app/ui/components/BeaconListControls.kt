@@ -69,7 +69,7 @@ fun BeaconSearchBox(
             modifier
                 .fillMaxWidth()
                 .heightIn(min = BeaconUiMetrics.SearchFieldMinHeight)
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
+                .beaconGlassMaterial(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape)
                 .semantics { contentDescription = hint }
                 .testTag(SEARCH_BOX_TAG),
         decorationBox = { field ->

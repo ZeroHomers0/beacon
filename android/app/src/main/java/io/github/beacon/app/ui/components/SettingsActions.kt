@@ -63,12 +63,11 @@ fun SettingsTextAction(
     accessibilityLabel: String = label,
     onClick: () -> Unit,
 ) {
-    val tint = MaterialTheme.colorScheme.primary.copy(alpha = if (enabled) 1f else .38f)
     BeaconTextButton(onClick, Modifier.named(accessibilityLabel), enabled = enabled) {
         Row(verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap6)) {
-            Icon(icon, null, Modifier.size(BeaconUiMetrics.IconInline), tint = tint)
-            BeaconText(label, color = tint, style = MaterialTheme.typography.labelLarge)
+            Icon(icon, null, Modifier.size(BeaconUiMetrics.IconInline))
+            BeaconText(label, style = MaterialTheme.typography.labelLarge)
         }
     }
 }

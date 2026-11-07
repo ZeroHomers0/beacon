@@ -104,6 +104,7 @@ fun BeaconTheme(
                 secondaryContainer = miuix.secondaryContainer,
                 onSecondaryContainer = miuix.onSecondaryContainer,
                 error = miuix.error,
+                onError = miuix.onError,
             )
         else colors
     CompositionLocalProvider(LocalBeaconUiStyle provides style) {
