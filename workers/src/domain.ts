@@ -15,7 +15,7 @@ export interface StructuredBlock {
   indeterminate?: boolean;
 }
 
-export const VERSION = "1.3.0-workers";
+export const VERSION = "1.4.0-workers";
 export const DAY = 86_400_000;
 export const PENDING = 7 * DAY;
 export const RECEIPT = 30 * DAY;

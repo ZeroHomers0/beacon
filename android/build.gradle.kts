@@ -4,6 +4,6 @@ plugins {
     alias(libs.plugins.kotlin.android) apply false
 }
 
-extra["beaconVersionCode"] = 17
+extra["beaconVersionCode"] = 18
 
-extra["beaconVersionName"] = "1.3.0"
+extra["beaconVersionName"] = "1.4.0"
