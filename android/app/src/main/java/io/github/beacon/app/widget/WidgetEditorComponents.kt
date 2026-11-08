@@ -214,7 +214,7 @@ internal fun WidgetStateDetail(row:JSONObject,id:Int,cache:StateCache,onEdit:()-
             SettingsHint("最后同步："+formatStateTime(row.optLong("accepted_at_ms")))
         }}
         SettingsGroup("通知设置"){
-            Column(Modifier.padding(horizontal=BeaconUiMetrics.CardInset)){
+            SettingsPreferenceRows{
                 BeaconPreferenceToggle("显示静默状态通知","仅更新这一主题的通知",notify){value->notify=value;cache.preference("notify:$key",if(value)"1"else"0");cache.preference("dismiss:$key","");StateNotifications.refresh(context);StateRefreshReceiver.schedule(context)}
             }
             io.github.beacon.app.feature.settings.TemporaryMuteAction(
@@ -224,7 +224,7 @@ internal fun WidgetStateDetail(row:JSONObject,id:Int,cache:StateCache,onEdit:()-
             if(progress.isNotEmpty())BeaconDropdownPreference("通知主内容",progress.map{it.optString("label",it.optString("id"))},progress.indexOfFirst{it.optString("id")==primary}.coerceAtLeast(0),settingsRow=true,icon=BeaconIcons.Tune){index->primary=progress[index].optString("id");cache.preference("primary:$key",primary);StateNotifications.refresh(context)}
         }
         SettingsGroup("主题显示"){
-            Column(Modifier.padding(horizontal=BeaconUiMetrics.CardInset)){
+            SettingsPreferenceRows{
                 BeaconPreferenceToggle("在状态列表显示","隐藏不会删除数据或桌面组件",!hidden){show->hidden=!show;cache.preference("hidden:$key",if(hidden)"1"else"0")}
             }
             SettingsRow(if(id==AppWidgetManager.INVALID_APPWIDGET_ID)"桌面添加说明"else"编辑小组件","设置模板、内容和外观",BeaconIcons.Applications,onClick=onEdit)

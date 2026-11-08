@@ -27,7 +27,6 @@ object BeaconUiMetrics {
     val SectionGap = 12.dp
     val SettingsGroupGap = 20.dp
     val GroupTitleGap = 8.dp
-    val PreferenceInset = 4.dp
     val NavigationMinHeight = 62.92.dp
     val NavigationVerticalInset = 4.84.dp
     val FieldMinHeight = 61.6.dp

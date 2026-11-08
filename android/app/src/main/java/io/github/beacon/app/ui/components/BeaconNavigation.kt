@@ -68,6 +68,8 @@ fun BeaconDropdownPreference(
     itemLeading: (@Composable (Int) -> Unit)? = null,
     onSelected: (Int) -> Unit,
 ) {
+    val cardRow = LocalBeaconPreferenceCard.current
+    val insetRow = settingsRow || cardRow
     if (miuix()) {
         val entry = top.yukonga.miuix.kmp.basic.DropdownEntry(items.mapIndexed { index, label ->
             top.yukonga.miuix.kmp.basic.DropdownItem(text = label, selected = index == selectedIndex,
@@ -76,21 +78,31 @@ fun BeaconDropdownPreference(
         })
         top.yukonga.miuix.kmp.preference.WindowDropdownPreference(
             entry = entry, title = title,
-            modifier = Modifier.semantics(mergeDescendants = true) { if (!enabled) disabled() },
+            modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) { if (!enabled) disabled() },
             summary = items.getOrElse(selectedIndex) { BeaconUnknownValue },
             enabled = enabled, showValue = false, maxHeight = 360.dp,
             startAction = icon?.let { image -> {
                 androidx.compose.material3.Icon(image, null,
-                    if (settingsRow) Modifier.padding(end = BeaconUiMetrics.Gap16) else Modifier)
+                    if (insetRow) Modifier.padding(end = BeaconUiMetrics.Gap16) else Modifier)
             } },
-            insideMargin = PaddingValues(horizontal = if (settingsRow) BeaconUiMetrics.CardInset else 0.dp,
-                vertical = if (settingsRow) BeaconUiMetrics.NavigationVerticalInset else BeaconUiMetrics.FieldVerticalInset),
+            insideMargin = PaddingValues(horizontal = if (insetRow) BeaconUiMetrics.CardInset else 0.dp,
+                vertical = if (insetRow) BeaconUiMetrics.NavigationVerticalInset else BeaconUiMetrics.FieldVerticalInset),
         )
         return
     }
     var expanded by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxWidth()) {
-        if (settingsRow) {
+        if (cardRow) {
+            androidx.compose.material3.ListItem(
+                headlineContent = { BeaconText(title) },
+                supportingContent = { BeaconText(items.getOrElse(selectedIndex) { BeaconUnknownValue }) },
+                leadingContent = icon?.let { image -> { androidx.compose.material3.Icon(image, null) } },
+                trailingContent = { androidx.compose.material3.Icon(BeaconIcons.Select, null) },
+                modifier = Modifier.fillMaxWidth().alpha(if (enabled) 1f else .38f)
+                    .clickable(enabled = enabled) { expanded = true },
+                colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+            )
+        } else if (settingsRow) {
             SettingsRow(
                 title,
                 items.getOrElse(selectedIndex) { BeaconUnknownValue },

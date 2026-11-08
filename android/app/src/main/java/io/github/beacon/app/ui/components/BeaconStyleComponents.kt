@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -188,7 +189,7 @@ fun BeaconCard(
 ) {
     if (miuix())
         top.yukonga.miuix.kmp.basic.Card(
-            modifier,
+            modifier.clip(shape),
             cornerRadius = BeaconUiMetrics.CardRadius,
             colors =
                 top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(
@@ -213,7 +214,7 @@ fun BeaconCard(
         // The library has no enabled parameter; a passive Card preserves disabled semantics.
         if (enabled)
             top.yukonga.miuix.kmp.basic.Card(
-                modifier,
+                modifier.clip(shape),
                 cornerRadius = BeaconUiMetrics.CardRadius,
                 colors =
                     top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(

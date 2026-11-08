@@ -236,7 +236,7 @@ private fun StateWidgetEditorContent(id:Int, detail:Boolean, source:String?, ide
                     item { WidgetDisplaySettings(row,config){next->draft=next.toString()} }
                     item { SettingsGroup(androidx.compose.ui.res.stringResource(io.github.beacon.app.R.string.widget_update_hints)){
                         BeaconDropdownPreference("刷新策略",listOf("及时 · 约5秒","均衡 · 任务约5秒，其他约15秒","省电 · 约1分钟"),listOf("fast","balanced","economy").indexOf(config.optString("refresh","balanced")).coerceAtLeast(0),settingsRow=true,icon=BeaconIcons.Sync){index->update{it.put("refresh",listOf("fast","balanced","economy")[index])}}
-                        Column(Modifier.padding(horizontal=BeaconUiMetrics.CardInset)){
+                        SettingsPreferenceRows{
                             BeaconPreferenceToggle("显示更新时间","空间不足时自动隐藏",config.optBoolean("updated",true)){value->update{it.put("updated",value)}}
                         }
                     }}

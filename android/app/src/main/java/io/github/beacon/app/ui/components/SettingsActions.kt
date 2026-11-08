@@ -24,7 +24,9 @@ import io.github.beacon.app.ui.icons.BeaconIcons
 fun SettingsActions(content: @Composable () -> Unit) {
     val fontScale = androidx.compose.ui.platform.LocalDensity.current.fontScale.coerceAtLeast(1f)
     CompositionLocalProvider(LocalActionFillWidth provides true) {
-        Layout(content = content, modifier = Modifier.fillMaxWidth()) { measurables, constraints ->
+        Layout(content = content, modifier = Modifier.fillMaxWidth().then(
+            if (LocalBeaconPreferenceCard.current) Modifier.padding(horizontal = BeaconUiMetrics.CardInset,
+                vertical = BeaconUiMetrics.NavigationVerticalInset) else Modifier)) { measurables, constraints ->
             if (measurables.isEmpty()) {
                 layout(constraints.maxWidth, 0) {}
             } else {

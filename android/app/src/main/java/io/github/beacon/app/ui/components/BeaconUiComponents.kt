@@ -109,18 +109,19 @@ fun SettingsSection(title: String, action: (@Composable () -> Unit)? = null, con
     }
 }
 
+/** Row padding belongs inside interactive controls so their press state fills the card. */
+internal val LocalBeaconPreferenceCard = staticCompositionLocalOf { false }
+
+@Composable
+fun SettingsPreferenceRows(content: @Composable ColumnScope.() -> Unit) {
+    CompositionLocalProvider(LocalBeaconPreferenceCard provides true) {
+        Column(Modifier.fillMaxWidth(), content = content)
+    }
+}
+
 @Composable
 fun SettingsPreferences(title: String, content: @Composable ColumnScope.() -> Unit) {
-    SettingsGroup(title) {
-        Column(
-            Modifier.fillMaxWidth()
-                .padding(
-                    horizontal = BeaconUiMetrics.CardInset,
-                    vertical = BeaconUiMetrics.PreferenceInset,
-                ),
-            content = content,
-        )
-    }
+    SettingsGroup(title) { SettingsPreferenceRows(content) }
 }
 
 /**
@@ -164,6 +165,8 @@ internal fun BeaconListCardColumn(
 fun SettingsHint(text: String) {
     BeaconText(
         text,
+        modifier = if (LocalBeaconPreferenceCard.current) Modifier.padding(
+            horizontal = BeaconUiMetrics.CardInset, vertical = BeaconUiMetrics.NavigationVerticalInset) else Modifier,
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )

@@ -49,7 +49,7 @@ object WidgetHealth {
                 val decimals=listOf(-1,0,1,2,3)
                 BeaconDropdownPreference("小数位数",listOf("自动","整数","1位","2位","3位"),decimals.indexOf(config.optInt("decimals",-1)).coerceAtLeast(0),settingsRow=true,icon=BeaconIcons.Tune){i->onChange(JSONObject(config.toString()).put("decimals",decimals[i]))}
                 BeaconDropdownPreference("单位位置",listOf("数值后","数值前","隐藏单位"),listOf("after","before","hidden").indexOf(config.optString("unit_position","after")).coerceAtLeast(0),settingsRow=true,icon=BeaconIcons.Tune){i->onChange(JSONObject(config.toString()).put("unit_position",listOf("after","before","hidden")[i]))}
-                Column(Modifier.padding(horizontal=BeaconUiMetrics.CardInset)){
+                SettingsPreferenceRows{
                     BeaconPreferenceToggle("显示趋势箭头","显示发送方提供的趋势",config.optBoolean("trend",true)){value->onChange(JSONObject(config.toString()).put("trend",value))}
                 }
             }
@@ -63,7 +63,7 @@ object WidgetHealth {
         BeaconDropdownPreference("起始排名",(1..12).map{"第${it}条"},config.optInt("list_start",1).coerceIn(1,12)-1,settingsRow=true,icon=BeaconIcons.Tune){i->onChange(JSONObject(config.toString()).put("list_start",i+1))}
         BeaconDropdownPreference("最多显示",(1..12).map{"${it}条"},config.optInt("list_count",12).coerceIn(1,12)-1,settingsRow=true,icon=BeaconIcons.Tune){i->onChange(JSONObject(config.toString()).put("list_count",i+1))}
         BeaconDropdownPreference("每条行数",listOf("一行","两行"),config.optInt("list_lines",1).coerceIn(1,2)-1,settingsRow=true,icon=BeaconIcons.Tune){i->onChange(JSONObject(config.toString()).put("list_lines",i+1))}
-        Column(Modifier.padding(horizontal=BeaconUiMetrics.CardInset)){
+        SettingsPreferenceRows{
             BeaconPreferenceToggle("显示排名序号","序号对应原榜单排名",config.optBoolean("list_rank",true)){value->onChange(JSONObject(config.toString()).put("list_rank",value))}
             SettingsHint("双列放不下时自动改为单列。")
         }

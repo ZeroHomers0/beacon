@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.beacon.app.BuildConfig
@@ -31,7 +32,9 @@ internal fun LazyListScope.aboutSettingsItems(
             verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8),
         ) {
             androidx.compose.foundation.Image(
-                androidx.compose.ui.res.painterResource(R.drawable.beacon_logo_about),
+                androidx.compose.ui.res.painterResource(
+                    if (MaterialTheme.colorScheme.background.luminance() < .5f)
+                        R.drawable.beacon_logo_about_dark else R.drawable.beacon_logo_about),
                 stringResource(R.string.settings_about_logo_description),
                 Modifier.size(64.dp)
                     .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp)),

@@ -191,6 +191,19 @@ private fun timeMinute(value: String): Int? {
 
 @Composable
 fun BeaconTimeSummary(label: String, value: String) {
+    if (LocalBeaconPreferenceCard.current) {
+        if (miuix()) top.yukonga.miuix.kmp.basic.BasicComponent(
+            title = label, summary = value, holdDownState = false,
+            insideMargin = PaddingValues(horizontal = BeaconUiMetrics.CardInset,
+                vertical = BeaconUiMetrics.NavigationVerticalInset),
+            endActions = { androidx.compose.material3.Icon(io.github.beacon.app.ui.icons.BeaconIcons.Arrow, null) },
+        ) else androidx.compose.material3.ListItem(
+            headlineContent = { BeaconText(label) }, supportingContent = { BeaconText(value) },
+            trailingContent = { androidx.compose.material3.Icon(io.github.beacon.app.ui.icons.BeaconIcons.Arrow, null) },
+            colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+        )
+        return
+    }
     Row(Modifier.fillMaxWidth().heightIn(min = BeaconUiMetrics.FieldMinHeight)
         .padding(vertical = BeaconUiMetrics.FieldVerticalInset),
         verticalAlignment = Alignment.CenterVertically,

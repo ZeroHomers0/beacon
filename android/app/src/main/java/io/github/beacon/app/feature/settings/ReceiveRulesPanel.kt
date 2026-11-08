@@ -2,6 +2,7 @@ package io.github.beacon.app.feature.settings
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import io.github.beacon.app.R
 import io.github.beacon.app.ui.components.*
@@ -16,7 +17,7 @@ internal fun ReceiveRulesPanel(form: ReceptionFormState, busy: Boolean) {
     val plan = form.plan
     val start = form.scheduleStartText
     val end = form.scheduleEndText
-    SettingsSection(stringResource(R.string.settings_rules_conditions)) {
+    SettingsPreferences(stringResource(R.string.settings_rules_conditions)) {
         SettingsHint(resources.getString(R.string.settings_rules_priority_order))
         Column {
             BeaconPreferenceToggle(
@@ -54,24 +55,28 @@ internal fun ReceiveRulesPanel(form: ReceptionFormState, busy: Boolean) {
                 form.edited = true
             }
             run {
-                BeaconTimeRangePreference(
-                    start,
-                    end,
-                    stringResource(R.string.settings_rules_start),
-                    stringResource(R.string.settings_rules_end),
-                    enabled = !busy && plan.scheduleEnabled,
-                    onStartChange = {
-                        form.scheduleStartText = it
-                        form.edited = true
-                    },
-                    onEndChange = {
-                        form.scheduleEndText = it
-                        form.edited = true
-                    },
-                )
-                SettingsOverviewField(stringResource(R.string.settings_validation_title),
-                    stringResource(if (form.scheduleValid) R.string.settings_validation_ready
-                        else R.string.settings_rules_time_invalid), error = !form.scheduleValid)
+                Box(Modifier.padding(horizontal = BeaconUiMetrics.CardInset, vertical = BeaconUiMetrics.NavigationVerticalInset)) {
+                    BeaconTimeRangePreference(
+                        start,
+                        end,
+                        stringResource(R.string.settings_rules_start),
+                        stringResource(R.string.settings_rules_end),
+                        enabled = !busy && plan.scheduleEnabled,
+                        onStartChange = {
+                            form.scheduleStartText = it
+                            form.edited = true
+                        },
+                        onEndChange = {
+                            form.scheduleEndText = it
+                            form.edited = true
+                        },
+                    )
+                }
+                Box(Modifier.padding(horizontal = BeaconUiMetrics.CardInset, vertical = BeaconUiMetrics.NavigationVerticalInset)) {
+                    SettingsOverviewField(stringResource(R.string.settings_validation_title),
+                        stringResource(if (form.scheduleValid) R.string.settings_validation_ready
+                            else R.string.settings_rules_time_invalid), error = !form.scheduleValid)
+                }
                 BeaconDropdownPreference(
                     resources.getString(R.string.settings_rules_schedule_mode),
                     listOf(

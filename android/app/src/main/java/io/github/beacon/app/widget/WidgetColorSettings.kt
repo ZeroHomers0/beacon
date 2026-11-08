@@ -44,7 +44,7 @@ internal fun WidgetColorSettings(row:JSONObject,config:JSONObject,onChange:(JSON
             }
         }
         if(!advanced){
-            Column(Modifier.padding(horizontal=BeaconUiMetrics.CardInset)){
+            SettingsPreferenceRows{
                 val available=config.optString("template") !in listOf("numbers","countdown","text","text_list","overview_list") && WidgetConfigRules.selected(row,config).any{(it.optJSONArray("bands")?.length()?:0)>0}
                 BeaconPreferenceToggle("分段颜色",if(available)"自动颜色按数据范围分段显示"else"当前内容无分段范围",config.optBoolean("bands"),enabled=available){value->onChange(JSONObject(config.toString()).put("bands",value))}
             }

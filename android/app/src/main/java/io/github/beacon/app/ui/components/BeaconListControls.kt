@@ -231,12 +231,26 @@ fun BeaconPreferenceToggle(
     enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit,
 ) {
+    val cardRow = LocalBeaconPreferenceCard.current
     if (miuix()) {
         top.yukonga.miuix.kmp.preference.SwitchPreference(
             title = title, summary = summary.takeIf { it.isNotBlank() },
             checked = checked, enabled = enabled, onCheckedChange = { if (enabled) onCheckedChange(it) },
-            insideMargin = PaddingValues(vertical = BeaconUiMetrics.FieldVerticalInset),
+            insideMargin = PaddingValues(horizontal = if (cardRow) BeaconUiMetrics.CardInset else 0.dp,
+                vertical = if (cardRow) BeaconUiMetrics.NavigationVerticalInset else BeaconUiMetrics.FieldVerticalInset),
             modifier = Modifier.semantics { contentDescription = title; if (!enabled) disabled() },
+        )
+        return
+    }
+    if (cardRow) {
+        ListItem(
+            headlineContent = { BeaconText(title) },
+            supportingContent = summary.takeIf { it.isNotBlank() }?.let { text -> { BeaconText(text) } },
+            trailingContent = { Switch(checked, onCheckedChange = null, enabled = enabled,
+                modifier = Modifier.clearAndSetSemantics {}) },
+            modifier = Modifier.fillMaxWidth().named(title).alpha(if (enabled) 1f else .38f)
+                .toggleable(value = checked, enabled = enabled, role = Role.Switch, onValueChange = onCheckedChange),
+            colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
         )
         return
     }
@@ -284,7 +298,10 @@ fun BeaconPreferenceToggle(
 /** Compatibility entry point: metadata always uses the shared title/value geometry. */
 @Composable
 fun DiagnosticRow(label: String, value: String) {
-    SettingsOverviewField(label, value)
+    Box(if (LocalBeaconPreferenceCard.current) Modifier.padding(
+        horizontal = BeaconUiMetrics.CardInset, vertical = BeaconUiMetrics.NavigationVerticalInset) else Modifier) {
+        SettingsOverviewField(label, value)
+    }
 }
 
 /** Statistics always use separate cells against the page background, without a nested card. */
