@@ -2,6 +2,10 @@
 
 package io.github.beacon.app.ui.components
 
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -26,14 +30,12 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -88,11 +90,12 @@ fun ReceiveModeButton(
         if (serverIssue) MaterialTheme.colorScheme.error
         else if (connected && !checkingServer) modeColor
         else MaterialTheme.colorScheme.onSurfaceVariant,
-        tween(BeaconMotion.StandardMs), label = "receive-mode-color",
+        tween(if (animationsEnabled) BeaconMotion.StandardMs else 0), label = "receive-mode-color",
     )
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed) .90f else 1f, tween(BeaconMotion.QuickMs), label = "receive-mode-press")
+    val scale by animateFloatAsState(if (pressed && animationsEnabled) .94f else 1f,
+        if (animationsEnabled) spring(dampingRatio = .65f, stiffness = 650f) else tween(0), label = "receive-mode-press")
     var resumed by remember { mutableStateOf(false) }
     androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
         resumed = true
@@ -105,9 +108,8 @@ fun ReceiveModeButton(
         badgeAlpha.snapTo(1f)
         if (breathing) {
             while (true) {
-                kotlinx.coroutines.delay(BeaconMotion.BreathPeriodMs.toLong())
-                badgeAlpha.animateTo(.55f, tween(BeaconMotion.BreathFadeMs))
-                badgeAlpha.animateTo(1f, tween(BeaconMotion.BreathFadeMs))
+                badgeAlpha.animateTo(.55f, tween(BeaconMotion.BreathPeriodMs / 2, easing = FastOutSlowInEasing))
+                badgeAlpha.animateTo(1f, tween(BeaconMotion.BreathPeriodMs / 2, easing = FastOutSlowInEasing))
             }
         }
     }
@@ -120,6 +122,10 @@ fun ReceiveModeButton(
     } else {
         rememberUpdatedState(0f)
     }
+    val dark = MaterialTheme.colorScheme.background.luminance() < .5f
+    val faceTop = lerp(accent, Color.White, if (dark) .08f else .16f)
+    val faceBottom = lerp(accent, Color.Black, if (dark) .12f else .18f)
+    val glyph = if (dark) MaterialTheme.colorScheme.background else Color.White
     val description =
         if (checkingServer) stringResource(R.string.server_checking)
         else if (serverIssue) stringResource(R.string.server_warning_action)
@@ -145,20 +151,29 @@ fun ReceiveModeButton(
         contentAlignment = Alignment.Center,
     ) {
         Box(
-            Modifier.size(42.dp),
+            Modifier.size(42.dp)
+                .graphicsLayer { translationY = if (pressed) 1.dp.toPx() else 0f }
+                .shadow(if (pressed) 1.dp else 3.dp, CircleShape,
+                    ambientColor = accent.copy(alpha = .25f), spotColor = accent.copy(alpha = .35f)),
             contentAlignment = Alignment.Center,
         ) {
-            Box(Modifier.matchParentSize().background(
-                accent.copy(alpha = .14f).compositeOver(MaterialTheme.colorScheme.surface), CircleShape))
+            Box(Modifier.matchParentSize()
+                .background(Brush.verticalGradient(listOf(faceTop, faceBottom)), CircleShape)
+                .border(1.dp, Brush.verticalGradient(listOf(
+                    Color.White.copy(alpha = if (dark) .30f else .55f),
+                    accent.copy(alpha = .18f),
+                )), CircleShape))
             AnimatedContent(
                 mode,
                 transitionSpec = {
-                    (fadeIn(tween(240)) + scaleIn(tween(280), initialScale = .7f)) togetherWith
-                        (fadeOut(tween(140)) + scaleOut(tween(180), targetScale = 1.2f))
+                    (fadeIn(tween(if (animationsEnabled) 180 else 0)) +
+                        scaleIn(if (animationsEnabled) spring(dampingRatio = .7f, stiffness = 500f) else tween(0), initialScale = .65f)) togetherWith
+                        (fadeOut(tween(if (animationsEnabled) 120 else 0)) +
+                            scaleOut(tween(if (animationsEnabled) 160 else 0), targetScale = 1.12f))
                 },
                 label = "receive-mode-icon",
             ) { displayed ->
-                Icon(receiveModeIcon(displayed), description, Modifier.size(26.dp), tint = accent)
+                Icon(receiveModeIcon(displayed), description, Modifier.size(26.dp), tint = glyph)
             }
         }
         if (checkingServer) {
@@ -172,10 +187,16 @@ fun ReceiveModeButton(
             val badgeColor = if (serverIssue) MaterialTheme.colorScheme.error
                 else if (receiving && connected) io.github.beacon.app.ui.theme.beaconSuccessColor()
                 else MaterialTheme.colorScheme.onSurfaceVariant
+            if (breathing) {
+                Canvas(Modifier.align(Alignment.BottomEnd).size(18.dp)) {
+                    val phase = (1f - badgeAlpha.value) / .45f
+                    drawCircle(badgeColor.copy(alpha = .24f * (1f - phase)),
+                        radius = (5f + 4f * phase).dp.toPx())
+                }
+            }
             Box(
                 Modifier.align(Alignment.BottomEnd).padding(2.dp).size(14.dp)
                     .background(MaterialTheme.colorScheme.surface, CircleShape).padding(2.dp)
-                    .graphicsLayer { alpha = if (breathing) badgeAlpha.value else 1f }
                     .background(badgeColor, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
