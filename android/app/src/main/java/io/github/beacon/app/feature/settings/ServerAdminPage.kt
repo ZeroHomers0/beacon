@@ -484,44 +484,32 @@ internal fun ServerAdminPage(
                 }
                 2 ->
                     item {
-                        SettingsSection(stringResource(R.string.admin_test_title_page)) {
-                            SettingsHint(stringResource(R.string.settings_real_test_hint))
-                            DevicePicker(active, deviceId, { deviceId = it }, !state.busy)
-                            AdminField(
-                                testTitle,
-                                { testTitle = it.take(200) },
-                                R.string.admin_test_title,
-                                !state.busy,
-                            )
-                            AdminField(
-                                testBody,
-                                { testBody = it.take(4096) },
-                                R.string.admin_test_body,
-                                !state.busy,
-                                singleLine = false,
-                            )
-                            BeaconDropdownPreference(
-                                stringResource(R.string.admin_priority),
-                                PRIORITY_TIERS.map { value ->
-                                    stringResource(priorityShortLabel(value))
-                                },
-                                PRIORITY_TIERS.indexOf(testPriority).coerceAtLeast(0),
-                                enabled = !state.busy,
-                                ) {
-                                testPriority = PRIORITY_TIERS[it]
+                        SettingsGroup(stringResource(R.string.admin_test_title_page)) {
+                            Column(Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset)) {
+                                SettingsHint(stringResource(R.string.settings_real_test_hint))
                             }
-
-                            SettingsActions {
-                            SettingsPrimaryButton(
-                                stringResource(R.string.admin_send_test),
-                                Modifier,
-                                !state.busy &&
-                                    deviceId.isNotBlank() &&
-                                    testTitle.isNotBlank() &&
-                                    testBody.isNotBlank(),
-                            ) {
-                                confirmTest = true
+                            SettingsPreferenceRows {
+                                DevicePicker(active, deviceId, { deviceId = it }, !state.busy)
                             }
+                            Column(Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset),
+                                verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
+                                AdminField(testTitle, { testTitle = it.take(200) }, R.string.admin_test_title, !state.busy)
+                                AdminField(testBody, { testBody = it.take(4096) }, R.string.admin_test_body,
+                                    !state.busy, singleLine = false)
+                            }
+                            SettingsPreferenceRows {
+                                BeaconDropdownPreference(
+                                    stringResource(R.string.admin_priority),
+                                    PRIORITY_TIERS.map { value -> stringResource(priorityShortLabel(value)) },
+                                    PRIORITY_TIERS.indexOf(testPriority).coerceAtLeast(0), enabled = !state.busy,
+                                ) { testPriority = PRIORITY_TIERS[it] }
+                            }
+                            Column(Modifier.fillMaxWidth().padding(BeaconUiMetrics.CardInset)) {
+                                SettingsActions {
+                                    SettingsPrimaryButton(stringResource(R.string.admin_send_test), Modifier,
+                                        !state.busy && deviceId.isNotBlank() && testTitle.isNotBlank() && testBody.isNotBlank(),
+                                    ) { confirmTest = true }
+                                }
                             }
                         }
                     }

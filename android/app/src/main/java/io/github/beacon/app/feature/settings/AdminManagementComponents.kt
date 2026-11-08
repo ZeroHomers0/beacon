@@ -1,6 +1,8 @@
 package io.github.beacon.app.feature.settings
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.*
@@ -81,7 +83,7 @@ internal fun AdminListCard(
         },
         confirmButton = { BeaconButton({ showingDetails = false }) { BeaconText(stringResource(R.string.action_close)) } },
     )
-    BeaconListCard(modifier.clickable(enabled = enabled) {
+    BeaconListCard(modifier.clip(RoundedCornerShape(BeaconUiMetrics.CardRadius)).clickable(enabled = enabled) {
         if (onDetails != null) onDetails() else showingDetails = true
     }) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.Top,

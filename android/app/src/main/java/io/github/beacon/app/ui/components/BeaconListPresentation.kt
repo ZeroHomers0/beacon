@@ -64,10 +64,11 @@ fun receiveModeIcon(mode: ReceiveMode) =
 @Composable
 fun receiveModeColor(mode: ReceiveMode): Color {
     val dark = MaterialTheme.colorScheme.background.luminance() < .5f
+    // Radix Teal / Indigo / Iris: mode identity, independent of connection status.
     return when (mode) {
-        ReceiveMode.POWER_SAVING -> if (dark) Color(0xFF81C784) else Color(0xFF2E7D32)
-        ReceiveMode.REALTIME -> if (dark) Color(0xFF64B5F6) else Color(0xFF1565C0)
-        ReceiveMode.RULES -> if (dark) Color(0xFFFFB74D) else Color(0xFFB45309)
+        ReceiveMode.POWER_SAVING -> if (dark) Color(0xFF0BD8B6) else Color(0xFF008573)
+        ReceiveMode.REALTIME -> if (dark) Color(0xFF9EB1FF) else Color(0xFF3358D4)
+        ReceiveMode.RULES -> if (dark) Color(0xFFB1A9FF) else Color(0xFF5753C6)
     }
 }
 
@@ -123,7 +124,7 @@ fun ReceiveModeButton(
         rememberUpdatedState(0f)
     }
     val dark = MaterialTheme.colorScheme.background.luminance() < .5f
-    val faceTop = lerp(accent, Color.White, if (dark) .08f else .16f)
+    val faceTop = lerp(accent, Color.White, if (dark) .06f else .08f)
     val faceBottom = lerp(accent, Color.Black, if (dark) .12f else .18f)
     val glyph = if (dark) MaterialTheme.colorScheme.background else Color.White
     val description =
@@ -154,13 +155,13 @@ fun ReceiveModeButton(
             Modifier.size(42.dp)
                 .graphicsLayer { translationY = if (pressed) 1.dp.toPx() else 0f }
                 .shadow(if (pressed) 1.dp else 3.dp, CircleShape,
-                    ambientColor = accent.copy(alpha = .25f), spotColor = accent.copy(alpha = .35f)),
+                    ambientColor = accent.copy(alpha = .25f), spotColor = accent.copy(alpha = .22f)),
             contentAlignment = Alignment.Center,
         ) {
             Box(Modifier.matchParentSize()
                 .background(Brush.verticalGradient(listOf(faceTop, faceBottom)), CircleShape)
                 .border(1.dp, Brush.verticalGradient(listOf(
-                    Color.White.copy(alpha = if (dark) .30f else .55f),
+                    Color.White.copy(alpha = if (dark) .22f else .32f),
                     accent.copy(alpha = .18f),
                 )), CircleShape))
             AnimatedContent(

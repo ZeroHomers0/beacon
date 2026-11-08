@@ -238,7 +238,7 @@ fun BeaconPreferenceToggle(
             checked = checked, enabled = enabled, onCheckedChange = { if (enabled) onCheckedChange(it) },
             insideMargin = PaddingValues(horizontal = if (cardRow) BeaconUiMetrics.CardInset else 0.dp,
                 vertical = if (cardRow) BeaconUiMetrics.NavigationVerticalInset else BeaconUiMetrics.FieldVerticalInset),
-            modifier = Modifier.fillMaxWidth().heightIn(min = if (cardRow) BeaconUiMetrics.NavigationMinHeight else BeaconUiMetrics.FieldMinHeight).semantics { contentDescription = title; if (!enabled) disabled() },
+            modifier = Modifier.fillMaxWidth().then(if (cardRow) Modifier else Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(BeaconUiMetrics.ActionRadius))).heightIn(min = if (cardRow) BeaconUiMetrics.NavigationMinHeight else BeaconUiMetrics.FieldMinHeight).semantics { contentDescription = title; if (!enabled) disabled() },
         )
         return
     }
@@ -256,6 +256,7 @@ fun BeaconPreferenceToggle(
     }
     Row(
         Modifier.fillMaxWidth()
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(BeaconUiMetrics.ActionRadius))
             .heightIn(min = BeaconUiMetrics.FieldMinHeight)
             .named(title)
             .toggleable(value = checked, enabled = enabled,
