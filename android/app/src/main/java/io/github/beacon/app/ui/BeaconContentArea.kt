@@ -159,7 +159,7 @@ BeaconMessageTransition(
                         ui.selectionMode,
                         ui.selectedKeys,
                         ui.selectionHint,
-                        scrollModifier = Modifier.nestedScroll(pageBarBehaviors.getValue(0).connection(ui.uiStyle)),
+                        scrollModifier = Modifier,
                         sharedTitle = sharedTitleLabel,
                         topInset = if (underTopBar) pageInsets.calculateTopPadding() else 0.dp,
                         onSearch = { ui.search = it },

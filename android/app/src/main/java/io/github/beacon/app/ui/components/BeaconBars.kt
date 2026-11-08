@@ -59,11 +59,29 @@ fun BeaconTopBar(
     behavior: BeaconBarBehavior,
     navigationIcon: @Composable () -> Unit,
     actions: @Composable RowScope.() -> Unit,
+    prioritizeTitle: Boolean = false,
 ) {
     val groupedActions: @Composable RowScope.() -> Unit = { BeaconToolbarActions(actions) }
     if (miuix()) {
         BeaconSurface(androidx.compose.material3.MaterialTheme.colorScheme.background) {
-            if (compact)
+            if (compact && prioritizeTitle) {
+                val textStyles = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles
+                top.yukonga.miuix.kmp.theme.MiuixTheme(
+                    colors = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme,
+                    textStyles = textStyles.copy(title3 = textStyles.title3.copy(
+                        fontSize = androidx.compose.material3.MaterialTheme.typography.titleMedium.fontSize)),
+                ) {
+                top.yukonga.miuix.kmp.basic.SmallTopAppBar(
+                    title,
+                    color = androidx.compose.ui.graphics.Color.Transparent,
+                    navigationIcon = navigationIcon,
+                    actions = groupedActions,
+                    titlePadding = BeaconUiMetrics.Gap8,
+                    navigationIconPadding = BeaconUiMetrics.Gap8,
+                    actionIconPadding = 0.dp,
+                )
+                }
+            } else if (compact)
                 top.yukonga.miuix.kmp.basic.SmallTopAppBar(
                     title,
                     color = androidx.compose.ui.graphics.Color.Transparent,
@@ -82,7 +100,10 @@ fun BeaconTopBar(
     } else {
         if (compact)
             androidx.compose.material3.TopAppBar(
-                title = { BeaconText(title) },
+                title = {
+                    if (prioritizeTitle) BeaconFittedText(title, style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
+                    else BeaconText(title)
+                },
                 navigationIcon = navigationIcon,
                 actions = groupedActions,
             )

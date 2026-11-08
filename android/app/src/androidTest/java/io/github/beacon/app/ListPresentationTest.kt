@@ -106,6 +106,30 @@ class ListPresentationTest {
     @Test fun materialLists()=verify(BeaconUiStyle.MATERIAL3)
     @Test fun miuixLists()=verify(BeaconUiStyle.MIUIX)
 
+    @Test fun compactSelectionTitleFitsNarrowScreen() {
+        for (style in BeaconUiStyle.entries) {
+            rule.runOnUiThread {
+                rule.activity.setContent {
+                    BeaconTheme(style) {
+                        Box(Modifier.width(320.dp)) {
+                            BeaconTopBar("已选 100 条", true, rememberBeaconBarBehavior(), prioritizeTitle = true,
+                                navigationIcon = { BeaconActionIcon(io.github.beacon.app.ui.icons.BeaconIcons.Close, "退出多选") {} },
+                                actions = {
+                                    BeaconActionIcon(io.github.beacon.app.ui.icons.BeaconIcons.More, "更多操作") {}
+                                })
+                        }
+                    }
+                }
+            }
+            rule.onNodeWithText("已选 100 条").assertIsDisplayed()
+                .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult) { get ->
+                    val results = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+                    assertTrue(get(results))
+                    assertTrue("Selected count must not be ellipsized in $style: ${results.map { "${it.size} font=${it.layoutInput.style.fontSize} overflowW=${it.didOverflowWidth} overflowH=${it.didOverflowHeight} ellipsis=${it.isLineEllipsized(0)}" }}", results.all { !it.isLineEllipsized(0) && it.getLineEnd(0) == it.layoutInput.text.length && it.getLineRight(0) <= it.size.width + 1f })
+                }
+        }
+    }
+
     @Test fun returningFromShortFilterRestoresLongListPosition() {
         var filter by mutableStateOf("all")
         var detail by mutableStateOf(false)

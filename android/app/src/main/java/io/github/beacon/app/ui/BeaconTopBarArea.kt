@@ -4,7 +4,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material3.Icon
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import io.github.beacon.app.ui.components.BeaconDropdownMenu
+import io.github.beacon.app.ui.components.BeaconDropdownMenuItem
+import io.github.beacon.app.ui.components.BeaconText
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -72,12 +75,13 @@ internal fun BeaconTopBarArea(
                         )
                     else if (barPage == 0) stringResource(R.string.ui_nav_messages_title)
                     else stringResource(ui.pages[barPage]),
-                    (barPage == 0 && ui.selectionMode) || displayedDetail != null,
+                    barPage == 0 || displayedDetail != null,
                     when {
                         displayedDetail != null -> barBehavior
                         barPage == 1 -> settingsBarBehaviors.getValue(displayedSettingsScreen)
                         else -> pageBarBehaviors.getValue(barPage)
                     },
+                    prioritizeTitle = barPage == 0 && displayedDetail == null,
                     navigationIcon = {
                         if (
                             displayedDetail == null &&
@@ -189,41 +193,6 @@ internal fun BeaconTopBarArea(
                             barPage == 0 &&
                                 ui.selectionMode
                         ) {
-                            BeaconActionIcon(
-                                BeaconIcons.DoneAll,
-                                stringResource(R.string.ui_mark_read_action),
-                                !busy && ui.selectedKeys.isNotEmpty(),
-                            ) {
-                                actions.manageMessages(
-                                    MessageAction.MARK_READ,
-                                    ui.selectedKeys,
-                                    onComplete = {
-                                        ui.selectedKeys = emptyList()
-                                    },
-                                )
-                            }
-                            BeaconActionIcon(
-                                BeaconIcons.Messages,
-                                stringResource(R.string.ui_mark_unread_action),
-                                !busy && ui.selectedKeys.isNotEmpty(),
-                            ) {
-                                actions.manageMessages(
-                                    MessageAction.MARK_UNREAD,
-                                    ui.selectedKeys,
-                                    onComplete = {
-                                        ui.selectedKeys = emptyList()
-                                    },
-                                )
-                            }
-                            BeaconActionIcon(
-                                BeaconIcons.Delete,
-                                stringResource(
-                                    R.string.ui_delete_selected_action
-                                ),
-                                !busy && ui.selectedKeys.isNotEmpty(),
-                            ) {
-                                ui.pendingDelete = ui.selectedKeys.toList()
-                            }
                             val visibleKeys =
                                 runtimeState.messages.map {
                                     MessageKey(it.server, it.id)
@@ -235,28 +204,41 @@ internal fun BeaconTopBarArea(
                                 stringResource(
                                     R.string.ui_max_selection_warning
                                 )
-                            BeaconActionIcon(
-                                if (allSelected) BeaconIcons.Close
-                                else BeaconIcons.Check,
-                                if (allSelected)
-                                    stringResource(
-                                        R.string.ui_deselect_page_action
-                                    )
-                                else
-                                    stringResource(
-                                        R.string.ui_select_page_action
-                                    ),
-                                !busy,
-                            ) {
-                                val merged =
-                                    (ui.selectedKeys + visibleKeys).distinct()
-                                if (allSelected)
-                                    ui.selectedKeys =
-                                        ui.selectedKeys - visibleKeys.toSet()
-                                else if (merged.size <= 100) {
-                                    ui.selectedKeys = merged
-                                    ui.selectionHint = ""
-                                } else ui.selectionHint = maxSelectionWarning
+                            var menuOpen by remember { mutableStateOf(false) }
+                            Box {
+                                BeaconActionIcon(BeaconIcons.More,
+                                    stringResource(R.string.admin_more_actions),
+                                    !busy) { menuOpen = true }
+                                BeaconDropdownMenu(menuOpen, { menuOpen = false }) {
+                                    BeaconDropdownMenuItem({ BeaconText(stringResource(
+                                        if (allSelected) R.string.ui_deselect_page_action else R.string.ui_select_page_action)) }) {
+                                        menuOpen = false
+
+                                        val merged =
+                                            (ui.selectedKeys + visibleKeys).distinct()
+                                        if (allSelected)
+                                            ui.selectedKeys =
+                                                ui.selectedKeys - visibleKeys.toSet()
+                                        else if (merged.size <= 100) {
+                                            ui.selectedKeys = merged
+                                            ui.selectionHint = ""
+                                        } else ui.selectionHint = maxSelectionWarning
+                                    }
+                                    listOf(
+                                        MessageAction.MARK_READ to R.string.ui_mark_read_action,
+                                        MessageAction.MARK_UNREAD to R.string.ui_mark_unread_action,
+                                    ).forEach { (action, label) ->
+                                        BeaconDropdownMenuItem({ BeaconText(stringResource(label)) }) {
+                                            menuOpen = false
+                                            actions.manageMessages(action, ui.selectedKeys,
+                                                onComplete = { ui.selectedKeys = emptyList() })
+                                        }
+                                    }
+                                    BeaconDropdownMenuItem({ BeaconText(stringResource(R.string.ui_delete_selected_action)) }) {
+                                        menuOpen = false
+                                        ui.pendingDelete = ui.selectedKeys.toList()
+                                    }
+                                }
                             }
                         } else if (barPage == 0) {
                             androidx.compose.runtime.CompositionLocalProvider(io.github.beacon.app.ui.components.LocalCompactActions provides true) {
