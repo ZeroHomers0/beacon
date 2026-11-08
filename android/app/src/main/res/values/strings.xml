@@ -91,8 +91,8 @@
     <string name="ui_list_load_failed">消息加载失败</string>
     <string name="ui_list_load_failed_hint">请检查接收服务连接，再重新加载。</string>
     <string name="ui_local_data_attention_hint">本地数据连接异常，可前往诊断与工具重新连接</string>
-    <string name="ui_mark_read_action">@string.action_mark_read</string>
-    <string name="ui_mark_unread_action">@string.action_mark_unread</string>
+    <string name="ui_mark_read_action">@string/action_mark_read</string>
+    <string name="ui_mark_unread_action">@string/action_mark_unread</string>
     <string name="ui_max_selection_warning">最多选择 100 条，请先减少选择</string>
     <string name="ui_message_detail_title">消息详情</string>
     <string name="ui_message_more_action">消息更多操作</string>
@@ -114,7 +114,7 @@
     <string name="msg_delete_confirm_single_title">删除这条消息？</string>
     <string name="msg_detail_id_desc">消息 ID：%1$s</string>
     <string name="msg_detail_source_desc">服务器标识：%1$s</string>
-    <string name="msg_selected_count_label">已选 %1$d 条</string>
+    <string name="msg_selected_count_label">%1$d 条</string>
     <string name="msg_stat_total">共 %1$d 条</string>
     <string name="msg_stat_unread">%1$d 条未读</string>
     <string name="settings_interval_hours_option">%1$d 小时</string>
@@ -203,7 +203,7 @@
     <string name="event_export_title">Beacon 接收事件记录 v1（UTC，按记录顺序）</string>
     <string name="event_export_disclaimer">仅含固定事件类型、结果和时间；最多100条。不含地址、凭证、消息、标识或原始异常。</string>
     <string name="event_kind_service_started">接收服务启动</string>
-    <string name="event_kind_manual_sync">@string.action_sync_now</string>
+    <string name="event_kind_manual_sync">@string/action_sync_now</string>
     <string name="event_kind_auto_sync">自动同步或连接后补收</string>
     <string name="event_kind_realtime_connecting">即时连接开始</string>
     <string name="event_kind_realtime_connected">即时连接成功</string>

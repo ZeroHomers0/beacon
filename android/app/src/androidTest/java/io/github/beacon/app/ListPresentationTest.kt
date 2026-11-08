@@ -112,16 +112,20 @@ class ListPresentationTest {
                 rule.activity.setContent {
                     BeaconTheme(style) {
                         Box(Modifier.width(320.dp)) {
-                            BeaconTopBar("已选 100 条", true, rememberBeaconBarBehavior(), prioritizeTitle = true,
+                            BeaconTopBar("100 条", true, rememberBeaconBarBehavior(), prioritizeTitle = true,
                                 navigationIcon = { BeaconActionIcon(io.github.beacon.app.ui.icons.BeaconIcons.Close, "退出多选") {} },
                                 actions = {
-                                    BeaconActionIcon(io.github.beacon.app.ui.icons.BeaconIcons.More, "更多操作") {}
+                                    CompositionLocalProvider(LocalCompactActions provides true) {
+                                        for (description in listOf("标为已读", "标为未读", "删除", "全选")) {
+                                            BeaconActionIcon(io.github.beacon.app.ui.icons.BeaconIcons.Check, description) {}
+                                        }
+                                    }
                                 })
                         }
                     }
                 }
             }
-            rule.onNodeWithText("已选 100 条").assertIsDisplayed()
+            rule.onNodeWithText("100 条").assertIsDisplayed()
                 .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult) { get ->
                     val results = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
                     assertTrue(get(results))
