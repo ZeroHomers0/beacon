@@ -73,7 +73,7 @@ internal fun ReceiveRulesPanel(form: ReceptionFormState, busy: Boolean) {
                     )
                 }
                 Box(Modifier.padding(horizontal = BeaconUiMetrics.CardInset, vertical = BeaconUiMetrics.NavigationVerticalInset)) {
-                    SettingsOverviewField(stringResource(R.string.settings_validation_title),
+                    SettingsOverviewField(stringResource(R.string.settings_time_validation_title),
                         stringResource(if (form.scheduleValid) R.string.settings_validation_ready
                             else R.string.settings_rules_time_invalid), error = !form.scheduleValid)
                 }

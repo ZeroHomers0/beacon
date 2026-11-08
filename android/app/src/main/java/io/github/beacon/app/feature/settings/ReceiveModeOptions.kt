@@ -48,35 +48,33 @@ internal fun ReceiveModeOptions(
                             onClick = { if (enabled) onSelect(mode) },
                             insideMargin = PaddingValues(horizontal = BeaconUiMetrics.CardInset,
                                 vertical = BeaconUiMetrics.NavigationVerticalInset),
-                            modifier = Modifier.background(
+                            modifier = Modifier.fillMaxWidth().heightIn(min = BeaconUiMetrics.ReceiveModeMinHeight).background(
                                 if (mode == selected) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Transparent,
                                 RoundedCornerShape(BeaconUiMetrics.CardRadius)).semantics {
                                     this.selected = mode == selected
                                     if (!enabled) disabled()
                                 },
                             startAction = {
-                                Row(Modifier.padding(end = BeaconUiMetrics.Gap16),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap10)) {
-                                Box(Modifier.size(BeaconUiMetrics.SearchFieldMinHeight),
-                                    contentAlignment = Alignment.Center) {
-                                    top.yukonga.miuix.kmp.basic.RadioButton(
-                                        selected = mode == selected, onClick = null, enabled = enabled,
-                                        modifier = Modifier.size(BeaconUiMetrics.IconMedium))
-                                }
-                                Box(Modifier
+                                Box(Modifier.padding(end = BeaconUiMetrics.Gap12)
                                     .size(BeaconUiMetrics.SearchFieldMinHeight)
                                     .background(receiveModeColor(mode).copy(alpha = .14f)
                                         .compositeOver(MaterialTheme.colorScheme.surface), CircleShape),
                                     contentAlignment = Alignment.Center) {
                                     Icon(receiveModeIcon(mode), null, Modifier.size(20.dp), tint = receiveModeColor(mode))
                                 }
+                            },
+                            endActions = {
+                                Box(Modifier.padding(start = BeaconUiMetrics.Gap12).size(BeaconUiMetrics.IconMedium),
+                                    contentAlignment = Alignment.Center) {
+                                    top.yukonga.miuix.kmp.basic.RadioButton(
+                                        selected = mode == selected, onClick = null, enabled = enabled,
+                                        modifier = Modifier.size(BeaconUiMetrics.IconMedium))
                                 }
                             },
                         )
                     } else
                     Row(
-                        Modifier.fillMaxWidth().alpha(if (enabled) 1f else .38f)
+                        Modifier.fillMaxWidth().heightIn(min = BeaconUiMetrics.ReceiveModeMinHeight).alpha(if (enabled) 1f else .38f)
                             .selectable(selected = mode == selected, enabled = enabled,
                                 role = Role.RadioButton, onClick = { onSelect(mode) })
                             .padding(BeaconUiMetrics.CardInset),
@@ -86,16 +84,16 @@ internal fun ReceiveModeOptions(
                         Icon(receiveModeIcon(mode), null, Modifier.size(20.dp),
                             tint = receiveModeColor(mode))
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap4)) {
-                            BeaconFittedText(stringResource(receiveModeTitle(mode)), Modifier.fillMaxWidth(),
+                            BeaconText(stringResource(receiveModeTitle(mode)), Modifier.fillMaxWidth(),
                                 style = MaterialTheme.typography.titleSmall)
-                            BeaconFittedText(stringResource(when (mode) {
+                            BeaconText(stringResource(when (mode) {
                                 ReceiveMode.REALTIME -> R.string.receive_mode_realtime_description
                                 ReceiveMode.POWER_SAVING -> R.string.receive_mode_power_description
                                 ReceiveMode.RULES -> R.string.receive_mode_rules_description
                             }), Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        RadioButton(selected = mode == selected, onClick = null, enabled = enabled)
+                        RadioButton(selected = mode == selected, onClick = null, enabled = enabled, modifier = Modifier.size(BeaconUiMetrics.IconMedium))
                     }
                 }
         }

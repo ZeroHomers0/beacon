@@ -215,7 +215,7 @@ fun SettingsPage(
                     SettingsGroup(stringResource(R.string.settings_receive_section_title)) {
                         SettingsRow(
                             stringResource(R.string.ui_v2_server_config_title),
-                            stringResource(R.string.settings_first_setup_hint),
+                            runtimeState.configuredEndpoint.ifBlank { stringResource(R.string.settings_first_setup_hint) },
                             BeaconIcons.Server,
                         ) {
                             onNavigate(SettingsScreen.CONNECTION)
@@ -231,6 +231,13 @@ fun SettingsPage(
                             onClick = { onNavigate(SettingsScreen.RECEPTION) },
                         )
                         SettingsRow(
+                            stringResource(R.string.settings_background_permissions_title),
+                            stringResource(R.string.settings_background_permissions_desc),
+                            BeaconIcons.BackgroundTasks,
+                        ) {
+                            onNavigate(SettingsScreen.BACKGROUND)
+                        }
+                        SettingsRow(
                             stringResource(R.string.settings_notifications_section_title),
                             notificationHint?.let { stringResource(it) }
                                 ?: when (notificationPermission) {
@@ -243,29 +250,22 @@ fun SettingsPage(
                                     NotificationPermissionState.UNKNOWN ->
                                         stringResource(R.string.diag_not_read_label)
                                 },
-                            BeaconIcons.Messages,
+                            BeaconIcons.Notifications,
                         ) {
                             onNavigate(SettingsScreen.NOTIFICATIONS)
                         }
                         SettingsRow(
                             stringResource(R.string.quiet_title),
                             stringResource(R.string.quiet_description),
-                            BeaconIcons.QuietHours,
+                            BeaconIcons.ReceiveRules,
                         ) {
                             onNavigate(SettingsScreen.NOTIFICATION_RULES)
                         }
-                        SettingsRow(
-                            stringResource(R.string.settings_background_permissions_title),
-                            stringResource(R.string.settings_background_permissions_desc),
-                            BeaconIcons.BackgroundTasks,
-                        ) {
-                            onNavigate(SettingsScreen.BACKGROUND)
-                        }
+
                     }
                 }
                 item {
                     SettingsGroup(stringResource(R.string.settings_interface_section_title)) {
-                        SettingsRow(stringResource(R.string.settings_widgets_title),"管理桌面小组件",BeaconIcons.Applications){onNavigate(SettingsScreen.WIDGETS)}
                         BeaconDropdownPreference(
                             stringResource(R.string.appearance_style),
                             listOf(
@@ -295,13 +295,7 @@ fun SettingsPage(
                 }
                 item {
                     SettingsGroup(stringResource(R.string.settings_misc_section_title)) {
-                        SettingsRow(
-                            stringResource(R.string.admin_title),
-                            stringResource(R.string.settings_admin_menu_description),
-                            BeaconIcons.Server,
-                        ) {
-                            onNavigate(SettingsScreen.SERVER_ADMIN)
-                        }
+                        SettingsRow(stringResource(R.string.settings_widgets_title),"管理桌面小组件",BeaconIcons.Widget){onNavigate(SettingsScreen.WIDGETS)}
                         SettingsRow(
                             stringResource(R.string.settings_storage_title),
                             stringResource(R.string.settings_storage_menu_description),
@@ -316,10 +310,22 @@ fun SettingsPage(
                         ) {
                             onNavigate(SettingsScreen.BACKUP)
                         }
+                        SettingsRow(
+                            stringResource(R.string.admin_title),
+                            stringResource(R.string.settings_admin_menu_description),
+                            BeaconIcons.Tune,
+                        ) {
+                            onNavigate(SettingsScreen.SERVER_ADMIN)
+                        }
                     }
                 }
                 item {
                     SettingsGroup("帮助与关于") {
+                        SettingsRow(
+                            stringResource(R.string.settings_guide_title), "", BeaconIcons.Guide,
+                            iconTint=MaterialTheme.colorScheme.onSurface, compact=true,
+                            onClick={onNavigate(SettingsScreen.GUIDE)},
+                        )
                         SettingsRow(
                             title = stringResource(R.string.settings_update_title),
                             compact = true,
@@ -346,11 +352,7 @@ fun SettingsPage(
                             iconTint=MaterialTheme.colorScheme.onSurface, compact=true,
                             onClick={onNavigate(SettingsScreen.ABOUT)},
                         )
-                        SettingsRow(
-                            stringResource(R.string.settings_guide_title), "", BeaconIcons.Guide,
-                            iconTint=MaterialTheme.colorScheme.onSurface, compact=true,
-                            onClick={onNavigate(SettingsScreen.GUIDE)},
-                        )
+
                     }
                 }
             }
@@ -437,13 +439,12 @@ fun SettingsPage(
             }
             SettingsScreen.NOTIFICATION_RULES -> {
                 item {
-                    NotificationSettingsPanel(
-                        runtimeState,
-                        actions,
-                        notificationForm,
-                        onRetrySave = { notificationForm.saveRules(actions, quietHoursForm) },
-                    )
+                    SettingsGroup(stringResource(R.string.mute_group)) {
+                        TemporaryMuteAction(io.github.beacon.app.domain.model.MuteScope.GLOBAL,
+                            enabled = runtimeState.runtimeConnected && !notificationForm.saving && !notificationForm.rulesSaving)
+                    }
                 }
+
                 item {
                     QuietHoursPanel(
                         runtimeState,
@@ -456,9 +457,17 @@ fun SettingsPage(
                     )
                 }
                 item {
+                    NotificationSettingsPanel(
+                        runtimeState,
+                        actions,
+                        notificationForm,
+                        onRetrySave = { notificationForm.saveRules(actions, quietHoursForm) },
+                    )
+                }
+                item {
                     SettingsGroup(stringResource(R.string.settings_sound_title)) {
                         SettingsRow(stringResource(R.string.settings_open_channels),
-                            stringResource(R.string.settings_open_channels_hint), BeaconIcons.Messages) {
+                            stringResource(R.string.settings_open_channels_hint), BeaconIcons.Notifications) {
                             onNavigate(SettingsScreen.NOTIFICATIONS)
                         }
                     }

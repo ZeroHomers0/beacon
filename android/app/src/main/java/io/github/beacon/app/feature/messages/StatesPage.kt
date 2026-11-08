@@ -15,7 +15,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import io.github.beacon.app.data.repository.StateListRepository
 import io.github.beacon.app.domain.model.AsyncPageState
-import io.github.beacon.app.domain.policy.MessageMarkdown
 import io.github.beacon.app.ui.components.*
 import io.github.beacon.app.ui.icons.BeaconIcons
 import io.github.beacon.app.widget.StateWidgetActivity
@@ -84,6 +83,7 @@ internal fun StatesPage(
             search.isBlank() || listOf("title","topic_key","application_name").any { key -> it.optString(key).contains(search,true) }
         }
     }
+    val resultScroll = rememberScopedListState("$showHidden:$search", scroll)
     SettingsRetryFeedback("数据加载失败",failed&&loaded,onRetry={version++})
     Column(modifier) {
         Column(
@@ -91,8 +91,8 @@ internal fun StatesPage(
             verticalArrangement=Arrangement.spacedBy(BeaconUiMetrics.Gap8),
         ) {
             BeaconSearchBox(search,{search=it},"搜索主题或应用",Modifier.fillMaxWidth(),onSearch={})
-            BeaconListSwitch(labels=listOf("共 ${rows.size} 个","显示 ${visible.size} 个"),
-                icons=listOf(BeaconIcons.Topics,BeaconIcons.List))
+            BeaconListSummary("共 ${rows.size} 个主题",
+                if (visible.size != rows.size) "当前显示 ${visible.size} 个" else null)
 
         }
         BeaconPullToRefresh(refreshing,{if(!busy){refreshing=true;onRefresh();version++}},Modifier.fillMaxWidth().weight(1f),enabled=connected) {
@@ -100,7 +100,7 @@ internal fun StatesPage(
                 empty={Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())){BeaconEmptyState(BeaconIcons.Topics,if(search.isNotBlank())"没有匹配的数据主题"else"暂无数据主题","可在服务器管理中创建主题，连接恢复后同步最新数据。")}},
                 error={Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(BeaconUiMetrics.PageInset)){SettingsHint("数据加载失败，请重试。");BeaconButton(onClick={version++}){BeaconText("重试")}}},
             ) {
-                BeaconSettingsList(scroll,Modifier.fillMaxSize().testTag("states-list"),
+                BeaconSettingsList(resultScroll,Modifier.fillMaxSize().testTag("states-list"),
                     contentPadding=PaddingValues(start=BeaconUiMetrics.PageInset,end=BeaconUiMetrics.PageInset,top=BeaconUiMetrics.Gap4,bottom=BeaconUiMetrics.PageBottomInset),
                     itemSpacing=BeaconUiMetrics.MessageCardGap,
                 ) {
@@ -118,18 +118,39 @@ internal fun StatesPage(
 
 @Composable
 internal fun StateListCard(row: JSONObject, onOpen: () -> Unit) {
-    val now=System.currentTimeMillis()
-    val status=androidx.compose.ui.res.stringResource(row.topicSnapshot().status(now).labelResource)
+    val now = System.currentTimeMillis()
+    val dataStatus = row.topicSnapshot().status(now)
+    val status = androidx.compose.ui.res.stringResource(dataStatus.labelResource)
+    val preview = remember(row.toString(), dataStatus) { topicListPreview(row, dataStatus) }
     BeaconCard(onClick=onOpen,modifier=Modifier.fillMaxWidth(),colors=CardDefaults.cardColors(containerColor=MaterialTheme.colorScheme.surfaceContainerLow)) {
-        BeaconListCardColumn(verticalInset=BeaconUiMetrics.MessageCardVerticalInset) {
-            BeaconText(row.optString("title").ifBlank{row.optString("topic_key")},
-                style=MaterialTheme.typography.titleMedium.copy(fontSize=BeaconListText.TitleSize,lineHeight=BeaconListText.TitleLineHeight),maxLines=2,overflow=TextOverflow.Ellipsis)
-            BeaconText(MessageMarkdown.summary(row.optString("body")),Modifier.testTag("state-preview"),
-                style=MaterialTheme.typography.bodySmall.copy(fontSize=BeaconListText.PreviewSize,lineHeight=BeaconListText.PreviewLineHeight),
-                color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=BeaconListText.PreviewLines,overflow=TextOverflow.Ellipsis)
-            BeaconText(listOf(if(row.optBoolean("local_imported"))"离线数据"else status,row.optString("application_name").ifBlank{"未关联应用"}).joinToString(" · "),
-                style=MaterialTheme.typography.bodySmall.copy(fontSize=BeaconListText.SubtitleSize,lineHeight=BeaconListText.SubtitleLineHeight),
-                color=MaterialTheme.colorScheme.onSurface.copy(alpha=BeaconListText.SubtitleAlpha),maxLines=1,overflow=TextOverflow.Ellipsis)
+        BeaconListCardColumn {
+            BeaconText(row.optString("title").ifBlank { row.optString("topic_key") },
+                style=MaterialTheme.typography.titleMedium.copy(fontSize=BeaconListText.TitleSize,
+                    lineHeight=BeaconListText.TitleLineHeight, fontWeight=androidx.compose.ui.text.font.FontWeight.SemiBold),
+                maxLines=2,overflow=TextOverflow.Ellipsis)
+            if (preview.summary.isNotBlank()) BeaconText(preview.summary,Modifier.testTag("state-preview"),
+                style=MaterialTheme.typography.bodyMedium.copy(
+                    fontSize=if(preview.numeric) BeaconListText.ValueSize else BeaconListText.PreviewSize,
+                    lineHeight=if(preview.numeric) BeaconListText.ValueLineHeight else BeaconListText.PreviewLineHeight),
+                color=if(preview.numeric) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines=BeaconListText.PreviewLines,overflow=TextOverflow.Ellipsis)
+            preview.progress?.let { progress ->
+                LinearProgressIndicator(progress={progress},modifier=Modifier.fillMaxWidth())
+            }
+            Row(Modifier.fillMaxWidth(),verticalAlignment=androidx.compose.ui.Alignment.CenterVertically,
+                horizontalArrangement=Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
+                BeaconText(listOfNotNull(row.optString("application_name").takeIf{it.isNotBlank()},
+                    row.optLong("accepted_at_ms").takeIf{it>0}?.let{formatMessageTime(it)}).joinToString(" · "),
+                    Modifier.weight(1f),style=MaterialTheme.typography.bodySmall.copy(
+                        fontSize=BeaconListText.MetadataSize,lineHeight=BeaconListText.MetadataLineHeight),
+                    color=MaterialTheme.colorScheme.onSurfaceVariant,maxLines=1,overflow=TextOverflow.Ellipsis)
+                MessageFilterTag(if(row.optBoolean("local_imported"))"离线数据"else status,
+                    tone=if(row.optBoolean("local_imported")) BeaconTagTone.NEUTRAL else when(dataStatus) {
+                        io.github.beacon.app.domain.model.DataStatus.ACTIVE -> BeaconTagTone.SUCCESS
+                        io.github.beacon.app.domain.model.DataStatus.STALE -> BeaconTagTone.WARNING
+                        else -> BeaconTagTone.NEUTRAL
+                    })
+            }
         }
     }
 }

@@ -93,15 +93,6 @@ internal fun QuietHoursPanel(
                     }
                 }
             val scheduleContent: @Composable ColumnScope.() -> Unit = {
-                BeaconTimeRangePreference(
-                    start,
-                    end,
-                    stringResource(R.string.quiet_start),
-                    stringResource(R.string.quiet_end),
-                    enabled = editable,
-                    onStartChange = { start = it },
-                    onEndChange = { end = it },
-                )
                 var customDays by remember { mutableStateOf(draft.weekdays != 127 && draft.weekdays != 31) }
                 LaunchedEffect(loaded) {
                     if (loaded) customDays = draft.weekdays != 127 && draft.weekdays != 31
@@ -127,7 +118,16 @@ internal fun QuietHoursPanel(
                         )
                     }
                 }
-                SettingsOverviewField(stringResource(R.string.settings_validation_title),
+                BeaconTimeRangePreference(
+                    start,
+                    end,
+                    stringResource(R.string.quiet_start),
+                    stringResource(R.string.quiet_end),
+                    enabled = editable,
+                    onStartChange = { start = it },
+                    onEndChange = { end = it },
+                )
+                SettingsOverviewField(stringResource(R.string.settings_time_validation_title),
                     stringResource(if (scheduleValid) R.string.settings_validation_ready else R.string.quiet_invalid),
                     error = !scheduleValid)
             }

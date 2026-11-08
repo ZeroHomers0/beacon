@@ -43,6 +43,7 @@ internal fun BeaconTopBarArea(
     adminModel: ServerAdminViewModel,
     updateState: UpdateCheckState,
     displayedDetail: IncomingMessage? = null,
+    detailActions: @Composable () -> Unit = {},
     pager: PagerState,
     barBehavior: BeaconBarBehavior,
     settingsBarBehaviors: Map<SettingsScreen, BeaconBarBehavior>,
@@ -183,9 +184,9 @@ internal fun BeaconTopBarArea(
                         }
                     },
                     actions = {
-                        if (
-                            displayedDetail == null &&
-                                barPage == 0 &&
+                        if (displayedDetail != null) detailActions()
+                        else if (
+                            barPage == 0 &&
                                 ui.selectionMode
                         ) {
                             BeaconActionIcon(
@@ -257,7 +258,7 @@ internal fun BeaconTopBarArea(
                                     ui.selectionHint = ""
                                 } else ui.selectionHint = maxSelectionWarning
                             }
-                        } else if (displayedDetail == null && barPage == 0) {
+                        } else if (barPage == 0) {
                             androidx.compose.runtime.CompositionLocalProvider(io.github.beacon.app.ui.components.LocalCompactActions provides true) {
                                 BeaconActionIcon(
                                     BeaconIcons.ReadAll,
@@ -288,8 +289,7 @@ internal fun BeaconTopBarArea(
                                 }
                             }
                         } else if (
-                            displayedDetail == null &&
-                                barPage == 1 &&
+                            barPage == 1 &&
                                 displayedSettingsScreen ==
                                     SettingsScreen.SERVER_ADMIN
                         ) {
@@ -300,8 +300,7 @@ internal fun BeaconTopBarArea(
                             io.github.beacon.app.feature.settings.AdminTopicFilterAction(adminModel.listFilters,adminState.devices,adminState.applications,adminState.loggedIn&&!adminState.busy)
                             if(adminState.topicCatalog) io.github.beacon.app.ui.components.BeaconActionIcon(io.github.beacon.app.ui.icons.BeaconIcons.Add,"新建数据主题",adminState.loggedIn&&!adminState.busy,onClick=adminModel::showCreation)
                         } else if (
-                            displayedDetail == null &&
-                                barPage == 1 &&
+                            barPage == 1 &&
                                 displayedSettingsScreen in
                                     setOf(
                                         SettingsScreen.SERVER_DEVICES,
@@ -311,13 +310,12 @@ internal fun BeaconTopBarArea(
                             io.github.beacon.app.feature.settings.AdminManagementActions(
                                 adminState, adminModel, displayedSettingsScreen == SettingsScreen.SERVER_APPLICATIONS)
                         } else if (
-                            displayedDetail == null && barPage == 1 &&
+                            barPage == 1 &&
                                 displayedSettingsScreen == SettingsScreen.CONNECTION
                         ) {
                             io.github.beacon.app.feature.settings.ConnectionRefreshAction(runtimeState, actions, busy)
                         } else if (
-                            displayedDetail == null &&
-                                barPage == 1 &&
+                            barPage == 1 &&
                                 displayedSettingsScreen ==
                                     SettingsScreen.RECEPTION
                         ) {
@@ -347,8 +345,7 @@ internal fun BeaconTopBarArea(
                                 )
                             }
                         } else if (
-                            displayedDetail == null &&
-                                barPage == 1 &&
+                            barPage == 1 &&
                                 displayedSettingsScreen in
                                     setOf(
                                         SettingsScreen.NOTIFICATION_RULES,

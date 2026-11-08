@@ -30,7 +30,7 @@
 ### Android 客户端
 
 1. 打开 [Releases](https://github.com/ZeroHomers0/beacon/releases)，下载通用包 `beacon-release.apk`。同时提供 `beacon-release-arm64-v8a.apk`（64 位 ARM）和 `beacon-release-armeabi-v7a.apk`（32 位 ARM）；不确定设备架构时选择通用包。
-2. 在 Android 13 及以上设备安装，首次安装时按系统提示允许对应来源安装应用。界面可选 Material 3 或 MIUIX；MIUIX 在支持的设备上自动使用柔光玻璃效果，否则使用普通材质。
+2. 在 Android 13 及以上设备安装，首次安装时按系统提示允许对应来源安装应用。界面可选 Material 3 或 MIUIX，支持跟随系统、浅色和深色模式。
 3. 安装后按下文快速开始绑定自己的服务端，并开启通知权限。
 
 若某次构建只有 `beacon-release-unsigned.apk`，该文件需要自行签名后才能安装。自行编译可使用 `android/` 中的 Gradle 工程；正式版本签名配置见 [构建脚本](android/app/build.gradle.kts)。

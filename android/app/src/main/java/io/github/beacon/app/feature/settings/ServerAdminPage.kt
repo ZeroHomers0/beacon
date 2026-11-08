@@ -126,14 +126,16 @@ internal fun ServerAdminPage(
     var deviceStatus by model.listFilters::deviceStatus
     var applicationStatus by model.listFilters::applicationStatus
     var applicationDevice by model.listFilters::applicationDevice
-    val devices = allDevices.filter { device ->
-        adminListMatches(deviceQuery, deviceStatus, device.revoked, device.name, device.id)
+    val matchingDevices = allDevices.filter { device ->
+        adminListMatches(deviceQuery, 0, device.revoked, device.name, device.id)
     }
-    val applications = allApplications.filter { app ->
+    val devices = matchingDevices.filter { adminListMatches("", deviceStatus, it.revoked) }
+    val matchingApplications = allApplications.filter { app ->
         val owner = allDevices.find { it.id == app.deviceId }?.name.orEmpty()
-        adminListMatches(applicationQuery, applicationStatus, app.revoked, app.name, app.id, owner, app.deviceId) &&
+        adminListMatches(applicationQuery, 0, app.revoked, app.name, app.id, owner, app.deviceId) &&
             (applicationDevice.isBlank() || app.deviceId == applicationDevice)
     }
+    val applications = matchingApplications.filter { adminListMatches("", applicationStatus, it.revoked) }
     LaunchedEffect(state.devices) {
         if (allDevices.none { it.id == applicationDevice }) applicationDevice = ""
     }
@@ -174,6 +176,12 @@ internal fun ServerAdminPage(
     LaunchedEffect(state.busy, listRefreshing) {
         if (listRefreshing && !state.busy) listRefreshing = false
     }
+    val resultScroll = rememberScopedListState(
+        "${state.endpoint}:$tab:" + when(tab) {
+            0 -> "$deviceStatus:$deviceQuery"
+            1 -> "$applicationStatus:$applicationDevice:$applicationQuery"
+            else -> "overview"
+        }, scroll)
     Column(modifier) {
         if (state.loggedIn && tab in 0..1) Box(Modifier.fillMaxWidth().padding(
             start = padding.calculateLeftPadding(androidx.compose.ui.unit.LayoutDirection.Ltr),
@@ -185,19 +193,18 @@ internal fun ServerAdminPage(
                 if (tab == 0) deviceStatus else applicationStatus,
                 { if (tab == 0) deviceStatus = it else applicationStatus = it },
                 stringResource(if (tab == 0) R.string.settings_search_devices else R.string.settings_search_apps),
-                allDevices, if (tab == 0) "" else applicationDevice,
-                if (tab == 0) null else { value: String -> applicationDevice = value },
-                total = if (tab == 0) allDevices.size else allApplications.size,
-                active = if (tab == 0) allDevices.count { !it.revoked } else allApplications.count { !it.revoked },
+                total = if (tab == 0) matchingDevices.size else matchingApplications.size,
+                active = if (tab == 0) matchingDevices.count { !it.revoked } else matchingApplications.count { !it.revoked },
                 enabled = !state.busy,
                 totalIcon = if (tab == 0) BeaconIcons.Device else BeaconIcons.Applications,
+                application = tab == 1,
             )
         }
     BeaconPullToRefresh(listRefreshing, {
         if (!state.busy) { listRefreshing = true; model.refresh() }
     }, Modifier.fillMaxWidth().weight(1f), enabled = state.loggedIn && tab in 0..1) {
     BeaconSettingsList(
-        state = scroll,
+        state = resultScroll,
         modifier = Modifier.fillMaxSize().beaconFilterChange(if (tab == 0) deviceStatus else applicationStatus),
         contentPadding = if (state.loggedIn && tab in 0..1) PaddingValues(
             start = padding.calculateLeftPadding(androidx.compose.ui.unit.LayoutDirection.Ltr),
@@ -335,7 +342,7 @@ internal fun ServerAdminPage(
                     ) {
                         onNavigate(SettingsScreen.SERVER_APPLICATIONS)
                     }
-                    SettingsActionRow(stringResource(R.string.admin_topics_title),"管理进度、数值、榜单和文字等数据内容",BeaconIcons.Topics,!state.busy){onNavigate(SettingsScreen.SERVER_TOPICS)}
+                    SettingsActionRow(stringResource(R.string.admin_topics_title),stringResource(R.string.admin_topics_description),BeaconIcons.Topics,!state.busy){onNavigate(SettingsScreen.SERVER_TOPICS)}
                     SettingsActionRow(
                         stringResource(R.string.admin_test_title_page),
                         stringResource(R.string.admin_test_description),
@@ -388,10 +395,10 @@ internal fun ServerAdminPage(
                     items(devices, key = { "device-${it.id}" }) { device ->
                         AdminListCard(
                             device.name.ifBlank { stringResource(R.string.admin_unnamed_device) },
-                            device.id,
+                            device.id.take(12),
                             stringResource(
-                                if (device.revoked) R.string.admin_revoked
-                                else R.string.admin_active
+                                if (device.revoked) R.string.admin_device_unbound
+                                else R.string.admin_device_bound
                             ),
                             !state.busy,
                             buildList {
@@ -422,6 +429,7 @@ internal fun ServerAdminPage(
                             },
                             modifier = Modifier.animateItem(placementSpec = null),
                             revoked = device.revoked,
+                            details = device.id,
                         )
                     }
                 }
@@ -448,11 +456,11 @@ internal fun ServerAdminPage(
                                 state.devices
                                     .find { it.id == app.deviceId }
                                     ?.name
-                                    ?.takeIf { it.isNotBlank() } ?: app.deviceId,
+                                    ?.takeIf { it.isNotBlank() } ?: app.deviceId.take(12),
                             ),
                             stringResource(
-                                    if (app.revoked) R.string.admin_revoked
-                                    else R.string.admin_active
+                                    if (app.revoked) R.string.admin_app_token_revoked
+                                    else R.string.admin_app_token_active
                                 ),
                             !state.busy,
                             listOf(
@@ -477,6 +485,7 @@ internal fun ServerAdminPage(
                 2 ->
                     item {
                         SettingsSection(stringResource(R.string.admin_test_title_page)) {
+                            SettingsHint(stringResource(R.string.settings_real_test_hint))
                             DevicePicker(active, deviceId, { deviceId = it }, !state.busy)
                             AdminField(
                                 testTitle,

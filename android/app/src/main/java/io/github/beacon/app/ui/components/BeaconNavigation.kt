@@ -78,7 +78,7 @@ fun BeaconDropdownPreference(
         })
         top.yukonga.miuix.kmp.preference.WindowDropdownPreference(
             entry = entry, title = title,
-            modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) { if (!enabled) disabled() },
+            modifier = Modifier.fillMaxWidth().heightIn(min = if (insetRow) BeaconUiMetrics.NavigationMinHeight else BeaconUiMetrics.FieldMinHeight).semantics(mergeDescendants = true) { if (!enabled) disabled() },
             summary = items.getOrElse(selectedIndex) { BeaconUnknownValue },
             enabled = enabled, showValue = false, maxHeight = 360.dp,
             startAction = icon?.let { image -> {
@@ -98,7 +98,7 @@ fun BeaconDropdownPreference(
                 supportingContent = { BeaconText(items.getOrElse(selectedIndex) { BeaconUnknownValue }) },
                 leadingContent = icon?.let { image -> { androidx.compose.material3.Icon(image, null) } },
                 trailingContent = { androidx.compose.material3.Icon(BeaconIcons.Select, null) },
-                modifier = Modifier.fillMaxWidth().alpha(if (enabled) 1f else .38f)
+                modifier = Modifier.fillMaxWidth().heightIn(min = BeaconUiMetrics.NavigationMinHeight).alpha(if (enabled) 1f else .38f)
                     .clickable(enabled = enabled) { expanded = true },
                 colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
             )

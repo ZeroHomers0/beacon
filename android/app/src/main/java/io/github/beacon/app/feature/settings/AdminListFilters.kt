@@ -31,30 +31,18 @@ internal class AdminListFilterState {
 }
 
 @Composable
-internal fun AdminStatusFilterAction(filters: AdminListFilterState, application: Boolean,
+internal fun AdminApplicationDeviceFilterAction(filters: AdminListFilterState,
     devices: List<AdminDevice>, enabled: Boolean) {
-    val status = if (application) filters.applicationStatus else filters.deviceStatus
     Box {
         BeaconActionIcon(io.github.beacon.app.ui.icons.BeaconIcons.Filter,
-            stringResource(R.string.admin_filter_title), enabled) { filters.open = true }
+            stringResource(R.string.admin_filter_title), enabled, showBadge = filters.applicationDevice.isNotBlank()) { filters.open = true }
         BeaconDropdownMenu(filters.open, { filters.open = false }) {
-            listOf(R.string.settings_all_status, R.string.admin_active, R.string.admin_revoked)
-                .forEachIndexed { index, label ->
-                    BeaconDropdownMenuItem({ BeaconSelectableRow(stringResource(label), index == status) }) {
-                        if (application) filters.applicationStatus = index else filters.deviceStatus = index
-                        filters.open = false
+            (listOf("" to stringResource(R.string.settings_all_devices)) + devices.map { it.id to it.name.ifBlank { it.id } })
+                .forEach { (id, name) ->
+                    BeaconDropdownMenuItem({ BeaconSelectableRow(name, filters.applicationDevice == id) }) {
+                        filters.applicationDevice = id; filters.open = false
                     }
                 }
-            if (application) {
-                androidx.compose.material3.HorizontalDivider()
-                SettingsLabel(stringResource(R.string.settings_selected_device))
-                (listOf("" to stringResource(R.string.settings_all_devices)) + devices.map { it.id to it.name.ifBlank { it.id } })
-                    .forEach { (id, name) ->
-                        BeaconDropdownMenuItem({ BeaconSelectableRow(name, filters.applicationDevice == id) }) {
-                            filters.applicationDevice = id; filters.open = false
-                        }
-                    }
-            }
         }
     }
 }
@@ -63,22 +51,20 @@ internal fun AdminStatusFilterAction(filters: AdminListFilterState, application:
 internal fun AdminListFilters(
     query: String, onQuery: (String) -> Unit,
     status: Int, onStatus: (Int) -> Unit, label: String,
-    devices: List<AdminDevice> = emptyList(), selectedDevice: String = "",
-    onDevice: ((String) -> Unit)? = null,
     total: Int = 0, active: Int = 0, enabled: Boolean = true,
     totalIcon: androidx.compose.ui.graphics.vector.ImageVector = io.github.beacon.app.ui.icons.BeaconIcons.Device,
+    application: Boolean = false,
 ) {
     val focus = androidx.compose.ui.platform.LocalFocusManager.current
     Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
         BeaconSearchBox(query, onQuery, label, onSearch = { focus.clearFocus() })
         BeaconListSwitch(
-            labels = listOf(stringResource(R.string.admin_stat_total, total),
-                stringResource(if (status == 2) R.string.admin_stat_revoked else R.string.admin_stat_active,
-                    if (status == 2) total - active else active)),
-            icons = listOf(totalIcon, if (status == 2) io.github.beacon.app.ui.icons.BeaconIcons.Block
-                else io.github.beacon.app.ui.icons.BeaconIcons.Check),
-            selectedIndex = if (status == 0) 0 else 1, enabled = enabled,
-            onSelected = { onStatus(if (it == 0) 0 else if (status == 2) 2 else 1) },
+            labels = listOf("全部 $total",
+                if (application) "有效 $active" else "已绑定 $active",
+                if (application) "已撤销 ${total-active}" else "已解绑 ${total-active}"),
+            icons = listOf(totalIcon, io.github.beacon.app.ui.icons.BeaconIcons.Check,
+                io.github.beacon.app.ui.icons.BeaconIcons.Block),
+            selectedIndex = status, enabled = enabled, onSelected = onStatus,
         )
 
     }
@@ -94,7 +80,8 @@ internal fun priorityShortLabel(value: Int): Int = when {
 @Composable
 internal fun AdminTopicFilterAction(filters:AdminListFilterState,devices:List<AdminDevice>,applications:List<AdminApplication>,enabled:Boolean){
     Box{
-        BeaconActionIcon(io.github.beacon.app.ui.icons.BeaconIcons.Filter,"筛选数据主题",enabled){filters.topicOpen=true}
+        BeaconActionIcon(io.github.beacon.app.ui.icons.BeaconIcons.Filter,"筛选数据主题",enabled,
+            showBadge=filters.topicStatus!="all"||filters.topicDevice.isNotBlank()||filters.topicApplication!="*"){filters.topicOpen=true}
         BeaconDropdownMenu(filters.topicOpen,{filters.topicOpen=false}){
             listOf("all" to "全部状态","waiting" to "等待数据","active" to "数据有效","stale" to "数据较旧","expired" to "已过期").forEach{(id,label)->
                 BeaconDropdownMenuItem({BeaconSelectableRow(label,filters.topicStatus==id)}){filters.topicStatus=id;filters.topicOffset=0;filters.topicOpen=false}
@@ -121,7 +108,7 @@ internal fun AdminOverviewActions(state: AdminUiState, model: ServerAdminViewMod
 
 @Composable
 internal fun AdminManagementActions(state: AdminUiState, model: ServerAdminViewModel, application: Boolean) {
-    AdminStatusFilterAction(model.listFilters, application, state.devices, state.loggedIn && !state.busy)
+    if (application) AdminApplicationDeviceFilterAction(model.listFilters, state.devices, state.loggedIn && !state.busy)
     BeaconActionIcon(io.github.beacon.app.ui.icons.BeaconIcons.Add,
         stringResource(if (application) R.string.admin_create_application else R.string.admin_create_binding),
         state.loggedIn && !state.busy, onClick = model::showCreation)

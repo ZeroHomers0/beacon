@@ -56,7 +56,7 @@ fun WidgetManagerPage(modifier:Modifier,scroll:LazyListState,padding:PaddingValu
                 SettingsGroup("${format.label} · ${format.description}"){
                     SettingsRow(name,
                         if(row==null)"选择数据主题"else WidgetHealth.description(row,online=online),
-                        BeaconIcons.Applications,onClick={context.startActivity(Intent(context,StateWidgetActivity::class.java).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,id))})
+                        BeaconIcons.Widget,onClick={context.startActivity(Intent(context,StateWidgetActivity::class.java).putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID,id))})
                     WidgetManagerPreview(row,JSONObject(config.toString()).put("format",format.name).put("_offline",!online),WidgetInstances.previewSize(context,id,format))
                 }
                 }

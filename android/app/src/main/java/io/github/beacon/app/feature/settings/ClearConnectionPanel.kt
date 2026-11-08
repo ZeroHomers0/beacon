@@ -17,7 +17,7 @@ fun ClearConnectionPanel(state: RuntimeState, actions: RuntimeActions, form: Con
     var confirm by remember { mutableStateOf(false) }
     var revoke by remember { mutableStateOf(false) }
     SettingsGroup(stringResource(R.string.settings_danger_section_title)) {
-        SettingsCommandRow(stringResource(R.string.device_revoke), icon = BeaconIcons.Close,
+        SettingsCommandRow(stringResource(R.string.device_revoke), icon = BeaconIcons.Disconnect,
             enabled = !state.messageBusy && state.runtimeConnected && state.configuredEndpoint.isNotBlank(),
             danger = true, onClick = { revoke = true })
         SettingsCommandRow(stringResource(R.string.connection_clear), icon = BeaconIcons.Delete,

@@ -79,81 +79,6 @@ internal fun LazyListScope.receptionSettingsItems(
             error = ready && failed,
         ) {
             SettingsOverviewField(
-                stringResource(R.string.reception_https_status),
-                when {
-                    runtimeState.configuredEndpoint.isBlank() ->
-                        stringResource(R.string.settings_receive_unbound)
-                    !runtimeState.runtimeConnected ->
-                        stringResource(R.string.settings_runtime_disconnected)
-                    !runtimeState.receivePlanLoaded ->
-                        stringResource(R.string.settings_data_loading)
-                    runtimeState.transportBusy -> stringResource(R.string.reception_syncing)
-                    polling.blocked.isNotBlank() -> polling.blocked
-                    !polling.config.enabled -> stringResource(R.string.reception_paused)
-                    polling.lastOutcome == io.github.beacon.app.domain.model.SyncOutcome.AUTH ->
-                        stringResource(R.string.reception_sync_auth_failure)
-                    polling.lastOutcome == io.github.beacon.app.domain.model.SyncOutcome.TLS ->
-                        stringResource(R.string.reception_sync_tls_failure)
-                    polling.lastOutcome in setOf(io.github.beacon.app.domain.model.SyncOutcome.CONFIG,
-                        io.github.beacon.app.domain.model.SyncOutcome.PROTOCOL) ->
-                        stringResource(R.string.reception_sync_config_failure)
-                    polling.lastOutcome == io.github.beacon.app.domain.model.SyncOutcome.TRANSIENT ->
-                        stringResource(R.string.reception_sync_retry)
-                    polling.lastOutcome == io.github.beacon.app.domain.model.SyncOutcome.STORAGE ->
-                        stringResource(R.string.reception_storage_failure)
-                    polling.lastOutcome == io.github.beacon.app.domain.model.SyncOutcome.OK ->
-                        stringResource(R.string.reception_sync_ready)
-                    else -> stringResource(R.string.reception_sync_waiting)
-                },
-                error = polling.blocked.isNotBlank() && runtimeState.runtimeConnected &&
-                    runtimeState.configuredEndpoint.isNotBlank() && runtimeState.receivePlanLoaded &&
-                    !runtimeState.transportBusy,
-            )
-            SettingsOverviewField(
-                stringResource(R.string.receive_realtime_status_title),
-                when {
-                    runtimeState.configuredEndpoint.isBlank() ->
-                        stringResource(R.string.settings_receive_unbound)
-                    !runtimeState.runtimeConnected ->
-                        stringResource(R.string.settings_runtime_disconnected)
-                    !runtimeState.receivePlanLoaded -> stringResource(R.string.settings_data_loading)
-                    receivePlan.mode == ReceiveMode.POWER_SAVING -> stringResource(R.string.reception_realtime_not_needed)
-                    polling.blocked.isNotBlank() -> stringResource(R.string.reception_sync_blocked)
-                    !polling.config.enabled -> stringResource(R.string.reception_paused)
-                    runtimeState.realtimeRunning ->
-                        stringResource(R.string.settings_realtime_connected)
-                    receivePlan.mode == ReceiveMode.RULES -> runtimeState.realtimeStatus
-                    runtimeState.realtimeDiagnostics.failure !=
-                        io.github.beacon.app.domain.model.RealtimeFailure.NONE ->
-                        stringResource(
-                            when (runtimeState.realtimeDiagnostics.failure) {
-                                io.github.beacon.app.domain.model.RealtimeFailure.AUTH ->
-                                    R.string.settings_realtime_auth_failure
-                                io.github.beacon.app.domain.model.RealtimeFailure.CONFIG ->
-                                    R.string.settings_realtime_config_failure
-                                io.github.beacon.app.domain.model.RealtimeFailure
-                                    .CERTIFICATE_EXPIRED,
-                                io.github.beacon.app.domain.model.RealtimeFailure
-                                    .CERTIFICATE_NOT_YET_VALID,
-                                io.github.beacon.app.domain.model.RealtimeFailure
-                                    .CERTIFICATE_UNTRUSTED,
-                                io.github.beacon.app.domain.model.RealtimeFailure.HOSTNAME ->
-                                    R.string.settings_realtime_tls_failure
-                                else -> R.string.settings_realtime_network_failure
-                            }
-                        )
-                    else ->
-                        runtimeState.realtimeStatus
-                            .removePrefix(stringResource(R.string.receive_mode_realtime))
-                            .lineSequence()
-                            .first()
-                },
-            )
-            SettingsOverviewField(stringResource(R.string.realtime_next_retry),
-                if(runtimeState.realtimeDiagnostics.nextRetryAtMs>0 && !runtimeState.realtimeRunning)
-                    formatMessageTime(runtimeState.realtimeDiagnostics.nextRetryAtMs)
-                else stringResource(R.string.realtime_no_retry))
-            SettingsOverviewField(
                 stringResource(R.string.settings_last_sync_success_desc) +
                     (polling.lastSuccessInserted?.let {
                         " · " + stringResource(R.string.receive_success_count, it)
@@ -198,6 +123,96 @@ internal fun LazyListScope.receptionSettingsItems(
     if (receivePlan.mode == ReceiveMode.RULES) {
         item { InheritedReceptionPreferences(runtimeState, receptionForm, busy) }
     }
+    item {
+        var expanded by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+        SettingsGroup("") {
+            SettingsRow(stringResource(R.string.settings_connection_details),
+                stringResource(R.string.settings_connection_details_hint),
+                io.github.beacon.app.ui.icons.BeaconIcons.Diagnostics,
+                iconTint = MaterialTheme.colorScheme.onSurface,
+                onClick = { expanded = !expanded }, expanded = expanded)
+            if (expanded) Column(
+                Modifier.padding(BeaconUiMetrics.CardInset),
+                verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12),
+            ) {
+                SettingsOverviewField(
+                    stringResource(R.string.reception_https_status),
+                    when {
+                        runtimeState.configuredEndpoint.isBlank() ->
+                            stringResource(R.string.settings_receive_unbound)
+                        !runtimeState.runtimeConnected ->
+                            stringResource(R.string.settings_runtime_disconnected)
+                        !runtimeState.receivePlanLoaded ->
+                            stringResource(R.string.settings_data_loading)
+                        runtimeState.transportBusy -> stringResource(R.string.reception_syncing)
+                        polling.blocked.isNotBlank() -> polling.blocked
+                        !polling.config.enabled -> stringResource(R.string.reception_paused)
+                        polling.lastOutcome == io.github.beacon.app.domain.model.SyncOutcome.AUTH ->
+                            stringResource(R.string.reception_sync_auth_failure)
+                        polling.lastOutcome == io.github.beacon.app.domain.model.SyncOutcome.TLS ->
+                            stringResource(R.string.reception_sync_tls_failure)
+                        polling.lastOutcome in setOf(io.github.beacon.app.domain.model.SyncOutcome.CONFIG,
+                            io.github.beacon.app.domain.model.SyncOutcome.PROTOCOL) ->
+                            stringResource(R.string.reception_sync_config_failure)
+                        polling.lastOutcome == io.github.beacon.app.domain.model.SyncOutcome.TRANSIENT ->
+                            stringResource(R.string.reception_sync_retry)
+                        polling.lastOutcome == io.github.beacon.app.domain.model.SyncOutcome.STORAGE ->
+                            stringResource(R.string.reception_storage_failure)
+                        polling.lastOutcome == io.github.beacon.app.domain.model.SyncOutcome.OK ->
+                            stringResource(R.string.reception_sync_ready)
+                        else -> stringResource(R.string.reception_sync_waiting)
+                    },
+                    error = polling.blocked.isNotBlank() && runtimeState.runtimeConnected &&
+                        runtimeState.configuredEndpoint.isNotBlank() && runtimeState.receivePlanLoaded &&
+                        !runtimeState.transportBusy,
+                )
+                SettingsOverviewField(
+                    stringResource(R.string.receive_realtime_status_title),
+                    when {
+                        runtimeState.configuredEndpoint.isBlank() ->
+                            stringResource(R.string.settings_receive_unbound)
+                        !runtimeState.runtimeConnected ->
+                            stringResource(R.string.settings_runtime_disconnected)
+                        !runtimeState.receivePlanLoaded -> stringResource(R.string.settings_data_loading)
+                        receivePlan.mode == ReceiveMode.POWER_SAVING -> stringResource(R.string.reception_realtime_not_needed)
+                        polling.blocked.isNotBlank() -> stringResource(R.string.reception_sync_blocked)
+                        !polling.config.enabled -> stringResource(R.string.reception_paused)
+                        runtimeState.realtimeRunning ->
+                            stringResource(R.string.settings_realtime_connected)
+                        receivePlan.mode == ReceiveMode.RULES -> runtimeState.realtimeStatus
+                        runtimeState.realtimeDiagnostics.failure !=
+                            io.github.beacon.app.domain.model.RealtimeFailure.NONE ->
+                            stringResource(
+                                when (runtimeState.realtimeDiagnostics.failure) {
+                                    io.github.beacon.app.domain.model.RealtimeFailure.AUTH ->
+                                        R.string.settings_realtime_auth_failure
+                                    io.github.beacon.app.domain.model.RealtimeFailure.CONFIG ->
+                                        R.string.settings_realtime_config_failure
+                                    io.github.beacon.app.domain.model.RealtimeFailure
+                                        .CERTIFICATE_EXPIRED,
+                                    io.github.beacon.app.domain.model.RealtimeFailure
+                                        .CERTIFICATE_NOT_YET_VALID,
+                                    io.github.beacon.app.domain.model.RealtimeFailure
+                                        .CERTIFICATE_UNTRUSTED,
+                                    io.github.beacon.app.domain.model.RealtimeFailure.HOSTNAME ->
+                                        R.string.settings_realtime_tls_failure
+                                    else -> R.string.settings_realtime_network_failure
+                                }
+                            )
+                        else ->
+                            runtimeState.realtimeStatus
+                                .removePrefix(stringResource(R.string.receive_mode_realtime))
+                                .lineSequence()
+                                .first()
+                    },
+                )
+                SettingsOverviewField(stringResource(R.string.realtime_next_retry),
+                    if(runtimeState.realtimeDiagnostics.nextRetryAtMs>0 && !runtimeState.realtimeRunning)
+                        formatMessageTime(runtimeState.realtimeDiagnostics.nextRetryAtMs)
+                    else stringResource(R.string.realtime_no_retry))
+            }
+        }
+    }
 }
 
 @androidx.compose.runtime.Composable
@@ -212,7 +227,7 @@ private fun ConnectionPreferences(
             {
                 BeaconPreferenceToggle(
                     stringResource(R.string.receive_adaptive_heartbeat),
-                    "",
+                    stringResource(R.string.settings_adaptive_heartbeat_hint),
                     receptionForm.plan.adaptiveHeartbeat,
                     !busy && runtimeState.runtimeConnected && runtimeState.receivePlanLoaded,
                 ) {
@@ -241,7 +256,7 @@ private fun ConnectionPreferences(
             {
                 BeaconPreferenceToggle(
                     stringResource(R.string.receive_batch_ordinary),
-                    "",
+                    stringResource(R.string.settings_batch_hint),
                     receptionForm.plan.batchOrdinaryMessages,
                     !busy && runtimeState.runtimeConnected && runtimeState.receivePlanLoaded,
                 ) {
@@ -297,7 +312,7 @@ private fun PollingPreferences(
                 {
                     BeaconPreferenceToggle(
                         stringResource(R.string.receive_unmetered_title),
-                        "",
+                        stringResource(R.string.settings_unmetered_hint),
                         unmetered,
                         !busy && runtimeState.runtimeConnected && runtimeState.receivePlanLoaded,
                     ) {
@@ -308,7 +323,7 @@ private fun PollingPreferences(
                 {
                     BeaconPreferenceToggle(
                         stringResource(R.string.receive_charging_title),
-                        "",
+                        stringResource(R.string.settings_charging_hint),
                         charging,
                         !busy && runtimeState.runtimeConnected && runtimeState.receivePlanLoaded,
                     ) {

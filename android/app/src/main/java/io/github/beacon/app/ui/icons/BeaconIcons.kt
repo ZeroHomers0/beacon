@@ -8,6 +8,13 @@ import androidx.compose.ui.unit.dp
 
 /** Material Symbols Rounded (Apache-2.0), except the original receive-mode drawings below. */
 object BeaconIcons {
+    // App-owned semantic symbols, matching the existing 24dp stroke weight.
+    val Widget = vector("Widget", 24f, 24f,
+        "M3 3h18v18H3V3Zm2 2v5h14V5H5Zm0 7v7h5v-7H5Zm7 0v7h7v-7h-7Z")
+    val Notifications = vector("Notifications", 24f, 24f,
+        "M12 2a2 2 0 0 1 2 2v.35A6 6 0 0 1 18 10v5l2 2v2H4v-2l2-2v-5a6 6 0 0 1 4-5.65V4a2 2 0 0 1 2-2Zm0 4a4 4 0 0 0-4 4v5.8L6.8 17h10.4L16 15.8V10a4 4 0 0 0-4-4Zm-2 14h4a2 2 0 0 1-4 0Z")
+    val Disconnect = vector("Disconnect", 24f, 24f,
+        "M2 3.4 3.4 2 22 20.6 20.6 22l-4.3-4.3A5 5 0 0 1 12 20H9v-2h3a3 3 0 0 0 2.85-2.05l-2.25-2.25H8v-2h2.6L2 3.4ZM9 4h3a5 5 0 0 1 5 5v1h-2V9a3 3 0 0 0-3-3H9V4Zm9 3h2v10h-2V7ZM4 7h2v10H4V7Z")
     val Device = vector("Device", 24f, 24f,
         "M6 2h12v20H6V2Zm2 2v14h8V4H8Zm3 15v1h2v-1h-2Z")
     val Topics = vector("Topics", 24f, 24f,

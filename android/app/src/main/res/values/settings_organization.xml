@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_time_validation_title">时段检查</string>
+    <string name="settings_connection_details">连接详情</string>
+    <string name="settings_connection_details_hint">同步、连接与自动重试</string>
+    <string name="settings_adaptive_heartbeat_hint">自动调整心跳间隔</string>
+    <string name="settings_batch_hint">减少接收唤醒次数，普通消息可能延迟送达</string>
+    <string name="settings_unmetered_hint">通常为 Wi-Fi，以系统的计费网络标记为准</string>
+    <string name="settings_charging_hint">未充电时暂停定时补收</string>
+    <string name="settings_background_autostart_hint">打开应用信息后，查找系统的自启动设置</string>
+    <string name="settings_notification_age_hint">按消息发送时间判断；超过时限的消息使用下方方式处理。</string>
+    <string name="admin_device_unbound">已解绑</string>
+    <string name="admin_device_bound">已绑定</string>
+    <string name="admin_app_token_revoked">令牌已撤销</string>
+    <string name="admin_app_token_active">令牌有效</string>
+    <string name="settings_real_test_hint">会向所选设备发送真实消息，不代表已收到通知。</string>
+    <string name="admin_topics_description">管理数据主题</string>
+</resources>

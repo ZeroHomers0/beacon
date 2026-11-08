@@ -147,7 +147,7 @@ internal fun BeaconListCard(
 @Composable
 internal fun BeaconListCardColumn(
     modifier: Modifier = Modifier,
-    verticalInset: Dp = BeaconUiMetrics.SectionGap,
+    verticalInset: Dp = BeaconUiMetrics.MessageCardVerticalInset,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
@@ -320,21 +320,22 @@ fun SettingsRow(
         top.yukonga.miuix.kmp.preference.ArrowPreference(
             title = title, summary = subtitle.takeIf { it.isNotBlank() },
             enabled = enabled, onClick = onClick,
+            modifier = Modifier.heightIn(min = if (compact && subtitle.isBlank()) BeaconUiMetrics.ControlMinHeight else BeaconUiMetrics.NavigationMinHeight),
             startAction = { BadgedIcon(icon, iconTint, badge, Modifier.padding(end = BeaconUiMetrics.Gap16)) },
             insideMargin = PaddingValues(horizontal = BeaconUiMetrics.CardInset,
-                vertical = BeaconUiMetrics.NavigationVerticalInset),
+                vertical = if (compact && subtitle.isBlank()) BeaconUiMetrics.Gap8 else BeaconUiMetrics.NavigationVerticalInset),
         )
         return
     }
     if (!miuix() && !command && !selection && !external && expanded == null) {
         ListItem(
-            headlineContent = { BeaconFittedText(title, Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodyLarge) },
+            headlineContent = { BeaconText(title, style = MaterialTheme.typography.bodyLarge) },
             supportingContent = subtitle.takeIf { it.isNotBlank() }?.let { summary ->
-                { BeaconFittedText(summary, Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodySmall) }
+                { BeaconText(summary, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             },
             leadingContent = { BadgedIcon(icon, iconTint, badge) },
             trailingContent = { Icon(BeaconIcons.Arrow, null) },
-            modifier = Modifier.clickable(enabled = enabled, onClick = onClick).alpha(if (enabled) 1f else .38f),
+            modifier = Modifier.heightIn(min = if (compact && subtitle.isBlank()) BeaconUiMetrics.ControlMinHeight else BeaconUiMetrics.NavigationMinHeight).clickable(enabled = enabled, onClick = onClick).alpha(if (enabled) 1f else .38f),
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         )
         return
@@ -359,10 +360,10 @@ fun SettingsRow(
         ) {
             BadgedIcon(icon, iconTint, badge)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap2)) {
-                BeaconFittedText(title, Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodyLarge,
+                BeaconText(title, Modifier.fillMaxWidth(), style = MaterialTheme.typography.bodyLarge,
                     color = if (danger) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface)
                 if (subtitle.isNotBlank())
-                    BeaconFittedText(
+                    BeaconText(
                         subtitle,
                         modifier = Modifier.fillMaxWidth(),
                         style = MaterialTheme.typography.bodySmall,
@@ -564,7 +565,7 @@ fun MessageItem(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-            BeaconText(
+            if (message.body.isNotBlank()) BeaconText(
                 remember(message.body) {
                     io.github.beacon.app.domain.policy.MessageMarkdown.summary(message.body)
                 },
@@ -588,14 +589,7 @@ fun MessageItem(
     }
 }
 
-/**
- * Metadata chips; compact mode is reserved for the list footer.
- *
- * [toneSlot] selects which of the tinted hues this label draws from: the application and the group
- * are seeded with different slots so the two chips on one card are told apart even when the names
- * collide, while the same application keeps its colour on every message. `-1` (the default) keeps
- * the neutral chip used for controls that are not metadata (the render/source toggle).
- */
+/** Compact metadata labels use neutral surfaces; status meaning is carried by text and tone. */
 @Composable
 internal fun MessageFilterTag(
     label: String,
@@ -603,20 +597,20 @@ internal fun MessageFilterTag(
     compact: Boolean = false,
     enabled: Boolean = true,
     outlined: Boolean = false,
-    toneSlot: Int = -1,
-    containerColor: Color? = null,
+    tone: BeaconTagTone = BeaconTagTone.NEUTRAL,
     onClick: (() -> Unit)? = null,
 ) {
+    val colors = beaconTagColors(tone)
     Box(
         modifier
             .semantics { if (compact) contentDescription = label }
             .clip(RoundedCornerShape(BeaconUiMetrics.BadgeRadius))
-            .background(containerColor ?: beaconTagContainer(label, toneSlot))
+            .background(colors.container)
             .then(
                 if (!outlined) Modifier
                 else Modifier.border(
                     1.dp,
-                    BeaconTagOutline,
+                    colors.outline,
                     RoundedCornerShape(BeaconUiMetrics.BadgeRadius),
                 )
             )
@@ -639,11 +633,8 @@ internal fun MessageFilterTag(
         BeaconText(
             label,
             Modifier.weight(1f, fill = false),
-            style =
-                if (compact)
-                    MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, lineHeight = 14.sp)
-                else MaterialTheme.typography.labelSmall,
-            color = BeaconTagInk,
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 12.sp, lineHeight = 16.sp),
+            color = colors.content,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )

@@ -101,7 +101,7 @@ fun MessagesPage(
 // Compose can skip this entire subtree even while the surrounding toolbar updates.
 @Composable
 private fun MessagesContent(
-    scroll: androidx.compose.foundation.lazy.LazyListState,
+    defaultScroll: androidx.compose.foundation.lazy.LazyListState,
     modifier: Modifier,
     padding: PaddingValues,
     runtimeState: MessageListState,
@@ -125,6 +125,8 @@ private fun MessagesContent(
     onCopyText: (String, Boolean) -> Unit,
     calendar: Pair<java.time.ZoneId, java.time.LocalDate>,
 ) {
+    val scroll = io.github.beacon.app.ui.components.rememberScopedListState(
+        "${runtimeState.messageQuery.search}:${runtimeState.messageQuery.readFilter}", defaultScroll)
     val context = androidx.compose.ui.platform.LocalContext.current
     val zone = calendar.first
     val dates =

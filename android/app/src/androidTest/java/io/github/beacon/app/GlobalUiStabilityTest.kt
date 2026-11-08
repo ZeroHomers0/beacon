@@ -107,26 +107,22 @@ class GlobalUiStabilityTest {
     }
 
     private fun palette(style: BeaconUiStyle) {
-        val samples = (0..7).map { target ->
-            generateSequence(0) { it + 1 }.map { "配色样例 $it" }.first {
-                io.github.beacon.app.domain.policy.tagToneIndex(it, 0) == target
-            }
-        }
+        val samples = listOf("构建服务", "工作提醒", "每日简报", "部署报告", "自动化", "数据更新", "监控", "备份")
         for (mode in listOf(BeaconThemeMode.LIGHT, BeaconThemeMode.DARK)) {
             rule.runOnUiThread {
                 rule.activity.setContent {
                     BeaconTheme(style, mode) {
                         val behavior = key(mode) { rememberBeaconBarBehavior() }
-                        BeaconScaffold(topBar = { BeaconTopBar("明亮标签", false, behavior, {}, {}) }, bottomBar = {}) { padding ->
+                        BeaconScaffold(topBar = { BeaconTopBar("中性标签", false, behavior, {}, {}) }, bottomBar = {}) { padding ->
                             Column(Modifier.fillMaxSize().padding(padding).padding(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                MessageItem(IncomingMessage("example.test", "preview", "消息标签示例", "标签使用明亮底色与清晰文字",
+                                MessageItem(IncomingMessage("example.test", "preview", "消息标签示例", "分类使用中性底色，状态保留语义颜色",
                                     applicationId = "app", applicationName = "构建服务", group = "工作提醒"), false, false,
                                     {}, {}, {}, false, {}, {}, {})
                                 for (row in 0..3) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     for (column in 0..1) {
                                         val slot = row * 2 + column
-                                        MessageFilterTag(samples[slot], Modifier.weight(1f).testTag("palette$slot"), toneSlot = 0)
+                                        MessageFilterTag(samples[slot], Modifier.weight(1f).testTag("palette$slot"), tone = BeaconTagTone.NEUTRAL)
                                     }
                                 }
 
@@ -138,10 +134,11 @@ class GlobalUiStabilityTest {
             for (index in 0..7) {
                 val pixels = rule.onNodeWithTag("palette$index").captureToImage().toPixelMap()
                 val color = pixels[pixels.width / 2, pixels.height - 3]
-                assertTrue("Displayed label stays bright in $style / $mode", color.luminance() >= .4f)
+                assertTrue("Label surface follows $mode",
+                    if (mode == BeaconThemeMode.LIGHT) color.luminance() > .7f else color.luminance() < .1f)
             }
             val image = rule.onRoot().captureToImage().asAndroidBitmap()
-            val file = java.io.File(rule.activity.getExternalFilesDir("ui-qa"), "BRIGHT_TAGS_${style}_${mode}.png")
+            val file = java.io.File(rule.activity.getExternalFilesDir("ui-qa"), "NEUTRAL_TAGS_${style}_${mode}.png")
             file.outputStream().use { image.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
             val automation = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation
             for (command in listOf("mkdir -p /data/local/tmp/beacon-ui-qa", "cp ${file.absolutePath} /data/local/tmp/beacon-ui-qa/${file.name}"))
@@ -155,6 +152,6 @@ class GlobalUiStabilityTest {
     @Test fun miuixReminderAndSelectionKeepGeometry() = metadata(BeaconUiStyle.MIUIX)
     @Test fun materialFastRefreshOnlyAnimatesItsOwner() = fastRefresh(BeaconUiStyle.MATERIAL3)
     @Test fun miuixFastRefreshOnlyAnimatesItsOwner() = fastRefresh(BeaconUiStyle.MIUIX)
-    @Test fun materialTagsStayBrightInBothThemes() = palette(BeaconUiStyle.MATERIAL3)
-    @Test fun miuixTagsStayBrightInBothThemes() = palette(BeaconUiStyle.MIUIX)
+    @Test fun materialTagsFollowBothThemes() = palette(BeaconUiStyle.MATERIAL3)
+    @Test fun miuixTagsFollowBothThemes() = palette(BeaconUiStyle.MIUIX)
 }

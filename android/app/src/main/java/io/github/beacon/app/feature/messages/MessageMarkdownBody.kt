@@ -59,7 +59,7 @@ private data class RenderedBody(
  * Renders one message body.
  *
  * [raw] is owned by the screen, not by this composable: the render/source switch belongs to the
- * metadata row in the header card, so the body itself must not push that row around by declaring it.
+ * detail toolbar menu, so the body itself must not push that row around by declaring it.
  */
 @Composable
 internal fun MessageMarkdownBody(body: String, raw: Boolean, modifier: Modifier = Modifier) {
@@ -100,6 +100,7 @@ internal fun MessageMarkdownBody(body: String, raw: Boolean, modifier: Modifier 
             .usePlugin(object : AbstractMarkwonPlugin() {
                 override fun configureTheme(builder: MarkwonTheme.Builder) {
                     builder.headingTextSizeMultipliers(BeaconDetailText.HeadingMultipliers.copyOf())
+                    builder.headingBreakHeight(0)
                     builder.blockMargin(px(BeaconDetailText.BlockMargin))
                     builder.blockQuoteWidth(px(BeaconDetailText.QuoteWidth))
                     builder.blockQuoteColor(scheme.outline.copy(alpha = .5f).toArgb())

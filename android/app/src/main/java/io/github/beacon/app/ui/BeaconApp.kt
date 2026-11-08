@@ -343,7 +343,7 @@ fun BeaconApp(
         val messageBarBehavior = rememberBeaconBarBehavior()
         val statesBarBehavior = rememberBeaconBarBehavior()
         val detailBarBehavior = rememberBeaconBarBehavior()
-        val renderTopBar: @Composable (Int, SettingsScreen?, IncomingMessage?) -> Unit = { page, screen, displayedDetail ->
+        val renderTopBar: @Composable (Int, SettingsScreen?, IncomingMessage?, @Composable () -> Unit) -> Unit = { page, screen, displayedDetail, detailActions ->
             BeaconTopBarArea(
                             ui = ui,
                             runtimeState = runtimeState,
@@ -352,6 +352,7 @@ fun BeaconApp(
                             adminModel = adminModel,
                             updateState = updateState,
                             displayedDetail = displayedDetail,
+                            detailActions = detailActions,
                             pager = pager,
                             barBehavior = detailBarBehavior,
                             settingsBarBehaviors = settingsBarBehaviors,
@@ -380,8 +381,8 @@ fun BeaconApp(
                         statesScroll = statesScroll,
                         settingsScrollStates = settingsScrollStates,
                         settingsBarBehaviors = settingsBarBehaviors,
-                        pageTopBar = { page, screen -> renderTopBar(page, screen, null) },
-                        detailTopBar = { message -> renderTopBar(ui.page, null, message) },
+                        pageTopBar = { page, screen -> renderTopBar(page, screen, null, {}) },
+                        detailTopBar = { message, menu -> renderTopBar(ui.page, null, message, menu) },
                         pageBarBehaviors = mapOf(0 to messageBarBehavior, 2 to statesBarBehavior),
                         sharedTitleLabel = null,
                         busy = busy,

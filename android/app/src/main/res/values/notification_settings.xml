@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="notification_age_title">过时消息提醒</string>
-    <string name="notification_fresh_window">提醒有效时间</string>
+    <string name="notification_age_title">过时消息处理</string>
+    <string name="notification_fresh_window">正常提醒时限</string>
     <string name="notification_minutes">%1$d 分钟</string>
     <string name="notification_hours">%1$d 小时</string>
-    <string name="notification_outdated_behavior">过时消息处理</string>
+    <string name="notification_outdated_behavior">超过时限后</string>
 </resources>

@@ -227,7 +227,7 @@ internal fun WidgetStateDetail(row:JSONObject,id:Int,cache:StateCache,onEdit:()-
             SettingsPreferenceRows{
                 BeaconPreferenceToggle("在状态列表显示","隐藏不会删除数据或桌面组件",!hidden){show->hidden=!show;cache.preference("hidden:$key",if(hidden)"1"else"0")}
             }
-            SettingsRow(if(id==AppWidgetManager.INVALID_APPWIDGET_ID)"桌面添加说明"else"编辑小组件","设置模板、内容和外观",BeaconIcons.Applications,onClick=onEdit)
+            SettingsRow(if(id==AppWidgetManager.INVALID_APPWIDGET_ID)"桌面添加说明"else"编辑小组件","设置模板、内容和外观",BeaconIcons.Widget,onClick=onEdit)
         }
     }
 }

@@ -114,20 +114,18 @@ class UiConsistencyRegressionTest {
             rule.activity.setContent {
                 BeaconTheme(style) {
                     Column(Modifier.fillMaxWidth().padding(16.dp)) {
-                        AdminStatusFilterAction(state, true, listOf(AdminDevice("d", "测试设备", false)), true)
+                        AdminApplicationDeviceFilterAction(state, listOf(AdminDevice("d", "测试设备", false)), true)
                         AdminListFilters(state.applicationQuery, { state.applicationQuery = it },
                             state.applicationStatus, { state.applicationStatus = it }, "搜索应用",
-                            listOf(AdminDevice("d", "测试设备", false)), state.applicationDevice,
-                            { state.applicationDevice = it }, total = 5, active = 3)
+                            total = 5, active = 3, application = true)
                     }
                 }
             }
         }
-        rule.onNodeWithContentDescription(rule.activity.getString(R.string.admin_filter_title)).performClick()
-        rule.onNodeWithText(rule.activity.getString(R.string.admin_revoked)).performClick()
+        rule.onNodeWithText("已撤销 2").performClick()
         rule.runOnIdle { assertEquals(2, state.applicationStatus) }
-        rule.onNodeWithText(rule.activity.getString(R.string.admin_stat_revoked, 2)).assertExists()
-        rule.onNodeWithText(rule.activity.getString(R.string.admin_stat_total, 5)).performClick()
+        rule.onNodeWithText("已撤销 2").assertExists()
+        rule.onNodeWithText("全部 5").performClick()
         rule.runOnIdle { assertEquals(0, state.applicationStatus) }
         rule.onNodeWithContentDescription(rule.activity.getString(R.string.admin_filter_title)).performClick()
         rule.onNodeWithText("测试设备").performClick()

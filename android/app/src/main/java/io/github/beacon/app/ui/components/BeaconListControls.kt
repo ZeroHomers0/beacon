@@ -238,7 +238,7 @@ fun BeaconPreferenceToggle(
             checked = checked, enabled = enabled, onCheckedChange = { if (enabled) onCheckedChange(it) },
             insideMargin = PaddingValues(horizontal = if (cardRow) BeaconUiMetrics.CardInset else 0.dp,
                 vertical = if (cardRow) BeaconUiMetrics.NavigationVerticalInset else BeaconUiMetrics.FieldVerticalInset),
-            modifier = Modifier.semantics { contentDescription = title; if (!enabled) disabled() },
+            modifier = Modifier.fillMaxWidth().heightIn(min = if (cardRow) BeaconUiMetrics.NavigationMinHeight else BeaconUiMetrics.FieldMinHeight).semantics { contentDescription = title; if (!enabled) disabled() },
         )
         return
     }
@@ -248,7 +248,7 @@ fun BeaconPreferenceToggle(
             supportingContent = summary.takeIf { it.isNotBlank() }?.let { text -> { BeaconText(text) } },
             trailingContent = { Switch(checked, onCheckedChange = null, enabled = enabled,
                 modifier = Modifier.clearAndSetSemantics {}) },
-            modifier = Modifier.fillMaxWidth().named(title).alpha(if (enabled) 1f else .38f)
+            modifier = Modifier.fillMaxWidth().heightIn(min = BeaconUiMetrics.NavigationMinHeight).named(title).alpha(if (enabled) 1f else .38f)
                 .toggleable(value = checked, enabled = enabled, role = Role.Switch, onValueChange = onCheckedChange),
             colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
         )

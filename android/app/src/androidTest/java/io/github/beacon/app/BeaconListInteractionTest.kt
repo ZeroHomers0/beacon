@@ -57,7 +57,7 @@ class BeaconListInteractionTest {
         }
         val header=rule.onNodeWithTag("message-detail-header").fetchSemanticsNode().boundsInRoot
         val body=rule.onNodeWithTag("message-detail-body").fetchSemanticsNode().boundsInRoot
-        org.junit.Assert.assertTrue("Header and body are separate cards",header.bottom<body.top)
+        org.junit.Assert.assertTrue("Article header precedes the body",header.bottom<body.top)
         rule.onNodeWithText("查看消息信息").assertDoesNotExist()
         rule.onNodeWithTag("message-detail-raw-content").assertDoesNotExist()
         val expand=rule.onNodeWithContentDescription(rule.activity.getString(R.string.msg_detail_expand_raw_action))

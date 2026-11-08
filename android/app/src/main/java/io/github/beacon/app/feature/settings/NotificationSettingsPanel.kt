@@ -55,10 +55,9 @@ internal fun NotificationSettingsPanel(
                         },
                     )
                 }
+                SettingsHint(stringResource(R.string.settings_notification_age_hint))
             }
-            SettingsGroup(stringResource(R.string.mute_group)) {
-                TemporaryMuteAction(MuteScope.GLOBAL,enabled=state.runtimeConnected&&!saving&&!rulesSaving)
-            }
+
             if (failed && rulesFailure == null) {
                 SettingsRetryFeedback(
                     stringResource(R.string.settings_data_failed), failed = true,

@@ -45,7 +45,7 @@ internal fun LazyListScope.notificationPermissionSettingsItems(
                     NotificationPermissionState.ALLOWED -> R.string.settings_notifications_allowed_label
                     NotificationPermissionState.DENIED -> R.string.settings_notifications_denied_label
                 }),
-                icon = BeaconIcons.Messages,
+                icon = BeaconIcons.Notifications,
                 iconTint = if (allowed) io.github.beacon.app.ui.theme.beaconSuccessColor()
                     else MaterialTheme.colorScheme.onSurfaceVariant,
                 external = allowed,
@@ -61,6 +61,7 @@ internal fun LazyListScope.notificationPermissionSettingsItems(
             )
         }
     }
+    item { NotificationChannelsPanel() }
     item {
         // Resending is an action, not navigation, so it carries a button instead of the arrow the
         // row above uses to leave the app.
@@ -81,15 +82,18 @@ internal fun LazyListScope.notificationPermissionSettingsItems(
                 style = MaterialTheme.typography.bodySmall,
                 color = if (loadFailed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (loadFailed) SettingsRetryFeedback(
+                stringResource(R.string.settings_reminders_failed), true,
+                onRetry = if (connected && !busy && !loading) onRetry else null)
             SettingsActions {
                 SettingsPrimaryButton(
                     stringResource(R.string.settings_reminders_send),
-                    enabled = connected && !busy && (pendingReminderCount ?: 0) > 0) {
+                    enabled = connected && !busy && !loading && !loadFailed && (pendingReminderCount ?: 0) > 0) {
                         actions.transport(notifyOnly = true)
                     }
             }
         }
     }
 
-    item { NotificationChannelsPanel() }
+
 }

@@ -20,7 +20,7 @@ import io.github.beacon.app.ui.icons.BeaconIcons
  * Explicit user clicks open destinations; receiving or displaying a message never executes them.
  */
 @Composable
-fun MessageActionsPanel(actions: List<MessageLinkAction>, legacyUrl: String = "") {
+fun MessageActionsPanel(actions: List<MessageLinkAction>, legacyUrl: String = "", grouped: Boolean = true) {
     val context = LocalContext.current
     val defaultTitle = stringResource(R.string.message_action_open)
     val available =
@@ -37,7 +37,7 @@ fun MessageActionsPanel(actions: List<MessageLinkAction>, legacyUrl: String = ""
         }
     var failed by remember(available) { mutableStateOf(false) }
     if (available.isNotEmpty()) {
-        UiSection(stringResource(R.string.message_actions)) {
+        val content: @Composable () -> Unit = {
             available.forEach { action ->
                 BeaconOutlinedButton(
                     modifier = Modifier.fillMaxWidth(),
@@ -60,12 +60,14 @@ fun MessageActionsPanel(actions: List<MessageLinkAction>, legacyUrl: String = ""
                     BeaconText(action.displayTitle, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 BeaconText(
-                    action.url,
+                    if (grouped) action.url else java.net.URI(action.url).host.orEmpty(),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            if (failed) BeaconFailureDialog(stringResource(R.string.message_link_failed)) { failed = false }
         }
+        if (grouped) UiSection(stringResource(R.string.message_actions)) { content() }
+        else Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) { content() }
+        if (failed) BeaconFailureDialog(stringResource(R.string.message_link_failed)) { failed = false }
     }
 }

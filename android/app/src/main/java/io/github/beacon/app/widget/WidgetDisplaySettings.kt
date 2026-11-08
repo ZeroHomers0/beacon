@@ -34,18 +34,9 @@ internal fun rememberWidgetClock(row:JSONObject?,config:JSONObject):Long {
 @Composable
 internal fun WidgetDisplaySettings(row:JSONObject,config:JSONObject,onChange:(JSONObject)->Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.SettingsGroupGap)) {
-    SettingsGroup("点击行为") {
-        BeaconDropdownPreference("单击小组件",listOf("不执行操作","查看完整内容"),
-            if(config.optString("tap_action")=="detail")1 else 0,settingsRow=true,icon=BeaconIcons.Info){index->
-            onChange(JSONObject(config.toString()).put("tap_action",if(index==1)"detail"else"none"))
-        }
-        Column(Modifier.padding(horizontal=BeaconUiMetrics.CardInset)) {
-            SettingsHint("查看内容不会打开外部链接。")
-        }
-    }
     val selected=WidgetConfigRules.selected(row,config)
     if(selected.isNotEmpty())SettingsGroup("内容名称") {
-        Column(Modifier.padding(BeaconUiMetrics.CardInset)) {
+        Column(Modifier.padding(BeaconUiMetrics.CardInset), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
             SettingsHint(if(config.optString("template")=="nested_rings")"留空使用原名称，最多8字；按外环到内环排列。"else"仅对当前组件生效，留空使用原名称，最多8字。")
             selected.take(8).forEach { block ->
                 val id=block.optString("id")
@@ -58,6 +49,15 @@ internal fun WidgetDisplaySettings(row:JSONObject,config:JSONObject,onChange:(JS
                 },Modifier.fillMaxWidth(),label={BeaconText(block.optString("label",id))},labelText=block.optString("label",id),singleLine=true,
                     placeholder=block.optString("label",id))
             }
+        }
+    }
+    SettingsGroup("点击行为") {
+        BeaconDropdownPreference("单击小组件",listOf("不执行操作","查看完整内容"),
+            if(config.optString("tap_action")=="detail")1 else 0,settingsRow=true,icon=BeaconIcons.Info){index->
+            onChange(JSONObject(config.toString()).put("tap_action",if(index==1)"detail"else"none"))
+        }
+        Column(Modifier.padding(horizontal=BeaconUiMetrics.CardInset)) {
+            SettingsHint("查看内容不会打开外部链接。")
         }
     }
     }

@@ -1,6 +1,8 @@
 package io.github.beacon.app.feature.settings
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -57,9 +59,11 @@ internal fun AdminListCard(
     actions: List<Pair<Int, () -> Unit>>,
     modifier: Modifier = Modifier,
     revoked: Boolean = false,
+    statusTone: BeaconTagTone = if (revoked) BeaconTagTone.NEUTRAL else BeaconTagTone.SUCCESS,
     priority: Int? = null,
     details: String = subtitle,
     onDetails: (() -> Unit)? = null,
+    metadata: String = "",
 ) {
     var showingDetails by remember { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
@@ -77,16 +81,22 @@ internal fun AdminListCard(
         },
         confirmButton = { BeaconButton({ showingDetails = false }) { BeaconText(stringResource(R.string.action_close)) } },
     )
-    BeaconListCard(modifier) {
+    BeaconListCard(modifier.clickable(enabled = enabled) {
+        if (onDetails != null) onDetails() else showingDetails = true
+    }) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.Top,
             horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap12)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap4)) {
-                BeaconFittedText(title, Modifier.fillMaxWidth(),
+                BeaconText(title, Modifier.fillMaxWidth(),
                     style = androidx.compose.material3.MaterialTheme.typography.titleMedium.copy(
-                        fontSize = BeaconListText.TitleSize, lineHeight = BeaconListText.TitleLineHeight))
-                BeaconFittedText(subtitle, Modifier.fillMaxWidth(),
-                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
+                        fontSize = BeaconListText.TitleSize, lineHeight = BeaconListText.TitleLineHeight,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+                    maxLines = 2, overflow = TextOverflow.Ellipsis)
+                if (subtitle.isNotBlank()) BeaconText(subtitle, Modifier.fillMaxWidth(),
+                    style = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = BeaconListText.PreviewSize, lineHeight = BeaconListText.PreviewLineHeight),
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
             FirstLineSlot(BeaconListText.TitleLineHeight) {
               Box {
@@ -116,17 +126,16 @@ internal fun AdminListCard(
         }
         Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(BeaconUiMetrics.Gap8)) {
-            Spacer(Modifier.weight(1f))
-            MessageFilterTag(status, compact = true,
-                containerColor = androidx.compose.ui.graphics.Color(if (revoked) 0xFFFF8F96 else 0xFF82E6A4))
+            if (metadata.isNotBlank()) BeaconText(metadata, Modifier.weight(1f),
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall.copy(
+                    fontSize = BeaconListText.MetadataSize, lineHeight = BeaconListText.MetadataLineHeight),
+                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1, overflow = TextOverflow.Ellipsis)
+            else Spacer(Modifier.weight(1f))
+            MessageFilterTag(status, compact = true, tone = statusTone)
             if (priority != null) MessageFilterTag(stringResource(priorityShortLabel(priority)),
                 modifier = Modifier.widthIn(max = 180.dp), compact = true,
-                containerColor = androidx.compose.ui.graphics.Color(when {
-                    priority <= 1 -> 0xFFE8F3FF
-                    priority <= 3 -> 0xFFBEDDFF
-                    priority <= 7 -> 0xFF8FC5FF
-                    else -> 0xFF5AA7F2
-                }))
+                tone = if (priority >= 8) BeaconTagTone.WARNING else BeaconTagTone.NEUTRAL)
         }
     }
 }

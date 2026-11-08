@@ -69,7 +69,7 @@ fun BackgroundPermissionPanel() {
     ) {
         SettingsGroup("") {
             SettingsRow(stringResource(R.string.background_autostart_title),
-                stringResource(R.string.background_manual_status), io.github.beacon.app.ui.icons.BeaconIcons.BackgroundTasks,
+                stringResource(R.string.settings_background_autostart_hint), io.github.beacon.app.ui.icons.BeaconIcons.BackgroundTasks,
                 iconTint = MaterialTheme.colorScheme.onSurface, external = true, onClick = { appDetails() })
             SettingsRow(stringResource(R.string.background_system_restriction),
                 stringResource(when (restricted) {

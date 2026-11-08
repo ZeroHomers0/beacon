@@ -89,6 +89,7 @@ internal fun BeaconUnifiedButton(
 ) {
     val scheme = MaterialTheme.colorScheme
     val emphasized = primary || LocalPrimaryAction.current
+    val choiceColors = selected?.let { beaconChoiceColors(it) }
     val defaults = when {
         danger -> top.yukonga.miuix.kmp.basic.ButtonDefaults.buttonColorsPrimary(
             color = scheme.error, contentColor = scheme.onError)
@@ -96,7 +97,7 @@ internal fun BeaconUnifiedButton(
         else -> top.yukonga.miuix.kmp.basic.ButtonDefaults.buttonColors()
     }
     val background = when {
-        selected != null -> if (selected) BeaconChoiceSelected else BeaconChoiceUnselected
+        choiceColors != null -> choiceColors.container.copy(alpha = if (enabled) 1f else .38f)
         miuix() -> if (enabled) defaults.color else defaults.disabledColor
         !enabled -> scheme.onSurface.copy(alpha = .12f)
         danger -> scheme.error
@@ -104,7 +105,7 @@ internal fun BeaconUnifiedButton(
         else -> scheme.surfaceContainerHigh
     }
     val foreground = when {
-        selected != null -> BeaconTagInk.copy(alpha = if (enabled) 1f else .38f)
+        choiceColors != null -> choiceColors.content.copy(alpha = if (enabled) 1f else .38f)
         miuix() -> if (enabled) defaults.contentColor else defaults.disabledContentColor
         !enabled -> scheme.onSurface.copy(alpha = .38f)
         danger -> scheme.onError

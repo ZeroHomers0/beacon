@@ -1,0 +1,4 @@
+<resources>
+    <color name="beacon_logo_background">#111111</color>
+    <color name="beacon_logo_stroke">#FFFFFF</color>
+</resources>

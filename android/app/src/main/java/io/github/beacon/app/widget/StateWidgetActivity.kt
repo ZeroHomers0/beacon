@@ -219,11 +219,11 @@ private fun StateWidgetEditorContent(id:Int, detail:Boolean, source:String?, ide
                     else item { WidgetTemplateSelector(row,WidgetConfigRules.resolved(row,config),previewSize){value->update{val suggested=WidgetConfigRules.resolved(row,it);it.put("template",value);if(!it.has("metrics"))it.put("metrics",suggested.optJSONArray("metrics")?:JSONArray(WidgetConfigRules.defaults(row,it).map{block->block.optString("id")}))}} }
                     item { WidgetSimpleAppearance(row,config){next->draft=next.toString()} }
                     item { BeaconCard(Modifier.fillMaxWidth()){
-                        SettingsRow("更多设置","名称、排版、点击与更新",BeaconIcons.Tune,iconTint=MaterialTheme.colorScheme.onSurface,
+                        SettingsRow("更多设置","名称、排版、点击行为与刷新",BeaconIcons.Tune,iconTint=MaterialTheme.colorScheme.onSurface,
                             onClick={moreSettings=!moreSettings},expanded=moreSettings)
                     }}
                     if(moreSettings){
-                    item { SettingsGroup("名称") { Column(Modifier.padding(BeaconUiMetrics.CardInset)){
+                    item { SettingsGroup("名称与标题") { Column(Modifier.padding(BeaconUiMetrics.CardInset)){
                         BeaconTextField(config.optString("instance_name"),{value->update{it.put("instance_name",WidgetTextLimits.cap(value,24))}},Modifier.fillMaxWidth(),label={BeaconText("组件名称")},labelText="组件名称",singleLine=true,placeholder="仅在管理页显示")
                         BeaconTextField(config.optString("title"),{value->update{it.put("title",if(value.codePointCount(0,value.length)>12)value.substring(0,value.offsetByCodePoints(0,12))else value)}},Modifier.fillMaxWidth(),label={BeaconText("桌面标题")},labelText="桌面标题",singleLine=true,placeholder="留空使用主题名称")
                         SettingsHint("桌面标题最多12字，留空使用主题名称。")

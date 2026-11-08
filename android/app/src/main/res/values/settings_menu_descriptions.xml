@@ -1,8 +1,8 @@
 <resources>
-    <string name="settings_admin_menu_description">设备、应用与发送测试</string>
-    <string name="settings_storage_menu_description">消息占用与历史清理</string>
-    <string name="settings_backup_menu_description">备份与恢复</string>
+    <string name="settings_admin_menu_description">设备、应用与数据主题</string>
+    <string name="settings_storage_menu_description">本地消息占用与清理</string>
+    <string name="settings_backup_menu_description">应用设置与消息记录</string>
     <string name="admin_devices_description">管理设备绑定</string>
     <string name="admin_applications_description">管理应用与密钥</string>
-    <string name="admin_test_description">验证消息投递</string>
+    <string name="admin_test_description">向指定设备发送真实消息</string>
 </resources>

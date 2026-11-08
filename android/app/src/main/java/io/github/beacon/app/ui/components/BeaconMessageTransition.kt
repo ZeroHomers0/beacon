@@ -13,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -29,6 +30,7 @@ fun BeaconMessageTransition(
     animateSize: Boolean = true,
     content: @Composable (IncomingMessage?) -> Unit,
 ) {
+    val savedPages = rememberSaveableStateHolder()
     val direction = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1 else 1
     transition.AnimatedContent(
         modifier = modifier.fillMaxWidth(),
@@ -55,6 +57,9 @@ fun BeaconMessageTransition(
                 } else null)
         },
     ) { message ->
-        Box(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background)) { content(message) }
+        Box(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background)) {
+            if (message == null) savedPages.SaveableStateProvider("lists") { content(null) }
+            else content(message)
+        }
     }
 }

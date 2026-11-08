@@ -52,20 +52,21 @@ internal fun AdminTopicsPage(state:AdminUiState,model:ServerAdminViewModel,scrol
     SettingsRetryFeedback("数据主题加载失败",state.refreshFailure!=null||state.topicsFailure!=null,onRetry={reload++})
     SettingsRetryFeedback("详情加载失败",detailOpen&&state.topicDetailFailure!=null,onRetry={detailIdentity?.let(model::loadTopic)})
     val direction=androidx.compose.ui.platform.LocalLayoutDirection.current
+    val resultScroll = rememberScopedListState("${state.endpoint}:$status:$device:$application:$search:$offset", scroll)
     Column(modifier){
         Column(Modifier.fillMaxWidth().padding(start=padding.calculateStartPadding(direction),end=padding.calculateEndPadding(direction),top=padding.calculateTopPadding(),bottom=BeaconUiMetrics.Gap8),verticalArrangement=Arrangement.spacedBy(BeaconUiMetrics.Gap8)){
             BeaconSearchBox(search,{search=it;offset=0},"搜索主题、设备或应用",onSearch={})
-            BeaconListSwitch(labels=listOf("共 ${state.topicsTotal} 个","本页 ${state.topics.size} 个"),
-                icons=listOf(BeaconIcons.Topics,BeaconIcons.List), selectedIndex=if(status=="all")0 else -1,
-                enabled=!state.busy,selectableIndices=setOf(0),onSelected={status="all";offset=0})
+            BeaconListSummary("共 ${state.topicsTotal} 个主题")
 
         }
         BeaconPullToRefresh(refreshing,{if(!state.busy){refreshing=true;reload++}},Modifier.fillMaxWidth().weight(1f)){
-            BeaconSettingsList(scroll,Modifier.fillMaxSize().beaconFilterChange(states.indexOf(status)),contentPadding=PaddingValues(start=padding.calculateStartPadding(direction),end=padding.calculateEndPadding(direction),top=BeaconUiMetrics.Gap4,bottom=padding.calculateBottomPadding()),itemSpacing=BeaconUiMetrics.MessageCardGap){
+            BeaconSettingsList(resultScroll,Modifier.fillMaxSize().beaconFilterChange(states.indexOf(status)),contentPadding=PaddingValues(start=padding.calculateStartPadding(direction),end=padding.calculateEndPadding(direction),top=BeaconUiMetrics.Gap4,bottom=padding.calculateBottomPadding()),itemSpacing=BeaconUiMetrics.MessageCardGap){
                 if(state.topics.isEmpty())item{BeaconEmptyState(BeaconIcons.List,"暂无数据主题","先从右上角创建主题，再将上报示例交给脚本。无需创建应用。")}
                 items(state.topics,key={it.optString("device_id")+":"+it.optString("application_id")+":"+it.optString("topic_key")}){row->
                     AdminListCard(row.optString("title").ifBlank{row.optString("topic_key")},
-                        "${row.optString("device_name")} · ${if(row.optString("application_id").isBlank())"未关联应用"else row.optString("source_name").ifBlank{row.optString("application_id")}} · v${row.optLong("revision")}",
+                        row.optString("status").ifBlank {
+                            if(row.optString("state")=="waiting") "等待首次上报" else ""
+                        },
                         labels.getOrElse(states.indexOf(row.optString("state"))){"未知"},!state.busy,
                         buildList{
                             if(row.optLong("revision")>0&&row.optString("state")!="waiting")add(R.string.admin_topic_clear to {model.dismissAction();pending=row})
@@ -77,11 +78,24 @@ internal fun AdminTopicsPage(state:AdminUiState,model:ServerAdminViewModel,scrol
                             }
                         },
                         revoked=row.optString("state") in listOf("deleted","expired"),
+                        statusTone=when(row.optString("state")) {
+                            "active" -> BeaconTagTone.SUCCESS
+                            "stale" -> BeaconTagTone.WARNING
+                            else -> BeaconTagTone.NEUTRAL
+                        },
+                        metadata=listOfNotNull(row.optString("device_name").takeIf{it.isNotBlank()},
+                            row.optString("source_name").takeIf{it.isNotBlank()},
+                            row.optLong("accepted_at_ms").takeIf{it>0}?.let{io.github.beacon.app.ui.components.formatMessageTime(it)})
+                            .joinToString(" · "),
+                        details="${row.optString("device_name")}\n${row.optString("device_id")}\n${row.optString("application_id")}\n${row.optString("topic_key")}\nv${row.optLong("revision")}",
                         onDetails=if(row.optLong("revision")>0)({model.dismissTopic();detailOpen=true;detailIdentity=topicIdentity(row);model.loadTopic(detailIdentity!!)})else null)
                 }
-                if(offset>0||state.topicsHasMore)item{BeaconActionPair(
+                if(offset>0||state.topicsHasMore)item{Column {
+                    BeaconListSummary("第 ${offset/50+1} 页", "本页 ${state.topics.size} 个")
+                    BeaconActionPair(
                     dismiss={BeaconTextButton(onClick={offset=(offset-50).coerceAtLeast(0)},enabled=offset>0&&!state.busy){BeaconText("上一页")}},
-                    confirm={BeaconTextButton(onClick={offset+=50},enabled=state.topicsHasMore&&!state.busy){BeaconText("下一页")}})}
+                    confirm={BeaconTextButton(onClick={offset+=50},enabled=state.topicsHasMore&&!state.busy){BeaconText("下一页")}})
+                }}
             }
         }
     }

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -38,6 +39,7 @@ fun BeaconSettingsTransition(
     animateSize: Boolean = true,
     content: @Composable (SettingsScreen) -> Unit,
 ) {
+    val savedPages = rememberSaveableStateHolder()
     val direction = if (LocalLayoutDirection.current == LayoutDirection.Rtl) -1 else 1
     transition.AnimatedContent(
         modifier = (if (animateSize) Modifier.fillMaxWidth() else Modifier.fillMaxSize()).clipToBounds(),
@@ -80,7 +82,7 @@ fun BeaconSettingsTransition(
             (if (animateSize) Modifier.fillMaxWidth() else Modifier.fillMaxSize())
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            content(screen)
+            savedPages.SaveableStateProvider(screen.name) { content(screen) }
         }
     }
 }

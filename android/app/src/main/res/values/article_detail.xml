@@ -1,0 +1,4 @@
+<resources>
+    <string name="detail_view_source">查看原文</string>
+    <string name="detail_view_rendered">查看排版</string>
+</resources>

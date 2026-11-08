@@ -60,7 +60,7 @@ internal fun BeaconContentArea(
     settingsScrollStates: Map<SettingsScreen, LazyListState>,
     settingsBarBehaviors: Map<SettingsScreen, BeaconBarBehavior>,
     pageTopBar: @Composable (Int, SettingsScreen?) -> Unit,
-    detailTopBar: @Composable (IncomingMessage) -> Unit,
+    detailTopBar: @Composable (IncomingMessage, @Composable () -> Unit) -> Unit,
     pageBarBehaviors: Map<Int, BeaconBarBehavior>,
     sharedTitleLabel: String?,
     busy: Boolean,
@@ -90,12 +90,10 @@ BeaconMessageTransition(
     animateSize = false,
 ) { detail ->
     if (detail != null) {
-        io.github.beacon.app.ui.components.BeaconScaffold(
-            topBar = { detailTopBar(detail) }, bottomBar = {},
-        ) { detailInsets ->
         MessageDetailScreen(
             detail,
-            Modifier.fillMaxSize().padding(detailInsets),
+            Modifier.fillMaxSize(),
+            topBar = { menu -> detailTopBar(detail, menu) },
             onCopy = { body ->
                 copyToClipboard(
                     context,
@@ -125,7 +123,6 @@ BeaconMessageTransition(
                 )
             },
         )
-        }
     } else
         HorizontalPager(
             state = pager,

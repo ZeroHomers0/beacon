@@ -4,7 +4,7 @@
     <string name="settings_connection_status_heading">连接状态</string>
     <string name="settings_permission_status_heading">授权状态</string>
     <string name="settings_about_links_heading">相关链接</string>
-    <string name="settings_api_heading">开发者工具</string>
+    <string name="settings_api_heading">推送接入</string>
     <string name="settings_time_range_heading">时段设置</string>
     <string name="admin_more_actions">更多操作</string>
     <string name="receive_success_count">新增 %1$d 条</string>
@@ -18,8 +18,8 @@
     <string name="settings_discard_connection_hint">尚未提交的输入将被清除。</string>
     <string name="settings_auto_adjusting">自动调整</string>
     <string name="settings_saved_automatically">修改后自动保存</string>
-    <string name="settings_open_channels">通知频道与声音</string>
-    <string name="settings_open_channels_hint">频道状态、声音与振动</string>
+    <string name="settings_open_channels">通知权限与渠道</string>
+    <string name="settings_open_channels_hint">管理通知权限、声音与振动</string>
     <string name="settings_example_shell">命令环境</string>
     <string name="settings_example_format">请求格式</string>
     <string name="settings_every_day">每天</string>
