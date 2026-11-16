@@ -7,6 +7,7 @@ const FIELDS = [
   "title",
   "subtitle",
   "body",
+  "markdown",
   "device_key",
   "level",
   "sound",
@@ -215,7 +216,8 @@ export function presentation(values: Record<string, string>): {
   return {
     bark: Object.keys(extra).length ? JSON.stringify(extra) : "",
     priority,
-    body: encrypted ? "加密消息" : (values.body ?? ""),
+    // An explicitly supplied markdown field overrides body, even when empty.
+    body: encrypted ? "加密消息" : (values.markdown ?? values.body ?? ""),
   };
 }
 

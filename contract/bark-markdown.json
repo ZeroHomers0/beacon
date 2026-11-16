@@ -1,0 +1,10 @@
+[
+  {"name":"markdown only","payload":{"markdown":"# 标题\n- **项目**"},"status":200,"body":"# 标题\n- **项目**"},
+  {"name":"markdown wins","payload":{"body":"ignored","markdown":"chosen"},"status":200,"body":"chosen"},
+  {"name":"body only","payload":{"body":"plain"},"status":200,"body":"plain"},
+  {"name":"empty markdown overrides body","payload":{"body":"ignored","markdown":""},"status":400},
+  {"name":"empty message","payload":{},"status":400},
+  {"name":"null markdown","payload":{"body":"plain","markdown":null},"status":400},
+  {"name":"numeric markdown","payload":{"body":"plain","markdown":42},"status":400},
+  {"name":"ciphertext wins","payload":{"title":"ignored","markdown":"ignored","ciphertext":"eHh4eHh4eHh4eHh4eHh4eA==","iv":"1234567890123456"},"status":200,"body":"加密消息"}
+]

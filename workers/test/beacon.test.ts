@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import worker, { BeaconInstance, Env } from "../src/index";
 import { DAY, GRACE, PENDING, RECEIPT } from "../src/domain";
 import { SqliteRepository } from "../src/store/repository";
+import markdownCases from "../../contract/bark-markdown.json";
 
 const bindings = env as unknown as Env;
 const admin = "test-only-admin-token-32-characters";
@@ -708,6 +709,24 @@ describe("Beacon protocol and durable delivery", () => {
       "SELECT bark FROM messages ORDER BY seq DESC LIMIT 1",
     );
     expect(String(stored[0].bark ?? "")).not.toContain("image");
+  });
+
+  it("normalizes Bark markdown using the shared contract", async () => {
+    const device = await bind();
+    for (const c of markdownCases) {
+      const response = await call("/push", "", { ...c.payload, device_key: device.push_key });
+      expect(response.status, c.name).toBe(c.status);
+      if (c.status === 200) {
+        const { id } = await response.json<{ id: string }>();
+        expect((await rows("SELECT body FROM messages WHERE id=?", id))[0].body, c.name).toBe(c.body);
+      }
+    }
+    for (const query of ["markdown=a&markdown=b", "markdown=" + "x".repeat(65537)]) {
+      expect((await call(`/${device.push_key}?${query}`)).status).toBe(400);
+    }
+    const response = await call(`/${device.push_key}/path?markdown=query`);
+    const { id } = await response.json<{ id: string }>();
+    expect((await rows("SELECT body FROM messages WHERE id=?", id))[0].body).toBe("query");
   });
 
   it("drops unsupported Bark parameters instead of rejecting the request", async () => {

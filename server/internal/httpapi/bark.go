@@ -31,6 +31,9 @@ func barkReply(w http.ResponseWriter, status int, message string, stored *domain
 // parameter (badge, action, ...) is silently dropped so third-party
 // software only has to change the key to reach Beacon.
 func barkField(key string) bool {
+	if key == "markdown" {
+		return true
+	}
 	return key == "group" || key == "ttl" || key == "title" || key == "subtitle" || key == "body" || key == "device_key" || key == "level" || key == "sound" || key == "image" || key == "icon" || key == "url" || key == "ciphertext" || key == "iv"
 }
 
@@ -230,6 +233,10 @@ func (a *API) bark(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	extension, kept := validateBarkExtension(values)
+	// An explicitly supplied markdown field overrides body, even when empty.
+	if markdown, ok := values["markdown"]; ok {
+		values["body"] = markdown
+	}
 	// Bark's own semantics give ciphertext precedence: when it survives
 	// validation, any plaintext alongside it is ignored rather than rejected.
 	if kept["ciphertext"] != "" {

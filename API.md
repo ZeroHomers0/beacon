@@ -129,6 +129,7 @@ curl -X POST 'https://push.example.com/push' \
 兼容范围：
 
 - 支持 `title`、`subtitle`、`body`，文本长度限制与原生接口一致。
+- 支持字符串 `markdown`，统一保存为正文；提供该字段时忽略 `body`，包括空字符串（空正文返回400）。有效 `ciphertext` 仍优先于明文。先按路径 > 查询参数 > 请求体合并同名参数，再选择 `markdown` 正文，因此路径中的 `body` 也会被 `markdown` 覆盖。重复的受支持查询/表单参数、重复 JSON 键或非字符串 `markdown` 返回400；正文仍限制为65536 UTF-8字节。
 - `level=passive` 或 `sound=none` 对应优先级 2；`level=timeSensitive`、`level=critical` 对应优先级 8；其余默认使用 5。Android 通知效果仍受系统通知权限和通知渠道设置影响。
 - 接收 `image`、`icon`、`url`、`sound` 扩展字段；链接字段仅保留有效的 HTTPS 地址。Bark 的 iOS 铃声和 critical alert 权限不等同于 Android 上的效果。
 - 接收 `ciphertext`、`iv` 加密字段。在 Android「设置 → 服务器配置 → Bark 消息解密」配置与发送方一致的 AES 加密密钥和默认 IV；先完成服务器绑定。AES-CBC 密钥需为16、24或32个 UTF-8 字节，默认 IV 为16字节，均按原始文本输入，不是十六进制/Base64解码输入。消息自带 IV 时优先使用消息中的值。
