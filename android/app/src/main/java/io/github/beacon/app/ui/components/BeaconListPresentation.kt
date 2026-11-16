@@ -61,15 +61,19 @@ fun receiveModeIcon(mode: ReceiveMode) =
         ReceiveMode.RULES -> BeaconIcons.ReceiveRules
     }
 
+// Blue / green / orange from the approved preview, with its 0.9 saturation baked in.
+private fun receiveModeFace(mode: ReceiveMode): Pair<Color, Color> = when (mode) {
+    ReceiveMode.REALTIME -> Color(0xFF3F88EC) to Color(0xFF1F5DBE)
+    ReceiveMode.POWER_SAVING -> Color(0xFF3BA976) to Color(0xFF1D7C52)
+    ReceiveMode.RULES -> Color(0xFFEB9B4C) to Color(0xFFC16B29)
+}
+
 @Composable
 fun receiveModeColor(mode: ReceiveMode): Color {
     val dark = MaterialTheme.colorScheme.background.luminance() < .5f
-    // Radix Teal / Indigo / Iris: mode identity, independent of connection status.
-    return when (mode) {
-        ReceiveMode.POWER_SAVING -> if (dark) Color(0xFF0BD8B6) else Color(0xFF008573)
-        ReceiveMode.REALTIME -> if (dark) Color(0xFF9EB1FF) else Color(0xFF3358D4)
-        ReceiveMode.RULES -> if (dark) Color(0xFFB1A9FF) else Color(0xFF5753C6)
-    }
+    val (top, bottom) = receiveModeFace(mode)
+    // Standalone glyphs need a lighter tint in dark themes; filled badges keep their rich face.
+    return if (dark) lerp(top, Color.White, .25f) else bottom
 }
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
@@ -87,9 +91,11 @@ fun ReceiveModeButton(
     // One shared gate: the system switch, the animator scale and this composition all agree now.
     val animationsEnabled = rememberSystemAnimationsEnabled()
     val modeColor = receiveModeColor(mode)
+    val (modeTop, modeBottom) = receiveModeFace(mode)
+    val modeFaceVisible = connected && !checkingServer && !serverIssue
     val accent by animateColorAsState(
         if (serverIssue) MaterialTheme.colorScheme.error
-        else if (connected && !checkingServer) modeColor
+        else if (modeFaceVisible) modeBottom
         else MaterialTheme.colorScheme.onSurfaceVariant,
         tween(if (animationsEnabled) BeaconMotion.StandardMs else 0), label = "receive-mode-color",
     )
@@ -124,9 +130,14 @@ fun ReceiveModeButton(
         rememberUpdatedState(0f)
     }
     val dark = MaterialTheme.colorScheme.background.luminance() < .5f
-    val faceTop = lerp(accent, Color.White, if (dark) .06f else .08f)
-    val faceBottom = lerp(accent, Color.Black, if (dark) .12f else .18f)
-    val glyph = if (dark) MaterialTheme.colorScheme.background else Color.White
+    val faceTop by animateColorAsState(
+        if (modeFaceVisible) modeTop
+        else lerp(if (serverIssue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+            Color.White, .08f),
+        tween(if (animationsEnabled) BeaconMotion.StandardMs else 0), label = "receive-mode-face-top",
+    )
+    val faceBottom = accent
+    val glyph = Color.White
     val description =
         if (checkingServer) stringResource(R.string.server_checking)
         else if (serverIssue) stringResource(R.string.server_warning_action)
@@ -152,18 +163,25 @@ fun ReceiveModeButton(
         contentAlignment = Alignment.Center,
     ) {
         Box(
-            Modifier.size(42.dp)
+            Modifier.size(BeaconUiMetrics.ReceiveModeBadgeSize)
                 .graphicsLayer { translationY = if (pressed) 1.dp.toPx() else 0f }
                 .shadow(if (pressed) 1.dp else 3.dp, CircleShape,
                     ambientColor = accent.copy(alpha = .25f), spotColor = accent.copy(alpha = .22f)),
             contentAlignment = Alignment.Center,
         ) {
             Box(Modifier.matchParentSize()
-                .background(Brush.verticalGradient(listOf(faceTop, faceBottom)), CircleShape)
+                .background(Brush.linearGradient(listOf(faceTop, faceBottom)), CircleShape)
                 .border(1.dp, Brush.verticalGradient(listOf(
                     Color.White.copy(alpha = if (dark) .22f else .32f),
                     accent.copy(alpha = .18f),
                 )), CircleShape))
+            Canvas(Modifier.matchParentSize().clip(CircleShape)) {
+                drawRect(Brush.radialGradient(
+                    listOf(Color.White.copy(alpha = .20f), Color.Transparent),
+                    center = androidx.compose.ui.geometry.Offset(size.width * .27f, size.height * .13f),
+                    radius = size.width * .7f,
+                ))
+            }
             AnimatedContent(
                 mode,
                 transitionSpec = {

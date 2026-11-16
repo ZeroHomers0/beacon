@@ -30,6 +30,7 @@ object BeaconUiMetrics {
     val NavigationMinHeight = 76.dp
     val NavigationVerticalInset = 12.dp
     val ReceiveModeMinHeight = 84.dp
+    val ReceiveModeBadgeSize = 44.dp
     val FieldMinHeight = 61.6.dp
     val FieldVerticalInset = 13.2.dp
 
